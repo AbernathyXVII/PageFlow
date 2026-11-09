@@ -1151,6 +1151,23 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.15 — 09/11/2026 · 18:01 — PageFlow si installa su Windows: menu Start, icona, collegamento sul desktop
+*(Claude Code sul PC; installata su Windows dall'utente; sul telefono installata, il suo codice non cambia; 1118 test passati)*
+
+- **[Progetto]** **L'installatore per Windows** (`gradle :desktop:packageExe`,
+  `PageFlow-<versione>.exe`): si installa per l'utente, senza permessi da
+  amministratore, con la voce nel menu Start, il collegamento sul desktop e
+  l'icona di PageFlow (`branding/pageflow.ico`). Dentro c'è anche Java,
+  quindi non serve installare altro. I dati restano in `%APPDATA%\PageFlow`:
+  installandolo si ritrovano le note già aperte sul PC. Installato e provato
+  dall'utente
+- **[Progetto]** Il numero di versione per Windows viene dall'ultima voce del
+  README, coi tre numeri che Windows vuole: 0.153.14 diventa 0.153.1400,
+  0.153.11.1 diventa 0.153.1101, così cresce sempre e un nuovo installatore
+  aggiorna quello vecchio. Fra i moduli di Java portati nel programma ci
+  sono anche le date nelle otto lingue, le connessioni sicure (meteo,
+  sport, azioni) e le codifiche delle pagine web
+
 ### ✏️ v0.153.14 — 09/11/2026 · 17:50 — Sul PC si apre un backup del telefono: le tue note su Windows
 *(Claude Code sul PC; provata sul PC con un backup vero e sul telefono; 1118 test passati)*
 

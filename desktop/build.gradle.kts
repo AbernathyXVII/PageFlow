@@ -1,3 +1,4 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 /**
@@ -60,8 +61,47 @@ sourceSets.main {
     resources.srcDir(rootProject.file("app/src/main/assets"))
 }
 
+/**
+ * **Il numero di versione per Windows** (dal 09/11/2026): quello dell'ultima
+ * voce del README, ma Windows ne vuole tre ("0.153.14" diventa 0.153.1400,
+ * "0.153.11.1" diventa 0.153.1101): così cresce sempre, e l'installatore
+ * riconosce un aggiornamento.
+ */
+val installerVersion: String = run {
+    val readme = rootProject.file("README.md").readText(Charsets.UTF_8)
+    val latest = Regex("""^### \S+ v(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))? — """, RegexOption.MULTILINE).find(readme)
+        ?: error("Nel README non c'è una versione")
+    val (major, minor, change, fix) = latest.destructured
+    "$major.$minor.${(change.toIntOrNull() ?: 0) * 100 + (fix.toIntOrNull() ?: 0)}"
+}
+
 compose.desktop {
     application {
         mainClass = "com.gabriele.notionlocal.desktop.MainKt"
+        /**
+         * **L'installatore per Windows** (dal 09/11/2026): `gradle :desktop:packageExe`,
+         * in `desktop/build/compose/binaries/main/exe`. Si installa per l'utente
+         * (senza permessi da amministratore), con la voce nel menu Start e il
+         * collegamento sul desktop. I dati restano in `%APPDATA%\PageFlow`.
+         */
+        nativeDistributions {
+            targetFormats(TargetFormat.Exe)
+            // I due che trova `suggestRuntimeModules`, più quelli che si caricano per nome:
+            // date e mesi nelle otto lingue, le connessioni sicure (meteo, sport…), le pagine web non UTF-8.
+            modules("java.instrument", "jdk.unsupported", "jdk.localedata", "jdk.crypto.ec", "jdk.charsets")
+            packageName = "PageFlow"
+            packageVersion = installerVersion
+            description = "PageFlow"
+            vendor = "PageFlow"
+            windows {
+                iconFile.set(rootProject.file("branding/pageflow.ico"))
+                menuGroup = "PageFlow"
+                menu = true
+                shortcut = true
+                perUserInstall = true
+                // Sempre lo stesso: è così che Windows riconosce un aggiornamento della stessa app.
+                upgradeUuid = "8c0f3c8e-6923-461c-ad01-e3f35518e769"
+            }
+        }
     }
 }
