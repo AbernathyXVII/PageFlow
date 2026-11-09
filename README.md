@@ -1151,6 +1151,22 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### 🔧 v0.153.11.1 — 09/11/2026 · 16:41 — Il nome delle immagini scaricate sul PC, e "Salva una copia" controllato dai test
+*(Claude Code sul PC; installata sul telefono, il codice del telefono non cambia; 1113 test passati)*
+
+- **[Bug fix]** **[💻 PC]** **Il nome di un'immagine scaricata sul PC**
+  (trovato rivedendo la v0.153.11): veniva dal nome del blocco, che per le
+  immagini del Web Clipper è il testo descrittivo della pagina web. Uno che
+  finiva col punto ("Un grafico delle emissioni.") dava un file senza
+  estensione, uno con `:` o `?` non si salvava, e uno con `..\` poteva
+  finire fuori da Immagini/PageFlow. Adesso si tiene solo l'ultimo pezzo
+  del nome, senza i caratteri che Windows non vuole né i punti finali, e
+  con l'estensione vera dell'immagine
+- **[Progetto]** `SaveCopyTest`: "Salva una copia" di un blocco-file passa
+  il nome proposto al "Salva in…" di sistema e copia il file dove l'utente
+  ha scelto (il "Salva in…" del test è finto e risponde subito). Nel
+  `DesktopFilesTest` del PC, i nomi delle immagini scaricate
+
 ### ✏️ v0.153.11 — 04/11/2026 · 15:07 — Immagini, video, audio e file dei blocchi nel codice comune
 *(Claude Code sul PC; provata sul telefono; 1111 test passati)*
 

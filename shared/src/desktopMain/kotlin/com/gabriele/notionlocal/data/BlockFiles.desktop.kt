@@ -6,6 +6,8 @@ import kotlinx.coroutines.withContext
 import java.awt.Desktop
 import java.io.File
 
+private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
+
 actual object BlockFiles {
 
     /** Dai primi byte del file: JPEG, PNG, GIF, WebP, BMP, HEIC. */
@@ -59,7 +61,15 @@ actual object BlockFiles {
             runCatching {
                 val folder = File(File(System.getProperty("user.home"), "Pictures"), "PageFlow").apply { mkdirs() }
                 val extension = extensionFor(imageMime(store, fileName)) ?: "jpg"
-                val name = displayName?.takeIf { it.contains('.') } ?: "PageFlow-${System.currentTimeMillis()}.$extension"
+                // Il nome può venire da una pagina web (l'alt del Web Clipper): solo l'ultimo pezzo,
+                // senza i caratteri che Windows vieta né i punti finali, e con l'estensione vera.
+                val base = displayName?.substringAfterLast('/')?.substringAfterLast('\\')
+                    ?.replace(Regex("[<>:\"|?*\\x00-\\x1F]"), "_")?.trim()?.trimEnd('.')?.takeIf { it.isNotBlank() }
+                val name = when {
+                    base == null -> "PageFlow-${System.currentTimeMillis()}.$extension"
+                    base.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS -> base
+                    else -> "$base.$extension"
+                }
                 var target = File(folder, name)
                 var copy = 1
                 while (target.exists()) target = File(folder, name.substringBeforeLast('.') + " ($copy)." + name.substringAfterLast('.')).also { copy++ }

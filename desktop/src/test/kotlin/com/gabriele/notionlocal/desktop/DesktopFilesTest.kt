@@ -11,6 +11,8 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -52,6 +54,27 @@ class DesktopFilesTest {
         assertEquals("jpg", BlockFiles.extensionFor("image/jpeg"))
         assertEquals("mp4", BlockFiles.extensionFor("video/mp4"))
         assertNull(BlockFiles.extensionFor(null))
+    }
+
+    @Test
+    fun downloadedImageNamesAreSafe() {
+        // "Download" salva in <cartella dell'utente>/Pictures/PageFlow: qui la cartella dell'utente è quella del test.
+        val home = System.getProperty("user.home")
+        System.setProperty("user.home", dir.path)
+        try {
+            val image = saved("png")
+            fun download(name: String?) = runBlocking { BlockFiles.saveImageToGallery(context, store, image, name) }
+            assertTrue(download("Un grafico delle emissioni."))
+            assertTrue(download("..\\..\\fuori.png"))
+            assertTrue(download("Fonte: OWID?"))
+            assertTrue(download("foto.png"))
+            assertEquals(
+                setOf("Un grafico delle emissioni.png", "fuori.png", "Fonte_ OWID_.png", "foto.png"),
+                File(dir, "Pictures/PageFlow").list()!!.toSet()
+            )
+        } finally {
+            System.setProperty("user.home", home)
+        }
     }
 
     @Test
