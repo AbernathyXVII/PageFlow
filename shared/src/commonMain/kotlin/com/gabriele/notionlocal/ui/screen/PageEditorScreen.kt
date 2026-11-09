@@ -10,19 +10,10 @@ import com.gabriele.notionlocal.ui.i18n.HistoryStrings
 import com.gabriele.notionlocal.ui.i18n.EditorStrings
 import com.gabriele.notionlocal.ui.i18n.ParagraphStrings
 import androidx.compose.material.icons.filled.FormatLineSpacing
-import com.gabriele.notionlocal.data.entity.BlockAttrs
 import com.gabriele.notionlocal.data.entity.ParagraphLook
 import com.gabriele.notionlocal.data.entity.paragraph
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
-import com.gabriele.notionlocal.data.webclip.WebClipMode
-import com.gabriele.notionlocal.data.webclip.WebClipRequest
-import com.gabriele.notionlocal.data.webclip.webClipCaptions
-import com.gabriele.notionlocal.data.webclip.webClipHost
-import com.gabriele.notionlocal.data.webclip.headingSize
-import com.gabriele.notionlocal.data.webclip.toNewBlocks
-import com.gabriele.notionlocal.data.entity.NewBlock
-import com.gabriele.notionlocal.ui.i18n.WebClipStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -854,24 +845,6 @@ private fun FontSizeDialog(
     )
 }
 
-/**
- * Diagnostica temporanea per i difetti delle caselle da spuntare che
- * **non si riescono a riprodurre da computer**: il cursore che salta a
- * inizio riga e l'Invio che cancella quello che si è scritto.
- *
- * Dipendono dalla tastiera vera — `adb shell input text` scrive senza
- * passare dall'IME, quindi la composizione delle parole, la maiuscola
- * automatica e i tempi reali non entrano mai in gioco. L'unico modo di
- * vederli è che li riproduca una persona col dito e che qui resti
- * scritto cosa è arrivato davvero al campo.
- *
- * Si legge con `adb logcat -d -s NOTE:D`. **Da togliere** quando i due
- * difetti sono chiusi.
- */
-private fun noteLog(message: String) {
-    android.util.Log.d("NOTE", message)
-}
-
 /** Il testo con l'a-capo nascosto reso visibile, per il registro. */
 private fun String.forLog(): String = replace("\n", "\\n")
 
@@ -1497,7 +1470,6 @@ private fun PageEditorContent(
     var paragraphLines by remember { mutableStateOf<List<BlockEntity>?>(null) }
     // "Web Clipper" dai tre puntini (dal 20/10/2026): il pannello, poi la foto in corso.
     var webClipperOpen by remember { mutableStateOf(false) }
-    var webClipRequest by remember { mutableStateOf<WebClipRequest?>(null) }
     // "Move to": dove la pagina non può andare, letto quando si tocca la
     // voce; finché c'è, l'albero per scegliere è aperto.
     var moveExclusions by remember { mutableStateOf<PageRepository.MoveExclusions?>(null) }
@@ -3507,68 +3479,7 @@ private fun PageEditorContent(
                 }
             )
         }
-        if (webClipperOpen) {
-            WebClipperSheet(
-                onDismiss = { webClipperOpen = false },
-                onClip = { request ->
-                    webClipperOpen = false
-                    if (request.mode == WebClipMode.BOOKMARK) {
-                        // Il segnalibro prende da solo titolo, descrizione e immagine del sito.
-                        viewModel.insertWebClip(
-                            BlockType.BOOKMARK,
-                            BlockAttrs(url = request.url),
-                            webClipCaptions(title = null, note = request.note, url = null, clippedFrom = WebClipStrings.clippedFrom)
-                        )
-                    } else {
-                        webClipRequest = request
-                    }
-                }
-            )
-        }
-        webClipRequest?.let { request ->
-            val placeClip: (WebClipResult) -> Unit = { result ->
-                webClipRequest = null
-                val title = request.title.ifBlank { result.pageTitle.orEmpty() }
-                viewModel.insertWebClip(
-                    BlockType.IMAGE,
-                    BlockAttrs(
-                        file = result.fileName,
-                        name = title.ifBlank { webClipHost(request.url) },
-                        url = request.url,
-                        mime = "image/jpeg",
-                        size = result.image.file.length()
-                    ),
-                    webClipCaptions(title, request.note, request.url, WebClipStrings.clippedFrom)
-                )
-                showMessage(context, WebClipStrings.clipped)
-            }
-            val failed = {
-                webClipRequest = null
-                showClipFailed(context)
-            }
-            // "Text and Images": in cima il titolo grande, la nota e "Clipped from", come
-            // OneNote; poi l'articolo, riga per riga, con le sue immagini.
-            val placeText: (WebClipTextResult) -> Unit = { result ->
-                webClipRequest = null
-                val title = request.title.ifBlank { result.content.title }
-                val header = webClipCaptions(title, request.note, request.url, WebClipStrings.clippedFrom, titleSize = headingSize(1))
-                    .map { NewBlock(spans = it) }
-                viewModel.insertWebClipBlocks(header + result.content.toNewBlocks(result.images))
-                showMessage(context, WebClipStrings.clipped)
-            }
-            if (request.mode == WebClipMode.REGION) {
-                WebClipRegionDialog(request, imageStore, onDone = placeClip, onFailed = failed, onCancel = { webClipRequest = null })
-            } else {
-                WebClipCaptureDialog(
-                    request,
-                    imageStore,
-                    onDone = placeClip,
-                    onFailed = failed,
-                    onCancel = { webClipRequest = null },
-                    onContent = placeText
-                )
-            }
-        }
+        WebClipperFlow(open = webClipperOpen, onClose = { webClipperOpen = false }, viewModel = viewModel, imageStore = imageStore)
         if (showProofing) {
             PageProofingSheet(
                 page = current,

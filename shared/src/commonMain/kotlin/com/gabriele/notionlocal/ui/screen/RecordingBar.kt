@@ -41,6 +41,7 @@ import com.gabriele.notionlocal.ui.theme.NotionWhite
 import kotlinx.coroutines.delay
 import kotlin.math.sqrt
 import androidx.compose.ui.graphics.Color
+import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 
 /** Il rosso della registrazione: il pallino, la barra del volume, "Stop". */
 internal val RecordRed = Color(0xFFE5484D)
@@ -130,3 +131,11 @@ internal const val LEVEL_EVERY_MS = 120L
  */
 @Composable
 expect fun rememberRecordStarter(block: BlockEntity): () -> Unit
+
+/**
+ * **"Scan document"**: lo scanner dei documenti, e le pagine scansionate al
+ * posto della riga col suo id (o sotto). Sul telefono quello di Google; sul
+ * PC, per ora, non c'è.
+ */
+@Composable
+expect fun rememberDocumentScanner(viewModel: PageEditorViewModel): (String) -> Unit

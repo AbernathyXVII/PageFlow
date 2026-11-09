@@ -58,16 +58,13 @@ const val PAGE_EXPORT_TAG = "page_export"
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PageExportSheet(
+actual fun PageExportSheet(
     title: String,
-    /** Se la pagina ha delle sottopagine: allora c'è "Include subpages". */
     hasSubpages: Boolean,
-    /** Se la pagina ha dei disegni a mano: allora, per il PDF, c'è "Include drawings" (dal 03/11/2026). */
-    hasDrawings: Boolean = false,
+    hasDrawings: Boolean,
     export: suspend (ExportOptions) -> ExportedFile?,
     onDismiss: () -> Unit,
-    /** Manda il file a un'altra app; di suo con la scelta di sistema (`PageExporter.share`). */
-    share: ((ExportedFile) -> Unit)? = null
+    share: ((ExportedFile) -> Unit)?
 ) {
     val context = LocalPlatformContext.current
     val scope = rememberCoroutineScope()

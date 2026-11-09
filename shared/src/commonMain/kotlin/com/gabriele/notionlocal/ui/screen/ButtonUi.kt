@@ -61,7 +61,6 @@ import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
 import com.gabriele.notionlocal.data.entity.NewBlock
 import com.gabriele.notionlocal.data.entity.attrs
-import com.gabriele.notionlocal.data.notify.Notifier
 import com.gabriele.notionlocal.data.repository.PageRepository
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.ui.i18n.ButtonStrings

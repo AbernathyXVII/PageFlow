@@ -63,7 +63,7 @@ class DatabaseReader(private val factory: ViewModelFactory, private val pages: P
         return withContext(Dispatchers.Main) {
             val store = ViewModelStore()
             try {
-                val viewModel = ViewModelProvider(store, factory)[DatabaseViewModel::class.java]
+                val viewModel = ViewModelProvider.create(store, factory)[DatabaseViewModel::class]
                 viewModel.load(viewId, light = true)
                 withTimeoutOrNull(LOAD_TIMEOUT_MS) { viewModel.page.first { it != null } }
                 // Il calcolo della tabella arriva a pezzi (prima le righe, poi la

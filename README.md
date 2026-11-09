@@ -1151,6 +1151,27 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.12 — 09/11/2026 · 17:05 — L'editor delle pagine e i database nel codice comune: la prima pagina disegnata sul PC
+*(Claude Code sul PC; provata sul telefono; 1114 test passati)*
+
+- **[Progetto]** **L'editor delle pagine e i database sono nel codice
+  comune** (`PageEditorScreen`, `DatabaseViewScreen`, i bottoni e il
+  calendario del giorno): sono gli stessi file per telefono e PC. Quello
+  che resta solo del telefono passa da funzioni di ogni sistema: il Web
+  Clipper (`WebClipperFlow`, tutto il giro dalla scelta del sito al
+  risultato nella pagina), lo scanner dei documenti, la finestra
+  "Export" e il registro di prova dell'editor. Sul PC, per ora, Web
+  Clipper ed esportazione si chiudono subito e lo scanner non fa niente
+- **[Progetto]** Adesso sono 276 file comuni (90.800 righe) e 60 solo del
+  telefono (10.900): notifiche, sveglie, backup, impostazioni, Web
+  Clipper, lettori, esportazione e la navigazione fra le schermate
+- **[Progetto]** **Più memoria per compilare**: l'editor nel codice comune
+  non si compilava per il telefono con 2 GB ("Java heap space"); adesso
+  Gradle e il compilatore di Kotlin ne hanno 4 (`gradle.properties`)
+- **[Progetto]** `DesktopEditorTest`: sul PC l'editor disegna una pagina
+  vera — icona, titolo, righe — e carica le sue righe dal database. È la
+  prima pagina di PageFlow disegnata su Windows
+
 ### 🔧 v0.153.11.1 — 09/11/2026 · 16:41 — Il nome delle immagini scaricate sul PC, e "Salva una copia" controllato dai test
 *(Claude Code sul PC; installata sul telefono, il codice del telefono non cambia; 1113 test passati)*
 
