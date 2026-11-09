@@ -4,14 +4,16 @@ import com.gabriele.notionlocal.platform.PlatformContext
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 
 /**
- * **Una pagina o un database in un file** (Markdown o PDF, vedi [ExportOptions]):
- * sul telefono lo prepara `PageExporter`, come prima; sul PC l'esportazione
- * arriverà più avanti, e intanto non c'è (null). Null anche se non riesce.
+ * **Una pagina o un database in un file** (Markdown o PDF, vedi [ExportOptions]),
+ * preparato da [PageExporter]. Null se non riesce, o se questo sistema non sa
+ * fare il formato chiesto (il PDF sul PC, per ora).
  */
-expect suspend fun exportToFile(
+suspend fun exportToFile(
     context: PlatformContext,
     factory: ViewModelFactory,
     pageId: String,
     options: ExportOptions,
     untitled: String
-): ExportedFile?
+): ExportedFile? = runCatching {
+    PageExporter(context, factory.pageRepository, DatabaseReader(factory, factory.pageRepository)).export(pageId, options, untitled)
+}.getOrNull()

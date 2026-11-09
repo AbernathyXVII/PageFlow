@@ -25,6 +25,7 @@ import com.gabriele.notionlocal.ui.navigation.AppNavHost
 import com.gabriele.notionlocal.ui.navigation.Routes
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
 import com.gabriele.notionlocal.ui.screen.BackupScreen
+import com.gabriele.notionlocal.ui.screen.PageExportSheet
 import com.gabriele.notionlocal.ui.screen.SettingsScreen
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
@@ -119,6 +120,14 @@ class DesktopEditorTest {
             draw("backup.png") { BackupScreen(onBack = {}, onRestart = {}) }
         } finally {
             Backups.folderOverride = null
+        }
+    }
+
+    /** La finestra "Export" sul PC: solo il Markdown, e "Save" come pulsante pieno (foto in `export.png`). */
+    @Test
+    fun theExportSheetDrawsOnThePc() {
+        draw("export.png") {
+            PageExportSheet(title = "Lista della spesa", hasSubpages = true, export = { null }, onDismiss = {})
         }
     }
 

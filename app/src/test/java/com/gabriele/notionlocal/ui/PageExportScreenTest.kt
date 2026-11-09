@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.gabriele.notionlocal.data.export.ExportActions
 import com.gabriele.notionlocal.data.export.ExportFormat
 import com.gabriele.notionlocal.data.export.ExportOptions
 import com.gabriele.notionlocal.data.export.ExportedFile
@@ -115,7 +116,7 @@ class PageExportScreenTest {
     @Test
     fun theFileGoesToTheOtherAppWithPermissionToReadIt() {
         val exported = ExportedFile(File("Viaggio.zip"), PageExporter.ZIP_MIME)
-        val chooser = PageExporter.shareIntent(Uri.parse("content://com.gabriele.notionlocal.files/exports/Viaggio.zip"), exported, "Viaggio")
+        val chooser = ExportActions.shareIntent(Uri.parse("content://com.gabriele.notionlocal.files/exports/Viaggio.zip"), exported, "Viaggio")
         assertEquals(Intent.ACTION_CHOOSER, chooser.action)
         @Suppress("DEPRECATION")
         val send = chooser.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!

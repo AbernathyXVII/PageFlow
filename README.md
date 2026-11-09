@@ -1151,6 +1151,25 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.21 — 09/11/2026 · 22:45 — "Export" anche sul PC, in Markdown
+*(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2000) e sul telefono; 1129 test passati)*
+
+- **[Progetto]** **"Export" sul PC**, dai tre puntini di una pagina o di un
+  database: lo stesso Markdown del telefono (una pagina da sola è un .md;
+  con immagini, sottopagine o database uno .zip con la cartella accanto).
+  "Save" apre la finestra "Salva con nome" di Windows col nome già scritto.
+  Sul PC "Share" non c'è (non c'è la scelta delle app a cui mandarlo) e il
+  PDF non ancora: il telefono lo disegna con gli strumenti di Android, e
+  sul PC va rifatto. Prima, sul PC, la finestra si chiudeva subito.
+  Provato dall'utente sul PC
+- **[Progetto]** `PageExporter` (preparare i file) e la finestra "Export"
+  nel codice comune; per sistema `pdfWriter` (sul PC null per ora),
+  "Save", "Share" e "Print" (`ExportActions` sul telefono, coi gesti di
+  sempre). `exportToFile` è una funzione comune, non più una per sistema
+- **[Progetto]** `DesktopExportTest`: sul PC una pagina con un'immagine e
+  una sottopagina diventa lo stesso .zip del telefono, e il PDF non si fa;
+  la finestra "Export" disegnata sul PC (`export.png`)
+
 ### ✏️ v0.153.20 — 09/11/2026 · 22:25 — Il Backup completo sul PC, e un backup del PC si apre anche sul telefono
 *(Claude Code sul PC; provata sul PC dall'utente (backup e caricamento) e sul telefono (un backup del PC ripristinato); il ripristino sul PC non ancora; 1127 test passati)*
 

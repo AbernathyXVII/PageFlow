@@ -1,29 +1,18 @@
 package com.gabriele.notionlocal.data.export
 
-import android.app.Activity
-import android.content.ClipData
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.os.Bundle
-import android.os.CancellationSignal
-import android.os.ParcelFileDescriptor
-import android.print.PageRange
-import android.print.PrintAttributes
-import android.print.PrintDocumentAdapter
-import android.print.PrintDocumentInfo
-import android.print.PrintManager
-import androidx.activity.result.contract.ActivityResultContract
-import androidx.core.content.FileProvider
 import com.gabriele.notionlocal.data.PageImageStore
+import com.gabriele.notionlocal.data.applicationContextOf
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
 import com.gabriele.notionlocal.data.entity.attrs
 import com.gabriele.notionlocal.data.repository.PageRepository
+import com.gabriele.notionlocal.platform.PlatformContext
+import com.gabriele.notionlocal.platform.cacheDirOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
+import java.io.OutputStream
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -40,15 +29,18 @@ import java.util.zip.ZipOutputStream
  * In PDF le pagine delle righe dei database che hanno qualcosa di scritto
  * (dal 03/11/2026) diventano PDF a sé: allora il file è uno .zip con
  * "Pagina.pdf" e la cartella "Pagina/Database/Riga.pdf".
+ *
+ * Nel codice comune dal 09/11/2026: sul PC lo stesso, tranne il PDF (vedi
+ * [pdfWriter]); mandare, salvare e stampare sono di ogni sistema.
  */
 class PageExporter(
-    context: Context,
+    context: PlatformContext,
     private val repository: PageRepository,
     /** Chi legge i database come li mostra la loro vista; null = di un database resta il nome. */
     private val databases: DatabaseSource? = null
 ) {
 
-    private val appContext = context.applicationContext
+    private val appContext = applicationContextOf(context)
     private val store = PageImageStore(appContext)
 
     suspend fun export(pageId: String, options: ExportOptions, untitled: String): ExportedFile? =
@@ -61,14 +53,14 @@ class PageExporter(
                 base
             }
             val root = enrich(shaped, options, hashSetOf(pageId), 0, untitled)
-            val directory = File(appContext.cacheDir, EXPORT_DIRECTORY).apply {
+            val directory = File(cacheDirOf(appContext), EXPORT_DIRECTORY).apply {
                 deleteRecursively()
                 mkdirs()
             }
             val name = exportFileName(root.page.title, untitled)
             when (options.format) {
                 ExportFormat.PDF -> {
-                    val pdf = PdfExport(::fileOf, untitled, if (options.drawings) PdfLayout.phone(appContext) else PdfLayout.DOCUMENT)
+                    val pdf = pdfWriter(appContext, ::fileOf, untitled, options.drawings) ?: return@withContext null
                     val pages = flatten(root)
                     if (options.singleFile || pages.none { page -> page.databases.values.any { db -> db.rows.any { it.page != null } } }) {
                         val file = File(directory, "$name.pdf")
@@ -157,7 +149,7 @@ class PageExporter(
      * in "[folder][name]/Database/Riga.pdf", e così via per i database di
      * quelle.
      */
-    private fun writePdfs(zip: ZipOutputStream, pages: List<ExportPage>, folder: String, name: String, pdf: PdfExport, untitled: String) {
+    private fun writePdfs(zip: ZipOutputStream, pages: List<ExportPage>, folder: String, name: String, pdf: PdfWriter, untitled: String) {
         zip.putNextEntry(ZipEntry("$folder$name.pdf"))
         pdf.write(pages, zip)
         zip.closeEntry()
@@ -264,94 +256,13 @@ class PageExporter(
             }
             return candidate
         }
-
-        private fun uriOf(context: Context, exported: ExportedFile): Uri =
-            FileProvider.getUriForFile(context, "${context.packageName}.files", exported.file)
-
-        /** **Manda** il file con un'altra app (WhatsApp, la posta, Drive…), con la scelta di sistema. */
-        fun share(context: Context, exported: ExportedFile, title: String) {
-            val chooser = shareIntent(uriOf(context, exported), exported, title)
-            if (context !is Activity) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(chooser)
-        }
-
-        /** La scelta di sistema delle app a cui mandare il file [uri]. */
-        fun shareIntent(uri: Uri, exported: ExportedFile, title: String): Intent {
-            val send = Intent(Intent.ACTION_SEND)
-                .setType(exported.mime)
-                .putExtra(Intent.EXTRA_STREAM, uri)
-                .putExtra(Intent.EXTRA_SUBJECT, title)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            send.clipData = ClipData.newRawUri(exported.name, uri)
-            return Intent.createChooser(send, null)
-        }
-
-        /** **Salva** il file dove l'utente ha scelto (vedi [SaveExport]). */
-        suspend fun copyTo(context: Context, exported: ExportedFile, uri: Uri): Boolean = withContext(Dispatchers.IO) {
-            runCatching {
-                context.contentResolver.openOutputStream(uri, "wt")!!.use { out ->
-                    FileInputStream(exported.file).use { it.copyTo(out) }
-                }
-            }.isSuccess
-        }
-
-        /** **Stampa** il PDF, con la finestra di stampa di sistema (che sa anche salvarlo come PDF). */
-        fun print(context: Context, exported: ExportedFile, title: String) {
-            val manager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
-            val attributes = PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).build()
-            manager.print(title, FilePrintAdapter(exported.file, exported.name), attributes)
-        }
     }
 }
 
-/**
- * La finestra di sistema "Salva in…": il nome e il tipo del file sono quelli
- * del file esportato. Restituisce dove salvarlo, o null se l'utente ha
- * annullato.
- */
-class SaveExport : ActivityResultContract<ExportedFile, Uri?>() {
-    override fun createIntent(context: Context, input: ExportedFile): Intent =
-        Intent(Intent.ACTION_CREATE_DOCUMENT)
-            .addCategory(Intent.CATEGORY_OPENABLE)
-            .setType(input.mime)
-            .putExtra(Intent.EXTRA_TITLE, input.name)
-
-    override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
-        intent?.data?.takeIf { resultCode == Activity.RESULT_OK }
+/** Chi disegna il PDF di una o più pagine (sul telefono `PdfExport`). */
+fun interface PdfWriter {
+    fun write(pages: List<ExportPage>, out: OutputStream)
 }
 
-/** Passa alla stampa un PDF già pronto: i fogli sono già impaginati in A4. */
-private class FilePrintAdapter(private val file: File, private val name: String) : PrintDocumentAdapter() {
-    override fun onLayout(
-        oldAttributes: PrintAttributes?,
-        newAttributes: PrintAttributes,
-        cancellationSignal: CancellationSignal,
-        callback: LayoutResultCallback,
-        extras: Bundle?
-    ) {
-        if (cancellationSignal.isCanceled) {
-            callback.onLayoutCancelled()
-            return
-        }
-        val info = PrintDocumentInfo.Builder(name)
-            .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-            .build()
-        callback.onLayoutFinished(info, oldAttributes == null)
-    }
-
-    override fun onWrite(
-        pages: Array<out PageRange>,
-        destination: ParcelFileDescriptor,
-        cancellationSignal: CancellationSignal,
-        callback: WriteResultCallback
-    ) {
-        try {
-            FileInputStream(file).use { input ->
-                FileOutputStream(destination.fileDescriptor).use { input.copyTo(it) }
-            }
-            if (cancellationSignal.isCanceled) callback.onWriteCancelled() else callback.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
-        } catch (e: Exception) {
-            callback.onWriteFailed(e.message)
-        }
-    }
-}
+/** Il PDF di questo sistema, coi disegni a mano se [drawings]; null dove non c'è ancora (il PC). */
+expect fun pdfWriter(context: PlatformContext, fileOf: (String) -> File?, untitled: String, drawings: Boolean): PdfWriter?
