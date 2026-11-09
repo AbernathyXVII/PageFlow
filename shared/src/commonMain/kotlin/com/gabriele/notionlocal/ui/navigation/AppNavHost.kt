@@ -38,6 +38,7 @@ import com.gabriele.notionlocal.data.share.QuickNotes
 import com.gabriele.notionlocal.ui.i18n.ShareStrings
 import com.gabriele.notionlocal.data.settings.StartupMode
 import com.gabriele.notionlocal.data.settings.TrashPolicy
+import com.gabriele.notionlocal.ui.screen.BackupScreen
 import com.gabriele.notionlocal.ui.screen.DatabaseViewScreen
 import com.gabriele.notionlocal.ui.screen.LockGate
 import com.gabriele.notionlocal.ui.screen.NotebookSectionScreen
@@ -51,6 +52,7 @@ import androidx.compose.runtime.produceState
 import com.gabriele.notionlocal.ui.screen.FavoritesScreen
 import com.gabriele.notionlocal.ui.screen.NoInsets
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
+import com.gabriele.notionlocal.ui.screen.SettingsScreen
 import com.gabriele.notionlocal.ui.screen.SearchScreen
 import com.gabriele.notionlocal.ui.screen.SidebarActions
 import com.gabriele.notionlocal.ui.screen.SidebarContent
@@ -583,7 +585,7 @@ private fun AppRoutes(
         }
 
         composable(Routes.SETTINGS) {
-            SettingsRoute(
+            SettingsScreen(
                 factory = factory,
                 onBack = { navController.popBackStack() },
                 onOpenPatchNotes = { navController.navigate(Routes.PATCH_NOTES) { launchSingleTop = true } },
@@ -592,7 +594,7 @@ private fun AppRoutes(
         }
 
         composable(Routes.BACKUP) {
-            BackupRoute(onBack = { navController.popBackStack() })
+            BackupScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.PATCH_NOTES) {

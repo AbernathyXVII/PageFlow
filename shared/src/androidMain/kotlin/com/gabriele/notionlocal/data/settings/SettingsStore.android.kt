@@ -10,9 +10,14 @@ actual fun openSettingsStore(context: PlatformContext, name: String): SettingsSt
 
 private class SharedPreferencesStore(private val prefs: SharedPreferences) : SettingsStore {
     override fun getString(key: String, defValue: String?): String? = prefs.getString(key, defValue)
-    override fun getBoolean(key: String, defValue: Boolean): Boolean = prefs.getBoolean(key, defValue)
-    override fun getInt(key: String, defValue: Int): Int = prefs.getInt(key, defValue)
-    override fun getLong(key: String, defValue: Long): Long = prefs.getLong(key, defValue)
+
+    // Un backup fatto sul PC ha le impostazioni tutte come testo ("true", "3"): si leggono lo stesso.
+    override fun getBoolean(key: String, defValue: Boolean): Boolean =
+        try { prefs.getBoolean(key, defValue) } catch (e: ClassCastException) { prefs.getString(key, null)?.toBooleanStrictOrNull() ?: defValue }
+    override fun getInt(key: String, defValue: Int): Int =
+        try { prefs.getInt(key, defValue) } catch (e: ClassCastException) { prefs.getString(key, null)?.toIntOrNull() ?: defValue }
+    override fun getLong(key: String, defValue: Long): Long =
+        try { prefs.getLong(key, defValue) } catch (e: ClassCastException) { prefs.getString(key, null)?.toLongOrNull() ?: defValue }
     override fun edit(): SettingsStore.Editor = Editor(prefs.edit())
 
     private class Editor(private val editor: SharedPreferences.Editor) : SettingsStore.Editor {

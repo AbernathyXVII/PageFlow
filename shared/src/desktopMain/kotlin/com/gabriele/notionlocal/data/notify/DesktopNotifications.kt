@@ -18,9 +18,8 @@ import javax.imageio.ImageIO
 object DesktopNotifications {
     private var tray: TrayIcon? = null
 
-    /** Cosa aprire cliccando l'ultima notifica. */
-    private var lastOpen: OpenRequest? = null
-    private var lastOpensWidgets = false
+    /** Cosa fare cliccando l'ultima notifica. */
+    private var lastClick: () -> Unit = {}
 
     /** La finestra davanti (la mette `Main.kt`). */
     var bringToFront: () -> Unit = {}
@@ -28,12 +27,11 @@ object DesktopNotifications {
     /** Le notifiche messe a tacere dalle impostazioni, come sul telefono (`Notifier.muted`). */
     val muted: Boolean get() = AppSettings.notificationsMuted || AppSettings.mutedUntil != null
 
-    /** Mostra una notifica; falso se il sistema non ha l'area di notifica. */
+    /** Mostra una notifica; cliccandola [onClick] (aprire la pagina…). Falso se il sistema non ha l'area di notifica. */
     @Synchronized
-    fun show(title: String, text: String, open: OpenRequest? = null, opensWidgets: Boolean = false): Boolean = runCatching {
+    fun show(title: String, text: String, onClick: () -> Unit = {}): Boolean = runCatching {
         val icon = tray ?: createTray() ?: return false
-        lastOpen = open
-        lastOpensWidgets = opensWidgets
+        lastClick = onClick
         icon.displayMessage(title, text, TrayIcon.MessageType.NONE)
         true
     }.getOrDefault(false)
@@ -45,11 +43,9 @@ object DesktopNotifications {
             isImageAutoSize = true
             // Il clic sulla notifica (o sull'icona): quello che riguarda, e la finestra davanti.
             addActionListener {
-                lastOpen?.let { NotificationTarget.pending.value = it }
-                if (lastOpensWidgets) NotificationTarget.openWidgets.value = true
+                lastClick()
                 // Una volta sola: un altro clic sull'icona porta solo la finestra davanti.
-                lastOpen = null
-                lastOpensWidgets = false
+                lastClick = {}
                 bringToFront()
             }
             SystemTray.getSystemTray().add(this)

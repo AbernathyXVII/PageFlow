@@ -1151,6 +1151,35 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.20 — 09/11/2026 · 22:25 — Il Backup completo sul PC, e un backup del PC si apre anche sul telefono
+*(Claude Code sul PC; provata sul PC dall'utente (backup e caricamento) e sul telefono (un backup del PC ripristinato); il ripristino sul PC non ancora; 1127 test passati)*
+
+- **[Progetto]** **La pagina Backup del telefono anche sul PC**, la stessa
+  (passata nel codice comune): "Fai un backup adesso", "Carica su Proton
+  Drive" (sul PC una finestra "Salva come", da puntare la prima volta sulla
+  cartella di Proton Drive o su una chiavetta: la volta dopo si apre lì),
+  il backup di ogni giorno, il promemoria per caricarne uno (una notifica
+  di Windows che apre la pagina Backup), l'elenco dei backup col menu
+  carica / ripristina / elimina, e "Ripristina da un file…". Sul PC i
+  backup stanno in Documenti/PageFlow backup e se ne tengono gli ultimi 7;
+  quello di ogni giorno si fa un minuto dopo l'apertura, e poi ogni ora si
+  guarda se è già stato fatto, finché PageFlow è aperta
+- **[Progetto]** **Il ripristino sul PC come sul telefono**: prima un backup
+  di com'era (nell'elenco, "Prima di un ripristino"), poi PageFlow si chiude
+  e si riapre da sola col backup al suo posto. Prima si chiudeva e
+  andava riaperta a mano. Anche dopo "Delete all content" ora si riapre da sola
+- **[Bug fix]** **[📱 Mobile]** **Un backup fatto sul PC si apre sul telefono**: il
+  PC tiene le impostazioni tutte come testo, e il telefono, trovando
+  "true" scritto come testo dove si aspettava un sì/no, si chiudeva a ogni
+  avvio. Ora le legge lo stesso. Provato dall'utente: sul telefono c'è
+  tutto, anche un evento creato sul PC
+- **[Progetto]** La navigazione apre direttamente Impostazioni e Backup, le
+  stesse sui due sistemi (via `PlatformRoutes`); i backup del PC stanno in
+  `Backups` (al posto di `DesktopBackups`). Test: `DesktopBackupTest` (un
+  backup del PC torna com'era: pagine, immagini, impostazioni), la pagina
+  Backup disegnata sul PC (`backup.png`), `BackupTest` (un backup con le
+  impostazioni come testo si legge sul telefono)
+
 ### ✏️ v0.153.19 — 09/11/2026 · 21:58 — Le notifiche di Windows: promemoria, timer, pomodoro e pulsanti anche sul PC
 *(Claude Code sul PC; provata sul PC dall'utente e sul telefono; 1124 test passati)*
 

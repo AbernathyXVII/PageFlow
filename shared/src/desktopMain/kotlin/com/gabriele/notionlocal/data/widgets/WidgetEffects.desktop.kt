@@ -1,6 +1,7 @@
 package com.gabriele.notionlocal.data.widgets
 
 import com.gabriele.notionlocal.data.notify.DesktopNotifications
+import com.gabriele.notionlocal.data.notify.NotificationTarget
 import com.gabriele.notionlocal.platform.PlatformContext
 import com.gabriele.notionlocal.ui.i18n.NotifyStrings
 import com.gabriele.notionlocal.ui.i18n.WidgetStrings
@@ -24,7 +25,7 @@ internal actual fun postWidgetEvents(context: PlatformContext, events: List<Widg
                 }
             }
         }
-        DesktopNotifications.show(title, body, opensWidgets = true)
+        DesktopNotifications.show(title, body) { NotificationTarget.openWidgets.value = true }
     }
 }
 

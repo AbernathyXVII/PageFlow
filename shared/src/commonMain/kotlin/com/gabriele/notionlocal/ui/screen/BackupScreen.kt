@@ -1,14 +1,5 @@
 package com.gabriele.notionlocal.ui.screen
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.provider.DocumentsContract
-import android.text.format.Formatter
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContract
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,7 +52,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.ContextCompat
 import com.gabriele.notionlocal.data.backup.BackupException
 import com.gabriele.notionlocal.data.backup.BackupFile
 import com.gabriele.notionlocal.data.backup.BackupReason
@@ -84,6 +74,7 @@ import java.time.Instant
 import java.time.LocalDate
 import com.gabriele.notionlocal.platform.showMessage
 import com.gabriele.notionlocal.platform.LocalPlatformContext
+import com.gabriele.notionlocal.platform.PlatformContext
 
 const val BACKUP_SCREEN_TAG = "backupScreen"
 
@@ -96,42 +87,34 @@ private class RestoreChoice(val label: String, val open: () -> InputStream)
  * Drive", "Fai un backup adesso", il backup di ogni giorno e il promemoria,
  * i backup sul telefono, e il ripristino. [onRestart]: riapre l'app dopo un
  * ripristino preparato (i test lo sostituiscono).
+ *
+ * Dal 09/11/2026 è la stessa sul PC: cambiano dove stanno i backup, le
+ * finestre per scegliere i file e qualche scritta (`BackupPlatformParts`).
  */
 @Composable
-fun BackupScreen(onBack: () -> Unit, onRestart: (Context) -> Unit = ::restartApp) {
+fun BackupScreen(onBack: () -> Unit, onRestart: (PlatformContext) -> Unit = ::restartAfterRestore) {
     val context = LocalPlatformContext.current
     val scope = rememberCoroutineScope()
     val changes = Backups.changes
     var backups by remember { mutableStateOf<List<BackupFile>?>(null) }
     LaunchedEffect(changes) { backups = withContext(Dispatchers.IO) { Backups.list() } }
     var busy by remember { mutableStateOf<String?>(null) }
-    var toUpload by remember { mutableStateOf<BackupFile?>(null) }
     var restoreChoice by remember { mutableStateOf<RestoreChoice?>(null) }
     var deleting by remember { mutableStateOf<BackupFile?>(null) }
     var choosingReminder by remember { mutableStateOf(false) }
 
     // Sempre dal filo principale: dopo un lavoro in sottofondo si torna anche altrove.
-    fun toast(text: String) = ContextCompat.getMainExecutor(context).execute {
-        showMessage(context, text, long = true)
+    fun toast(text: String) {
+        scope.launch(Dispatchers.Main) { showMessage(context, text, long = true) }
     }
 
-    val uploadLauncher = rememberLauncherForActivityResult(CreateZipDocument()) { uri ->
-        val file = toUpload
-        toUpload = null
-        if (uri != null && file != null) {
-            scope.launch {
-                busy = BackupStrings.uploading
-                val ok = Backups.upload(file, uri)
-                busy = null
-                toast(if (ok) BackupStrings.uploaded else BackupStrings.uploadFailed)
-            }
+    val upload = rememberBackupUpload(
+        onStart = { busy = BackupStrings.uploading },
+        onDone = { ok ->
+            busy = null
+            toast(if (ok) BackupStrings.uploaded else BackupStrings.uploadFailed)
         }
-    }
-
-    fun upload(file: BackupFile) {
-        toUpload = file
-        uploadLauncher.launch(file.name to Backups.lastUploadUri?.let(Uri::parse))
-    }
+    )
 
     fun backupNow(thenUpload: Boolean) {
         scope.launch {
@@ -146,13 +129,7 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (Context) -> Unit = ::restartApp
         }
     }
 
-    val pickLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            restoreChoice = RestoreChoice(fileLabel(context, uri)) {
-                context.contentResolver.openInputStream(uri) ?: throw BackupException(BackupException.Problem.NOT_A_BACKUP, "Non si apre")
-            }
-        }
-    }
+    val pickFile = rememberBackupPicker { label, open -> restoreChoice = RestoreChoice(label, open) }
 
     Scaffold(
         topBar = { WorkspaceTopBar(title = Strings.backup, onBack = onBack) },
@@ -196,14 +173,14 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (Context) -> Unit = ::restartApp
                     Text(BackupStrings.backupNow)
                 }
                 Spacer(modifier = Modifier.size(10.dp))
-                Text(BackupStrings.protonNote, style = MaterialTheme.typography.bodySmall, color = NotionGray400)
+                Text(uploadNote, style = MaterialTheme.typography.bodySmall, color = NotionGray400)
             }
 
             SectionHeader(BackupStrings.automatic)
             SettingsItem(
                 BackupStrings.dailyBackup,
                 icon = Icons.Filled.Schedule,
-                value = BackupStrings.dailyBackupNote,
+                value = dailyBackupNote,
                 onClick = { Backups.setAuto(!Backups.autoBackup) },
                 trailing = { Switch(checked = Backups.autoBackup, onCheckedChange = { Backups.setAuto(it) }) }
             )
@@ -215,9 +192,9 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (Context) -> Unit = ::restartApp
             )
             HorizontalDivider(color = NotionGray900, modifier = Modifier.padding(vertical = 8.dp))
 
-            SectionHeader(BackupStrings.onThisPhone)
+            SectionHeader(backupPlaceTitle)
             Text(
-                BackupStrings.whereNote,
+                backupPlaceNote,
                 style = MaterialTheme.typography.bodySmall,
                 color = NotionGray400,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 6.dp)
@@ -227,7 +204,7 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (Context) -> Unit = ::restartApp
                     CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
                 }
                 backups!!.isEmpty() -> Text(
-                    BackupStrings.noBackupsOnPhone,
+                    noBackupsHere,
                     color = NotionGray400,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -238,7 +215,7 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (Context) -> Unit = ::restartApp
                         enabled = busy == null,
                         onUpload = { upload(file) },
                         // Nella domanda la data vera: "del 28/10/2026 09:51", non "del Oggi alle 09:51".
-                        onRestore = { restoreChoice = RestoreChoice(Formats.dateTime(file.createdAt)) { Backups.storage.open(file) } },
+                        onRestore = { restoreChoice = RestoreChoice(Formats.dateTime(file.createdAt)) { Backups.open(file) } },
                         onDelete = { deleting = file }
                     )
                 }
@@ -251,7 +228,7 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (Context) -> Unit = ::restartApp
                 icon = Icons.Filled.Restore,
                 value = BackupStrings.restoreFromFileNote,
                 enabled = busy == null,
-                onClick = { pickLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) }
+                onClick = pickFile
             )
         }
     }
@@ -271,7 +248,13 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (Context) -> Unit = ::restartApp
                             Backups.prepareRestore(choice.open)
                             onRestart(context)
                         } catch (e: BackupException) {
-                            toast(if (e.problem == BackupException.Problem.TOO_NEW) BackupStrings.tooNew else BackupStrings.notABackup)
+                            toast(
+                                when (e.problem) {
+                                    BackupException.Problem.TOO_NEW -> BackupStrings.tooNew
+                                    BackupException.Problem.TOO_OLD -> BackupStrings.tooOldForPc
+                                    BackupException.Problem.NOT_A_BACKUP -> BackupStrings.notABackup
+                                }
+                            )
                         } catch (e: Exception) {
                             toast(BackupStrings.restoreFailed)
                         } finally {
@@ -358,7 +341,6 @@ private fun StatusLine(label: String, value: String) {
 /** Un backup sul telefono: quando, quanto pesa, e il menu con caricare, ripristinare, eliminare. */
 @Composable
 private fun BackupRow(file: BackupFile, enabled: Boolean, onUpload: () -> Unit, onRestore: () -> Unit, onDelete: () -> Unit) {
-    val context = LocalPlatformContext.current
     var menu by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
@@ -371,7 +353,7 @@ private fun BackupRow(file: BackupFile, enabled: Boolean, onUpload: () -> Unit, 
         Spacer(modifier = Modifier.size(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(whenLabel(file.createdAt), color = NotionWhite, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val detail = Formatter.formatShortFileSize(context, file.size) +
+            val detail = formatFileSize(file.size) +
                 if (file.name.contains("-before-restore")) " · " + BackupStrings.beforeRestore else ""
             Text(detail, color = NotionGray400, style = MaterialTheme.typography.bodySmall)
         }
@@ -404,38 +386,3 @@ private fun whenLabel(millis: Long): String {
 }
 
 private fun reminderLabel(days: Int): String = if (days <= 0) BackupStrings.never else BackupStrings.afterDays(days)
-
-/** Il nome del file scelto, per la domanda prima del ripristino. */
-private fun fileLabel(context: Context, uri: Uri): String =
-    runCatching {
-        context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) cursor.getString(0) else null
-        }
-    }.getOrNull() ?: uri.lastPathSegment.orEmpty()
-
-/**
- * **"Salva come"** per un backup: il nome già scritto e, dalla seconda volta,
- * la finestra aperta dove si è salvato l'ultima volta (su Proton Drive).
- */
-private class CreateZipDocument : ActivityResultContract<Pair<String, Uri?>, Uri?>() {
-    override fun createIntent(context: Context, input: Pair<String, Uri?>): Intent =
-        Intent(Intent.ACTION_CREATE_DOCUMENT)
-            .addCategory(Intent.CATEGORY_OPENABLE)
-            .setType("application/zip")
-            .putExtra(Intent.EXTRA_TITLE, input.first)
-            .apply { input.second?.let { putExtra(DocumentsContract.EXTRA_INITIAL_URI, it) } }
-
-    override fun parseResult(resultCode: Int, intent: Intent?): Uri? =
-        intent?.data?.takeIf { resultCode == Activity.RESULT_OK }
-}
-
-/**
- * **Riapre notE da capo** dopo un ripristino preparato: la nuova apertura
- * mette i file al loro posto prima di leggerli (`Backups.applyPendingRestore`).
- */
-private fun restartApp(context: Context) {
-    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) ?: return
-    context.startActivity(intent)
-    Runtime.getRuntime().exit(0)
-}

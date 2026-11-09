@@ -8,8 +8,8 @@ import com.gabriele.notionlocal.data.PageImageStore
 import com.gabriele.notionlocal.data.backup.BackupArchive
 import com.gabriele.notionlocal.data.backup.BackupException
 import com.gabriele.notionlocal.data.backup.BackupManifest
-import com.gabriele.notionlocal.data.backup.DesktopBackups
-import com.gabriele.notionlocal.data.backup.OlderBackupException
+import com.gabriele.notionlocal.data.backup.BackupReason
+import com.gabriele.notionlocal.data.backup.Backups
 import com.gabriele.notionlocal.data.backup.PrefValue
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.repository.PageRepository
@@ -17,6 +17,7 @@ import com.gabriele.notionlocal.data.settings.openSettingsStore
 import com.gabriele.notionlocal.platform.DesktopContext
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -28,23 +29,34 @@ import java.io.File
 import java.nio.file.Files
 
 /**
- * **Un backup del telefono aperto sul PC** (dal 09/11/2026): il file zip fatto
- * con lo stesso codice del telefono (`BackupArchive.write`) prende il posto
- * del database, delle immagini e delle impostazioni del PC, e quello che il
- * PC aveva resta in `before-restore-<ora>`. Uno di una versione più vecchia,
- * o un file che non è un backup, non tocca niente.
+ * **I backup sul PC** (dal 09/11/2026). Un backup del telefono (il file zip
+ * fatto con lo stesso codice, `BackupArchive.write`) prende il posto del
+ * database, delle immagini e delle impostazioni del PC; prima si fa un backup
+ * di com'era, e quello che il PC aveva resta anche in `before-restore-<ora>`.
+ * Uno di una versione più vecchia, o un file che non è un backup, non tocca
+ * niente. Un backup fatto sul PC torna com'era.
  */
 class DesktopBackupTest {
     private val phoneDir: File = Files.createTempDirectory("pageflow-phone").toFile()
     private val pcDir: File = Files.createTempDirectory("pageflow-pc").toFile()
+    private val backupsDir: File = Files.createTempDirectory("pageflow-backups").toFile()
     private val phone = DesktopContext(phoneDir)
     private val pc = DesktopContext(pcDir)
+
+    @Before
+    fun setUp() {
+        // Mai i Documenti veri.
+        Backups.folderOverride = backupsDir
+        Backups.init(pc)
+    }
 
     @After
     fun tearDown() {
         AppDatabase.closeInstance()
+        Backups.folderOverride = null
         phoneDir.deleteRecursively()
         pcDir.deleteRecursively()
+        backupsDir.deleteRecursively()
     }
 
     private fun pages(context: DesktopContext) = PageRepository(AppDatabase.getInstance(context))
@@ -75,8 +87,10 @@ class DesktopBackupTest {
         AppDatabase.closeInstance()
         openSettingsStore(pc, "settings").edit().putString("theme", "LIGHT").apply()
 
-        assertEquals(1_000L, DesktopBackups.prepareRestore(pc, backup).createdAt)
-        assertTrue(DesktopBackups.applyPendingRestore(pc, now = 42L))
+        assertEquals(1_000L, Backups.prepareRestore { backup.inputStream() }.createdAt)
+        // Prima un backup di com'era il PC, per poter tornare indietro.
+        assertTrue(Backups.list().single().name.endsWith("-before-restore.zip"))
+        assertTrue(Backups.applyPendingRestore(pc, now = 42L))
 
         val repo = pages(pc)
         assertEquals("Lista della spesa", repo.getPage("dal-telefono")?.title)
@@ -90,7 +104,7 @@ class DesktopBackupTest {
         assertTrue(File(before, "notion_local.db").exists())
         assertTrue(File(before, "settings.properties").readText().contains("LIGHT"))
         // Una volta sola.
-        assertFalse(DesktopBackups.applyPendingRestore(pc))
+        assertFalse(Backups.applyPendingRestore(pc))
     }
 
     @Test
@@ -105,12 +119,13 @@ class DesktopBackupTest {
             BackupArchive.write(it, BackupManifest(createdAt = 1L, databaseVersion = DATABASE_VERSION - 1), old, File(phoneDir, "niente"), emptyMap())
         }
         try {
-            DesktopBackups.prepareRestore(pc, zip)
+            runBlocking { Backups.prepareRestore { zip.inputStream() } }
             fail("un backup più vecchio non deve aprirsi sul PC")
-        } catch (e: OlderBackupException) {
-            // come previsto
+        } catch (e: BackupException) {
+            assertEquals(BackupException.Problem.TOO_OLD, e.problem)
         }
-        assertFalse(DesktopBackups.applyPendingRestore(pc))
+        assertTrue(Backups.list().isEmpty())
+        assertFalse(Backups.applyPendingRestore(pc))
         assertFalse(File(pcDir, "notion_local.db").exists())
     }
 
@@ -118,13 +133,37 @@ class DesktopBackupTest {
     fun aFileThatIsNotABackupIsRefused() {
         val notZip = File(phoneDir, "foto.zip").apply { writeText("non sono uno zip") }
         val problem = try {
-            DesktopBackups.prepareRestore(pc, notZip)
+            runBlocking { Backups.prepareRestore { notZip.inputStream() } }
             null
         } catch (e: BackupException) {
             e.problem
         }
         assertEquals(BackupException.Problem.NOT_A_BACKUP, problem)
         assertNotNull(pcDir.listFiles())
-        assertFalse(DesktopBackups.applyPendingRestore(pc))
+        assertFalse(Backups.applyPendingRestore(pc))
+    }
+
+    @Test
+    fun aPcBackupBringsBackWhatThePcHad() = runBlocking {
+        pages(pc).createPage(PageEntity(id = "nota", title = "Prima del backup"))
+        File(pcDir, PageImageStore.DIRECTORY).apply { mkdirs() }.resolve("foto.png").writeText("immagine")
+        openSettingsStore(pc, "settings").edit().putBoolean("muted", true).apply()
+
+        val made = Backups.backupNow(BackupReason.MANUAL)
+        assertEquals(listOf(made.name), Backups.list().map { it.name })
+        assertTrue(Backups.lastBackupAt > 0)
+
+        // Dopo il backup cambia qualcosa; il ripristino riporta tutto com'era.
+        pages(pc).createPage(PageEntity(id = "dopo", title = "Dopo il backup"))
+        File(pcDir, "${PageImageStore.DIRECTORY}/foto.png").delete()
+        openSettingsStore(pc, "settings").edit().putBoolean("muted", false).apply()
+        Backups.prepareRestore { Backups.open(made) }
+        assertTrue(Backups.applyPendingRestore(pc, now = 7L))
+
+        val repo = pages(pc)
+        assertEquals("Prima del backup", repo.getPage("nota")?.title)
+        assertNull(repo.getPage("dopo"))
+        assertEquals("immagine", File(pcDir, "${PageImageStore.DIRECTORY}/foto.png").readText())
+        assertTrue(openSettingsStore(pc, "settings").getBoolean("muted", false))
     }
 }

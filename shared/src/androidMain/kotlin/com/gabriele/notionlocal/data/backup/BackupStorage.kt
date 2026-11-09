@@ -14,7 +14,7 @@ import java.io.InputStream
 import java.io.OutputStream
 
 /** Un backup salvato: dove sta, come si chiama, quando è nato e quanto pesa. */
-data class BackupFile(val uri: Uri, val name: String, val createdAt: Long, val size: Long)
+actual data class BackupFile(val uri: Uri, actual val name: String, actual val createdAt: Long, actual val size: Long)
 
 /**
  * **Dove stanno i backup sul telefono**. Su Android 10 e dopo in
@@ -33,20 +33,6 @@ interface BackupStorage {
 
     fun open(file: BackupFile): InputStream
 }
-
-/** Come comincia il nome di un backup: "PageFlow-backup-2026-10-28-1432.zip". */
-const val BACKUP_PREFIX = "PageFlow-backup-"
-
-/** Come cominciava quando l'app si chiamava notE (fino al 03/11/2026). */
-const val OLD_BACKUP_PREFIX = "notE-backup-"
-
-/** Il nome di un backup, di adesso o di prima. */
-fun isBackupName(name: String) =
-    (name.startsWith(BACKUP_PREFIX) || name.startsWith(OLD_BACKUP_PREFIX)) && name.endsWith(".zip")
-
-/** Il nome nuovo di un backup col nome di prima. */
-fun renamedBackup(name: String) =
-    if (name.startsWith(OLD_BACKUP_PREFIX)) BACKUP_PREFIX + name.removePrefix(OLD_BACKUP_PREFIX) else name
 
 /**
  * Una cartella normale: per i telefoni prima di Android 10 e per i test. I

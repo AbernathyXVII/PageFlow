@@ -10,6 +10,7 @@ import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.PageImageStore
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.settings.AppSettings
+import com.gabriele.notionlocal.data.settings.openSettingsStore
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -160,9 +161,9 @@ class BackupTest {
 
     @Test
     fun theDailyBackupIsOncePerCalendarDay() {
-        assertTrue(Backups.isDue(0, now, zone))
-        assertFalse(Backups.isDue(at(2026, 10, 28, 0, 5), at(2026, 10, 28, 23, 50), zone))
-        assertTrue(Backups.isDue(at(2026, 10, 27, 23, 50), at(2026, 10, 28, 0, 5), zone))
+        assertTrue(isBackupDue(0, now, zone))
+        assertFalse(isBackupDue(at(2026, 10, 28, 0, 5), at(2026, 10, 28, 23, 50), zone))
+        assertTrue(isBackupDue(at(2026, 10, 27, 23, 50), at(2026, 10, 28, 0, 5), zone))
         // Uscendo dall'app: il primo del giorno sì, il secondo no.
         runBlocking { Backups.onStopTasks() }
         assertEquals(1, Backups.list().size)
@@ -212,6 +213,27 @@ class BackupTest {
         // Una volta sola.
         assertFalse(Backups.applyPendingRestore(context))
         assertFalse(File(context.filesDir, "restore-pending").exists())
+    }
+
+    @Test
+    fun aPcBackupWithSettingsAsTextIsReadOnThePhone() = runBlocking<Unit> {
+        db.pageDao().insert(PageEntity(id = "pc", title = "Dal PC"))
+        // Il PC tiene le impostazioni tutte come testo: il suo backup le scrive così.
+        val fromPhone = extract(backup())
+        val pcZip = ByteArrayOutputStream().also { out ->
+            BackupArchive.write(
+                out, fromPhone.manifest, fromPhone.database, fromPhone.files,
+                mapOf("settings" to mapOf("notifications_muted" to PrefValue("string", "true"), "skin_tone" to PrefValue("string", "3")))
+            )
+        }.toByteArray()
+
+        Backups.prepareRestore { ByteArrayInputStream(pcZip) }
+        assertTrue(Backups.applyPendingRestore(context))
+        // Come le legge `AppSettings` alla riapertura dell'app.
+        val settings = openSettingsStore(context, "settings")
+        assertTrue(settings.getBoolean("notifications_muted", false))
+        assertEquals(3, settings.getInt("skin_tone", 0))
+        assertEquals("Dal PC", AppDatabase.getInstance(context).pageDao().getById("pc")!!.title)
     }
 
     @Test
@@ -287,15 +309,15 @@ class BackupTest {
         val day = 24L * 60 * 60 * 1000
         val first = at(2026, 10, 1, 9, 0)
         // Mai caricato: dopo 7 giorni dal primo backup.
-        assertFalse(Backups.reminderDue(first + 6 * day, 7, 0, first, 0))
-        assertTrue(Backups.reminderDue(first + 7 * day, 7, 0, first, 0))
+        assertFalse(isUploadReminderDue(first + 6 * day, 7, 0, first, 0))
+        assertTrue(isUploadReminderDue(first + 7 * day, 7, 0, first, 0))
         // Già ricordato da poco: non di nuovo lo stesso giorno.
-        assertFalse(Backups.reminderDue(first + 7 * day + 3_600_000, 7, 0, first, first + 7 * day))
-        assertTrue(Backups.reminderDue(first + 8 * day, 7, 0, first, first + 7 * day))
+        assertFalse(isUploadReminderDue(first + 7 * day + 3_600_000, 7, 0, first, first + 7 * day))
+        assertTrue(isUploadReminderDue(first + 8 * day, 7, 0, first, first + 7 * day))
         // Caricato 3 giorni fa: niente. Spento: mai. Senza backup: niente.
-        assertFalse(Backups.reminderDue(first + 10 * day, 7, first + 7 * day, first, 0))
-        assertFalse(Backups.reminderDue(first + 100 * day, 0, 0, first, 0))
-        assertFalse(Backups.reminderDue(first + 100 * day, 7, 0, 0, 0))
+        assertFalse(isUploadReminderDue(first + 10 * day, 7, first + 7 * day, first, 0))
+        assertFalse(isUploadReminderDue(first + 100 * day, 0, 0, first, 0))
+        assertFalse(isUploadReminderDue(first + 100 * day, 7, 0, 0, 0))
     }
 
     @Test

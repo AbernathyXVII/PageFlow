@@ -54,7 +54,11 @@ object DesktopReminders {
             val now = System.currentTimeMillis()
             val due = runCatching { takeDue(context, now) }.getOrDefault(emptyList())
             if (!DesktopNotifications.muted) {
-                due.forEach { DesktopNotifications.show(it.title, it.body, OpenRequest(it.pageId, it.rowId, it.databaseId)) }
+                due.forEach { fire ->
+                    DesktopNotifications.show(fire.title, fire.body) {
+                        NotificationTarget.pending.value = OpenRequest(fire.pageId, fire.rowId, fire.databaseId)
+                    }
+                }
             }
             val next = runCatching {
                 loadReminders(AppDatabase.getInstance(context), AppSettings.zoneId, now, now + HORIZON_MS, words()).minOfOrNull { it.at }

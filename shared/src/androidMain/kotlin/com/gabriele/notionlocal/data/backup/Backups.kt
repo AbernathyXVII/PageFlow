@@ -25,9 +25,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.InputStream
-import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 /**
  * **I backup di notE** (dal 28/10/2026, chiesto dall'utente: "backup
@@ -48,7 +46,7 @@ import java.time.format.DateTimeFormatter
  *   file in una cartella a parte; li mette al loro posto `applyPendingRestore`,
  *   alla riapertura, prima che qualcuno apra il database.
  */
-object Backups {
+actual object Backups {
     /** Dal 03/11/2026, quando l'app si chiamava ancora notE, era "notE backup": vedi [OLD_FOLDERS]. */
     const val FOLDER = "PageFlow backup"
 
@@ -63,13 +61,11 @@ object Backups {
     /** Le preferenze che vanno nel backup: impostazioni, widget, penna, password delle pagine. */
     val PREF_NAMES = BackupArchive.PREF_NAMES
 
-    /** Dopo quanti giorni senza caricare arriva il promemoria; 0 = mai. */
-    val REMIND_CHOICES = listOf(3, 7, 14, 30, 0)
+    actual val REMIND_CHOICES = listOf(3, 7, 14, 30, 0)
 
     private const val PREFS = "backup"
     private const val PENDING = "restore-pending"
     private const val READY = "ready"
-    private const val DAY = 24L * 60 * 60 * 1000
 
     private var appContext: Context? = null
     private var prefs: SharedPreferences? = null
@@ -82,17 +78,16 @@ object Backups {
     var clock: () -> Long = { System.currentTimeMillis() }
     var zone: () -> ZoneId = { AppSettings.zoneId }
 
-    var autoBackup by mutableStateOf(true)
+    actual var autoBackup by mutableStateOf(true)
         private set
-    var remindDays by mutableIntStateOf(7)
+    actual var remindDays by mutableIntStateOf(7)
         private set
-    var lastBackupAt by mutableLongStateOf(0L)
+    actual var lastBackupAt by mutableLongStateOf(0L)
         private set
-    var lastUploadAt by mutableLongStateOf(0L)
+    actual var lastUploadAt by mutableLongStateOf(0L)
         private set
 
-    /** Cresce a ogni backup nuovo, caricato o cancellato: la pagina Backup rilegge l'elenco. */
-    var changes by mutableIntStateOf(0)
+    actual var changes by mutableIntStateOf(0)
         private set
 
     /** Dove si è salvato l'ultima volta con "Carica su Proton Drive": lì si riapre "Salva come". */
@@ -127,12 +122,12 @@ object Backups {
             ?.apply()
     }
 
-    fun setAuto(on: Boolean) {
+    actual fun setAuto(on: Boolean) {
         autoBackup = on
         save()
     }
 
-    fun setRemind(days: Int) {
+    actual fun setRemind(days: Int) {
         remindDays = days
         save()
     }
@@ -149,13 +144,11 @@ object Backups {
             }
         }
 
-    /** I backup sul telefono, dal più nuovo; nessuno se non si leggono. */
-    fun list(): List<BackupFile> = runCatching { storage.list() }.getOrDefault(emptyList())
+    actual fun list(): List<BackupFile> = runCatching { storage.list() }.getOrDefault(emptyList())
 
     // --- Il backup ---
 
-    /** Un backup adesso (o ogni giorno, o prima di un ripristino). */
-    suspend fun backupNow(reason: BackupReason = BackupReason.MANUAL): BackupFile =
+    actual suspend fun backupNow(reason: BackupReason): BackupFile =
         mutex.withLock { withContext(Dispatchers.IO) { create(reason) } }
 
     private fun create(reason: BackupReason): BackupFile {
@@ -211,11 +204,7 @@ object Backups {
         runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull().orEmpty()
 
     /** "PageFlow-backup-2026-10-28-143205.zip"; prima di un ripristino, con "-before-restore". */
-    fun fileName(at: Long, reason: BackupReason): String {
-        val stamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss").format(Instant.ofEpochMilli(at).atZone(zone()))
-        val tail = if (reason == BackupReason.BEFORE_RESTORE) "-before-restore" else ""
-        return "$BACKUP_PREFIX$stamp$tail.zip"
-    }
+    fun fileName(at: Long, reason: BackupReason): String = backupFileName(at, reason, zone())
 
     /** Se ne tengono gli ultimi [KEEP]: i più vecchi si cancellano. */
     private fun rotate() {
@@ -223,12 +212,9 @@ object Backups {
         all.drop(KEEP).forEach { runCatching { storage.delete(it) } }
     }
 
-    fun delete(file: BackupFile): Boolean = storage.delete(file).also { if (it) changes++ }
+    actual fun delete(file: BackupFile): Boolean = storage.delete(file).also { if (it) changes++ }
 
-    /** Il backup di ogni giorno è da fare se l'ultimo non è di oggi. */
-    fun isDue(lastBackupAt: Long, now: Long, zone: ZoneId): Boolean =
-        lastBackupAt <= 0 ||
-            Instant.ofEpochMilli(lastBackupAt).atZone(zone).toLocalDate() != Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    actual fun open(file: BackupFile): InputStream = storage.open(file)
 
     /**
      * **Uscendo dall'app** (vedi `MainActivity.onStop`): il backup di oggi, se
@@ -242,7 +228,7 @@ object Backups {
 
     /** Quello che si fa uscendo dall'app, in fila: il backup di oggi, poi il promemoria. */
     suspend fun onStopTasks() {
-        runCatching { if (autoBackup && isDue(lastBackupAt, clock(), zone())) backupNow(BackupReason.DAILY) }
+        runCatching { if (autoBackup && isBackupDue(lastBackupAt, clock(), zone())) backupNow(BackupReason.DAILY) }
         runCatching { remindIfDue() }
     }
 
@@ -269,25 +255,10 @@ object Backups {
         ok
     }
 
-    /**
-     * Se è ora del promemoria: passati [remindDays] giorni dall'ultimo
-     * caricamento (o dal primo backup, se non se n'è mai caricato uno), e non
-     * più di uno al giorno.
-     */
-    fun reminderDue(now: Long, remindDays: Int, lastUploadAt: Long, firstBackupAt: Long, lastReminderAt: Long): Boolean {
-        if (remindDays <= 0 || firstBackupAt <= 0) return false
-        val since = maxOf(lastUploadAt, firstBackupAt)
-        if (now - since < remindDays * DAY) return false
-        return now - lastReminderAt >= DAY
-    }
-
-    /** I giorni interi passati dall'ultimo caricamento, o null se non se n'è mai fatto uno. */
-    fun daysSinceUpload(now: Long = clock()): Long? = lastUploadAt.takeIf { it > 0 }?.let { (now - it) / DAY }
-
     private fun remindIfDue() {
         val now = clock()
-        if (!reminderDue(now, remindDays, lastUploadAt, firstBackupAt, lastReminderAt)) return
-        if (Notifier.postBackupReminder(context(), daysSinceUpload(now))) {
+        if (!isUploadReminderDue(now, remindDays, lastUploadAt, firstBackupAt, lastReminderAt)) return
+        if (Notifier.postBackupReminder(context(), daysSince(lastUploadAt, now))) {
             lastReminderAt = now
             save()
         }
@@ -302,7 +273,7 @@ object Backups {
      * (così si può tornare indietro). I file al loro posto li mette
      * `applyPendingRestore`, alla riapertura dell'app.
      */
-    suspend fun prepareRestore(open: () -> InputStream): BackupManifest = withContext(Dispatchers.IO) {
+    actual suspend fun prepareRestore(open: () -> InputStream): BackupManifest = withContext(Dispatchers.IO) {
         val ctx = context()
         val pending = File(ctx.filesDir, PENDING).apply { deleteRecursively(); mkdirs() }
         try {

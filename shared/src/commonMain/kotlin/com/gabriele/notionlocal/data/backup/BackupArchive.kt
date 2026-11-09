@@ -55,7 +55,10 @@ class BackupException(val problem: Problem, message: String) : IOException(messa
         /** Non è un backup di notE (manca il database o il manifest, o non è uno zip). */
         NOT_A_BACKUP,
         /** Fatto da una versione di notE più nuova di questa. */
-        TOO_NEW
+        TOO_NEW,
+
+        /** Fatto da una versione più vecchia, che il PC non sa aggiornare (le migrazioni vecchie sono solo del telefono). */
+        TOO_OLD
     }
 }
 

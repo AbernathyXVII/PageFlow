@@ -85,15 +85,15 @@ object BackupStrings {
     // --- Sul telefono ---
 
     val onThisPhone get() = t("On this phone", "Su questo telefono", "Auf diesem Telefon", "Sur ce téléphone", "En este teléfono", "此手机上", "이 휴대폰", "このスマートフォン")
-    val whereNote get() = t(
-        "In Download/PageFlow backup: they stay even if PageFlow is uninstalled.",
-        "In Download/PageFlow backup: restano anche se PageFlow viene disinstallata.",
-        "In Download/PageFlow backup: Sie bleiben auch, wenn PageFlow deinstalliert wird.",
-        "Dans Download/PageFlow backup : elles restent même si PageFlow est désinstallée.",
-        "En Download/PageFlow backup: se quedan aunque desinstales PageFlow.",
-        "位于 Download/PageFlow backup：即使卸载 PageFlow 也会保留。",
-        "Download/PageFlow backup에 있어요. PageFlow를 삭제해도 남아요.",
-        "Download/PageFlow backup にあります。PageFlow をアンインストールしても残ります。"
+    fun whereNote(place: String) = t(
+        "In $place: they stay even if PageFlow is uninstalled.",
+        "In $place: restano anche se PageFlow viene disinstallata.",
+        "In $place: Sie bleiben auch, wenn PageFlow deinstalliert wird.",
+        "Dans $place : elles restent même si PageFlow est désinstallée.",
+        "En $place: se quedan aunque desinstales PageFlow.",
+        "位于 $place：即使卸载 PageFlow 也会保留。",
+        "${place}에 있어요. PageFlow를 삭제해도 남아요.",
+        "$place にあります。PageFlow をアンインストールしても残ります。"
     )
     val noBackupsOnPhone get() = t(
         "There are no backups on this phone yet.",
@@ -107,6 +107,40 @@ object BackupStrings {
     )
     val beforeRestore get() = t("Before a restore", "Prima di un ripristino", "Vor einer Wiederherstellung", "Avant une restauration", "Antes de restaurar", "恢复之前", "복원 전", "復元前")
     val deleteTitle get() = t("Delete this backup?", "Eliminare questo backup?", "Diese Sicherung löschen?", "Supprimer cette sauvegarde ?", "¿Eliminar esta copia?", "删除此备份？", "이 백업을 삭제할까요?", "このバックアップを削除しますか？")
+
+    // --- Sul PC (dal 09/11/2026) ---
+
+    val onThisComputer get() = t("On this computer", "Su questo computer", "Auf diesem Computer", "Sur cet ordinateur", "En este ordenador", "此电脑上", "이 컴퓨터", "このコンピューター")
+    val noBackupsOnComputer get() = t(
+        "There are no backups on this computer yet.",
+        "Su questo computer non ci sono ancora backup.",
+        "Auf diesem Computer gibt es noch keine Sicherungen.",
+        "Il n'y a pas encore de sauvegarde sur cet ordinateur.",
+        "Todavía no hay copias en este ordenador.",
+        "此电脑上还没有备份。",
+        "이 컴퓨터에는 아직 백업이 없어요.",
+        "このコンピューターにはまだバックアップがありません。"
+    )
+    val dailyBackupNoteOnPc get() = t(
+        "Once a day, while PageFlow is open. The last 7 are kept.",
+        "Una volta al giorno, mentre PageFlow è aperta. Si tengono gli ultimi 7.",
+        "Einmal am Tag, solange PageFlow geöffnet ist. Die letzten 7 bleiben.",
+        "Une fois par jour, tant que PageFlow est ouverte. Les 7 dernières sont gardées.",
+        "Una vez al día, mientras PageFlow está abierta. Se guardan las últimas 7.",
+        "每天一次，在 PageFlow 打开期间。保留最近 7 份。",
+        "PageFlow가 열려 있는 동안 하루에 한 번요. 최근 7개를 남겨요.",
+        "PageFlow を開いている間に1日1回。最新の7件を残します。"
+    )
+    val uploadNoteOnPc get() = t(
+        "In the window that opens, choose the Proton Drive folder (or a USB stick) the first time: next time it opens there.",
+        "Nella finestra che si apre scegli la cartella di Proton Drive (o una chiavetta) la prima volta: la volta dopo si apre lì.",
+        "Wähle im Fenster beim ersten Mal den Proton-Drive-Ordner (oder einen USB-Stick): Beim nächsten Mal öffnet es sich dort.",
+        "Dans la fenêtre, choisissez la première fois le dossier Proton Drive (ou une clé USB) : la fois suivante, elle s'ouvre là.",
+        "En la ventana elige la primera vez la carpeta de Proton Drive (o un USB): la próxima vez se abre ahí.",
+        "第一次在弹出的窗口中选择 Proton Drive 文件夹（或 U 盘），下次会直接在那里打开。",
+        "처음에 열리는 창에서 Proton Drive 폴더(또는 USB)를 고르면, 다음부터는 거기서 열려요.",
+        "初回は開いた画面で Proton Drive のフォルダー（または USB メモリ）を選んでください。次回からはそこで開きます。"
+    )
 
     // --- Il ripristino ---
 
@@ -144,16 +178,6 @@ object BackupStrings {
         "此备份来自较新版本的 PageFlow：请先更新应用",
         "더 최신 PageFlow의 백업이에요. 먼저 앱을 업데이트하세요",
         "このバックアップは新しいバージョンの PageFlow のものです。先にアプリを更新してください"
-    )
-    val restoreClosesOnPc get() = t(
-        "On this computer PageFlow then closes: open it again to find the backup. What the computer has now is kept in its data folder, in \"before-restore\".",
-        "Su questo computer PageFlow poi si chiude: riaprila per trovare il backup. Quello che il computer ha adesso resta nella sua cartella dei dati, in \"before-restore\".",
-        "Auf diesem Computer wird PageFlow dann geschlossen: Öffne es erneut, um die Sicherung zu sehen. Der jetzige Stand bleibt im Datenordner unter \"before-restore\".",
-        "Sur cet ordinateur, PageFlow se ferme ensuite : rouvrez-le pour retrouver la sauvegarde. Ce que l'ordinateur contient maintenant reste dans son dossier de données, sous \"before-restore\".",
-        "En este ordenador PageFlow se cierra después: ábrelo de nuevo para ver la copia. Lo que el ordenador tiene ahora queda en su carpeta de datos, en \"before-restore\".",
-        "在这台电脑上，PageFlow 随后会关闭：重新打开即可看到备份。电脑上现有的内容会保留在数据文件夹的 \"before-restore\" 中。",
-        "이 컴퓨터에서는 PageFlow가 닫혀요. 다시 열면 백업이 보여요. 지금 컴퓨터에 있는 내용은 데이터 폴더의 \"before-restore\"에 남아요.",
-        "このコンピューターでは PageFlow がその後閉じます。もう一度開くとバックアップが表示されます。今の内容はデータフォルダーの \"before-restore\" に残ります。"
     )
     val tooOldForPc get() = t(
         "This backup comes from an older PageFlow: update the app on the phone, make a new backup and open that one",

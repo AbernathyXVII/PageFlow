@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.gabriele.notionlocal.data.backup.DesktopBackups
+import com.gabriele.notionlocal.data.backup.Backups
 import com.gabriele.notionlocal.data.entity.RollupFormatting
 import com.gabriele.notionlocal.data.ink.InkPrefs
 import com.gabriele.notionlocal.data.notify.DesktopNotifications
@@ -42,12 +42,12 @@ import org.jetbrains.skia.Image
  * **PageFlow sul PC** (dal 04/11/2026): la stessa app del telefono, con lo
  * stesso codice (`shared`). Dal 09/11/2026 la finestra apre la home, la barra
  * laterale e le pagine (`AppNavHost`), come il telefono; quello che è solo
- * del telefono (suoni, backup automatici…) sul PC per ora manca.
+ * del telefono (i suoni…) sul PC per ora manca.
  */
 fun main() {
     val context = DesktopContext()
     // Un backup del telefono scelto in "Backup": al suo posto prima che si legga qualcosa.
-    DesktopBackups.applyPendingRestore(context)
+    Backups.applyPendingRestore(context)
     // Come `MainActivity` sul telefono, per quello che c'è anche sul PC.
     AppSettings.init(context)
     WidgetStore.init(context)
@@ -55,6 +55,9 @@ fun main() {
     AppLock.init(context)
     // I promemoria delle pagine ("/notification", le date con la notifica), come `NoteAlarms` sul telefono.
     DesktopReminders.init(context)
+    // I backup: quello di ogni giorno e il promemoria per caricarne uno (vedi `Backups`).
+    Backups.init(context)
+    Backups.startDailyTasks()
     RollupFormatting.formatter = AppRollupFormatter
     val factory = ViewModelFactory(context)
     val icon = PlatformIcon.load()

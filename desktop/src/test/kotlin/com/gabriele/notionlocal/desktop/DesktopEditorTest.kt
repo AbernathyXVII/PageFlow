@@ -16,12 +16,15 @@ import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.repository.PageRepository
+import com.gabriele.notionlocal.data.backup.BackupReason
+import com.gabriele.notionlocal.data.backup.Backups
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.navigation.AppNavHost
 import com.gabriele.notionlocal.ui.navigation.Routes
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
+import com.gabriele.notionlocal.ui.screen.BackupScreen
 import com.gabriele.notionlocal.ui.screen.SettingsScreen
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
@@ -31,6 +34,7 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.EncodedImageFormat
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -101,6 +105,21 @@ class DesktopEditorTest {
     fun theSettingsDrawOnThePc() {
         val factory = ViewModelFactory(context)
         draw("settings.png") { SettingsScreen(onBack = {}, factory = factory) }
+    }
+
+    /** La pagina Backup, la stessa del telefono, con un backup fatto sul PC nell'elenco: la foto in `backup.png`. */
+    @Test
+    fun theBackupPageDrawsOnThePc() {
+        val folder = File(dir, "backups")
+        Backups.folderOverride = folder
+        try {
+            Backups.init(context)
+            val made = runBlocking { Backups.backupNow(BackupReason.MANUAL) }
+            assertTrue(File(folder, made.name).exists())
+            draw("backup.png") { BackupScreen(onBack = {}, onRestart = {}) }
+        } finally {
+            Backups.folderOverride = null
+        }
     }
 
     /** "Delete all content" sul PC: tutte le tabelle vuote, e rinasce solo My Space. */
