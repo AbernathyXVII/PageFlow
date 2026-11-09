@@ -390,7 +390,7 @@ fun InlineAudioPlayer(source: Uri, title: String, modifier: Modifier = Modifier)
 }
 
 /** L'id di un video di YouTube, da tutti i modi in cui si scrive il suo indirizzo; null se non lo è. */
-fun youTubeId(url: String): String? {
+actual fun youTubeId(url: String): String? {
     val uri = runCatching { Uri.parse(url.trim()) }.getOrNull() ?: return null
     val host = uri.host?.lowercase()?.removePrefix("www.")?.removePrefix("m.")?.removePrefix("music.") ?: return null
     val id = when (host) {
@@ -406,7 +406,7 @@ fun youTubeId(url: String): String? {
 }
 
 /** Il numero di un video di Vimeo ("vimeo.com/123456"); null se non lo è. */
-fun vimeoId(url: String): String? {
+actual fun vimeoId(url: String): String? {
     val uri = runCatching { Uri.parse(url.trim()) }.getOrNull() ?: return null
     val host = uri.host?.lowercase()?.removePrefix("www.") ?: return null
     if (host != "vimeo.com" && host != "player.vimeo.com") return null
@@ -420,7 +420,7 @@ fun vimeoId(url: String): String? {
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun EmbeddedVideoPlayer(embedUrl: String, modifier: Modifier = Modifier) {
+actual fun EmbeddedVideoPlayer(embedUrl: String, modifier: Modifier) {
     val shown = remember { WebViewRef() }
     OnLeaving(onLeave = { shown.view?.onPause() }, onReturn = { shown.view?.onResume() })
     val html = remember(embedUrl) {

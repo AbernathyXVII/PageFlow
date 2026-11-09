@@ -52,7 +52,6 @@ import androidx.compose.material3.OutlinedButton
 import com.gabriele.notionlocal.ui.theme.MIN_PAGE_FONT_SIZE
 import com.gabriele.notionlocal.ui.theme.MAX_PAGE_FONT_SIZE
 import com.gabriele.notionlocal.ui.theme.DarkSheet
-import com.gabriele.notionlocal.ui.theme.DarkSurface
 import com.gabriele.notionlocal.platform.BackHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -3743,20 +3742,6 @@ private fun CoverMoveOverlay(onCancel: () -> Unit, onSave: () -> Unit) {
             PageImageAction(label = EditorStrings.save, enabled = true, onClick = onSave)
         }
     }
-}
-
-/** Un pulsante della finestra dell'immagine (e di quella che sposta la copertina). */
-@Composable
-internal fun PageImageAction(label: String, enabled: Boolean, onClick: () -> Unit) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelLarge,
-        color = if (enabled) NotionWhite else NotionWhite.copy(alpha = 0.35f),
-        modifier = Modifier
-            .background(DarkSurface, RoundedCornerShape(percent = 50))
-            .clickable(enabled = enabled) { onClick() }
-            .padding(horizontal = 20.dp, vertical = 10.dp)
-    )
 }
 
 /**

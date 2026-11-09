@@ -24,6 +24,9 @@ expect fun urlHost(url: String): String?
 /** Lo schema di un indirizzo ("https"), come lo legge il sistema; null se non c'è. */
 expect fun urlScheme(url: String): String?
 
+/** L'ultimo pezzo del percorso di un indirizzo ("canzone.mp3"), come lo legge il sistema; null se non c'è. */
+expect fun urlLastPathSegment(url: String): String?
+
 /**
  * L'altezza in pixel della vista dell'app, letta quando serve (non quando si
  * disegna): sul telefono quella della vista di Compose, sul PC della finestra.

@@ -5,7 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
@@ -85,6 +84,7 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Mic
 import com.gabriele.notionlocal.platform.rememberImagePicker
+import com.gabriele.notionlocal.data.toImageBitmap
 
 /** Quale delle due immagini di una pagina si sta cambiando. */
 enum class PageImageTarget { ICON, COVER }
@@ -279,8 +279,8 @@ fun CoverImage(
 
     LaunchedEffect(fileName, box.width, detail) {
         if (box.width <= 0) return@LaunchedEffect
-        val loaded = store.load(fileName, box.width * detail) ?: return@LaunchedEffect
-        bitmap = loaded.asImageBitmap()
+        val loaded = store.load(fileName, box.width * detail)?.toImageBitmap() ?: return@LaunchedEffect
+        bitmap = loaded
         onImageSize(IntSize(loaded.width, loaded.height))
     }
 

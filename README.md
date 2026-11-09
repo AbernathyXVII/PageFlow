@@ -1151,6 +1151,31 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.11 — 04/11/2026 · 15:07 — Immagini, video, audio e file dei blocchi nel codice comune
+*(Claude Code sul PC; provata sul telefono; 1111 test passati)*
+
+- **[Progetto]** **I blocchi Image, Video, Audio, File e Web bookmark nel
+  codice comune.** Scegliere un'immagine o un file, copiarlo nell'app e
+  salvarne una copia passa da azioni di ogni sistema
+  (`rememberImageImporter`, `rememberFileImporter`, `rememberSaveCopy`): sul
+  telefono i selettori di sempre, sul PC la finestra di Windows o del Mac.
+  `BlockFiles` è diviso allo stesso modo: sul PC un file si apre col
+  programma del computer e un'immagine scaricata va in Immagini/PageFlow
+- **[Progetto]** **I lettori** dei video e degli audio (`MediaSource`: un
+  file dell'app o un link), YouTube e Vimeo dentro la pagina, le immagini
+  molto alte e il registratore dei blocchi audio sono azioni di ogni
+  sistema: sul telefono quelli di sempre, sul PC per ora una riga che apre
+  il video o l'audio col programma del computer, l'immagine intera
+  rimpicciolita, e niente registrazione. La barra di registrazione è nel
+  codice comune
+- **[Progetto]** Nel codice comune anche la finestra di icona e copertina,
+  le celle immagine dei database e il menu delle azioni sui blocchi: adesso
+  sono 268 file (70.000 righe) e 63 solo del telefono (31.600). Dall'editor
+  mancano ancora il Web Clipper, lo scanner, l'esportazione e le notifiche
+- **[Progetto]** `DesktopFilesTest`: sul PC il tipo di un'immagine si legge
+  dai suoi primi byte, i link di YouTube e Vimeo si riconoscono come sul
+  telefono, e il registratore dice di no
+
 ### ✏️ v0.153.10 — 04/11/2026 · 14:30 — Appunti, caratteri, correttore e Web Clipper verso il codice comune
 *(Claude Code sul PC; provata sul telefono; 1107 test passati)*
 

@@ -78,25 +78,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/**
- * **Le immagini molto alte** (dal 20/10/2026, per le foto del Web Clipper:
- * una pagina di game8 è 2160 × 19000 pixel). Caricate intere sarebbero
- * centocinquanta megabyte, e rimpicciolite fino a starci (come le altre
- * immagini, vedi `PageImageStore.load`) il testo diventerebbe illeggibile.
- * Qui si leggono **a pezzi** dal file (`BitmapRegionDecoder`), solo quelli
- * sullo schermo, alla risoluzione che serve.
- */
-fun isTallImage(width: Int, height: Int): Boolean =
-    height > TALL_MIN_HEIGHT && height > width * TALL_MIN_RATIO
-
-/**
- * Solo le immagini davvero lunghe e strette: le foto della fotocamera, anche
- * da dodici megapixel, si leggono intere rimpicciolite come sempre (le strisce
- * non sanno girare una foto scattata in verticale).
- */
-private const val TALL_MIN_HEIGHT = 4096
-private const val TALL_MIN_RATIO = 2.5f
-
 /** Quante righe del file per striscia, nella pagina. */
 private const val STRIP_ROWS = 1024
 
@@ -123,20 +104,13 @@ private fun BitmapRegionDecoder.read(left: Int, top: Int, right: Int, bottom: In
     decodeRegion(android.graphics.Rect(left, top, right, bottom), options)?.asImageBitmap()
 }.getOrNull()
 
-/** Di quanto rimpicciolire leggendo: la potenza di 2 più grande che lascia almeno un pixel letto per pixel mostrato. */
-fun sampleFor(pixelsShownPerImagePixel: Float): Int {
-    var sample = 1
-    while (pixelsShownPerImagePixel * sample * 2 <= 1f && sample < 64) sample *= 2
-    return sample
-}
-
 /**
  * **Un'immagine alta nella pagina**: larga quanto il suo riquadro, alta
  * quanto vuole la sua forma, disegnata a strisce. Si leggono solo le strisce
  * sullo schermo e quelle subito sopra e sotto; le altre si lasciano andare.
  */
 @Composable
-fun StripImage(file: File, imageWidth: Int, imageHeight: Int, description: String?, modifier: Modifier = Modifier) {
+actual fun StripImage(file: File, imageWidth: Int, imageHeight: Int, description: String?, modifier: Modifier) {
     val decoder = remember(file) { openDecoder(file) }
     DisposableEffect(decoder) { onDispose { decoder?.recycle() } }
     val windowHeight = LocalView.current.rootView.height.takeIf { it > 0 } ?: 3000
@@ -206,13 +180,13 @@ fun StripImage(file: File, imageWidth: Int, imageHeight: Int, description: Strin
  * letti. La X la chiude, accanto c'è lo scarica (`onDownload`).
  */
 @Composable
-fun TallImageViewer(
+actual fun TallImageViewer(
     file: File,
     imageWidth: Int,
     imageHeight: Int,
     title: String,
     onDismiss: () -> Unit,
-    onDownload: (() -> Unit)? = null
+    onDownload: (() -> Unit)?
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         val decoder = remember(file) { openDecoder(file) }

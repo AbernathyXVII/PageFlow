@@ -23,7 +23,7 @@ import kotlinx.coroutines.withContext
  * leggerne il nome e il tipo all'arrivo, aprirli con un'altra app e
  * salvarne una copia fuori dall'app.
  */
-object BlockFiles {
+actual object BlockFiles {
 
     /** Il nome del file com'era sul telefono ("vacanze.mp4"), se chi l'ha dato lo dice. */
     fun displayName(context: Context, uri: Uri): String? = runCatching {
@@ -39,14 +39,14 @@ object BlockFiles {
                 ?.let { MimeTypeMap.getSingleton().getMimeTypeFromExtension(it) }
 
     /** Il tipo di un'immagine già salvata, letto dal file stesso ("image/jpeg"). */
-    fun imageMime(store: PageImageStore, fileName: String): String? = runCatching {
+    actual fun imageMime(store: PageImageStore, fileName: String): String? = runCatching {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(store.fileFor(fileName).path, bounds)
         bounds.outMimeType
     }.getOrNull()
 
     /** L'estensione che va col tipo: "jpg" per "image/jpeg". */
-    fun extensionFor(mime: String?): String? =
+    actual fun extensionFor(mime: String?): String? =
         mime?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
 
     /** Un indirizzo che le altre app possono leggere, per un file dell'app. */
@@ -57,7 +57,7 @@ object BlockFiles {
      * **Apre il file con un'altra app** (il lettore video, il visore dei
      * PDF…), con la scelta di sistema. Falso se nessuna app lo sa aprire.
      */
-    fun openWithAnotherApp(context: Context, store: PageImageStore, fileName: String, mime: String?): Boolean {
+    actual fun openWithAnotherApp(context: Context, store: PageImageStore, fileName: String, mime: String?): Boolean {
         val intent = Intent(Intent.ACTION_VIEW)
             .setDataAndType(contentUri(context, store, fileName), mime ?: "*/*")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -84,7 +84,7 @@ object BlockFiles {
      * 18/10/2026 l'utente ha chiesto il browser vero: «vorrei che me lo
      * facesse aprire nel browser di default che nel mio caso è Firefox».
      */
-    fun openUrl(context: Context, url: String): Boolean = com.gabriele.notionlocal.platform.openUrl(context, url)
+    actual fun openUrl(context: Context, url: String): Boolean = com.gabriele.notionlocal.platform.openUrl(context, url)
 
     /** Dall'attività di notE l'app aperta resta nella sua pila; senza un'attività Android ne vuole una nuova. */
     private fun Intent.withTaskFor(context: Context): Intent =
@@ -102,7 +102,7 @@ object BlockFiles {
      * permesso che l'app non ha, risponde falso e chi chiama fa scegliere
      * dove salvarla.
      */
-    suspend fun saveImageToGallery(context: Context, store: PageImageStore, fileName: String, displayName: String?): Boolean =
+    actual suspend fun saveImageToGallery(context: Context, store: PageImageStore, fileName: String, displayName: String?): Boolean =
         withContext(Dispatchers.IO) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return@withContext false
             runCatching {

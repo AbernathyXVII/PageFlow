@@ -10,11 +10,11 @@ package com.gabriele.notionlocal.data.ocr
  */
 object PhotoTextRequests {
     @Volatile
-    private var onRequest: () -> Unit = {}
+    private var onRequest: (Long) -> Unit = {}
 
-    fun register(request: () -> Unit) {
+    fun register(request: (delayMs: Long) -> Unit) {
         onRequest = request
     }
 
-    fun request() = onRequest()
+    fun request(delayMs: Long = 0) = onRequest(delayMs)
 }

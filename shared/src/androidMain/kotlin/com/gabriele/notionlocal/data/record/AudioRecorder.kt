@@ -30,9 +30,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-/** Una registrazione in corso: in quale blocco (e pagina) va, in quale file, da quando. */
-data class Recording(val blockId: String, val pageId: String, val fileName: String, val startedAt: Long)
-
 /**
  * **Registrare l'audio da un blocco** (dal 03/11/2026, chiesto dall'utente:
  * "registrare l'audio dall'app, come Evernote").
@@ -43,15 +40,15 @@ data class Recording(val blockId: String, val pageId: String, val fileName: Stri
  * in primo piano ([RecordingService]) con la sua notifica, così il microfono
  * resta acceso a schermo spento o con l'app chiusa, e dalla notifica si ferma.
  */
-object AudioRecorder {
+actual object AudioRecorder {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val _current = MutableStateFlow<Recording?>(null)
-    val current: StateFlow<Recording?> = _current
+    actual val current: StateFlow<Recording?> = _current
     private var recorder: MediaRecorder? = null
 
     /** Comincia a registrare per il blocco [blockId]. Falso se ce n'è già una o il microfono non parte. */
     @Synchronized
-    fun start(context: Context, blockId: String, pageId: String): Boolean {
+    actual fun start(context: Context, blockId: String, pageId: String): Boolean {
         if (_current.value != null) return false
         val appContext = context.applicationContext
         val name = "${UUID.randomUUID()}.m4a"
@@ -84,13 +81,13 @@ object AudioRecorder {
     }
 
     /** Quanto è forte il suono adesso, da 0 a 1: la barretta che si muove. */
-    fun level(): Float = runCatching { (recorder?.maxAmplitude ?: 0) / 32767f }.getOrDefault(0f).coerceIn(0f, 1f)
+    actual fun level(): Float = runCatching { (recorder?.maxAmplitude ?: 0) / 32767f }.getOrDefault(0f).coerceIn(0f, 1f)
 
     /**
      * Ferma la registrazione. Con [keep] il file va nel suo blocco; senza, o
      * se è troppo corta per essere un file vero, se ne va.
      */
-    fun stop(context: Context, keep: Boolean = true) {
+    actual fun stop(context: Context, keep: Boolean) {
         val appContext = context.applicationContext
         val (recording, media) = synchronized(this) {
             val now = _current.value ?: return

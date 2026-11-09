@@ -48,6 +48,9 @@ actual fun urlHost(url: String): String? = runCatching { URI(url).host }.getOrNu
 
 actual fun urlScheme(url: String): String? = runCatching { URI(url).scheme }.getOrNull()
 
+actual fun urlLastPathSegment(url: String): String? =
+    runCatching { URI(url).path?.trimEnd('/')?.substringAfterLast('/')?.takeIf { it.isNotEmpty() } }.getOrNull()
+
 @Composable
 actual fun rememberRootHeight(): () -> Int {
     val info = LocalWindowInfo.current

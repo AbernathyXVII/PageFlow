@@ -1,8 +1,5 @@
 package com.gabriele.notionlocal.ui.screen
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -70,6 +67,8 @@ import com.gabriele.notionlocal.ui.theme.NotionWhite
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 import java.util.Locale
 import com.gabriele.notionlocal.platform.LocalPlatformContext
+import com.gabriele.notionlocal.platform.FileKind
+import com.gabriele.notionlocal.platform.urlLastPathSegment
 
 /** Quanto pesa un file, da leggere: "820 B", "12 KB", "1,4 MB". */
 fun formatFileSize(bytes: Long, locale: Locale = Locale.getDefault()): String {
@@ -118,8 +117,7 @@ fun FileBlockContent(
     var busy by remember(block.id) { mutableStateOf(false) }
     var choosing by remember(block.id) { mutableStateOf(false) }
     val actions = rememberFileActions(attrs, store)
-    val import = rememberImport(block, viewModel, store) { busy = it }
-    val documents = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { import(it) }
+    val import = rememberImport(block, viewModel, store, FileKind.ANY) { busy = it }
     HandleFileRequests(block, viewModel, locked, actions) { choosing = true }
 
     val file = attrs.file
@@ -153,7 +151,7 @@ fun FileBlockContent(
             Spacer(modifier = Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f).padding(vertical = 6.dp)) {
                 Text(
-                    attrs.name ?: url?.let { Uri.parse(it).lastPathSegment ?: linkHost(it) } ?: EditorStrings.blockType("File"),
+                    attrs.name ?: url?.let { urlLastPathSegment(it) ?: linkHost(it) } ?: EditorStrings.blockType("File"),
                     style = MaterialTheme.typography.bodyLarge,
                     color = NotionWhite,
                     maxLines = 1,
@@ -180,7 +178,7 @@ fun FileBlockContent(
             linkHint = null,
             onUpload = {
                 choosing = false
-                documents.launch(arrayOf("*/*"))
+                import()
             },
             onLink = { link ->
                 choosing = false

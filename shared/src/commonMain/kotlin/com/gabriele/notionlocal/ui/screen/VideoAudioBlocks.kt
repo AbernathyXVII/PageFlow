@@ -1,10 +1,5 @@
 package com.gabriele.notionlocal.ui.screen
 
-import android.content.Context
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,7 +36,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,13 +58,15 @@ import com.gabriele.notionlocal.ui.theme.NotionGray400
 import com.gabriele.notionlocal.ui.theme.NotionWhite
 import com.gabriele.notionlocal.viewmodel.MediaRequestKind
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
-import kotlinx.coroutines.launch
 import androidx.compose.material3.OutlinedButton
 import com.gabriele.notionlocal.data.record.AudioRecorder
 import com.gabriele.notionlocal.ui.i18n.CaptureStrings
-import com.gabriele.notionlocal.data.saveFile
 import com.gabriele.notionlocal.platform.showMessage
 import com.gabriele.notionlocal.platform.LocalPlatformContext
+import com.gabriele.notionlocal.platform.FileKind
+import com.gabriele.notionlocal.platform.rememberFileImporter
+import com.gabriele.notionlocal.platform.rememberSaveCopy
+import com.gabriele.notionlocal.platform.urlLastPathSegment
 
 /**
  * **"Upload" o "Link"** (dal 06/10/2026), la finestrella delle foto di
@@ -178,22 +174,14 @@ class FileActions(val saveCopy: () -> Unit, val openElsewhere: () -> Unit)
 @Composable
 fun rememberFileActions(attrs: BlockAttrs, store: PageImageStore): FileActions {
     val context = LocalPlatformContext.current
-    val scope = rememberCoroutineScope()
-    val saveAs = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument(attrs.mime ?: "application/octet-stream")
-    ) { target ->
-        val file = attrs.file
-        if (target == null || file == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            val saved = BlockFiles.copyTo(context, store, file, target)
-            showMessage(context, if (saved) BlockStrings.fileSaved else BlockStrings.saveFailed)
-        }
+    val saveCopy = rememberSaveCopy(store, attrs.mime) { saved ->
+        showMessage(context, if (saved) BlockStrings.fileSaved else BlockStrings.saveFailed)
     }
     return FileActions(
         saveCopy = {
-            if (attrs.file != null) {
+            attrs.file?.let { file ->
                 val name = attrs.name ?: ("PageFlow" + (BlockFiles.extensionFor(attrs.mime)?.let { ".$it" } ?: ""))
-                saveAs.launch(name)
+                saveCopy(file, name)
             }
         },
         openElsewhere = {
@@ -207,15 +195,6 @@ fun rememberFileActions(attrs: BlockAttrs, store: PageImageStore): FileActions {
             if (!opened) showMessage(context, BlockStrings.noAppToOpen)
         }
     )
-}
-
-/** Un file scelto dal telefono, copiato nell'app col suo nome, tipo e peso: per video, audio e file. */
-suspend fun importFile(context: Context, store: PageImageStore, uri: Uri): BlockAttrs? {
-    val name = BlockFiles.displayName(context, uri)
-    val mime = BlockFiles.mimeType(context, uri, name)
-    val extension = name?.substringAfterLast('.', "")?.takeIf { it.isNotEmpty() } ?: BlockFiles.extensionFor(mime)
-    val file = store.saveFile(uri, extension).getOrNull() ?: return null
-    return BlockAttrs(file = file, name = name, mime = mime, size = store.fileFor(file).length())
 }
 
 /** La riga sotto un video da un link: il nome del sito e i tre puntini del menu del blocco. */
@@ -268,23 +247,17 @@ fun rememberImport(
     block: BlockEntity,
     viewModel: PageEditorViewModel,
     store: PageImageStore,
+    kind: FileKind,
     onBusy: (Boolean) -> Unit
-): (Uri?) -> Unit {
+): () -> Unit {
     val context = LocalPlatformContext.current
-    val scope = rememberCoroutineScope()
-    return { uri ->
-        if (uri != null) {
-            onBusy(true)
-            scope.launch {
-                val imported = importFile(context, store, uri)
-                if (imported != null) {
-                    viewModel.updateBlockAttrs(block.id) { imported }
-                } else {
-                    showMessage(context, BlockStrings.fileReadFailed)
-                }
-                onBusy(false)
-            }
+    return rememberFileImporter(store, kind, onStart = { onBusy(true) }) { imported ->
+        if (imported != null) {
+            viewModel.updateBlockAttrs(block.id) { imported }
+        } else {
+            showMessage(context, BlockStrings.fileReadFailed)
         }
+        onBusy(false)
     }
 }
 
@@ -313,15 +286,14 @@ fun VideoBlockContent(
     var busy by remember(block.id) { mutableStateOf(false) }
     var choosing by remember(block.id) { mutableStateOf(false) }
     val actions = rememberFileActions(attrs, store)
-    val import = rememberImport(block, viewModel, store) { busy = it }
-    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { import(it) }
+    val import = rememberImport(block, viewModel, store, FileKind.VIDEO) { busy = it }
     HandleFileRequests(block, viewModel, locked, actions) { choosing = true }
 
     val file = attrs.file
     val url = attrs.url
     Box(modifier = modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         when {
-            file != null -> InlineVideoPlayer(Uri.fromFile(store.fileFor(file)), onLongPress = onLongPress)
+            file != null -> InlineVideoPlayer(MediaSource.LocalFile(store.fileFor(file)), onLongPress = onLongPress)
             url != null -> {
                 val youTube = youTubeId(url)
                 val vimeo = vimeoId(url)
@@ -331,7 +303,7 @@ fun VideoBlockContent(
                     else -> null
                 }
                 Column {
-                    if (embed != null) EmbeddedVideoPlayer(embed) else InlineVideoPlayer(Uri.parse(url), onLongPress = onLongPress)
+                    if (embed != null) EmbeddedVideoPlayer(embed) else InlineVideoPlayer(MediaSource.Link(url), onLongPress = onLongPress)
                     EmbedFooter(url, onLongPress)
                 }
             }
@@ -353,7 +325,7 @@ fun VideoBlockContent(
             linkHint = BlockStrings.videoLinkHint,
             onUpload = {
                 choosing = false
-                gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
+                import()
             },
             onLink = { link ->
                 choosing = false
@@ -385,8 +357,7 @@ fun AudioBlockContent(
     var busy by remember(block.id) { mutableStateOf(false) }
     var choosing by remember(block.id) { mutableStateOf(false) }
     val actions = rememberFileActions(attrs, store)
-    val import = rememberImport(block, viewModel, store) { busy = it }
-    val documents = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { import(it) }
+    val import = rememberImport(block, viewModel, store, FileKind.AUDIO) { busy = it }
     // **Registrare da qui** (dal 03/11/2026): vedi `AudioRecorder`.
     val recording by AudioRecorder.current.collectAsStateWithLifecycle()
     val record = rememberRecordStarter(block)
@@ -412,7 +383,7 @@ fun AudioBlockContent(
             modifier = modifier
         )
     } else {
-        val source = if (file != null) Uri.fromFile(store.fileFor(file)) else Uri.parse(url)
+        val source = if (file != null) MediaSource.LocalFile(store.fileFor(file)) else MediaSource.Link(url.orEmpty())
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -433,11 +404,11 @@ fun AudioBlockContent(
             linkHint = null,
             onUpload = {
                 choosing = false
-                documents.launch(arrayOf("audio/*"))
+                import()
             },
             onLink = { link ->
                 choosing = false
-                viewModel.updateBlockAttrs(block.id) { BlockAttrs(url = link, name = Uri.parse(link).lastPathSegment) }
+                viewModel.updateBlockAttrs(block.id) { BlockAttrs(url = link, name = urlLastPathSegment(link)) }
             },
             onDismiss = { choosing = false },
             extraLabel = CaptureStrings.recordAudio,

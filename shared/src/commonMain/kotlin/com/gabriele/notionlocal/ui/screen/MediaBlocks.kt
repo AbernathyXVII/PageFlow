@@ -5,20 +5,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -34,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,16 +36,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gabriele.notionlocal.data.BlockFiles
@@ -66,10 +55,11 @@ import com.gabriele.notionlocal.ui.theme.NotionGray400
 import com.gabriele.notionlocal.viewmodel.MediaRequestKind
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 import kotlinx.coroutines.launch
-import com.gabriele.notionlocal.data.ocr.ImageTexts
-import com.gabriele.notionlocal.data.saveFromGallery
 import com.gabriele.notionlocal.platform.showMessage
 import com.gabriele.notionlocal.platform.LocalPlatformContext
+import com.gabriele.notionlocal.platform.rememberImageImporter
+import com.gabriele.notionlocal.data.ocr.PhotoTextRequests
+import com.gabriele.notionlocal.data.toImageBitmap
 
 /** Quanto può stringersi un'immagine: un quarto della pagina. */
 private const val MIN_IMAGE_WIDTH = 0.25f
@@ -131,7 +121,7 @@ private fun WholeImage(fileName: String, store: PageImageStore, description: Str
     LaunchedEffect(fileName, widthPx) {
         if (widthPx <= 0) return@LaunchedEffect
         // Due volte la larghezza: ingrandita a tutto schermo resta nitida.
-        bitmap = store.load(fileName, widthPx * 2)?.asImageBitmap()
+        bitmap = store.load(fileName, widthPx * 2)?.toImageBitmap()
     }
     Box(modifier = modifier.fillMaxSize().onSizeChanged { widthPx = it.width }) {
         val image = bitmap
@@ -183,23 +173,17 @@ fun ImageBlockContent(
     var resizing by remember(block.id) { mutableStateOf(ImageResizeMode.NONE) }
     val request by viewModel.mediaRequest.collectAsStateWithLifecycle()
 
-    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        busy = true
-        scope.launch {
-            val name = BlockFiles.displayName(context, uri)
-            store.saveFromGallery(uri).fold(
-                onSuccess = { file ->
-                    viewModel.updateBlockAttrs(block.id) { it.copy(file = file, name = name) }
-                    // Il suo testo, per la ricerca (dal 03/11/2026).
-                    ImageTexts.request(delayMs = 1_000)
-                },
-                onFailure = { showMessage(context, EditorStrings.imageReadFailed) }
-            )
-            busy = false
-        }
+    val pick = rememberImageImporter(store, onStart = { busy = true }) { result ->
+        result.fold(
+            onSuccess = { (file, name) ->
+                viewModel.updateBlockAttrs(block.id) { it.copy(file = file, name = name) }
+                // Il suo testo, per la ricerca (dal 03/11/2026).
+                PhotoTextRequests.request(delayMs = 1_000)
+            },
+            onFailure = { showMessage(context, EditorStrings.imageReadFailed) }
+        )
+        busy = false
     }
-    val pick = { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
     val download: () -> Unit = {
         attrs.file?.let { file ->
             scope.launch {
