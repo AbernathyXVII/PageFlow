@@ -115,6 +115,7 @@ fun StocksView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(6.dp))
+                    .onRightClick({ onManagingChange(true) })
                     .combinedClickable(
                         onClick = { detailFor = item.symbol },
                         onLongClick = { onManagingChange(true) }

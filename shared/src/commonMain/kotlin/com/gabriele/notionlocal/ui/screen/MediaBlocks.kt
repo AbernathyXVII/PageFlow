@@ -85,6 +85,7 @@ fun MediaPlaceholder(
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(6.dp))
             .background(DarkSurface)
+            .onRightClick(onLongPress)
             .combinedClickable(
                 enabled = !busy,
                 onClick = { onClick?.invoke() },
@@ -249,6 +250,7 @@ fun ImageBlockContent(
                     description = attrs.name ?: EditorStrings.blockType("Image"),
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
+                        .onRightClick(onLongPress)
                         .combinedClickable(
                             // Mentre si ridimensiona, un tocco sull'immagine finisce.
                             onClick = { if (resizing != ImageResizeMode.NONE) resizing = ImageResizeMode.NONE else viewing = true },

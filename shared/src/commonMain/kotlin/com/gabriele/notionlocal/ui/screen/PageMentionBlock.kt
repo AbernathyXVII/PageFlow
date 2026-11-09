@@ -79,6 +79,7 @@ fun PageMentionBlockContent(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
+            .onRightClick(onLongPress)
             .combinedClickable(
                 enabled = page != null || onLongPress != null,
                 onClick = { if (page != null && page.trashedAt == null) onOpenPage(page) },

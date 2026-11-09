@@ -3102,6 +3102,7 @@ private fun CalculationCell(
             modifier = Modifier
                 .width(width)
                 .height(ROW_HEIGHT)
+                .onRightClick({ menuOpen = true })
                 .combinedClickable(onClick = onClick, onLongClick = { menuOpen = true })
                 .padding(horizontal = 12.dp),
             contentAlignment = alignment.box
@@ -3721,6 +3722,7 @@ private fun BoardCard(
                 }
             )
             .foundInside(row.id, RoundedCornerShape(8.dp))
+            .onRightClick { onLongPress() }
             .pointerInput(row.id) {
                 detectTapGestures(onTap = { onOpen() }, onLongPress = { onLongPress() })
             }
@@ -4104,6 +4106,7 @@ private fun CalendarLayout(
                     modifier = Modifier
                         .fillMaxWidth()
                         .foundInside(row.id)
+                        .onRightClick { onRowLongPress(row) }
                         .pointerInput(row.id) {
                             detectTapGestures(
                                 onTap = { onOpenRow(row) },
@@ -4549,6 +4552,7 @@ private fun CalendarBar(
                 )
             )
             .foundInside(segment.row.id, RoundedCornerShape(round))
+            .onRightClick { onLongPress() }
             .pointerInput(segment.row.id) {
                 detectTapGestures(onTap = { onOpen() }, onLongPress = { onLongPress() })
             }
@@ -4712,6 +4716,7 @@ private fun ListRow(
         modifier = Modifier
             .fillMaxWidth()
             .foundInside(row.id)
+            .onRightClick { onRowLongPress(row) }
             .pointerInput(row.id) {
                 detectTapGestures(
                     onTap = { onOpenRow(row) },
@@ -5040,6 +5045,7 @@ private fun GalleryCard(
             .clip(RoundedCornerShape(8.dp))
             .background(DarkSurface)
             .foundInside(row.id)
+            .onRightClick { onLongPress() }
             .pointerInput(row.id, repositioning) {
                 if (!repositioning) {
                     detectTapGestures(onTap = { onOpen() }, onLongPress = { onLongPress() })
@@ -7048,6 +7054,7 @@ private fun NameCell(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
+                            .onRightClick { onLongPress() }
                             .pointerInput(row.id, wrap) {
                                 detectTapGestures(
                                     onTap = {
@@ -11094,6 +11101,7 @@ private fun TimelineLayout(
                             .fillMaxWidth()
                             .height(TIMELINE_ROW_HEIGHT)
                             .foundInside(bar.row.id)
+                            .onRightClick { onRowLongPress(bar.row) }
                             .pointerInput(bar.row.id) {
                                 detectTapGestures(
                                     onTap = { onOpenRow(bar.row) },
@@ -11547,6 +11555,7 @@ private fun TimelineBarRow(
                 .padding(horizontal = 1.dp)
                 .background(DarkSurfaceVariant, RoundedCornerShape(4.dp))
                 .foundInside(bar.row.id, RoundedCornerShape(4.dp))
+                .onRightClick { onRowLongPress(bar.row) }
                 .pointerInput(bar.row.id) {
                     detectTapGestures(
                         onTap = { onOpenRow(bar.row) },
@@ -11591,6 +11600,7 @@ private fun TimelineUndatedRows(
             modifier = Modifier
                 .fillMaxWidth()
                 .foundInside(row.id)
+                .onRightClick { onRowLongPress(row) }
                 .pointerInput(row.id) {
                     detectTapGestures(
                         onTap = { onOpenRow(row) },

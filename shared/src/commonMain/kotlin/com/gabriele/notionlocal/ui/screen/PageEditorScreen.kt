@@ -533,6 +533,7 @@ private fun ClipboardBarButtons(
             modifier = Modifier
                 .size(BAR_BUTTON_SIZE)
                 .clip(CircleShape)
+                .onRightClick({ pasteMenu = true })
                 .combinedClickable(
                     onClick = { paste(PasteMode.KEEP_SOURCE) },
                     onLongClick = { pasteMenu = true }
@@ -6511,6 +6512,7 @@ private fun BlockRow(
                         // ci si arriva solo per un elenco numerato
                         // dentro un toggle, ma il gesto dev'essere
                         // quello, non un altro.
+                        .onRightClick { numberMenuFor = block.id }
                         .pointerInput(block.id) {
                             detectTapGestures(
                                 onLongPress = { numberMenuFor = block.id }
@@ -7259,6 +7261,7 @@ private fun PageLinkBlockContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = PAGE_SIDE_PADDING + (depth * 20).dp, end = PAGE_SIDE_PADDING, top = 4.dp, bottom = 4.dp)
+            .onRightClick(onLongPress)
             .combinedClickable(
                 enabled = linkedPageId != null,
                 onClick = open,

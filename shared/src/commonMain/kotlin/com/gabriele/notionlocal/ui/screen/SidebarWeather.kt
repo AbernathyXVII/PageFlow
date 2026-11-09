@@ -137,6 +137,7 @@ fun WeatherView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
+                        .onRightClick({ onManagingChange(true) })
                         .combinedClickable(
                             onClick = { hourlyFor = city.id },
                             onLongClick = { onManagingChange(true) }

@@ -127,8 +127,12 @@ class SubGroupTest {
                 GroupRuleSpec(day.id, dateBy = DateGroupBy(DateUnit.MONTH, newestFirst = true))
             )
         }
-        // La pagina del ViewModel arriva anche lei dal database: si aspetta l'ultima.
-        waitFor("i livelli") { viewModel.tableGroupLevels().map { it.hideEmpty } == listOf(true, false, true) }
+        // La pagina del ViewModel arriva anche lei dal database: si aspetta l'ultima, con
+        // tutte e due le scelte (fra le due scritture c'è un istante con la prima sola).
+        waitFor("i livelli") {
+            val levels = viewModel.tableGroupLevels()
+            levels.map { it.hideEmpty } == listOf(true, false, true) && levels[2].dateBy.unit == DateUnit.MONTH
+        }
         assertEquals(DateUnit.MONTH, viewModel.tableGroupLevels()[2].dateBy.unit)
     }
 

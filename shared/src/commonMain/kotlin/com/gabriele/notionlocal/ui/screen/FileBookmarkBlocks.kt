@@ -138,6 +138,7 @@ fun FileBlockContent(
                 .padding(vertical = 4.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(DarkSurface)
+                .onRightClick(onLongPress)
                 .combinedClickable(onClick = actions.openElsewhere, onLongClick = onLongPress)
                 .padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -244,6 +245,7 @@ fun BookmarkBlockContent(
                 .heightIn(min = 72.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
+                .onRightClick(onLongPress)
                 .combinedClickable(onClick = actions.openElsewhere, onLongClick = onLongPress),
             verticalAlignment = Alignment.CenterVertically
         ) {

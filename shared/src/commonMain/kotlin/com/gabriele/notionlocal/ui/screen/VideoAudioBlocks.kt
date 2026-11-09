@@ -390,6 +390,7 @@ fun AudioBlockContent(
                 .padding(vertical = 4.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(DarkSurface)
+                .onRightClick(onLongPress)
                 .combinedClickable(onClick = {}, onLongClick = onLongPress)
         ) {
             InlineAudioPlayer(source, title = attrs.name ?: url?.let { linkHost(it) } ?: EditorStrings.blockType("Audio"))

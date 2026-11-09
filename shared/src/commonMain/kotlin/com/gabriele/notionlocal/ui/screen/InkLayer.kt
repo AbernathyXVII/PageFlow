@@ -651,6 +651,7 @@ private fun ToolSlot(
             .size(width = 40.dp, height = 52.dp)
             .clip(RoundedCornerShape(6.dp))
             .background(if (selected) Color.White.copy(alpha = 0.12f) else Color.Transparent)
+            .onRightClick(onLongClick)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick, onClickLabel = description),
         contentAlignment = Alignment.Center
     ) {

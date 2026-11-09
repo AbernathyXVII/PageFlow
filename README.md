@@ -1151,6 +1151,23 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.17 — 09/11/2026 · 18:28 — Sul PC il clic destro apre i menu, come tenere premuto sul telefono
+*(Claude Code sul PC; provata sul PC dall'utente e sul telefono; 1120 test passati)*
+
+- **[Progetto]** **Il clic destro come la pressione lunga** (`onRightClick`):
+  dove tenendo premuto col dito si apre un menu, sul PC lo apre il clic
+  destro — le righe e le schede dei database (elenco, tabella, bacheca,
+  galleria, calendario, sequenza temporale), i quaderni, i blocchi
+  immagine, video, audio, file, segnalibro e bottone, le menzioni di
+  pagina, i numeri degli elenchi, i widget della barra laterale. Il clic
+  destro si ferma lì, così il clic normale (aprire la riga) non parte
+  insieme. Dentro il testo resta il menu di sempre (taglia, copia,
+  incolla). Col dito non cambia niente; provato dall'utente sul PC
+- **[Progetto]** `DesktopRightClickTest` (il clic destro apre il menu e non
+  la riga, il sinistro resta il clic di sempre); `SubGroupTest` aspetta
+  tutte e due le scelte di un raggruppamento prima di controllarle (fra le
+  due scritture c'è un istante con la prima sola, e a volte falliva)
+
 ### ✏️ v0.153.16 — 09/11/2026 · 18:14 — Sul PC: la pagina al centro, Esc per tornare indietro, Ctrl+F per cercare
 *(Claude Code sul PC; provata sul PC dall'utente e sul telefono; 1118 test passati)*
 

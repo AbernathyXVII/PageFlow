@@ -586,6 +586,7 @@ private fun ClockCell(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
+                .onRightClick { menuOpen = true }
                 .pointerInput(clock.id) { detectTapGestures(onLongPress = { menuOpen = true }) }
                 .padding(vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -690,6 +691,7 @@ private fun ZoneListRow(zoneId: String, instant: Instant, onRemove: () -> Unit) 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .onRightClick { menuOpen = true }
                 .pointerInput(zoneId) { detectTapGestures(onLongPress = { menuOpen = true }) }
                 .padding(horizontal = 4.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -915,6 +917,7 @@ private fun ProgressRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .onRightClick { menuOpen = true }
                 .pointerInput(bar.id) { detectTapGestures(onLongPress = { menuOpen = true }) }
                 .padding(vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically

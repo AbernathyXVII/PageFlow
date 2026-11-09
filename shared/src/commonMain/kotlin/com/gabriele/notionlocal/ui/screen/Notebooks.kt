@@ -340,6 +340,7 @@ private fun TreeLine(
             .padding(horizontal = 8.dp)
             .clip(RoundedCornerShape(6.dp))
             .background(if (isCurrent) DarkSurfaceVariant else Color.Transparent)
+            .onRightClick(onLongPress)
             .combinedClickable(onClick = onClick, onLongClick = onLongPress)
             .padding(start = rowStart(depth) - 8.dp, end = 8.dp)
             .height(40.dp),
@@ -1123,6 +1124,7 @@ fun NotebookSectionScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp)
                         .clip(RoundedCornerShape(6.dp))
+                        .onRightClick({ pageMenuFor = page })
                         .combinedClickable(
                             onClick = { onOpenPage(page.id) },
                             onLongClick = { pageMenuFor = page }

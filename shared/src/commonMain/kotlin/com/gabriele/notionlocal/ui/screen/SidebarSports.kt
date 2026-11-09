@@ -451,6 +451,7 @@ private fun CompetitionRounds(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
                 .fillMaxWidth()
+                .onRightClick(onManage)
                 .combinedClickable(onClick = {}, onLongClick = onManage)
                 .padding(vertical = 16.dp)
         )
@@ -511,6 +512,7 @@ private fun CompetitionRounds(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
+                    .onRightClick(onManage)
                     .combinedClickable(onClick = { detail = page }, onLongClick = onManage)
             )
         }
@@ -669,6 +671,7 @@ private fun MatchList(
                 compact,
                 Modifier
                     .clip(RoundedCornerShape(6.dp))
+                    .onRightClick(onMatchLongClick)
                     .combinedClickable(onClick = { onMatchClick(match) }, onLongClick = onMatchLongClick)
             )
         }

@@ -90,7 +90,7 @@ fun SyncedBlockFrame(
                 .padding(start = start, end = end)
                 .then(
                     if (onOpenMenu != null) {
-                        Modifier.combinedClickable(onClick = onOpenMenu, onLongClick = onOpenMenu)
+                        Modifier.onRightClick(onOpenMenu).combinedClickable(onClick = onOpenMenu, onLongClick = onOpenMenu)
                     } else {
                         Modifier
                     }

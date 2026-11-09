@@ -207,6 +207,7 @@ fun ButtonPill(
             .testTag(BUTTON_PILL_TAG)
             .clip(RoundedCornerShape(6.dp))
             .background(NotionGray900)
+            .onRightClick(onLongClick)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = if (compact) 8.dp else 10.dp, vertical = if (compact) 3.dp else 6.dp)
             .alpha(if (running) 0.5f else 1f),

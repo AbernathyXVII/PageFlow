@@ -461,6 +461,7 @@ private fun EventBlock(
             .clip(shape)
             .background(eventBackground(block.row.eventColor))
             .foundInside(block.row.id, shape)
+            .onRightClick { onLongPress() }
             .pointerInput(block.row.id) {
                 detectTapGestures(onTap = { onOpen() }, onLongPress = { onLongPress() })
             }
@@ -546,6 +547,7 @@ private fun AllDayItem(row: DatabaseRowEntity, onOpen: () -> Unit, onLongPress: 
             .clip(shape)
             .background(eventBackground(row.eventColor))
             .foundInside(row.id, shape)
+            .onRightClick { onLongPress() }
             .pointerInput(row.id) {
                 detectTapGestures(onTap = { onOpen() }, onLongPress = { onLongPress() })
             }
