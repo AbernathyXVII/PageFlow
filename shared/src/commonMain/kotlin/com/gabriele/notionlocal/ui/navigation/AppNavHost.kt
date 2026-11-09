@@ -38,7 +38,6 @@ import com.gabriele.notionlocal.data.share.QuickNotes
 import com.gabriele.notionlocal.ui.i18n.ShareStrings
 import com.gabriele.notionlocal.data.settings.StartupMode
 import com.gabriele.notionlocal.data.settings.TrashPolicy
-import com.gabriele.notionlocal.ui.screen.BackupScreen
 import com.gabriele.notionlocal.ui.screen.DatabaseViewScreen
 import com.gabriele.notionlocal.ui.screen.LockGate
 import com.gabriele.notionlocal.ui.screen.NotebookSectionScreen
@@ -53,7 +52,6 @@ import com.gabriele.notionlocal.ui.screen.FavoritesScreen
 import com.gabriele.notionlocal.ui.screen.NoInsets
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
 import com.gabriele.notionlocal.ui.screen.SearchScreen
-import com.gabriele.notionlocal.ui.screen.SettingsScreen
 import com.gabriele.notionlocal.ui.screen.SidebarActions
 import com.gabriele.notionlocal.ui.screen.SidebarContent
 import com.gabriele.notionlocal.ui.screen.StartupScreen
@@ -69,6 +67,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.snapshotFlow
+import androidx.savedstate.read
 
 /**
  * Grafo di navigazione dell'app. Non esiste più una schermata Home
@@ -103,20 +102,20 @@ fun AppNavHost(
     // La pagina aperta adesso, per evidenziarla nell'albero.
     val currentPageId = when (backStackEntry?.destination?.route) {
         Routes.HOME -> PageEntity.ROOT_PAGE_ID
-        Routes.PAGE_EDITOR, Routes.DATABASE_VIEW -> backStackEntry?.arguments?.getString("pageId")
+        Routes.PAGE_EDITOR, Routes.DATABASE_VIEW -> backStackEntry?.arguments?.read { getStringOrNull("pageId") }
         else -> null
     }
     // La sezione di un quaderno aperta adesso, o quella della pagina aperta:
     // la barra laterale la evidenzia fra i quaderni.
     val currentSectionId by produceState<String?>(null, backStackEntry) {
         value = when (backStackEntry?.destination?.route) {
-            Routes.NOTEBOOK_SECTION -> backStackEntry?.arguments?.getString("sectionId")
+            Routes.NOTEBOOK_SECTION -> backStackEntry?.arguments?.read { getStringOrNull("sectionId") }
             Routes.PAGE_EDITOR -> currentPageId?.let { factory.pageRepository.getPage(it)?.notebookSectionId }
             else -> null
         }
     }
     val currentNotebookId = backStackEntry?.takeIf { it.destination.route == Routes.NOTEBOOK }
-        ?.arguments?.getString("notebookId")
+        ?.arguments?.read { getStringOrNull("notebookId") }
 
     fun openSidebar() {
         sidebar.refresh()
@@ -240,7 +239,7 @@ fun AppNavHost(
     }
     LaunchedEffect(navController) {
         navController.currentBackStack.collect { stack ->
-            val open = stack.mapNotNullTo(HashSet()) { it.arguments?.getString("pageId") }
+            val open = stack.mapNotNullTo(HashSet()) { it.arguments?.read { getStringOrNull("pageId") } }
             for (pageId in QuickNotes.leftBehind(open)) {
                 // Dopo un attimo: le ultime lettere scritte devono arrivare.
                 scope.launch {
@@ -272,7 +271,7 @@ fun AppNavHost(
     // L'ultima pagina aperta, per la finestra di avvio "Last visited page".
     LaunchedEffect(navController) {
         navController.currentBackStackEntryFlow.collect { entry ->
-            val id = entry.arguments?.getString("pageId")
+            val id = entry.arguments?.read { getStringOrNull("pageId") }
             when (entry.destination.route) {
                 Routes.HOME -> AppSettings.lastVisitedRoute = Routes.HOME
                 Routes.PAGE_EDITOR -> id?.let { AppSettings.lastVisitedRoute = Routes.pageEditor(it) }
@@ -424,7 +423,7 @@ private fun AppRoutes(
             route = Routes.PAGE_EDITOR,
             arguments = listOf(navArgument("pageId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val pageId = backStackEntry.arguments?.getString("pageId") ?: return@composable
+            val pageId = backStackEntry.arguments?.read { getStringOrNull("pageId") } ?: return@composable
             LockGate(pageId, factory.pageRepository, fullScreen = true, onBack = { navController.popBackStack() }) {
             PageEditorScreen(
                 pageId = pageId,
@@ -451,7 +450,7 @@ private fun AppRoutes(
             route = Routes.UPDATES,
             arguments = listOf(navArgument("pageId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val pageId = backStackEntry.arguments?.getString("pageId") ?: return@composable
+            val pageId = backStackEntry.arguments?.read { getStringOrNull("pageId") } ?: return@composable
             UpdatesScreen(
                 pageId = pageId,
                 factory = factory,
@@ -463,7 +462,7 @@ private fun AppRoutes(
             route = Routes.DATABASE_VIEW,
             arguments = listOf(navArgument("pageId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val pageId = backStackEntry.arguments?.getString("pageId") ?: return@composable
+            val pageId = backStackEntry.arguments?.read { getStringOrNull("pageId") } ?: return@composable
             LockGate(pageId, factory.pageRepository, fullScreen = true, isDatabase = true, onBack = { navController.popBackStack() }) {
             DatabaseViewScreen(
                 pageId = pageId,
@@ -532,7 +531,7 @@ private fun AppRoutes(
             route = Routes.NOTEBOOK_SECTION,
             arguments = listOf(navArgument("sectionId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val sectionId = backStackEntry.arguments?.getString("sectionId") ?: return@composable
+            val sectionId = backStackEntry.arguments?.read { getStringOrNull("sectionId") } ?: return@composable
             LockGate(
                 sectionId,
                 factory.pageRepository,
@@ -562,7 +561,7 @@ private fun AppRoutes(
             route = Routes.NOTEBOOK,
             arguments = listOf(navArgument("notebookId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val notebookId = backStackEntry.arguments?.getString("notebookId") ?: return@composable
+            val notebookId = backStackEntry.arguments?.read { getStringOrNull("notebookId") } ?: return@composable
             NotebookScreen(
                 notebookId = notebookId,
                 factory = factory,
@@ -577,7 +576,7 @@ private fun AppRoutes(
         }
 
         composable(Routes.SETTINGS) {
-            SettingsScreen(
+            SettingsRoute(
                 factory = factory,
                 onBack = { navController.popBackStack() },
                 onOpenPatchNotes = { navController.navigate(Routes.PATCH_NOTES) { launchSingleTop = true } },
@@ -586,7 +585,7 @@ private fun AppRoutes(
         }
 
         composable(Routes.BACKUP) {
-            BackupScreen(onBack = { navController.popBackStack() })
+            BackupRoute(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.PATCH_NOTES) {
@@ -601,7 +600,7 @@ private fun AppRoutes(
             arguments = listOf(navArgument("version") { type = NavType.StringType })
         ) { entry ->
             PatchNoteScreen(
-                version = entry.arguments?.getString("version").orEmpty(),
+                version = entry.arguments?.read { getStringOrNull("version") }.orEmpty(),
                 onBack = { navController.popBackStack() }
             )
         }

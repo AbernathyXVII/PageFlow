@@ -57,6 +57,9 @@ kotlin {
             // Le schermate: `collectAsStateWithLifecycle` e `viewModel(...)`.
             api("org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:2.9.5")
             api("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.9.5")
+            // La navigazione fra le schermate (dal 09/11/2026): la stessa di Android, multipiattaforma
+            // (sul telefono è navigation-compose di Google). 2.9.1 va con lifecycle 2.9.5.
+            api("org.jetbrains.androidx.navigation:navigation-compose:2.9.1")
         }
         androidMain.dependencies {
             // L'orientamento scritto dentro le foto (EXIF): vedi `PageImageStore.android.kt`.
@@ -69,7 +72,6 @@ kotlin {
             implementation("androidx.compose.ui:ui-tooling-preview")
             implementation("androidx.core:core-ktx:1.13.1")
             implementation("androidx.activity:activity-compose:1.9.2")
-            implementation("androidx.navigation:navigation-compose:2.7.7")
             implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
             implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
             implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")

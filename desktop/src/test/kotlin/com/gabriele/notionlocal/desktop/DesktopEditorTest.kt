@@ -18,10 +18,13 @@ import com.gabriele.notionlocal.data.repository.PageRepository
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
+import com.gabriele.notionlocal.ui.navigation.AppNavHost
+import com.gabriele.notionlocal.ui.navigation.Routes
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.EncodedImageFormat
 import org.junit.After
@@ -64,41 +67,57 @@ class DesktopEditorTest {
         dir.deleteRecursively()
     }
 
-    @Test
-    fun theEditorDrawsAPageOnThePc() {
-        val owner = ScreenOwner()
-        val factory = ViewModelFactory(context)
-        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
-        val scene = ImageComposeScene(width = 520, height = 900, density = Density(1f)) {
-            CompositionLocalProvider(
-                LocalPlatformContext provides context,
-                LocalLifecycleOwner provides owner,
-                LocalViewModelStoreOwner provides owner
-            ) {
-                NotionLocalTheme {
-                    PageEditorScreen(
-                        pageId = "p",
-                        factory = factory,
-                        onBack = {},
-                        onOpenSearch = {},
-                        onOpenUpdates = {},
-                        onNavigateToPage = {},
-                        onNavigateToDatabase = {},
-                        viewModel = viewModel
-                    )
+    /** Disegna [content] per qualche secondo, come la finestra, e salva la foto in `build/desktop-screenshots`. */
+    private fun draw(name: String, owner: ScreenOwner = ScreenOwner(), content: @androidx.compose.runtime.Composable () -> Unit) {
+        // Sul filo della finestra (quello di Swing), come nella finestra vera: la navigazione lo pretende.
+        fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+        val scene = onWindowThread {
+            ImageComposeScene(width = 520, height = 900, density = Density(1f)) {
+                CompositionLocalProvider(
+                    LocalPlatformContext provides context,
+                    LocalLifecycleOwner provides owner,
+                    LocalViewModelStoreOwner provides owner
+                ) {
+                    NotionLocalTheme { content() }
                 }
             }
         }
-        // La pagina si legge dal database fuori dal filo principale: qualche giro di disegno.
+        // Il database si legge fuori dal filo principale: qualche giro di disegno.
         var time = 0L
         repeat(40) {
-            scene.render(time)
+            onWindowThread { scene.render(time) }
             time += 100_000_000L
             Thread.sleep(50)
         }
-        val png = scene.render(time).encodeToData(EncodedImageFormat.PNG)!!.bytes
-        scene.close()
-        File("build/desktop-screenshots", "page_editor.png").apply { parentFile.mkdirs() }.writeBytes(png)
+        val png = onWindowThread { scene.render(time).encodeToData(EncodedImageFormat.PNG)!!.bytes.also { scene.close() } }
+        File("build/desktop-screenshots", name).apply { parentFile.mkdirs() }.writeBytes(png)
+    }
+
+    /** Tutta l'app, come la apre la finestra del PC (`Main.kt`): arriva alla home. */
+    @Test
+    fun theWholeAppOpensTheHomeOnThePc() {
+        AppSettings.lastVisitedRoute = null
+        val factory = ViewModelFactory(context)
+        draw("app_home.png") { AppNavHost(factory = factory) }
+        assertEquals(Routes.HOME, AppSettings.lastVisitedRoute)
+    }
+
+    @Test
+    fun theEditorDrawsAPageOnThePc() {
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        draw("page_editor.png") {
+            PageEditorScreen(
+                pageId = "p",
+                factory = factory,
+                onBack = {},
+                onOpenSearch = {},
+                onOpenUpdates = {},
+                onNavigateToPage = {},
+                onNavigateToDatabase = {},
+                viewModel = viewModel
+            )
+        }
 
         assertEquals("Lista della spesa", viewModel.page.value?.title)
         assertEquals(2, viewModel.blocks.value.size)

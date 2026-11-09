@@ -1151,6 +1151,27 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.13 — 09/11/2026 · 17:21 — La navigazione nel codice comune: sul PC si apre l'app, dalla home alle pagine
+*(Claude Code sul PC; provata sul telefono; 1115 test passati)*
+
+- **[Progetto]** **La navigazione fra le schermate nel codice comune**
+  (`AppNavHost`): al posto della navigazione di Android (navigation-compose
+  2.7.7) c'è quella multipiattaforma di JetBrains (2.9.1), con le stesse
+  rotte e gli stessi comandi; sul telefono è la navigation-compose 2.9 di
+  Google. Gli argomenti delle rotte si leggono alla maniera comune
+  (`read { getStringOrNull(…) }`). "Settings" e "Backup", ancora solo del
+  telefono, passano da `SettingsRoute` e `BackupRoute`: sul PC per ora sono
+  una pagina vuota con la freccia per tornare
+- **[Progetto]** **La finestra del PC apre l'app**: la home, la barra
+  laterale, le pagine e i database, con lo stesso codice del telefono, al
+  posto delle sole Patch Notes. All'avvio fa quello che fa il telefono per
+  le parti comuni (impostazioni, widget, disegno, password, formati). Il
+  database del PC è ancora suo e vuoto: i dati del telefono arriveranno
+  col backup e poi con la sincronizzazione
+- **[Progetto]** `DesktopEditorTest`: sul PC tutta l'app arriva alla home
+  (disegnata sul filo della finestra, come la finestra vera); la foto resta
+  in `build/desktop-screenshots/app_home.png`
+
 ### ✏️ v0.153.12 — 09/11/2026 · 17:05 — L'editor delle pagine e i database nel codice comune: la prima pagina disegnata sul PC
 *(Claude Code sul PC; provata sul telefono; 1114 test passati)*
 
