@@ -1151,6 +1151,31 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.14 — 09/11/2026 · 17:50 — Sul PC si apre un backup del telefono: le tue note su Windows
+*(Claude Code sul PC; provata sul PC con un backup vero e sul telefono; 1118 test passati)*
+
+- **[Progetto]** **Le tue note sul PC**: in "Backup" della finestra del PC
+  c'è "Restore from a file…", che apre un backup fatto dal telefono (lo
+  stesso file zip, letto con lo stesso codice). Come sul telefono va in due
+  tempi: prima si toglie dallo zip e si controlla, poi PageFlow si chiude e,
+  riaprendola, il database, le immagini e le impostazioni (tema, widget,
+  disegno, la password delle pagine bloccate) prendono il loro posto.
+  **Niente si perde**: quello che il PC aveva va nella cartella
+  `before-restore-<ora>` dei suoi dati. Provato con un backup vero: sul PC
+  c'è tutto quello che c'è sul telefono. Per ora è una copia: quello che si
+  scrive dopo su uno non arriva sull'altro (per quello ci sarà la
+  sincronizzazione)
+- **[Progetto]** Il PC apre solo backup della sua stessa versione del
+  database (`DATABASE_VERSION`, 70): le migrazioni dei database vecchi
+  stanno nel codice del telefono, e un database più vecchio non si
+  aprirebbe più. Un backup più vecchio lo dice ("aggiorna l'app sul
+  telefono, fai un nuovo backup"), uno più nuovo pure. Le impostazioni che
+  vanno nel backup (`PREF_NAMES`) sono adesso le stesse per telefono e PC
+- **[Progetto]** `DesktopBackupTest`: un backup fatto col codice del
+  telefono prende il posto dei dati del PC, e quelli di prima restano da
+  parte; un backup più vecchio e un file che non è un backup non toccano
+  niente
+
 ### ✏️ v0.153.13 — 09/11/2026 · 17:21 — La navigazione nel codice comune: sul PC si apre l'app, dalla home alle pagine
 *(Claude Code sul PC; provata sul telefono; 1115 test passati)*
 

@@ -145,5 +145,25 @@ object BackupStrings {
         "더 최신 PageFlow의 백업이에요. 먼저 앱을 업데이트하세요",
         "このバックアップは新しいバージョンの PageFlow のものです。先にアプリを更新してください"
     )
+    val restoreClosesOnPc get() = t(
+        "On this computer PageFlow then closes: open it again to find the backup. What the computer has now is kept in its data folder, in \"before-restore\".",
+        "Su questo computer PageFlow poi si chiude: riaprila per trovare il backup. Quello che il computer ha adesso resta nella sua cartella dei dati, in \"before-restore\".",
+        "Auf diesem Computer wird PageFlow dann geschlossen: Öffne es erneut, um die Sicherung zu sehen. Der jetzige Stand bleibt im Datenordner unter \"before-restore\".",
+        "Sur cet ordinateur, PageFlow se ferme ensuite : rouvrez-le pour retrouver la sauvegarde. Ce que l'ordinateur contient maintenant reste dans son dossier de données, sous \"before-restore\".",
+        "En este ordenador PageFlow se cierra después: ábrelo de nuevo para ver la copia. Lo que el ordenador tiene ahora queda en su carpeta de datos, en \"before-restore\".",
+        "在这台电脑上，PageFlow 随后会关闭：重新打开即可看到备份。电脑上现有的内容会保留在数据文件夹的 \"before-restore\" 中。",
+        "이 컴퓨터에서는 PageFlow가 닫혀요. 다시 열면 백업이 보여요. 지금 컴퓨터에 있는 내용은 데이터 폴더의 \"before-restore\"에 남아요.",
+        "このコンピューターでは PageFlow がその後閉じます。もう一度開くとバックアップが表示されます。今の内容はデータフォルダーの \"before-restore\" に残ります。"
+    )
+    val tooOldForPc get() = t(
+        "This backup comes from an older PageFlow: update the app on the phone, make a new backup and open that one",
+        "Questo backup viene da una versione più vecchia di PageFlow: aggiorna l'app sul telefono, fai un nuovo backup e apri quello",
+        "Diese Sicherung stammt von einer älteren PageFlow-Version: Aktualisiere die App auf dem Handy, erstelle eine neue Sicherung und öffne diese",
+        "Cette sauvegarde vient d'une version plus ancienne de PageFlow : mettez à jour l'appli sur le téléphone, faites une nouvelle sauvegarde et ouvrez-la",
+        "Esta copia viene de una versión más antigua de PageFlow: actualiza la app en el móvil, haz una copia nueva y abre esa",
+        "此备份来自较旧版本的 PageFlow：请在手机上更新应用，重新备份后打开新的备份",
+        "이전 PageFlow의 백업이에요. 휴대폰에서 앱을 업데이트하고 새로 백업한 뒤 그 백업을 여세요",
+        "このバックアップは古いバージョンの PageFlow のものです。スマホのアプリを更新し、新しくバックアップしてそれを開いてください"
+    )
     val restoreFailed get() = t("The restore didn't work", "Il ripristino non è riuscito", "Die Wiederherstellung ist fehlgeschlagen", "La restauration a échoué", "No se pudo restaurar", "恢复失败", "복원하지 못했어요", "復元できませんでした")
 }

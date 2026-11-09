@@ -61,7 +61,7 @@ object Backups {
     const val FIRST_DATABASE_VERSION = 65
 
     /** Le preferenze che vanno nel backup: impostazioni, widget, penna, password delle pagine. */
-    val PREF_NAMES = listOf("settings", "widgets", "ink", "app_lock")
+    val PREF_NAMES = BackupArchive.PREF_NAMES
 
     /** Dopo quanti giorni senza caricare arriva il promemoria; 0 = mai. */
     val REMIND_CHOICES = listOf(3, 7, 14, 30, 0)

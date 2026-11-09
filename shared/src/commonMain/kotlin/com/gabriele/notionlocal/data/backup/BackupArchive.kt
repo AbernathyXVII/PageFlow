@@ -69,6 +69,9 @@ object BackupArchive {
     const val FILES = "files/"
     const val PREFS = "prefs.json"
 
+    /** Le impostazioni che vanno nel backup (e solo quelle si ripristinano): le stesse su telefono e PC. */
+    val PREF_NAMES = listOf("settings", "widgets", "ink", "app_lock")
+
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     fun write(

@@ -25,6 +25,8 @@ dependencies {
     implementation(compose.desktop.currentOs)
     // Le schermate del PC disegnate in un'immagine, senza aprire finestre.
     testImplementation("junit:junit:4.13.2")
+    // Per preparare nei test un database di una versione vecchia (DesktopBackupTest): la stessa di `shared`.
+    testImplementation("androidx.sqlite:sqlite-bundled:2.6.2")
 }
 
 /**

@@ -54,6 +54,9 @@ import com.gabriele.notionlocal.platform.PlatformContext
  * oggi. **Le migrazioni da qui in avanti** vanno scritte col
  * `SQLiteConnection` di Room, che vale su tutti e due.
  */
+/** La versione del database: anche quella che un backup deve avere per aprirsi sul PC (vedi `DesktopBackups`). */
+const val DATABASE_VERSION = 70
+
 @Database(
     entities = [
         PageEntity::class,
@@ -71,7 +74,7 @@ import com.gabriele.notionlocal.platform.PlatformContext
         AutomationEntity::class,
         ImageTextEntity::class
     ],
-    version = 70,
+    version = DATABASE_VERSION,
     exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)

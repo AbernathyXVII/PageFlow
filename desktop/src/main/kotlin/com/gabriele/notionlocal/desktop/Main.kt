@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.gabriele.notionlocal.data.backup.DesktopBackups
 import com.gabriele.notionlocal.data.entity.RollupFormatting
 import com.gabriele.notionlocal.data.ink.InkPrefs
 import com.gabriele.notionlocal.data.security.AppLock
@@ -31,6 +32,8 @@ import org.jetbrains.skia.Image
  */
 fun main() {
     val context = DesktopContext()
+    // Un backup del telefono scelto in "Backup": al suo posto prima che si legga qualcosa.
+    DesktopBackups.applyPendingRestore(context)
     // Come `MainActivity` sul telefono, per quello che c'è anche sul PC.
     AppSettings.init(context)
     WidgetStore.init(context)
