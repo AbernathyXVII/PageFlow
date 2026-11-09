@@ -55,8 +55,8 @@ const val PAGE_EXPORT_TAG = "page_export"
  * [export] prepara il file (vedi `PageExporter`); null se non riesce.
  *
  * Nel codice comune dal 09/11/2026: sul PC "Save" apre la finestra "Salva
- * con nome" di Windows, "Share" non c'è e, finché il PC non sa fare il PDF,
- * c'è solo il Markdown (vedi `ExportPlatformParts`).
+ * con nome" di Windows, "Share" non c'è, "Print" manda il PDF alla stampante
+ * (vedi `ExportPlatformParts`).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

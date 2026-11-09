@@ -203,7 +203,7 @@ class ExportExtrasTest {
         val sheets = export.layOut(listOf(page))
         val bitmap = Bitmap.createBitmap(layout.pageWidth, layout.pageHeight, Bitmap.Config.ARGB_8888)
         bitmap.eraseColor(Color.WHITE)
-        export.draw(sheets, 0, Canvas(bitmap))
+        export.draw(sheets, 0, AndroidPdfCanvas(Canvas(bitmap)))
         // Il tratto rosso c'è, largo quanto sul telefono (da 40 a 300 dp), sotto il titolo.
         val s = layout.dpScale!!
         val redRows = (0 until layout.pageHeight).filter { y ->
@@ -234,7 +234,7 @@ class ExportExtrasTest {
         val sheets = export.layOut(listOf(page))
         val bitmap = Bitmap.createBitmap(PdfExport.PAGE_WIDTH, PdfExport.PAGE_HEIGHT, Bitmap.Config.ARGB_8888)
         bitmap.eraseColor(Color.WHITE)
-        export.draw(sheets, 0, Canvas(bitmap))
+        export.draw(sheets, 0, AndroidPdfCanvas(Canvas(bitmap)))
         // Niente griglia grigia larga tutta la pagina: una scheda.
         assertEquals(1, sheets.list.size)
     }

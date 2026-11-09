@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import com.gabriele.notionlocal.data.export.ExportedFile
+import com.gabriele.notionlocal.data.export.defaultPdfBackend
 import com.gabriele.notionlocal.platform.PlatformContext
 import com.gabriele.notionlocal.ui.i18n.ExportStrings
 import kotlinx.coroutines.Dispatchers
@@ -39,8 +40,9 @@ actual val canShareExports: Boolean = false
 
 actual fun shareExport(context: PlatformContext, file: ExportedFile, title: String) = Unit
 
+/** Il PDF alla stampante di Windows; se non si può, si apre nel programma dei PDF, che sa stamparlo. */
 actual fun printExport(context: PlatformContext, file: ExportedFile, title: String) {
-    runCatching { Desktop.getDesktop().print(file.file) }
+    runCatching { Desktop.getDesktop().print(file.file) }.onFailure { runCatching { Desktop.getDesktop().open(file.file) } }
 }
 
-actual val canExportPdf: Boolean = false
+actual val canExportPdf: Boolean get() = defaultPdfBackend() != null

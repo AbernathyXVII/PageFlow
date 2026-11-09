@@ -91,6 +91,8 @@ kotlin {
             implementation("androidx.sqlite:sqlite-bundled:2.6.2")
             // Il tasto Esc come "indietro" (vedi `BackHandler.desktop.kt`): la stessa che usa già la navigazione.
             implementation("org.jetbrains.compose.ui:ui-backhandler:1.11.1")
+            // Il PDF sul PC (vedi `PdfBackend.desktop.kt`): il telefono lo scrive con Android.
+            implementation("org.apache.pdfbox:pdfbox:3.0.5")
         }
     }
 }

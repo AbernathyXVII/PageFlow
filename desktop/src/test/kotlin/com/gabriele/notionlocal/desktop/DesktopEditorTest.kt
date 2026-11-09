@@ -123,7 +123,7 @@ class DesktopEditorTest {
         }
     }
 
-    /** La finestra "Export" sul PC: solo il Markdown, e "Save" come pulsante pieno (foto in `export.png`). */
+    /** La finestra "Export" sul PC: PDF e Markdown, "Print" e "Save" (pieno: "Share" non c'è). Foto in `export.png`. */
     @Test
     fun theExportSheetDrawsOnThePc() {
         draw("export.png") {

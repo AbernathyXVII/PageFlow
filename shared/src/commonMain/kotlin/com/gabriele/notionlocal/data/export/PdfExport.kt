@@ -1,28 +1,5 @@
 package com.gabriele.notionlocal.data.export
 
-import android.content.Context
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.RectF
-import android.graphics.Typeface
-import android.graphics.pdf.PdfDocument
-import android.text.Layout
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.StaticLayout
-import android.text.TextPaint
-import android.text.style.BackgroundColorSpan
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
-import android.text.style.StrikethroughSpan
-import android.text.style.StyleSpan
-import android.text.style.SubscriptSpan
-import android.text.style.SuperscriptSpan
-import android.text.style.UnderlineSpan
-import androidx.core.graphics.ColorUtils
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
 import com.gabriele.notionlocal.data.entity.InkStrokeEntity
@@ -60,6 +37,10 @@ import kotlin.math.sin
 // e, a richiesta, i disegni a mano: allora il PDF ha le proporzioni del
 // telefono (`PdfLayout.phone`), perché i tratti sono salvati in dp rispetto a
 // quello su cui sono fatti, e cadano al loro posto.
+//
+// **Dal 09/11/2026** è nel codice comune: l'impaginazione è la stessa su
+// telefono e PC, il testo lo misurano e i fogli li disegnano gli attrezzi di
+// ogni sistema (`PdfBackend`: Android sul telefono, PDFBox sul PC).
 // ---------------------------------------------------------------------------
 
 /** Com'è venuto il PDF: quanti fogli. */
@@ -101,11 +82,6 @@ data class PdfLayout(
             )
         }
 
-        fun phone(context: Context): PdfLayout {
-            val metrics = context.resources.displayMetrics
-            return phone(min(metrics.widthPixels, metrics.heightPixels) / metrics.density)
-        }
-
         private const val A5_WIDTH = 420f
         private const val A5_HEIGHT = 595
 
@@ -122,23 +98,15 @@ class PdfExport(
     private val fileOf: (String) -> File?,
     private val untitled: String,
     private val layout: PdfLayout = PdfLayout.DOCUMENT,
-    private val dateText: (Long) -> String = { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)) }
+    private val dateText: (Long) -> String = { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)) },
+    /** Chi misura e disegna (vedi `PdfBackend`). */
+    private val backend: PdfBackend = requireNotNull(defaultPdfBackend()) { "Qui il PDF non si può fare" }
 ) {
     /** Scrive [pages] (la pagina, poi le sottopagine, ognuna su un foglio nuovo) in [out]. */
     fun write(pages: List<ExportPage>, out: OutputStream): PdfResult {
         val sheets = layOut(pages)
-        val document = PdfDocument()
-        try {
-            for (index in sheets.list.indices) {
-                val sheet = document.startPage(PdfDocument.PageInfo.Builder(layout.pageWidth, layout.pageHeight, index + 1).create())
-                draw(sheets, index, sheet.canvas)
-                document.finishPage(sheet)
-            }
-            document.writeTo(out)
-            return PdfResult(sheets.list.size)
-        } finally {
-            document.close()
-        }
+        backend.writeDocument(layout.pageWidth, layout.pageHeight, sheets.list.size, out) { index, canvas -> draw(sheets, index, canvas) }
+        return PdfResult(sheets.list.size)
     }
 
     /** Cosa va su ogni foglio. */
@@ -152,7 +120,7 @@ class PdfExport(
     }
 
     /** Il foglio [index] su [canvas], col numero in fondo se i fogli sono più di uno. */
-    fun draw(sheets: Sheets, index: Int, canvas: Canvas) {
+    fun draw(sheets: Sheets, index: Int, canvas: PdfCanvas) {
         for (op in sheets.list[index]) op(canvas)
         val total = sheets.list.size
         if (total > 1) {
@@ -179,36 +147,19 @@ class PdfExport(
     private val titleGap = 12f * k
 
     private val bodyPaint = textPaint(layout.bodySize)
-    private val boldPaint = textPaint(layout.bodySize, Typeface.DEFAULT_BOLD)
-    private val titlePaint = textPaint(layout.titleSize, Typeface.DEFAULT_BOLD)
-    private val mutedPaint = textPaint(layout.bodySize).apply { color = MUTED_COLOR }
+    private val boldPaint = textPaint(layout.bodySize, bold = true)
+    private val titlePaint = textPaint(layout.titleSize, bold = true)
+    private val mutedPaint = textPaint(layout.bodySize).copy(color = MUTED_COLOR)
     private val smallPaint = textPaint(layout.bodySize * 0.9f)
-    private val smallMutedPaint = textPaint(layout.bodySize * 0.9f).apply { color = MUTED_COLOR }
-    private val monoPaint = textPaint(9.5f * k, Typeface.MONOSPACE)
+    private val smallMutedPaint = textPaint(layout.bodySize * 0.9f).copy(color = MUTED_COLOR)
+    private val monoPaint = textPaint(9.5f * k, mono = true)
     private val cellPaint = textPaint(10f * k)
-    private val headerCellPaint = textPaint(10f * k, Typeface.DEFAULT_BOLD)
-    private val numberPaint = textPaint(layout.bodySize).apply { textAlign = Paint.Align.RIGHT }
-    private val footerPaint = textPaint(8f * k).apply {
-        color = MUTED_COLOR
-        textAlign = Paint.Align.CENTER
-    }
-    private val rulePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 0.6f * k
-        color = 0xFFC8C8C8.toInt()
-    }
-    private val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 0.9f * k
-        color = MUTED_COLOR
-    }
-    private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1.4f * k
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-        color = Color.WHITE
-    }
+    private val headerCellPaint = textPaint(10f * k, bold = true)
+    private val numberPaint = textPaint(layout.bodySize).copy(align = PdfAlign.RIGHT)
+    private val footerPaint = textPaint(8f * k).copy(color = MUTED_COLOR, align = PdfAlign.CENTER)
+    private val rulePaint = PdfPaint(color = 0xFFC8C8C8.toInt(), stroke = 0.6f * k)
+    private val boxPaint = PdfPaint(color = MUTED_COLOR, stroke = 0.9f * k)
+    private val tickPaint = PdfPaint(color = PdfColors.WHITE, stroke = 1.4f * k, cap = PdfCap.ROUND, roundJoin = true)
 
     /** L'altezza fissa di una riga di testo come nell'editor, in punti; null per il documento (quella del carattere). */
     private fun fixedLine(spans: List<RichTextSpan>, checkbox: Boolean = false, spacing: Int = 0): Float? {
@@ -225,11 +176,11 @@ class PdfExport(
 
     /** I fogli, ognuno con le cose da disegnarci; [y] è dove si scrive adesso. */
     inner class Sheets {
-        val list = ArrayList<MutableList<(Canvas) -> Unit>>().apply { add(ArrayList()) }
+        val list = ArrayList<MutableList<(PdfCanvas) -> Unit>>().apply { add(ArrayList()) }
         var y = layout.titleTop
 
         fun newSheet() {
-            list += ArrayList<(Canvas) -> Unit>()
+            list += ArrayList<(PdfCanvas) -> Unit>()
             y = layout.marginTop
         }
 
@@ -238,12 +189,12 @@ class PdfExport(
             if (y + height > bottom && y > layout.marginTop) newSheet()
         }
 
-        fun draw(op: (Canvas) -> Unit) {
+        fun draw(op: (PdfCanvas) -> Unit) {
             list.last() += op
         }
 
-        fun drawOn(sheet: Int, op: (Canvas) -> Unit) {
-            while (list.size <= sheet) list += ArrayList<(Canvas) -> Unit>()
+        fun drawOn(sheet: Int, op: (PdfCanvas) -> Unit) {
+            while (list.size <= sheet) list += ArrayList<(PdfCanvas) -> Unit>()
             list[sheet] += op
         }
 
@@ -326,8 +277,8 @@ class PdfExport(
         when (block.type) {
             BlockType.PARAGRAPH -> {
                 if (line.text.isBlank()) {
-                    sheets.ensure(fixed ?: bodyPaint.fontSpacing)
-                    sheets.y += fixed ?: bodyPaint.fontSpacing
+                    sheets.ensure(fixed ?: backend.fontSpacing(bodyPaint))
+                    sheets.y += fixed ?: backend.fontSpacing(bodyPaint)
                 } else {
                     paragraph(sheets, styled(line.spans), bodyPaint, left, width, fixed = fixed)
                 }
@@ -353,7 +304,7 @@ class PdfExport(
                 val size = bodyPaint.textSize * 0.42f
                 val x = left + 3f * k
                 val y = baseline - bodyPaint.textSize * 0.33f
-                canvas.drawPath(Path().apply {
+                canvas.drawPath(PdfPath().apply {
                     moveTo(x, y - size)
                     lineTo(x + size * 1.3f, y)
                     lineTo(x, y + size)
@@ -377,8 +328,11 @@ class PdfExport(
                 })
             }
             BlockType.NOTIFICATION -> {
-                val text = SpannableStringBuilder("🔔 ").append(styled(line.spans))
-                block.notifyAt?.let { text.append(if (line.text.isBlank()) "" else " · ").append(dateText(it)) }
+                val text = buildList {
+                    add(PdfSpan("🔔 "))
+                    addAll(styled(line.spans))
+                    block.notifyAt?.let { add(PdfSpan((if (line.text.isBlank()) "" else " · ") + dateText(it))) }
+                }
                 paragraph(sheets, text, bodyPaint, left, width, fixed = fixed)
             }
             BlockType.BUTTON -> page.buttons[block.id]?.let { button(sheets, it, left, width) }
@@ -416,13 +370,12 @@ class PdfExport(
                     else -> "🔖 "
                 }
                 val name = (attrs.name ?: line.text.ifBlank { null } ?: attrs.url ?: "").trim()
-                val text = SpannableStringBuilder(icon).append(name)
-                attrs.url?.takeIf { it != name }?.let { url ->
-                    text.append("\n")
-                    val start = text.length
-                    text.append(url)
-                    text.setSpan(ForegroundColorSpan(LINK_COLOR), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    text.setSpan(RelativeSizeSpan(0.85f), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                val text = buildList {
+                    add(PdfSpan(icon + name))
+                    attrs.url?.takeIf { it != name }?.let { url ->
+                        add(PdfSpan("\n"))
+                        add(PdfSpan(url, color = LINK_COLOR, sizeFactor = 0.85f))
+                    }
                 }
                 paragraph(sheets, text, bodyPaint, left, width)
             }
@@ -443,7 +396,7 @@ class PdfExport(
      * va a capo pagina continua sul foglio dopo.
      */
     private fun boxed(sheets: Sheets, color: Int, left: Float, content: () -> Unit) {
-        sheets.ensure(boxPadding * 2 + bodyPaint.fontSpacing)
+        sheets.ensure(boxPadding * 2 + backend.fontSpacing(bodyPaint))
         val top = sheets.y
         sheets.draw { it.drawRect(left, top, right, top + boxPadding, fill(color)) }
         sheets.y += boxPadding
@@ -457,13 +410,9 @@ class PdfExport(
     private fun button(sheets: Sheets, button: ExportButton, left: Float, width: Float) {
         val inner = left + boxPadding
         val innerWidth = width - boxPadding * 2
-        val background: (Canvas, Float, Float) -> Unit = { canvas, top, end -> canvas.drawRect(left, top, right, end, fill(BUTTON_COLOR)) }
+        val background: (PdfCanvas, Float, Float) -> Unit = { canvas, top, end -> canvas.drawRect(left, top, right, end, fill(BUTTON_COLOR)) }
         boxed(sheets, BUTTON_COLOR, left) {
-            val head = SpannableStringBuilder("🔘 ")
-            val start = head.length
-            head.append(button.name)
-            head.setSpan(StyleSpan(Typeface.BOLD), start, head.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            head.append(" — ${ButtonStrings.whenTapped}:")
+            val head = listOf(PdfSpan("🔘 "), PdfSpan(button.name, bold = true), PdfSpan(" — ${ButtonStrings.whenTapped}:"))
             paragraph(sheets, head, bodyPaint, inner, innerWidth, background = background)
             for (step in button.steps) paragraph(sheets, step, smallPaint, inner + indent / 2, innerWidth - indent / 2, background = background)
         }
@@ -486,13 +435,11 @@ class PdfExport(
             grid(sheets, listOf(database.headers) + rows, header = true, left = left, width = width)
         } else {
             for (row in database.rows) {
-                sheets.ensure(boldPaint.fontSpacing * 2)
+                sheets.ensure(backend.fontSpacing(boldPaint) * 2)
                 paragraph(sheets, name(row), boldPaint, left, width)
                 row.cells.forEachIndexed { i, value ->
                     if (i == database.nameIndex || value.isBlank()) return@forEachIndexed
-                    val text = SpannableStringBuilder(database.headers[i] + ": ")
-                    text.setSpan(ForegroundColorSpan(MUTED_COLOR), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    text.append(value)
+                    val text = listOf(PdfSpan(database.headers[i] + ": ", color = MUTED_COLOR), PdfSpan(value))
                     paragraph(sheets, text, smallPaint, left + indent / 2, width - indent / 2)
                 }
                 sheets.y += 3f * k
@@ -524,11 +471,9 @@ class PdfExport(
             val bold = header && index == 0
             val layouts = (0 until cols).map { col ->
                 val text = row.getOrNull(col).orEmpty()
-                StaticLayout.Builder.obtain(text, 0, text.length, if (bold) headerCellPaint else cellPaint, max(1, (widths[col] - cellPadding * 2).toInt()))
-                    .setIncludePad(false)
-                    .build()
+                backend.layout(plainText(text), if (bold) headerCellPaint else cellPaint, max(1, (widths[col] - cellPadding * 2).toInt()))
             }
-            val height = min(contentHeight, (layouts.maxOf { it.height } + cellPadding * 2).coerceAtLeast(cellPaint.fontSpacing + cellPadding * 2))
+            val height = min(contentHeight, (layouts.maxOf { it.height } + cellPadding * 2).coerceAtLeast(backend.fontSpacing(cellPaint) + cellPadding * 2))
             sheets.ensure(height)
             val top = sheets.y
             sheets.draw { canvas ->
@@ -559,39 +504,46 @@ class PdfExport(
      */
     private fun paragraph(
         sheets: Sheets,
-        text: CharSequence,
-        paint: TextPaint,
+        text: String,
+        paint: PdfPaint,
         left: Float,
         width: Float,
         fixed: Float? = null,
-        background: ((Canvas, Float, Float) -> Unit)? = null,
-        marker: ((Canvas, Float) -> Unit)? = null
+        background: ((PdfCanvas, Float, Float) -> Unit)? = null,
+        marker: ((PdfCanvas, Float) -> Unit)? = null
+    ) = paragraph(sheets, plainText(text), paint, left, width, fixed, background, marker)
+
+    private fun paragraph(
+        sheets: Sheets,
+        text: List<PdfSpan>,
+        paint: PdfPaint,
+        left: Float,
+        width: Float,
+        fixed: Float? = null,
+        background: ((PdfCanvas, Float, Float) -> Unit)? = null,
+        marker: ((PdfCanvas, Float) -> Unit)? = null
     ) {
-        val layout = StaticLayout.Builder.obtain(text, 0, text.length, paint, max(1, width.toInt()))
-            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-            .setIncludePad(false)
-            .setLineSpacing(0f, if (fixed == null) LINE_SPACING else 1f)
-            .build()
+        val layout = backend.layout(text, paint, max(1, width.toInt()), if (fixed == null) LINE_SPACING else 1f)
         for (i in 0 until layout.lineCount) {
-            val lineTop = layout.getLineTop(i).toFloat()
-            val natural = layout.getLineBottom(i) - lineTop
+            val lineTop = layout.lineTop(i)
+            val natural = layout.lineBottom(i) - lineTop
             val height = fixed ?: natural
             sheets.ensure(height)
             val y = sheets.y
             // Nel mezzo della riga alta [fixed]; di suo, dov'è.
             val shift = if (fixed == null) 0f else {
-                val ascent = layout.getLineAscent(i).toFloat()
-                val descent = layout.getLineDescent(i).toFloat()
-                (fixed - (descent - ascent)) / 2f - ascent - (layout.getLineBaseline(i) - lineTop)
+                val ascent = layout.lineAscent(i)
+                val descent = layout.lineDescent(i)
+                (fixed - (descent - ascent)) / 2f - ascent - (layout.lineBaseline(i) - lineTop)
             }
-            val baseline = y + shift + layout.getLineBaseline(i) - lineTop
+            val baseline = y + shift + layout.lineBaseline(i) - lineTop
             val first = i == 0
             sheets.draw { canvas ->
                 background?.invoke(canvas, y, y + height)
                 canvas.save()
                 canvas.clipRect(left - 1f, y, left + width + 1f, y + height)
                 canvas.translate(left, y + shift - lineTop)
-                layout.draw(canvas)
+                layout.drawLine(canvas, i)
                 canvas.restore()
                 if (first) marker?.invoke(canvas, baseline)
             }
@@ -599,46 +551,37 @@ class PdfExport(
         }
     }
 
-    private fun checkbox(canvas: Canvas, left: Float, baseline: Float, checked: Boolean) {
+    private fun checkbox(canvas: PdfCanvas, left: Float, baseline: Float, checked: Boolean) {
         val size = bodyPaint.textSize * 0.82f
         val top = baseline - size * 0.92f
-        val box = RectF(left, top, left + size, top + size)
         if (checked) {
-            canvas.drawRoundRect(box, 2f * k, 2f * k, fill(CHECKED_COLOR))
-            canvas.drawPath(Path().apply {
+            canvas.drawRoundRect(left, top, left + size, top + size, 2f * k, fill(CHECKED_COLOR))
+            canvas.drawPath(PdfPath().apply {
                 moveTo(left + size * 0.22f, top + size * 0.52f)
                 lineTo(left + size * 0.42f, top + size * 0.72f)
                 lineTo(left + size * 0.78f, top + size * 0.30f)
             }, tickPaint)
         } else {
-            canvas.drawRoundRect(box, 2f * k, 2f * k, boxPaint)
+            canvas.drawRoundRect(left, top, left + size, top + size, 2f * k, boxPaint)
         }
     }
 
     /** L'immagine larga quanto nella pagina (`BlockAttrs.width`), mai più del foglio; false se il file non si legge. */
     private fun image(sheets: Sheets, file: File, left: Float, width: Float, fraction: Float?): Boolean {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(file.path, bounds)
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return false
+        val (outWidth, outHeight) = backend.imageSize(file) ?: return false
+        if (outWidth <= 0 || outHeight <= 0) return false
         var w = width * (fraction?.takeIf { it > 0f }?.coerceAtMost(1f) ?: 1f)
         // Un'immagine piccola (un'icona) non si ingrandisce oltre la sua misura.
-        w = min(w, bounds.outWidth * 0.75f * k)
-        var h = w * bounds.outHeight / bounds.outWidth
+        w = min(w, outWidth * 0.75f * k)
+        var h = w * outHeight / outWidth
         if (h > contentHeight) {
             h = contentHeight
-            w = h * bounds.outWidth / bounds.outHeight
+            w = h * outWidth / outHeight
         }
         sheets.ensure(h)
         val top = sheets.y
-        val path = file.path
         val pixels = (w * IMAGE_PIXELS_PER_POINT).toInt()
-        sheets.draw { canvas ->
-            var sample = 1
-            while (bounds.outWidth / (sample * 2) >= pixels) sample *= 2
-            val bitmap = BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return@draw
-            canvas.drawBitmap(bitmap, null, RectF(left, top, left + w, top + h), Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG))
-            bitmap.recycle()
-        }
+        sheets.draw { canvas -> canvas.drawImage(file, left, top, left + w, top + h, pixels) }
         sheets.y += h
         return true
     }
@@ -667,7 +610,7 @@ class PdfExport(
             val points = decodeInkPoints(stroke.points)
             if (points.isEmpty()) continue
             val path = inkPath(stroke.tool, stroke.width, points, s)
-            val bounds = RectF().also { path.computeBounds(it, true) }
+            val boundsBottom = path.bounds()[3]
             val paint = inkPaint(stroke, s)
             val reach = stroke.width * s
             var sheet = origin.sheet
@@ -683,7 +626,7 @@ class PdfExport(
                     canvas.drawPath(path, paint)
                     canvas.restore()
                 }
-                if (dy + bounds.bottom + reach <= bottom) break
+                if (dy + boundsBottom + reach <= bottom) break
                 dy -= contentHeight
                 sheet++
                 clipTop = layout.marginTop
@@ -692,8 +635,8 @@ class PdfExport(
     }
 
     /** Il percorso di un tratto in punti, come `buildInkPath` dell'editor: penna e matita piene e larghe quanto la pressione. */
-    private fun inkPath(tool: InkTool, width: Float, points: List<com.gabriele.notionlocal.data.ink.InkPoint>, s: Float): Path {
-        val path = Path()
+    private fun inkPath(tool: InkTool, width: Float, points: List<com.gabriele.notionlocal.data.ink.InkPoint>, s: Float): PdfPath {
+        val path = PdfPath()
         fun x(i: Int) = points[i].x * s
         fun y(i: Int) = points[i].y * s
         when (tool) {
@@ -716,7 +659,7 @@ class PdfExport(
         return path
     }
 
-    private fun addCircle(path: Path, cx: Float, cy: Float, r: Float) {
+    private fun addCircle(path: PdfPath, cx: Float, cy: Float, r: Float) {
         val sides = (r * 2.4f).toInt().coerceIn(8, 28)
         for (step in 0 until sides) {
             val angle = 2.0 * Math.PI * step / sides
@@ -727,7 +670,7 @@ class PdfExport(
         path.close()
     }
 
-    private fun addSegment(path: Path, ax: Float, ay: Float, ar: Float, bx: Float, by: Float, br: Float) {
+    private fun addSegment(path: PdfPath, ax: Float, ay: Float, ar: Float, bx: Float, by: Float, br: Float) {
         val length = hypot(bx - ax, by - ay)
         if (length < 0.01f) return
         val nx = -(by - ay) / length
@@ -746,44 +689,23 @@ class PdfExport(
     }
 
     /** Il colore del tratto sulla carta: "il colore del testo" è il nero, e un colore troppo chiaro si scurisce. */
-    private fun inkPaint(stroke: InkStrokeEntity, s: Float): Paint {
+    private fun inkPaint(stroke: InkStrokeEntity, s: Float): PdfPaint {
         val chosen = if (stroke.color == InkStrokeEntity.AUTO_COLOR) TEXT_COLOR else stroke.color.toInt()
-        val color = if (stroke.tool == InkTool.HIGHLIGHTER) chosen else forPaperText(chosen)
-        return Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            when (stroke.tool) {
-                InkTool.PEN -> {
-                    style = Paint.Style.FILL
-                    this.color = color
-                }
-                InkTool.PENCIL -> {
-                    style = Paint.Style.FILL
-                    this.color = ColorUtils.setAlphaComponent(color, (Color.alpha(color) * 0.8f).toInt())
-                }
-                InkTool.MARKER -> {
-                    style = Paint.Style.STROKE
-                    strokeWidth = stroke.width * s
-                    strokeCap = Paint.Cap.ROUND
-                    strokeJoin = Paint.Join.ROUND
-                    this.color = color
-                }
-                InkTool.HIGHLIGHTER -> {
-                    style = Paint.Style.STROKE
-                    strokeWidth = stroke.width * s
-                    strokeCap = Paint.Cap.SQUARE
-                    strokeJoin = Paint.Join.ROUND
-                    this.color = ColorUtils.setAlphaComponent(color, (255 * 0.38f).toInt())
-                }
-            }
+        val color = if (stroke.tool == InkTool.HIGHLIGHTER) chosen else PdfColors.forPaperText(chosen)
+        return when (stroke.tool) {
+            InkTool.PEN -> PdfPaint(color = color)
+            InkTool.PENCIL -> PdfPaint(color = PdfColors.withAlpha(color, (PdfColors.alpha(color) * 0.8f).toInt()))
+            InkTool.MARKER -> PdfPaint(color = color, stroke = stroke.width * s, cap = PdfCap.ROUND, roundJoin = true)
+            InkTool.HIGHLIGHTER -> PdfPaint(
+                color = PdfColors.withAlpha(color, (255 * 0.38f).toInt()),
+                stroke = stroke.width * s,
+                cap = PdfCap.SQUARE,
+                roundJoin = true
+            )
         }
     }
 
-    private fun underlined(prefix: String, text: String): CharSequence {
-        val result = SpannableStringBuilder(prefix)
-        val start = result.length
-        result.append(text)
-        result.setSpan(UnderlineSpan(), start, result.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        return result
-    }
+    private fun underlined(prefix: String, text: String): List<PdfSpan> = listOf(PdfSpan(prefix), PdfSpan(text, underline = true))
 
     companion object {
         /** La larghezza del foglio di un documento: per i test. */
@@ -820,16 +742,10 @@ class PdfExport(
 
         val FLOWING_TYPES = setOf(BlockType.PARAGRAPH, BlockType.BULLET_LIST_ITEM, BlockType.NUMBERED_LIST_ITEM, BlockType.CHECKBOX)
 
-        fun textPaint(size: Float, typeface: Typeface = Typeface.DEFAULT) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = size
-            color = TEXT_COLOR
-            this.typeface = typeface
-        }
+        fun textPaint(size: Float, bold: Boolean = false, mono: Boolean = false) =
+            PdfPaint(color = TEXT_COLOR, textSize = size, bold = bold, mono = mono)
 
-        fun fill(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            this.color = color
-        }
+        fun fill(color: Int) = PdfPaint(color = color)
     }
 }
 
@@ -840,47 +756,23 @@ class PdfExport(
  * rosso scuro) sul bianco della carta non si leggerebbero: il testo troppo
  * chiaro si scurisce, lo sfondo troppo scuro si schiarisce.
  */
-fun styled(spans: List<RichTextSpan>): CharSequence {
-    val result = SpannableStringBuilder()
-    for (span in spans) {
-        val start = result.length
-        result.append(span.text)
-        val end = result.length
-        if (start == end) continue
-        fun set(what: Any) = result.setSpan(what, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        when {
-            span.bold && span.italic -> set(StyleSpan(Typeface.BOLD_ITALIC))
-            span.bold -> set(StyleSpan(Typeface.BOLD))
-            span.italic -> set(StyleSpan(Typeface.ITALIC))
-        }
-        if (span.underline || span.link != null) set(UnderlineSpan())
-        if (span.strikethrough) set(StrikethroughSpan())
-        span.size?.let { set(RelativeSizeSpan(it / 16f)) }
-        if (span.subscript || span.superscript) {
-            set(if (span.subscript) SubscriptSpan() else SuperscriptSpan())
-            set(RelativeSizeSpan(0.75f))
-        }
-        val color = span.color?.let(::parseHex)?.let(::forPaperText) ?: if (span.link != null) 0xFF2563C9.toInt() else null
-        color?.let { set(ForegroundColorSpan(it)) }
-        span.background?.let(::parseHex)?.let(::forPaperBackground)?.let { set(BackgroundColorSpan(it)) }
-    }
-    return result
+fun styled(spans: List<RichTextSpan>): List<PdfSpan> = spans.filter { it.text.isNotEmpty() }.map { span ->
+    PdfSpan(
+        text = span.text,
+        bold = span.bold,
+        italic = span.italic,
+        underline = span.underline || span.link != null,
+        strike = span.strikethrough,
+        sizeFactor = span.size?.let { it / 16f },
+        script = when {
+            span.subscript -> -1
+            span.superscript -> 1
+            else -> 0
+        },
+        color = span.color?.let(PdfColors::parse)?.let(PdfColors::forPaperText) ?: if (span.link != null) PdfExport.LINK_COLOR else null,
+        background = span.background?.let(PdfColors::parse)?.let(PdfColors::forPaperBackground)
+    )
 }
 
-/**
- * Tutto il testo di [color], sotto i colori scelti per i suoi pezzi: con la
- * priorità più alta si applica per primo, e quelli dopo lo coprono.
- */
-private fun CharSequence.withColor(color: Int): CharSequence {
-    val result = SpannableStringBuilder(this)
-    result.setSpan(ForegroundColorSpan(color), 0, result.length, Spanned.SPAN_INCLUSIVE_INCLUSIVE or (1 shl Spanned.SPAN_PRIORITY_SHIFT))
-    return result
-}
-
-private fun parseHex(hex: String): Int? = runCatching { Color.parseColor(hex) }.getOrNull()
-
-private fun forPaperText(color: Int): Int =
-    if (ColorUtils.calculateLuminance(color) > 0.5) ColorUtils.blendARGB(color, Color.BLACK, 0.45f) else color
-
-private fun forPaperBackground(color: Int): Int =
-    if (ColorUtils.calculateLuminance(color) < 0.4) ColorUtils.blendARGB(color, Color.WHITE, 0.7f) else color
+/** Tutto il testo di [color], tranne i pezzi che hanno un colore loro. */
+private fun List<PdfSpan>.withColor(color: Int): List<PdfSpan> = map { it.copy(color = it.color ?: color) }

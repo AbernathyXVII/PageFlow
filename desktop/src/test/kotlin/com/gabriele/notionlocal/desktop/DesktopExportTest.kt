@@ -17,7 +17,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.file.Files
@@ -26,8 +25,7 @@ import java.util.zip.ZipFile
 /**
  * **L'esportazione sul PC** (dal 09/11/2026): lo stesso Markdown del telefono
  * (`PageExporter`, nel codice comune), con l'immagine e la sottopagina nello
- * .zip accanto. Il PDF sul PC non c'è ancora: niente file, e la finestra
- * "Export" non lo offre.
+ * .zip accanto. Il PDF è in `DesktopPdfTest`.
  */
 class DesktopExportTest {
     private val dir = Files.createTempDirectory("pageflow-export").toFile()
@@ -63,8 +61,5 @@ class DesktopExportTest {
             val hotel = file.getInputStream(file.getEntry("Viaggio/Hotel.md")).readBytes().toString(Charsets.UTF_8)
             assertTrue(hotel, hotel.startsWith("# Hotel\n\nCamera 12"))
         }
-
-        // Il PDF sul PC non c'è ancora.
-        assertNull(exportToFile(context, factory, "viaggio", ExportOptions(ExportFormat.PDF), "Untitled"))
     }
 }

@@ -1151,6 +1151,30 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.22 — 09/11/2026 · 23:07 — Il PDF anche sul PC, col testo vero, e "Print"
+*(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2100) e sul telefono (il PDF si prepara e si apre la stampa; l'anteprima no, la stampante era spenta); 1130 test passati)*
+
+- **[Progetto]** **"Export" in PDF sul PC**, come sul telefono: il testo è
+  testo vero (si seleziona e si cerca), con grassetto, corsivo, colori,
+  evidenziato, sottolineato, barrato, apici e pedici, le liste, le caselle,
+  citazioni, riquadri, codice, tabelle, database, bottoni, immagini, i
+  disegni a mano ("Include drawings") e "1 / 5" in fondo ai fogli. "Print"
+  lo manda alla stampa di Windows (se non si può, lo apre nel programma dei
+  PDF). I caratteri sono quelli di Windows dentro il file: Segoe UI, Consolas
+  per il codice e, per le lettere che mancano, Segoe UI Symbol, Segoe UI
+  Emoji (gli emoji vengono in bianco e nero), Malgun Gothic per il coreano,
+  Microsoft YaHei per cinese e giapponese. Le righe vanno a capo un po'
+  diversamente dal telefono (Segoe UI non è Roboto). Provato dall'utente sul PC
+- **[Progetto]** **L'impaginazione del PDF nel codice comune** (`PdfExport`):
+  è la stessa su telefono e PC; il testo lo misurano e i fogli li disegnano
+  gli attrezzi di ogni sistema (`PdfBackend`): sul telefono quelli di Android
+  di sempre (`StaticLayout`, `PdfDocument`), sul PC PDFBox 3.0.5, una
+  libreria nuova (l'installatore cresce di circa 4 MB)
+- **[Progetto]** `DesktopPdfTest`: una pagina con un po' di tutto diventa
+  sul PC un PDF di più fogli in cui si ritrova il testo, anche il coreano
+  (foto del primo foglio in `pdf_page1.png`); i test del PDF del telefono
+  disegnano i fogli come prima
+
 ### ✏️ v0.153.21 — 09/11/2026 · 22:45 — "Export" anche sul PC, in Markdown
 *(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2000) e sul telefono; 1129 test passati)*
 

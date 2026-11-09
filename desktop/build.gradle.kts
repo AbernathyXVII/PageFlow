@@ -28,6 +28,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // Per preparare nei test un database di una versione vecchia (DesktopBackupTest): la stessa di `shared`.
     testImplementation("androidx.sqlite:sqlite-bundled:2.6.2")
+    // Per leggere nei test il PDF fatto sul PC (`DesktopPdfTest`).
+    testImplementation("org.apache.pdfbox:pdfbox:3.0.5")
 }
 
 /**

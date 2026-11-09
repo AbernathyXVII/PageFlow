@@ -168,7 +168,7 @@ class PageExportTest {
         assertTrue("fogli: ${sheets.list.size}", sheets.list.size >= 3)
         val bitmap = Bitmap.createBitmap(PdfExport.PAGE_WIDTH, PdfExport.PAGE_HEIGHT, Bitmap.Config.ARGB_8888)
         bitmap.eraseColor(Color.WHITE)
-        export.draw(sheets, 0, Canvas(bitmap))
+        export.draw(sheets, 0, AndroidPdfCanvas(Canvas(bitmap)))
         // Il titolo in alto a sinistra: scritto scuro sul bianco.
         val dark = (60 until 280).sumOf { x -> (56 until 84).count { y -> Color.red(bitmap.getPixel(x, y)) < 128 } }
         assertTrue("punti scuri nel titolo: $dark", dark > 100)
