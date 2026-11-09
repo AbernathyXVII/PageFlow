@@ -71,7 +71,7 @@ private enum class NotificationsDialog { SOUND, PRIORITY, MUTE_FOR }
  * sentire e vedere com'è.
  */
 @Composable
-fun NotificationSettingsSection() {
+actual fun NotificationSettingsSection() {
     val context = LocalPlatformContext.current
     var dialog by remember { mutableStateOf<NotificationsDialog?>(null) }
 

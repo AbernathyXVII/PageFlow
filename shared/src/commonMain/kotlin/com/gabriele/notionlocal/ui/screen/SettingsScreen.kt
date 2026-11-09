@@ -13,10 +13,6 @@ import com.gabriele.notionlocal.data.security.AppLock
 import com.gabriele.notionlocal.ui.i18n.LockStrings
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.text.format.Formatter
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.DeleteForever
@@ -25,17 +21,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import com.gabriele.notionlocal.platform.mainActivityIntent
 import com.gabriele.notionlocal.data.AppCleanup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import android.content.Intent
-import android.media.RingtoneManager
-import android.net.Uri
-import android.provider.OpenableColumns
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -79,7 +68,6 @@ import com.gabriele.notionlocal.data.settings.DateStyle
 import com.gabriele.notionlocal.data.settings.NumberStyle
 import com.gabriele.notionlocal.data.settings.ThemeMode
 import com.gabriele.notionlocal.data.settings.TitlePosition
-import com.gabriele.notionlocal.data.widgets.WidgetStore
 import com.gabriele.notionlocal.ui.format.Formats
 import com.gabriele.notionlocal.ui.i18n.Strings
 import com.gabriele.notionlocal.ui.theme.DarkBackground
@@ -169,9 +157,11 @@ fun SettingsScreen(
             // questa sezione era "App sounds", con solo suono e notifiche
             // spente, e il resto stava nella pagina "Notifications" della
             // barra laterale. Vedi `NotificationSettingsSection`.
-            SectionHeader(Strings.notifications)
-            NotificationSettingsSection()
-            HorizontalDivider(color = NotionGray900, modifier = Modifier.padding(vertical = 12.dp))
+            if (hasNotificationSettings) {
+                SectionHeader(Strings.notifications)
+                NotificationSettingsSection()
+                HorizontalDivider(color = NotionGray900, modifier = Modifier.padding(vertical = 12.dp))
+            }
 
             // **"Startup window"** (dal 03/11/2026 qui, chiesto dall'utente:
             // "spostala dalla tendina a sinistra in Settings sopra Title
@@ -303,7 +293,7 @@ fun SettingsScreen(
             SettingsItem(
                 Strings.clearCache,
                 icon = Icons.Filled.CleaningServices,
-                value = Formatter.formatShortFileSize(context, cacheBytes),
+                value = formatFileSize(cacheBytes),
                 onClick = { dialog = SettingsDialog.CLEAR_CACHE }
             )
             SettingsItem(
@@ -317,9 +307,7 @@ fun SettingsScreen(
             // dall'utente): le versioni dell'app come sono scritte nella
             // Cronologia del README. Sotto, la versione di adesso.
             HorizontalDivider(color = NotionGray900, modifier = Modifier.padding(vertical = 12.dp))
-            val appVersion = remember(context) {
-                runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
-            }
+            val appVersion = remember(context) { appVersionName(context) }
             SettingsItem(
                 Strings.patchNotes,
                 icon = Icons.Filled.NewReleases,
@@ -444,7 +432,7 @@ fun SettingsScreen(
             onConfirm = {
                 scope.launch {
                     AppCleanup.deleteAllContent(context)
-                    restartApp(context)
+                    restartAppAfterReset(context)
                 }
             }
         )
@@ -575,25 +563,6 @@ private fun LockPasswordSettings(onDismiss: () -> Unit) {
             onDismiss = onDismiss
         )
     }
-}
-
-/**
- * Fa ripartire l'app da capo, su una My Space vuota. Le schermate aperte
- * hanno ancora in mano il contenuto di prima — un Annulla rimetterebbe i
- * blocchi cancellati — e con l'attività chiusa se ne vanno anche loro.
- */
-private fun restartApp(context: Context) {
-    val activity = context.findActivity() ?: return
-    val intent = mainActivityIntent(activity)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-    activity.startActivity(intent)
-    activity.finish()
-}
-
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
 }
 
 private fun themeLabel(mode: ThemeMode) = when (mode) {

@@ -10,5 +10,8 @@ import java.io.File
  */
 expect fun cacheDirOf(context: PlatformContext): File
 
+/** La cache sulla memoria condivisa, che solo il telefono ha (`externalCacheDir`); sul PC null. */
+expect fun externalCacheDirOf(context: PlatformContext): File?
+
 /** **Un'immagine dai suoi byte** (PNG, JPEG…), da disegnare; null se non si legge. */
 expect fun decodeImageBitmap(bytes: ByteArray): ImageBitmap?

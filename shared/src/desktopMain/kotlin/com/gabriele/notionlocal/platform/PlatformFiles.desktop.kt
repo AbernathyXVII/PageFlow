@@ -12,3 +12,5 @@ actual fun cacheDirOf(context: PlatformContext): File {
 
 actual fun decodeImageBitmap(bytes: ByteArray): ImageBitmap? =
     runCatching { Image.makeFromEncoded(bytes).toComposeImageBitmap() }.getOrNull()
+
+actual fun externalCacheDirOf(context: PlatformContext): File? = null

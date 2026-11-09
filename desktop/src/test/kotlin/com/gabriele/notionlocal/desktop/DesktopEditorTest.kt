@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.gabriele.notionlocal.data.AppCleanup
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.PageEntity
@@ -21,6 +22,7 @@ import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.navigation.AppNavHost
 import com.gabriele.notionlocal.ui.navigation.Routes
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
+import com.gabriele.notionlocal.ui.screen.SettingsScreen
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
@@ -29,6 +31,7 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.EncodedImageFormat
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -91,6 +94,22 @@ class DesktopEditorTest {
         }
         val png = onWindowThread { scene.render(time).encodeToData(EncodedImageFormat.PNG)!!.bytes.also { scene.close() } }
         File("build/desktop-screenshots", name).apply { parentFile.mkdirs() }.writeBytes(png)
+    }
+
+    /** Le impostazioni, le stesse del telefono (senza le notifiche): la foto in `settings.png`. */
+    @Test
+    fun theSettingsDrawOnThePc() {
+        val factory = ViewModelFactory(context)
+        draw("settings.png") { SettingsScreen(onBack = {}, factory = factory) }
+    }
+
+    /** "Delete all content" sul PC: tutte le tabelle vuote, e rinasce solo My Space. */
+    @Test
+    fun deleteAllContentLeavesAnEmptyMySpace() = runBlocking {
+        AppCleanup.deleteAllContent(context)
+        val repo = PageRepository(AppDatabase.getInstance(context))
+        assertNull(repo.getPage("p"))
+        assertEquals("My Space", repo.getPage(PageEntity.ROOT_PAGE_ID)?.title)
     }
 
     /** Tutta l'app, come la apre la finestra del PC (`Main.kt`): arriva alla home. */

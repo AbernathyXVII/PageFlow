@@ -1,11 +1,13 @@
 package com.gabriele.notionlocal.data
 
-import android.content.Context
 import com.gabriele.notionlocal.data.entity.PageEntity
-import com.gabriele.notionlocal.data.notify.NoteAlarms
+import com.gabriele.notionlocal.data.notify.ReminderAlarms
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.gabriele.notionlocal.platform.PlatformContext
+import com.gabriele.notionlocal.platform.cacheDirOf
+import com.gabriele.notionlocal.platform.externalCacheDirOf
 
 /**
  * **Le due voci in fondo alle impostazioni** (dal 26/09/2026): svuotare la
@@ -14,7 +16,7 @@ import java.io.File
 object AppCleanup {
 
     /** Quanto occupa la cache dell'app, in byte. */
-    fun cacheBytes(context: Context): Long =
+    fun cacheBytes(context: PlatformContext): Long =
         cacheDirs(context).sumOf { sizeOf(it) }
 
     /**
@@ -22,7 +24,7 @@ object AppCleanup {
      * può rifare quando servono. Le note non stanno lì: pagine, database e
      * disegni sono nel database, le immagini nella cartella dei file.
      */
-    suspend fun clearCache(context: Context) = withContext(Dispatchers.IO) {
+    suspend fun clearCache(context: PlatformContext) = withContext(Dispatchers.IO) {
         cacheDirs(context).forEach { dir -> dir.listFiles()?.forEach { it.deleteRecursively() } }
     }
 
@@ -38,17 +40,20 @@ object AppCleanup {
      * Chi chiama deve far ripartire l'app: le schermate aperte hanno
      * ancora in mano quello che c'era.
      */
-    suspend fun deleteAllContent(context: Context) = withContext(Dispatchers.IO) {
+    suspend fun deleteAllContent(context: PlatformContext) = withContext(Dispatchers.IO) {
         val db = AppDatabase.getInstance(context)
-        db.clearAllTables()
+        clearAllTablesOf(db)
         db.pageDao().insert(PageEntity(id = PageEntity.ROOT_PAGE_ID, title = "My Space", icon = "🏠"))
         PageImageStore(context).deleteAll()
-        NoteAlarms.reschedule()
+        ReminderAlarms.reschedule()
     }
 
-    private fun cacheDirs(context: Context): List<File> =
-        listOfNotNull(context.cacheDir, context.externalCacheDir)
+    private fun cacheDirs(context: PlatformContext): List<File> =
+        listOfNotNull(cacheDirOf(context), externalCacheDirOf(context))
 
     private fun sizeOf(file: File): Long =
         if (file.isDirectory) file.listFiles()?.sumOf { sizeOf(it) } ?: 0L else file.length()
 }
+
+/** Svuota tutte le tabelle del database (sul telefono `clearAllTables` di Room). */
+expect suspend fun clearAllTablesOf(db: AppDatabase)

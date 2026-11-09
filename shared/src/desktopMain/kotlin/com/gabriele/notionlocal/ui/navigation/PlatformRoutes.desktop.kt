@@ -38,6 +38,7 @@ import com.gabriele.notionlocal.ui.i18n.Strings
 import com.gabriele.notionlocal.ui.theme.DarkBackground
 import com.gabriele.notionlocal.ui.theme.NotionGray400
 import com.gabriele.notionlocal.ui.theme.NotionWhite
+import com.gabriele.notionlocal.ui.screen.SettingsScreen
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -58,11 +59,10 @@ private fun TopRow(title: String, onBack: () -> Unit) {
     }
 }
 
-// shortcut: sul PC le Impostazioni sono una pagina vuota, finché la loro schermata non passa nel codice comune.
+/** Le impostazioni del telefono, le stesse (senza la sezione delle notifiche: vedi `NotificationSettingsSection`). */
 @Composable
-actual fun SettingsRoute(factory: ViewModelFactory, onBack: () -> Unit, onOpenPatchNotes: () -> Unit, onOpenStartup: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().background(DarkBackground)) { TopRow(Strings.settings, onBack) }
-}
+actual fun SettingsRoute(factory: ViewModelFactory, onBack: () -> Unit, onOpenPatchNotes: () -> Unit, onOpenStartup: () -> Unit) =
+    SettingsScreen(factory = factory, onBack = onBack, onOpenPatchNotes = onOpenPatchNotes, onOpenStartup = onOpenStartup)
 
 /**
  * **Backup sul PC** (dal 09/11/2026): per ora solo "Ripristina da un file…",

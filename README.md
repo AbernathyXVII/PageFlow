@@ -1151,6 +1151,26 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.18 — 09/11/2026 · 21:36 — Le Impostazioni anche sul PC: tema, lingua, formati, correttore, password
+*(Claude Code sul PC; provata sul PC dall'utente e sul telefono; 1122 test passati)*
+
+- **[Progetto]** **Le Impostazioni nel codice comune**: sul PC sono le stesse
+  del telefono — tema, finestra di avvio, titolo, riga intera, paragrafo,
+  animazioni, formati di numeri, date e ore, lingua, correttore, fuso
+  orario, password delle pagine bloccate, cache, Patch Notes — tranne la
+  sezione "Notifications", che sul PC non c'è finché non ci sono le
+  notifiche di Windows. Prima, sul PC, erano una pagina vuota. Provate
+  dall'utente sul PC
+- **[Progetto]** Quello che era solo del telefono passa da funzioni di ogni
+  sistema: la versione dell'app (sul PC quella in cima alle Patch Notes),
+  il riavvio dopo "Delete all content" (sul PC PageFlow si chiude) e lo
+  svuotamento delle tabelle (sul PC una per una, in una transazione).
+  `AppCleanup` (svuotare la cache, cancellare tutto) è nel codice comune;
+  il peso della cache si scrive come quello dei file
+- **[Progetto]** Nel `DesktopEditorTest`: le Impostazioni si disegnano sul
+  PC (foto in `settings.png`), e "Delete all content" lascia solo una My
+  Space vuota
+
 ### ✏️ v0.153.17 — 09/11/2026 · 18:28 — Sul PC il clic destro apre i menu, come tenere premuto sul telefono
 *(Claude Code sul PC; provata sul PC dall'utente e sul telefono; 1120 test passati)*
 
