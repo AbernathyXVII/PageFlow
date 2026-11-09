@@ -1151,6 +1151,25 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.19 — 09/11/2026 · 21:58 — Le notifiche di Windows: promemoria, timer, pomodoro e pulsanti anche sul PC
+*(Claude Code sul PC; provata sul PC dall'utente e sul telefono; 1124 test passati)*
+
+- **[Progetto]** **Le notifiche sul PC**, come notifiche di Windows: i
+  promemoria delle pagine ("/notification") e delle date dei database con
+  "Include notification", la fine di un timer, le fasi del pomodoro e
+  "Send notification" dei pulsanti, con gli stessi testi del telefono.
+  Cliccandone una si apre la pagina, la riga o la barra laterale dei
+  widget, e la finestra torna davanti anche se era ridotta a icona. Alla
+  prima notifica l'icona di PageFlow compare accanto all'orologio; chiusa
+  la finestra, sparisce. Arrivano solo con PageFlow aperta: una persa a PC
+  spento arriva alla riapertura, se non è passata da più di 12 ore, e
+  nessuna arriva due volte. Provate dall'utente sul PC
+- **[Progetto]** Sul PC la sezione "Notifications" delle Impostazioni non
+  c'è ancora: suono, priorità e "spegnerle per un po'" sono del telefono
+- **[Progetto]** `DesktopRemindersTest`: un promemoria arriva una volta
+  sola e quando è l'ora, alla prima apertura il passato non arriva tutto
+  insieme, uno perso da più di 12 ore non arriva più
+
 ### ✏️ v0.153.18 — 09/11/2026 · 21:36 — Le Impostazioni anche sul PC: tema, lingua, formati, correttore, password
 *(Claude Code sul PC; provata sul PC dall'utente e sul telefono; 1122 test passati)*
 

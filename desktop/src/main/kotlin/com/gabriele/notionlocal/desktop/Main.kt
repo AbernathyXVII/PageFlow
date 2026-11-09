@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -23,6 +24,8 @@ import androidx.compose.ui.window.rememberWindowState
 import com.gabriele.notionlocal.data.backup.DesktopBackups
 import com.gabriele.notionlocal.data.entity.RollupFormatting
 import com.gabriele.notionlocal.data.ink.InkPrefs
+import com.gabriele.notionlocal.data.notify.DesktopNotifications
+import com.gabriele.notionlocal.data.notify.DesktopReminders
 import com.gabriele.notionlocal.data.security.AppLock
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.data.widgets.WidgetStore
@@ -39,7 +42,7 @@ import org.jetbrains.skia.Image
  * **PageFlow sul PC** (dal 04/11/2026): la stessa app del telefono, con lo
  * stesso codice (`shared`). Dal 09/11/2026 la finestra apre la home, la barra
  * laterale e le pagine (`AppNavHost`), come il telefono; quello che è solo
- * del telefono (notifiche, backup, impostazioni…) sul PC per ora manca.
+ * del telefono (suoni, backup automatici…) sul PC per ora manca.
  */
 fun main() {
     val context = DesktopContext()
@@ -50,15 +53,22 @@ fun main() {
     WidgetStore.init(context)
     InkPrefs.init(context)
     AppLock.init(context)
+    // I promemoria delle pagine ("/notification", le date con la notifica), come `NoteAlarms` sul telefono.
+    DesktopReminders.init(context)
     RollupFormatting.formatter = AppRollupFormatter
     val factory = ViewModelFactory(context)
     val icon = PlatformIcon.load()
     application {
+        val windowState = rememberWindowState(width = 520.dp, height = 900.dp)
         Window(
-            onCloseRequest = ::exitApplication,
+            // Senza togliere l'icona dall'area di notifica il programma resterebbe acceso.
+            onCloseRequest = {
+                DesktopNotifications.close()
+                exitApplication()
+            },
             title = "PageFlow",
             icon = icon,
-            state = rememberWindowState(width = 520.dp, height = 900.dp),
+            state = windowState,
             // Le scorciatoie da tastiera (vedi `AppShortcuts`): la finestra le riceve anche senza un cursore.
             onPreviewKeyEvent = { event ->
                 if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.F) {
@@ -69,6 +79,13 @@ fun main() {
                 }
             }
         ) {
+            // Cliccando una notifica la finestra torna davanti, anche se era ridotta a icona.
+            LaunchedEffect(Unit) {
+                DesktopNotifications.bringToFront = {
+                    windowState.isMinimized = false
+                    window.toFront()
+                }
+            }
             CompositionLocalProvider(LocalPlatformContext provides context) {
                 NotionLocalTheme {
                     Surface(modifier = Modifier.fillMaxSize()) {
