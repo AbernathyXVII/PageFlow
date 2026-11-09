@@ -68,6 +68,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.snapshotFlow
 import androidx.savedstate.read
+import androidx.compose.runtime.DisposableEffect
 
 /**
  * Grafo di navigazione dell'app. Non esiste più una schermata Home
@@ -290,6 +291,12 @@ fun AppNavHost(
     }
 
     BackHandler(enabled = drawerState.isOpen) { closeSidebar() }
+
+    // Ctrl+F sul PC (vedi `AppShortcuts`): la ricerca, come dalla barra laterale.
+    DisposableEffect(navController) {
+        AppShortcuts.openSearch = { closeSidebar(); navController.navigate(Routes.SEARCH) { launchSingleTop = true } }
+        onDispose { AppShortcuts.openSearch = null }
+    }
 
     val actions = SidebarActions(
         onMainMenu = { closeSidebar(); goHome() },

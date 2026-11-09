@@ -1151,6 +1151,22 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.16 — 09/11/2026 · 18:14 — Sul PC: la pagina al centro, Esc per tornare indietro, Ctrl+F per cercare
+*(Claude Code sul PC; provata sul PC dall'utente e sul telefono; 1118 test passati)*
+
+- **[Progetto]** **La finestra del PC a schermo largo**: l'app sta al centro,
+  larga al massimo come una pagina (900 punti), e ai lati resta lo sfondo;
+  prima, a finestra ingrandita, la pagina restava incollata a sinistra
+- **[Progetto]** **Esc è il gesto "indietro" del PC**: chiude la barra
+  laterale, toglie il cursore dalla riga in cui si scrive, e poi torna alla
+  schermata di prima, come il gesto del telefono (`BackHandler` del PC, che
+  passa da quello di Compose)
+- **[Progetto]** **Ctrl+F apre la ricerca** da qualsiasi schermata, anche
+  senza un cursore in un campo (`AppShortcuts`: la finestra riceve il tasto,
+  la navigazione apre "Search")
+- **[Progetto]** Provati dall'utente sul PC con l'installatore aggiornato
+  sopra quello di prima: l'aggiornamento tiene le note
+
 ### ✏️ v0.153.15 — 09/11/2026 · 18:01 — PageFlow si installa su Windows: menu Start, icona, collegamento sul desktop
 *(Claude Code sul PC; installata su Windows dall'utente; sul telefono installata, il suo codice non cambia; 1118 test passati)*
 

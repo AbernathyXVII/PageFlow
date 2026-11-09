@@ -1,9 +1,19 @@
 package com.gabriele.notionlocal.desktop
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
@@ -19,6 +29,7 @@ import com.gabriele.notionlocal.data.widgets.WidgetStore
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.navigation.AppNavHost
+import com.gabriele.notionlocal.ui.navigation.AppShortcuts
 import com.gabriele.notionlocal.ui.screen.AppRollupFormatter
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
@@ -47,18 +58,35 @@ fun main() {
             onCloseRequest = ::exitApplication,
             title = "PageFlow",
             icon = icon,
-            state = rememberWindowState(width = 520.dp, height = 900.dp)
+            state = rememberWindowState(width = 520.dp, height = 900.dp),
+            // Le scorciatoie da tastiera (vedi `AppShortcuts`): la finestra le riceve anche senza un cursore.
+            onPreviewKeyEvent = { event ->
+                if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.F) {
+                    AppShortcuts.openSearch?.invoke()
+                    true
+                } else {
+                    false
+                }
+            }
         ) {
             CompositionLocalProvider(LocalPlatformContext provides context) {
                 NotionLocalTheme {
                     Surface(modifier = Modifier.fillMaxSize()) {
-                        AppNavHost(factory = factory)
+                        // A finestra larga l'app sta al centro, larga come una pagina e non come lo schermo.
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                            Box(modifier = Modifier.widthIn(max = PAGE_MAX_WIDTH).fillMaxWidth().fillMaxHeight()) {
+                                AppNavHost(factory = factory)
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+/** Quanto può essere larga l'app nella finestra: oltre, ai lati resta lo sfondo. */
+private val PAGE_MAX_WIDTH = 900.dp
 
 /** L'icona di PageFlow, la stessa del telefono (cartella `branding`). */
 private object PlatformIcon {

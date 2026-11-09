@@ -89,6 +89,8 @@ kotlin {
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2")
             // Sul PC l'SQLite viaggia dentro l'app (su Windows non ce n'è uno di sistema).
             implementation("androidx.sqlite:sqlite-bundled:2.6.2")
+            // Il tasto Esc come "indietro" (vedi `BackHandler.desktop.kt`): la stessa che usa già la navigazione.
+            implementation("org.jetbrains.compose.ui:ui-backhandler:1.11.1")
         }
     }
 }
