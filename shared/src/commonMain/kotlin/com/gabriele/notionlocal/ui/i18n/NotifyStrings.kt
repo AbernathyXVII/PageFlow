@@ -123,6 +123,27 @@ object NotifyStrings {
         "端末の設定で PageFlow の通知がオフになっています"
     )
     val openPhoneSettings get() = t("Open the phone settings", "Apri le impostazioni del telefono", "Telefoneinstellungen öffnen", "Ouvrir les réglages du téléphone", "Abrir los ajustes del teléfono", "打开手机设置", "휴대폰 설정 열기", "端末の設定を開く")
+    /** Sul PC (dal 10/11/2026): quando arrivano, e da dove viene il suono. */
+    val onPcNote get() = t(
+        "On the computer they arrive while PageFlow is open, even minimized, as Windows notifications with Windows' own sound. Off, timers and pomodoro are silent too.",
+        "Sul computer arrivano mentre PageFlow è aperta, anche ridotta a icona, come notifiche di Windows, col suono di Windows. Spente, tacciono anche timer e pomodoro.",
+        "Auf dem Computer kommen sie, solange PageFlow geöffnet ist (auch minimiert), als Windows-Benachrichtigungen mit dem Windows-Ton. Ausgeschaltet schweigen auch Timer und Pomodoro.",
+        "Sur l'ordinateur, elles arrivent tant que PageFlow est ouverte, même réduite, comme notifications Windows avec le son de Windows. Désactivées, minuteurs et pomodoro se taisent aussi.",
+        "En el ordenador llegan mientras PageFlow está abierta, aunque esté minimizada, como notificaciones de Windows con su sonido. Desactivadas, también callan temporizadores y pomodoro.",
+        "在电脑上，PageFlow 打开时（即使最小化）通知会以 Windows 通知的形式到达，并使用 Windows 的声音。关闭后，计时器和番茄钟也会静音。",
+        "컴퓨터에서는 PageFlow가 열려 있는 동안(최소화해도) Windows 알림으로, Windows 소리와 함께 와요. 끄면 타이머와 뽀모도로도 조용해져요.",
+        "パソコンでは PageFlow が開いている間（最小化中も）、Windows の通知として Windows の音で届きます。オフにするとタイマーとポモドーロも鳴りません。"
+    )
+    val unavailableOnPc get() = t(
+        "Windows isn't showing notifications for PageFlow right now",
+        "Windows adesso non mostra le notifiche di PageFlow",
+        "Windows zeigt gerade keine Benachrichtigungen von PageFlow an",
+        "Windows n'affiche pas les notifications de PageFlow pour l'instant",
+        "Windows no muestra ahora las notificaciones de PageFlow",
+        "Windows 目前不显示 PageFlow 的通知",
+        "지금은 Windows가 PageFlow 알림을 표시하지 않아요",
+        "現在 Windows は PageFlow の通知を表示していません"
+    )
     val timersAlwaysRing get() = t(
         "Sound, vibration, priority and badge are for the reminders of pages and databases: timers and pomodoro always ring and pop up.",
         "Suono, vibrazione, priorità e pallino valgono per i promemoria di pagine e database: timer e pomodoro suonano e compaiono sempre.",

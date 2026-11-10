@@ -5,8 +5,8 @@ import com.gabriele.notionlocal.platform.PlatformContext
 
 /**
  * **La sezione "Notifications" delle impostazioni**: sul telefono quella di
- * sempre (`NotificationSettings.kt`); sul PC, finché le notifiche di Windows
- * non ci sono, non c'è.
+ * sempre (`NotificationSettings.kt`); sul PC, dal 10/11/2026, la prova e
+ * spegnerle (`SettingsPlatformParts.desktop.kt`).
  */
 @Composable
 expect fun NotificationSettingsSection()
@@ -21,6 +21,3 @@ expect fun restartAppAfterReset(context: PlatformContext)
 
 /** La versione dell'app ("0.153.17"): sul telefono quella dell'APK, sul PC quella in cima alle Patch Notes. */
 expect fun appVersionName(context: PlatformContext): String?
-
-/** Se le impostazioni hanno la sezione "Notifications" (sul PC, per ora, no: niente titolo vuoto). */
-expect val hasNotificationSettings: Boolean

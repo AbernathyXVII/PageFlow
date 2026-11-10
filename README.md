@@ -1151,6 +1151,21 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.28 — 10/11/2026 · 10:26 — Sul PC le Notifiche nelle Impostazioni: la prova, spegnerle, spegnerle per un po'
+*(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1140 test passati)*
+
+- **[Progetto]** **La sezione "Notifications" delle Impostazioni anche sul
+  PC**: "Send a test notification", "Turn off notifications" e "Turn off
+  for a while" (un'ora, otto ore, un giorno, una settimana, e "Turn back
+  on"), come sul telefono, con una riga che dice come arrivano sul PC (con
+  PageFlow aperta, col suono di Windows; spente, tacciono anche timer e
+  pomodoro). Suono, vibrazione, priorità e pallino restano del telefono:
+  sul PC le notifiche sono quelle di Windows. Prima, sul PC, la sezione non
+  c'era e le notifiche non si potevano spegnere. Non ancora provato
+  dall'utente
+- **[Progetto]** Via `hasNotificationSettings`: la sezione c'è su tutti e due.
+  La pagina delle Impostazioni disegnata sul PC (`settings.png`) la mostra
+
 ### ✏️ v0.153.27 — 10/11/2026 · 10:18 — Sul PC si legge il testo delle foto, per ritrovarle cercando
 *(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1140 test passati)*
 

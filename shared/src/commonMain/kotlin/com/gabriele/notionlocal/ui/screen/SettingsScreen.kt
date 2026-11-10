@@ -157,11 +157,9 @@ fun SettingsScreen(
             // questa sezione era "App sounds", con solo suono e notifiche
             // spente, e il resto stava nella pagina "Notifications" della
             // barra laterale. Vedi `NotificationSettingsSection`.
-            if (hasNotificationSettings) {
-                SectionHeader(Strings.notifications)
-                NotificationSettingsSection()
-                HorizontalDivider(color = NotionGray900, modifier = Modifier.padding(vertical = 12.dp))
-            }
+            SectionHeader(Strings.notifications)
+            NotificationSettingsSection()
+            HorizontalDivider(color = NotionGray900, modifier = Modifier.padding(vertical = 12.dp))
 
             // **"Startup window"** (dal 03/11/2026 qui, chiesto dall'utente:
             // "spostala dalla tendina a sinistra in Settings sopra Title

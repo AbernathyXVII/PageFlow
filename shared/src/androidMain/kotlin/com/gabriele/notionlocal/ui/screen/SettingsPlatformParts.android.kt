@@ -28,5 +28,3 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 
 actual fun appVersionName(context: PlatformContext): String? =
     runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
-
-actual val hasNotificationSettings: Boolean = true
