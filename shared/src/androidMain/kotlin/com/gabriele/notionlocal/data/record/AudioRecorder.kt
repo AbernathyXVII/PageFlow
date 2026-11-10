@@ -15,11 +15,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.gabriele.notionlocal.platform.mainActivityIntent
 import com.gabriele.notionlocal.shared.R
-import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.PageImageStore
-import com.gabriele.notionlocal.data.entity.BlockAttrs
-import com.gabriele.notionlocal.data.repository.PageRepository
-import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.ui.i18n.CaptureStrings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +23,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
@@ -99,25 +94,7 @@ actual object AudioRecorder {
         val stopped = runCatching { media?.stop() }.isSuccess
         media?.release()
         runCatching { RecordingService.stop(appContext) }
-        scope.launch {
-            withContext(Dispatchers.IO) {
-                val file = PageImageStore(appContext).fileFor(recording.fileName)
-                if (!keep || !stopped || !file.exists() || file.length() == 0L) {
-                    file.delete()
-                    return@withContext
-                }
-                val attrs = BlockAttrs(
-                    file = recording.fileName,
-                    name = CaptureStrings.recordingName(recording.startedAt, AppSettings.zoneId),
-                    mime = "audio/mp4",
-                    size = file.length()
-                )
-                val placed = runCatching {
-                    PageRepository(AppDatabase.getInstance(appContext)).putRecording(recording.blockId, recording.pageId, attrs)
-                }.getOrDefault(false)
-                if (!placed) file.delete()
-            }
-        }
+        scope.launch { placeRecording(appContext, recording, "audio/mp4", keep && stopped) }
     }
 }
 

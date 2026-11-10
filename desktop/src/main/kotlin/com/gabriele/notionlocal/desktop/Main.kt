@@ -21,6 +21,7 @@ import com.gabriele.notionlocal.data.entity.RollupFormatting
 import com.gabriele.notionlocal.data.ink.InkPrefs
 import com.gabriele.notionlocal.data.notify.DesktopNotifications
 import com.gabriele.notionlocal.data.notify.DesktopReminders
+import com.gabriele.notionlocal.data.record.AudioRecorder
 import com.gabriele.notionlocal.data.security.AppLock
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.data.widgets.WidgetStore
@@ -72,6 +73,7 @@ fun main() {
             // Senza togliere l'icona dall'area di notifica il programma resterebbe acceso.
             onCloseRequest = {
                 windowMemory.save(windowState)
+                AudioRecorder.stopBeforeExit(context)
                 DesktopNotifications.close()
                 exitApplication()
             },

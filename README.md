@@ -1151,6 +1151,26 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.24 — 10/11/2026 · 09:21 — Sul PC si registra l'audio dal microfono, nei blocchi audio
+*(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2301) e installata sul telefono; 1134 test passati)*
+
+- **[Progetto]** **Registrare sul PC**, da un blocco audio vuoto come sul
+  telefono: "Record" accende il microfono di Windows, la barra della
+  registrazione mostra il tempo e quanto è forte la voce, "Stop" mette il
+  file nel blocco ("Registrazione…"), "Scarta" lo butta. Il file è un .wav
+  (circa 2,6 MB al minuto, a 22 kHz): Java non sa scrivere l'.m4a del
+  telefono; lo suonano sia il telefono sia Windows. Chiudendo PageFlow
+  mentre registra, la registrazione si ferma e va nel suo blocco prima di
+  uscire. Se Windows nega il microfono alle app del desktop, la
+  registrazione resta muta. Prima, sul PC, "Record" diceva che il microfono
+  non si poteva usare. Provato dall'utente sul PC
+- **[Progetto]** Mettere la registrazione finita nel suo blocco
+  (`placeRecording`) è nel codice comune: lo usano il telefono, come prima,
+  e il PC. Test: `DesktopRecordingTest` (quanto è forte il suono, il .wav
+  scritto senza sapere quanto sarà lungo che alla fine si apre intero, il
+  file che va nel blocco o, scartato, se ne va); via il vecchio test che
+  voleva il registratore del PC spento
+
 ### 🔧 v0.153.23.1 — 10/11/2026 · 09:05 — Sul PC la barra appena fissata risponde al primo clic
 *(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2300) e installata sul telefono; 1132 test passati)*
 

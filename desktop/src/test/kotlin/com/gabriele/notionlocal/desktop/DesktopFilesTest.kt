@@ -2,14 +2,12 @@ package com.gabriele.notionlocal.desktop
 
 import com.gabriele.notionlocal.data.BlockFiles
 import com.gabriele.notionlocal.data.PageImageStore
-import com.gabriele.notionlocal.data.record.AudioRecorder
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.urlLastPathSegment
 import com.gabriele.notionlocal.ui.screen.vimeoId
 import com.gabriele.notionlocal.ui.screen.youTubeId
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -24,7 +22,7 @@ import javax.imageio.ImageIO
  * **I file dei blocchi sul PC** (dal 04/11/2026): il tipo di un'immagine
  * letto dai suoi primi byte, l'estensione che va con un tipo, i video di
  * YouTube e Vimeo riconosciuti dall'indirizzo come sul telefono, l'ultimo
- * pezzo di un indirizzo, e il registratore, che sul PC dice di no.
+ * pezzo di un indirizzo (il registratore è in `DesktopRecordingTest`).
  */
 class DesktopFilesTest {
     private val dir: File = Files.createTempDirectory("pageflow-files").toFile()
@@ -94,12 +92,5 @@ class DesktopFilesTest {
         assertEquals("canzone.mp3", urlLastPathSegment("https://example.com/musica/canzone.mp3"))
         assertEquals("musica", urlLastPathSegment("https://example.com/musica/"))
         assertNull(urlLastPathSegment("https://example.com"))
-    }
-
-    @Test
-    fun noRecordingOnThePc() {
-        assertFalse(AudioRecorder.start(context, "blocco", "pagina"))
-        assertNull(AudioRecorder.current.value)
-        assertEquals(0f, AudioRecorder.level())
     }
 }
