@@ -1151,8 +1151,26 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.35 — 10/11/2026 · 22:08 — Selezionando un titolo grande le righe sotto non si allargano più
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1152 test passati)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **Le righe sotto un titolo
+  grande non prendono più il suo spazio.** Selezionando la fine di un testo
+  più grande (il titolo di una pagina presa dal Web Clipper, un titolo col
+  corpo scelto con la barra Aa), tutte le righe normali sotto si
+  allontanavano come se fossero grandi anche loro, finché la selezione non
+  spariva. Succedeva perché la selezione arrivata in fondo a un campo si
+  porta dietro quello dopo (dal 19/10/2026), e un campo ha un'altezza di
+  riga sola, quella del testo più grande. Ora si porta dietro solo un campo
+  con righe che appaiono uguali, come per lo scorrimento (v0.131.0.2). Per
+  selezionare oltre un titolo, sul PC ci sono i blocchi interi col mouse
+  (v0.153.36). Non ancora provato dall'utente
+- **[Progetto]** `PageEditorViewModel.joinChunkAfter` guarda `lineLookOf`.
+  Test: `LineLookChunksTest` (+1: la selezione in fondo al titolo grande non
+  unisce le righe sotto, che restano alte come le altre)
+
 ### ✏️ v0.153.34 — 10/11/2026 · 21:22 — Sul PC il tasto "Sincronizza col telefono"
-*(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1151 test passati)*
+*(Claude Code sul PC; installata sul telefono dopo la pubblicazione; provata dall'utente col telefono e col PC il 10/11/2026; 1151 test passati)*
 
 - **[Progetto]** **"Sincronizza col telefono" anche sul PC**, in
   Connections, sotto "Aspetta il telefono": il PC lo chiede al telefono
@@ -1161,7 +1179,7 @@ gg/mm/aaaa)" accanto al titolo.
   decide sempre lui cosa va dove. Sul PC una rotellina finché non ha finito
   e poi la notifica; sul telefono, su qualunque schermata, com'è andata in
   basso. Se il telefono non risponde il PC lo dice. Prima si poteva
-  sincronizzare solo dal telefono. Non ancora provato dall'utente
+  sincronizzare solo dal telefono. Provato dall'utente il 10/11/2026
 - **[Progetto]** Il telefono ascolta sulla porta 47391 finché PageFlow è
   aperto, solo se è abbinato a un PC, e una richiesta da un PC sconosciuto
   non fa niente (`WifiSync.listenForPc`, `SyncServer.askPhones`). Test:
@@ -1169,7 +1187,7 @@ gg/mm/aaaa)" accanto al titolo.
   pagina nuova del PC)
 
 ### ✏️ v0.153.33 — 10/11/2026 · 19:47 — Sincronizzazione: una pagina cambiata da tutte e due le parti si unisce riga per riga
-*(Claude Code sul PC; installata sul telefono; la sincronizzazione provata dall'utente, l'unione della stessa pagina cambiata dalle due parti non ancora; 1150 test passati)*
+*(Claude Code sul PC; installata sul telefono; provata dall'utente col telefono e col PC il 10/11/2026; 1150 test passati)*
 
 - **[Progetto]** **La stessa pagina cambiata sul telefono e sul PC non
   sceglie più la pagina intera**: si guarda riga per riga (e il titolo, i
@@ -1180,7 +1198,8 @@ gg/mm/aaaa)" accanto al titolo.
   l'ultima modifica, e la versione di prima resta nella cronologia della
   pagina ("Before syncing"). Così anche due pagine nuove fatte di qua e di
   là nello stesso menu restano tutte e due. La prima volta, senza un "prima"
-  da confrontare, niente si cancella. Non ancora provato dall'utente
+  da confrontare, niente si cancella. Provato dall'utente il 10/11/2026
+  («Funziona, ottimo»)
 - **[Progetto]** `SyncMerge`; il telefono si ricorda le impronte di ogni
   riga dopo la sincronizzazione (`SyncPeer.elements`, in `sync.json`).
   Test in `DesktopSyncTest`: la lista della spesa cambiata dalle due parti

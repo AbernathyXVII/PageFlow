@@ -15,6 +15,7 @@ import com.gabriele.notionlocal.ui.screen.lineScaleFor
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -198,6 +199,21 @@ class LineLookChunksTest {
         assertEquals(before, runs().first().key)
         assertEquals(runs().size, runs().map { it.key }.toSet().size)
         assertEquals(listOf(listOf("Titolo"), listOf("uno", "due")), runs().map { run -> run.blocks.map { vm.plainTextOf(it) } })
+    }
+
+    /**
+     * **Selezionando la fine del titolo grande le righe sotto non si allargano**
+     * (dal 10/11/2026, trovato dall'utente sul PC: tutto il testo sotto il
+     * titolo di una pagina presa dal Web Clipper prendeva lo spazio del titolo).
+     * La selezione che arriva in fondo a un campo si porta dietro quello dopo
+     * solo se le sue righe appaiono uguali.
+     */
+    @Test
+    fun selectingTheEndOfTheBigTitleDoesNotStretchTheLinesBelow() {
+        assertFalse(viewModel.joinChunkAfter(lines[0].id))
+        assertEquals(listOf(lines[0].id), runs().first().blocks.map { it.id })
+        assertEquals(1f to false, lookOfLine(1))
+        assertEveryFieldIsOfOneLook()
     }
 
     @Test

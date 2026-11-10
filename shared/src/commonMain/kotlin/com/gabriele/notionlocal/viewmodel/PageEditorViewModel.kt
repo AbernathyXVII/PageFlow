@@ -629,6 +629,10 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         val at = top.indexOfFirst { it.id == lastLineId }
         if (at < 0) return false
         val next = top.getOrNull(at + 1) ?: return false
+        // **Mai una riga che appare diversa** (dal 10/11/2026, trovato dall'utente sul PC): il
+        // campo ha un'altezza di riga sola (vedi [lineLookOf]), e selezionando la fine di un
+        // titolo grande tutte le righe sotto prendevano lo spazio del titolo.
+        if (lineLookOf(next) != lineLookOf(top[at])) return false
         val nextKey = chunkStartsOf(top)[next.id] ?: return false
         val nextIds = chunkMembers[nextKey] ?: return false
         val ownKey = chunkMembers.entries.firstOrNull { lastLineId in it.value }?.key
