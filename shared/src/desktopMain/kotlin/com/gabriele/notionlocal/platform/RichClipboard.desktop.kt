@@ -12,7 +12,7 @@ actual fun copyRichText(context: PlatformContext, plain: String, html: String): 
 actual val systemAnnouncesCopies: Boolean get() = false
 
 /** Negli appunti di Windows e del Mac: l'HTML per chi lo sa leggere, il testo per gli altri. */
-private class HtmlSelection(private val plain: String, private val html: String) : Transferable {
+class HtmlSelection(private val plain: String, private val html: String) : Transferable {
     private val htmlFlavor = DataFlavor("text/html;class=java.lang.String")
     private val flavors = arrayOf(htmlFlavor, DataFlavor.stringFlavor)
 

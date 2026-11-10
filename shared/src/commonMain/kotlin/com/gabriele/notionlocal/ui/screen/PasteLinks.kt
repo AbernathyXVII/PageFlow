@@ -283,8 +283,8 @@ fun TextFieldValue.withoutPastedLinks(): TextFieldValue {
 /**
  * **Gli appunti dell'editor** (vedi sopra): come quelli di sempre, ma il testo
  * incollato porta i suoi link e, a richiesta, il suo stile. Sul telefono
- * leggono gli appunti di Android, col loro HTML; sul PC, per ora, sono gli
- * appunti di sempre (l'incolla porta il testo e basta).
+ * leggono gli appunti di Android, col loro HTML; sul PC, dal 10/11/2026,
+ * quelli di Windows, col loro HTML (`PasteLinks.desktop.kt`).
  */
 expect class LinkClipboard : ClipboardManager, Clipboard {
     /** Il modo del prossimo incolla; poi si torna a quello di sempre. */

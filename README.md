@@ -1151,6 +1151,23 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.29 — 10/11/2026 · 17:20 — Sul PC si incolla coi link (e con la formattazione), come sul telefono
+*(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1142 test passati)*
+
+- **[Progetto]** **Incollare coi link anche sul PC**: il testo copiato da
+  un browser, da Word o da PageFlow arriva coi suoi link sulle parole
+  giuste; con "Keep Source Formatting" anche grassetto, corsivo, grandezze,
+  elenchi e tabelle, e con "Keep Text Only" niente, come sul telefono.
+  Copiando da PageFlow, negli appunti di Windows va anche l'HTML con lo
+  stile e il tipo delle righe, così incollando in un'altra pagina (o in
+  Word) la formattazione resta. Prima, sul PC, si incollava solo il testo.
+  Non ancora provato dall'utente
+- **[Progetto]** Sul PC gli appunti si leggono dall'HTML di Windows con le
+  stesse funzioni del telefono (`parseClipHtml`, `matchAnchors`,
+  `htmlStyleRuns`). Test: `DesktopPasteTest` (un link da una pagina web
+  arriva sulla parola giusta; copiando del grassetto negli appunti va anche
+  l'HTML)
+
 ### ✏️ v0.153.28 — 10/11/2026 · 10:26 — Sul PC le Notifiche nelle Impostazioni: la prova, spegnerle, spegnerle per un po'
 *(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1140 test passati)*
 
