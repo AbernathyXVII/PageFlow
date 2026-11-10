@@ -77,10 +77,14 @@ object SyncDatabase {
      * blocchi non cambia `updatedAt`); per una riga la sua; per un quaderno
      * quando è nato.
      */
-    suspend fun manifest(db: AppDatabase): Map<String, UnitState> {
+    suspend fun manifest(db: AppDatabase): Map<String, UnitState> = snapshot(db).first
+
+    /** Come `manifest`, coi pezzi stessi accanto (per ricordare le impronte delle righe). */
+    suspend fun snapshot(db: AppDatabase): Pair<Map<String, UnitState>, Map<String, SyncUnit>> {
         val lastEdit = db.latestByPage("page_edits")
         val lastVersion = db.latestByPage("page_versions")
-        return readUnits(db).mapValues { (id, unit) ->
+        val units = readUnits(db)
+        return units.mapValues { (id, unit) ->
             val key = id.substringAfter(':')
             val changedAt = when (id.substringBefore(':')) {
                 "p" -> maxOf(
@@ -92,7 +96,7 @@ object SyncDatabase {
                 else -> unit.tables["notebooks"]?.firstOrNull()?.get("createdAt") as? Long ?: 0L
             }
             UnitState(unit.hash, changedAt)
-        }
+        } to units
     }
 
     private suspend fun AppDatabase.latestByPage(table: String): Map<String, Long> =

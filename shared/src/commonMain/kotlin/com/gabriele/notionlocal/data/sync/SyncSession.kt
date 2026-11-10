@@ -189,34 +189,55 @@ object SyncSession {
         val filesReceived = SyncFiles.receive(input, side.filesDir)
 
         progress(SyncStep.PAGES)
+        // Le pagine cambiate da tutte e due le parti si uniscono riga per riga (`SyncMerge`): servono le due versioni,
+        // e l'unione va di là e resta qui.
+        val toMerge = plan.conflicts.filterTo(HashSet()) { it.startsWith("p:") && it in myUnits && it in theirUnits }
         out.writeByte(CMD_GET)
-        writeStrings(out, plan.fetch)
+        writeStrings(out, plan.fetch + toMerge)
         writeLogKeys(out, missing(theirLogs, myLogs))
         out.flush()
-        val fetched = List(input.readInt()) { SyncUnit.read(input) }
+        val fetched = List(input.readInt()) { SyncUnit.read(input) }.associateBy { it.id }
         val fetchedLogs = readLogs(input)
+        val mineToMerge = SyncDatabase.readUnits(side.db, toMerge)
+        var conflicts = plan.conflicts.size - toMerge.size
+        val merged = toMerge.mapNotNull { id ->
+            val mine = mineToMerge[id] ?: return@mapNotNull null
+            val theirs = fetched[id] ?: return@mapNotNull null
+            val mineIsNewer = myUnits.getValue(id).changedAt >= theirUnits.getValue(id).changedAt
+            val result = SyncMerge.merge(mine, theirs, peer.elements[id].orEmpty(), mineIsNewer)
+            conflicts += result.conflicts
+            result.unit
+        }
         out.writeByte(CMD_PUT)
-        writeUnits(out, SyncDatabase.readUnits(side.db, plan.send).values)
+        writeUnits(out, SyncDatabase.readUnits(side.db, plan.send - toMerge).values + merged)
         writeStrings(out, plan.trashThere)
         writeLogs(out, SyncDatabase.readLogs(side.db, missing(myLogs, theirLogs)))
         out.flush()
         val theirAfter = readManifest(input)
-        applyHere(side, fetched, plan.trashHere, fetchedLogs)
-        val myAfter = SyncDatabase.manifest(side.db)
+        applyHere(side, fetched.values.filter { it.id !in toMerge } + merged, plan.trashHere, fetchedLogs)
+        val (myAfter, myUnitsAfter) = SyncDatabase.snapshot(side.db)
         val base = SyncPlan.newBase(myAfter, theirAfter, plan, peer.base)
+        // Le righe delle pagine uguali sui due lati, per unirle la prossima volta; le altre tengono quelle di prima.
+        val elements = HashMap<String, Map<String, String>>()
+        for ((id, hash) in base) {
+            if (!id.startsWith("p:")) continue
+            val unit = myUnitsAfter[id]
+            val kept = if (unit != null && myAfter[id]?.hash == hash) SyncMerge.elementHashes(unit) else peer.elements[id]
+            if (kept != null) elements[id] = kept
+        }
         side.store.update { state ->
             val current = state.peer(serverId) ?: peer
-            state.withPeer(current.copy(name = serverName, lastSyncAt = startedAt, base = base))
+            state.withPeer(current.copy(name = serverName, lastSyncAt = startedAt, base = base, elements = elements))
         }
         out.writeByte(CMD_BYE)
         out.flush()
         return SyncResult(
             otherName = serverName,
-            sent = plan.send.size,
-            received = plan.fetch.size,
+            sent = (plan.send - toMerge).size + merged.size,
+            received = (plan.fetch - toMerge).size + merged.size,
             trashedHere = plan.trashHere.size,
             trashedThere = plan.trashThere.size,
-            conflicts = plan.conflicts.size,
+            conflicts = conflicts,
             filesSent = filesToSend.size,
             filesReceived = filesReceived
         )

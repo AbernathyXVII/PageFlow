@@ -89,14 +89,14 @@ object WifiSyncStrings {
     )
     val network get() = t("The connection broke: try again.", "La connessione si è interrotta: riprova.", "Die Verbindung wurde unterbrochen: versuche es erneut.", "La connexion a été interrompue : réessayez.", "La conexión se cortó: inténtalo de nuevo.", "连接中断：请重试。", "연결이 끊어졌습니다. 다시 시도하세요.", "接続が切れました。もう一度試してください。")
     val whatSyncs get() = t(
-        "Pages, databases, notebooks, files and page history go both ways; the newest change wins, and the other one stays in the page history. Settings and widgets stay on each device. The first time, both make a backup.",
-        "Pagine, database, quaderni, file e cronologia vanno nei due sensi; vince l'ultima modifica, e l'altra resta nella cronologia della pagina. Impostazioni e widget restano di ogni dispositivo. La prima volta tutti e due fanno un backup.",
-        "Seiten, Datenbanken, Notizbücher, Dateien und Verlauf gehen in beide Richtungen; die neueste Änderung gewinnt, die andere bleibt im Seitenverlauf. Einstellungen und Widgets bleiben auf jedem Gerät. Beim ersten Mal machen beide eine Sicherung.",
-        "Pages, bases de données, carnets, fichiers et historique vont dans les deux sens ; la modification la plus récente l'emporte, l'autre reste dans l'historique de la page. Les réglages et widgets restent sur chaque appareil. La première fois, les deux font une sauvegarde.",
-        "Páginas, bases de datos, cuadernos, archivos e historial van en los dos sentidos; gana el cambio más reciente y el otro queda en el historial de la página. Los ajustes y widgets se quedan en cada dispositivo. La primera vez, los dos hacen una copia de seguridad.",
-        "页面、数据库、笔记本、文件和历史双向同步；最新的修改为准，另一版本保留在页面历史中。设置和小组件留在各自设备上。第一次同步时两边都会备份。",
-        "페이지, 데이터베이스, 노트북, 파일, 기록이 양방향으로 동기화됩니다. 최신 변경이 우선하고 다른 버전은 페이지 기록에 남습니다. 설정과 위젯은 각 기기에 남습니다. 처음에는 양쪽 모두 백업합니다.",
-        "ページ、データベース、ノート、ファイル、履歴が双方向に同期されます。新しい変更が優先され、もう一方はページ履歴に残ります。設定とウィジェットは各端末に残ります。初回は両方でバックアップします。"
+        "Pages, databases, notebooks, files and page history go both ways. A page changed on both sides is merged line by line; only a line changed on both keeps the newest change, and the other one stays in the page history. Settings and widgets stay on each device. The first time, both make a backup.",
+        "Pagine, database, quaderni, file e cronologia vanno nei due sensi. Una pagina cambiata da tutte e due le parti si unisce riga per riga; solo una riga cambiata da tutte e due tiene l'ultima modifica, e l'altra resta nella cronologia della pagina. Impostazioni e widget restano di ogni dispositivo. La prima volta tutti e due fanno un backup.",
+        "Seiten, Datenbanken, Notizbücher, Dateien und Verlauf gehen in beide Richtungen. Eine auf beiden Seiten geänderte Seite wird Zeile für Zeile zusammengeführt; nur bei einer auf beiden Seiten geänderten Zeile gewinnt die neueste Änderung, die andere bleibt im Seitenverlauf. Einstellungen und Widgets bleiben auf jedem Gerät. Beim ersten Mal machen beide eine Sicherung.",
+        "Pages, bases de données, carnets, fichiers et historique vont dans les deux sens. Une page modifiée des deux côtés est fusionnée ligne par ligne ; seule une ligne modifiée des deux côtés garde la modification la plus récente, l'autre reste dans l'historique de la page. Les réglages et widgets restent sur chaque appareil. La première fois, les deux font une sauvegarde.",
+        "Páginas, bases de datos, cuadernos, archivos e historial van en los dos sentidos. Una página cambiada en los dos lados se une línea por línea; solo una línea cambiada en los dos conserva el cambio más reciente, y la otra queda en el historial de la página. Los ajustes y widgets se quedan en cada dispositivo. La primera vez, los dos hacen una copia de seguridad.",
+        "页面、数据库、笔记本、文件和历史双向同步。两边都改过的页面会逐行合并；只有两边都改过的同一行以最新修改为准，另一版本保留在页面历史中。设置和小组件留在各自设备上。第一次同步时两边都会备份。",
+        "페이지, 데이터베이스, 노트북, 파일, 기록이 양방향으로 동기화됩니다. 양쪽에서 바뀐 페이지는 줄 단위로 합쳐지고, 양쪽에서 바뀐 같은 줄만 최신 변경이 우선하며 다른 버전은 페이지 기록에 남습니다. 설정과 위젯은 각 기기에 남습니다. 처음에는 양쪽 모두 백업합니다.",
+        "ページ、データベース、ノート、ファイル、履歴が双方向に同期されます。両方で変更されたページは行ごとにまとめられ、両方で変更された同じ行だけ新しい変更が優先され、もう一方はページ履歴に残ります。設定とウィジェットは各端末に残ります。初回は両方でバックアップします。"
     )
 
     // --- Il PC ---

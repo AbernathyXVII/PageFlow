@@ -9,7 +9,9 @@ package com.gabriele.notionlocal.data.sync
  * - cancellato da una parte e uguale dall'altra: nel cestino dall'altra
  *   (cancellato e cambiato dall'altra: torna, vince la modifica);
  * - cambiato da tutte e due: vince l'ultima modifica (a pari merito, questo
- *   lato), e l'altra resta nella cronologia della pagina (`BEFORE_SYNC`).
+ *   lato), e l'altra resta nella cronologia della pagina (`BEFORE_SYNC`). Le
+ *   pagine però, dal 10/11/2026, si uniscono riga per riga (`SyncMerge`, lo
+ *   fa `SyncSession` coi pezzi di [conflicts]).
  */
 data class SyncPlan(
     /** I pezzi nostri che vanno di là. */

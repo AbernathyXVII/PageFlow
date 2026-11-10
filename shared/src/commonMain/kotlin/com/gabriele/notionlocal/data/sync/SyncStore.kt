@@ -16,7 +16,9 @@ data class SyncPeer(
     /** L'ultima sincronizzazione finita, in millisecondi (0 mai). */
     val lastSyncAt: Long = 0,
     /** Le impronte dei pezzi all'ultima sincronizzazione (solo il telefono, che decide). */
-    val base: Map<String, String> = emptyMap()
+    val base: Map<String, String> = emptyMap(),
+    /** Per ogni pagina, le impronte delle sue righe all'ultima sincronizzazione: per unirle (`SyncMerge`). */
+    val elements: Map<String, Map<String, String>> = emptyMap()
 ) {
     val keyBytes: ByteArray get() = Base64.getDecoder().decode(key)
 }

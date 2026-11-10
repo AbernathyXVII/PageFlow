@@ -1151,8 +1151,27 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.33 — 10/11/2026 · 19:47 — Sincronizzazione: una pagina cambiata da tutte e due le parti si unisce riga per riga
+*(Claude Code sul PC; installata sul telefono; la sincronizzazione provata dall'utente, l'unione della stessa pagina cambiata dalle due parti non ancora; 1150 test passati)*
+
+- **[Progetto]** **La stessa pagina cambiata sul telefono e sul PC non
+  sceglie più la pagina intera**: si guarda riga per riga (e il titolo, i
+  disegni, le colonne di un database). Una riga cambiata da una parte sola
+  vince quella, una cancellata da una parte e uguale dall'altra se ne va,
+  una nuova resta; due righe nuove nello stesso posto vanno una dopo
+  l'altra. Solo una riga cambiata da tutte e due è un conflitto: vince
+  l'ultima modifica, e la versione di prima resta nella cronologia della
+  pagina ("Before syncing"). Così anche due pagine nuove fatte di qua e di
+  là nello stesso menu restano tutte e due. La prima volta, senza un "prima"
+  da confrontare, niente si cancella. Non ancora provato dall'utente
+- **[Progetto]** `SyncMerge`; il telefono si ricorda le impronte di ogni
+  riga dopo la sincronizzazione (`SyncPeer.elements`, in `sync.json`).
+  Test in `DesktopSyncTest`: la lista della spesa cambiata dalle due parti
+  (una riga cambiata e una cancellata di qua, un'altra cambiata e una nuova
+  di là), e i due menu con una pagina nuova ciascuno
+
 ### ✏️ v0.153.32 — 10/11/2026 · 17:53 — La sincronizzazione Wi‑Fi fra telefono e PC
-*(Claude Code sul PC; non pubblicata, da provare dall'utente col telefono e col PC (ramo sync-wifi); non installata sul telefono; 1149 test passati)*
+*(Claude Code sul PC; provata dall'utente col telefono e col PC il 10/11/2026; 1149 test passati)*
 
 - **[Progetto]** **Telefono e PC si sincronizzano sulla rete di casa**, senza
   cloud: nella barra laterale "Connections" (la voce che c'era già, grigia).
@@ -1166,7 +1185,9 @@ gg/mm/aaaa)" accanto al titolo.
   parte va nel cestino dall'altra; cambiato da tutte e due vince l'ultima
   modifica, e l'altra resta nella cronologia della pagina ("Before
   syncing"). Le pagine nuove fatte dalle due parti nella stessa pagina non
-  perdono il loro posto. Non ancora provato dall'utente
+  perdono il loro posto. Provato dall'utente il 10/11/2026: «quattro»
+  scritto nella pagina House M.D. sul PC è arrivato sul telefono, e
+  «quattordici» scritto poi sul telefono è arrivato sul PC
 - **[Progetto]** Tutto cifrato: l'abbinamento con ECDH (P-256) e il codice
   da confrontare, poi AES-GCM con chiavi nuove a ogni sincronizzazione.
   Le righe si copiano tali e quali con l'SQL (`SyncDatabase`), per nome di

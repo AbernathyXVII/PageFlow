@@ -108,9 +108,9 @@ class DesktopSyncTest {
 
     /**
      * **Una pagina nuova nel menu principale da tutte e due le parti**: il
-     * menu è in conflitto e ne vince uno, ma la pagina dell'altro non resta
-     * senza posto; col secondo giro (come fa il telefono dopo un conflitto)
-     * tutti e due i menu le hanno tutte e due.
+     * menu è cambiato di qua e di là, e si unisce riga per riga: tutti e due
+     * i menu hanno tutti e due i collegamenti, uno dopo l'altro, senza
+     * conflitti. Un altro giro non cambia più niente.
      */
     @Test
     fun newPagesOnBothSidesKeepTheirPlace() = runBlocking<Unit> {
@@ -122,13 +122,35 @@ class DesktopSyncTest {
         pc.repo.saveBlock(BlockEntity(pageId = PageEntity.ROOT_PAGE_ID, type = BlockType.PAGE_LINK, linkedPageId = "lista", orderIndex = 0))
         pc.db.pageDao().update(pc.db.pageDao().getById(PageEntity.ROOT_PAGE_ID)!!.copy(updatedAt = System.currentTimeMillis() + 60_000))
         val (round, _) = sync()
-        assertEquals(1, round.conflicts)
-        sync()
+        assertEquals(0, round.conflicts)
         for (device in listOf(phone, pc)) {
-            val links = device.db.blockDao().getBlocksForPageOnce(PageEntity.ROOT_PAGE_ID).mapNotNull { it.linkedPageId }
-            assertEquals(setOf("idea", "lista"), links.toSet())
-            assertEquals("un collegamento solo per pagina", 2, links.size)
+            val links = device.db.blockDao().getBlocksForPageOnce(PageEntity.ROOT_PAGE_ID).sortedBy { it.orderIndex }.mapNotNull { it.linkedPageId }
+            assertEquals(listOf("idea", "lista"), links)
         }
+        val (again, _) = sync()
+        assertEquals(0, again.sent)
+        assertEquals(0, again.received)
+    }
+
+    /**
+     * **La stessa pagina cambiata da tutte e due le parti si unisce riga per
+     * riga** (chiesto dall'utente il 10/11/2026): sul telefono una riga
+     * cambiata e una cancellata, sul PC un'altra riga cambiata e una nuova in
+     * fondo. Dopo, tutti e due hanno tutte le modifiche, e niente conflitti.
+     */
+    @Test
+    fun aPageChangedOnBothSidesKeepsEveryChange() = runBlocking<Unit> {
+        phone.page("spesa", "latte", "pane", "uova")
+        sync()
+        phone.setText("spesa", 0, "latte di soia")
+        phone.db.blockDao().delete(phone.db.blockDao().getBlocksForPageOnce("spesa").single { it.orderIndex == 2 })
+        pc.setText("spesa", 1, "pane nero")
+        pc.repo.saveBlock(BlockEntity(id = "spesa-3", pageId = "spesa", textJson = """[{"text":"caffè"}]""", orderIndex = 3))
+        val (merged, _) = sync()
+        assertEquals(0, merged.conflicts)
+        assertEquals(listOf("latte di soia", "pane nero", "caffè"), phone.texts("spesa"))
+        assertEquals(listOf("latte di soia", "pane nero", "caffè"), pc.texts("spesa"))
+        assertEquals(SyncDatabase.manifest(phone.db).mapValues { it.value.hash }, SyncDatabase.manifest(pc.db).mapValues { it.value.hash })
     }
 
     @Test
@@ -166,7 +188,8 @@ class DesktopSyncTest {
         pc.setText("spesa", 0, "latte intero")
         pc.db.pageDao().update(pc.db.pageDao().getById("spesa")!!.copy(updatedAt = System.currentTimeMillis() + 60_000))
         val (third, _) = sync()
-        assertEquals(1, third.conflicts)
+        // La riga, e la pagina stessa (qui le è stata cambiata a mano l'ora dell'ultima modifica).
+        assertEquals(2, third.conflicts)
         assertEquals(listOf("latte intero", "pane integrale"), phone.texts("spesa"))
         assertEquals(listOf("latte intero", "pane integrale"), pc.texts("spesa"))
         val history = phone.db.pageVersionDao().observeForPage("spesa").first()
