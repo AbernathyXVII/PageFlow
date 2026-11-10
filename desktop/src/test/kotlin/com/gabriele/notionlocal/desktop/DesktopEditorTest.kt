@@ -23,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.gabriele.notionlocal.data.AppCleanup
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.BlockEntity
+import com.gabriele.notionlocal.data.entity.BlockType
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.repository.PageRepository
 import com.gabriele.notionlocal.data.backup.BackupReason
@@ -31,6 +32,7 @@ import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.navigation.AppNavHost
+import com.gabriele.notionlocal.ui.navigation.AppShortcuts
 import com.gabriele.notionlocal.ui.navigation.Routes
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
 import com.gabriele.notionlocal.ui.screen.BackupScreen
@@ -163,6 +165,27 @@ class DesktopEditorTest {
         val factory = ViewModelFactory(context)
         draw("app_home.png") { AppNavHost(factory = factory) }
         assertEquals(Routes.HOME, AppSettings.lastVisitedRoute)
+    }
+
+    /**
+     * **Ctrl+N** (dal 10/11/2026): dal menu principale, una pagina nuova col
+     * collegamento in fondo al menu, e ci si entra. Foto in `app_ctrl_n.png`.
+     */
+    @Test
+    fun ctrlNMakesANewPageAndOpensIt() {
+        AppSettings.lastVisitedRoute = null
+        val factory = ViewModelFactory(context)
+        draw("app_ctrl_n.png") {
+            AppNavHost(factory = factory)
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(800)
+                AppShortcuts.newPage!!.invoke()
+            }
+        }
+        val link = runBlocking { AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce(PageEntity.ROOT_PAGE_ID) }
+            .maxBy { it.orderIndex }
+        assertEquals(BlockType.PAGE_LINK, link.type)
+        assertEquals(Routes.pageEditor(link.linkedPageId!!), AppSettings.lastVisitedRoute)
     }
 
     /**

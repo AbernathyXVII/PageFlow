@@ -88,12 +88,14 @@ fun main() {
             state = windowState,
             // Le scorciatoie da tastiera (vedi `AppShortcuts`): la finestra le riceve anche senza un cursore.
             onPreviewKeyEvent = { event ->
-                if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.F) {
-                    AppShortcuts.openSearch?.invoke()
-                    true
-                } else {
-                    false
+                val shortcut = when {
+                    event.type != KeyEventType.KeyDown || !event.isCtrlPressed -> null
+                    event.key == Key.F -> AppShortcuts.openSearch
+                    event.key == Key.N -> AppShortcuts.newPage
+                    else -> null
                 }
+                shortcut?.invoke()
+                shortcut != null
             }
         ) {
             // Cliccando una notifica la finestra torna davanti, anche se era ridotta a icona.

@@ -8,4 +8,7 @@ package com.gabriele.notionlocal.ui.navigation
 object AppShortcuts {
     /** Ctrl+F: la ricerca. */
     var openSearch: (() -> Unit)? = null
+
+    /** Ctrl+N: una pagina nuova (dal 10/11/2026). */
+    var newPage: (() -> Unit)? = null
 }

@@ -1151,6 +1151,20 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.31 — 10/11/2026 · 17:30 — Sul PC Ctrl+N fa una pagina nuova
+*(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1144 test passati)*
+
+- **[Progetto]** **Ctrl+N sul PC**: una pagina nuova, col collegamento in
+  fondo alla pagina aperta (dal menu principale, o da una schermata che non
+  è una pagina, in fondo al menu principale), e ci si entra col cursore
+  sulla prima riga. Come la nota al volo del telefono: lasciata vuota se ne
+  va, e senza titolo prende la sua prima riga. Funziona anche mentre si
+  scrive in un'altra pagina. Non ancora provato dall'utente
+- **[Progetto]** La scorciatoia la riceve la finestra (`AppShortcuts`,
+  come Ctrl+F) e la pagina nasce con `createQuickNote`. Test: in
+  `DesktopEditorTest`, Ctrl+N dal menu principale lascia il collegamento in
+  fondo al menu ed entra nella pagina nuova
+
 ### ✏️ v0.153.30 — 10/11/2026 · 17:25 — Sul PC le pagine bloccate si aprono con Windows Hello
 *(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1143 test passati)*
 

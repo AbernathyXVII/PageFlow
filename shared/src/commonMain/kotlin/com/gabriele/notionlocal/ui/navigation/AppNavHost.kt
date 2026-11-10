@@ -342,7 +342,22 @@ fun AppNavHost(
     // Ctrl+F sul PC (vedi `AppShortcuts`): la ricerca, come dalla barra laterale.
     DisposableEffect(navController) {
         AppShortcuts.openSearch = { closeSidebar(); navController.navigate(Routes.SEARCH) { launchSingleTop = true } }
-        onDispose { AppShortcuts.openSearch = null }
+        // Ctrl+N: una pagina nuova in fondo a quella aperta (o al menu principale), e dentro col
+        // cursore, come la nota al volo: lasciata vuota se ne va, senza titolo prende la prima riga.
+        AppShortcuts.newPage = {
+            val open = navController.currentBackStackEntry?.takeIf { it.destination.route == Routes.PAGE_EDITOR }
+                ?.arguments?.read { getStringOrNull("pageId") }
+            scope.launch(Dispatchers.Main.immediate) {
+                val note = withContext(Dispatchers.IO) { factory.pageRepository.createQuickNote(open ?: PageEntity.ROOT_PAGE_ID) }
+                QuickNotes.created(note.first, note.second)
+                closeSidebar()
+                navController.navigate(Routes.pageEditor(note.first))
+            }
+        }
+        onDispose {
+            AppShortcuts.openSearch = null
+            AppShortcuts.newPage = null
+        }
     }
 
     val actions = SidebarActions(
