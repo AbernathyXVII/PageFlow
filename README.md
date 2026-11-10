@@ -1151,6 +1151,20 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### 🔧 v0.153.23.1 — 10/11/2026 · 09:05 — Sul PC la barra appena fissata risponde al primo clic
+*(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2300) e installata sul telefono; 1132 test passati)*
+
+- **[Bug fix]** **[💻 PC]** **La barra laterale appena fissata rispondeva solo
+  dal secondo clic**: per scorrerla o richiuderla con le frecce bisognava
+  prima cliccare una volta a vuoto. Fissandola, il cassetto da cui la barra
+  si apre restava vuoto e largo zero, e allora "chiuso" e "aperto" erano lo
+  stesso punto: il cassetto si credeva ancora aperto, e il suo velo
+  invisibile sopra la finestra si prendeva il primo clic e la rotella. Ora
+  il cassetto si chiude prima di fissare la barra e, vuoto, resta largo come
+  lei. Il `DesktopEditorTest` fa la stessa cosa (apre la barra, la fissa,
+  un clic solo sulle frecce la richiude): prima della correzione falliva.
+  Provato dall'utente sul PC
+
 ### ✏️ v0.153.23 — 10/11/2026 · 07:44 — Sul PC la finestra si riapre com'era, l'app usa tutta la finestra e la barra laterale si fissa e si allarga, come in Notion
 *(Claude Code sul PC; provata coi test del PC (installatore 0.153.2200) e sul telefono (la barra laterale di sempre); 1131 test passati)*
 

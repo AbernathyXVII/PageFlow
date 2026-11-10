@@ -5,6 +5,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.ImageComposeScene
+import org.junit.Assert.assertNotEquals
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerButtons
+import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.geometry.Offset
+import org.jetbrains.skia.Bitmap
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -38,6 +44,7 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.EncodedImageFormat
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -175,6 +182,64 @@ class DesktopEditorTest {
         } finally {
             AppSettings.sidebarPinned = false
             AppSettings.sidebarWidth = AppSettings.SIDEBAR_DEFAULT_WIDTH
+        }
+    }
+
+    /**
+     * **Fissata la barra, il primo clic non va a vuoto** (bug trovato
+     * dall'utente il 10/11/2026: dopo la puntina bisognava cliccare una volta
+     * prima di poter scorrere la barra). Il cassetto restava "aperto" e il suo
+     * velo, sopra tutto, si prendeva il primo clic: la pagina accanto alla
+     * barra fissata deve tornare del suo colore, senza velo.
+     */
+    @Test
+    fun pinningTheSidebarLeavesNothingOverThePage() {
+        AppSettings.sidebarPinned = false
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 800, density = Density(1f)) {
+                CompositionLocalProvider(
+                    LocalPlatformContext provides context,
+                    LocalLifecycleOwner provides owner,
+                    LocalViewModelStoreOwner provides owner
+                ) {
+                    NotionLocalTheme { Surface(modifier = Modifier.fillMaxSize()) { AppNavHost(factory = factory) } }
+                }
+            }
+        }
+        var time = 0L
+        fun pageColor(): Int {
+            var color = 0
+            repeat(20) {
+                color = onWindowThread { Bitmap.makeFromImage(scene.render(time)).getColor(800, 400) }
+                time += 100_000_000L
+                Thread.sleep(30)
+            }
+            return color
+        }
+        fun click(x: Float, y: Float) = onWindowThread {
+            val at = Offset(x, y)
+            scene.sendPointerEvent(PointerEventType.Move, at)
+            scene.sendPointerEvent(PointerEventType.Press, at, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
+            scene.sendPointerEvent(PointerEventType.Release, at, buttons = PointerButtons(), button = PointerButton.Primary)
+        }
+        try {
+            val clear = pageColor()
+            click(28f, 28f)
+            assertNotEquals("la barra aperta mette il velo sulla pagina", clear, pageColor())
+            click(268f, 28f)
+            val after = pageColor()
+            assertTrue(AppSettings.sidebarPinned)
+            assertEquals("fissata la barra, sulla pagina non resta il velo", clear, after)
+            // Un clic solo sulle frecce, nello stesso punto della puntina: la barra si richiude.
+            click(268f, 28f)
+            pageColor()
+            assertFalse("il primo clic dopo averla fissata non deve andare a vuoto", AppSettings.sidebarPinned)
+        } finally {
+            onWindowThread { scene.close() }
+            AppSettings.sidebarPinned = false
         }
     }
 

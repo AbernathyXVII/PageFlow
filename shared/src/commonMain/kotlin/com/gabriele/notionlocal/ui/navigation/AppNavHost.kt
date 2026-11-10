@@ -370,8 +370,16 @@ fun AppNavHost(
     val pinButton: @Composable () -> Unit = {
         if (canPinSidebar) {
             SidebarPinButton(pinned = pinned) {
-                AppSettings.sidebarPinned = !pinned
-                if (!pinned) scope.launch { drawerState.snapTo(DrawerValue.Closed) }
+                if (pinned) {
+                    AppSettings.sidebarPinned = false
+                } else {
+                    // Prima si chiude il cassetto, poi la barra va accanto alla pagina: al contrario il
+                    // cassetto restava "aperto" col velo invisibile, e il primo clic finiva lì.
+                    scope.launch {
+                        drawerState.snapTo(DrawerValue.Closed)
+                        AppSettings.sidebarPinned = true
+                    }
+                }
             }
         }
     }
@@ -411,7 +419,11 @@ fun AppNavHost(
         // proprio da lì.
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
-            if (!pinned) {
+            // Fissata, la barra sta accanto alla pagina e il cassetto resta vuoto, ma largo uguale:
+            // largo zero, "chiuso" e "aperto" sarebbero lo stesso punto e potrebbe credersi aperto.
+            if (pinned) {
+                Box(modifier = Modifier.width(SIDEBAR_WIDTH))
+            } else {
                 ModalDrawerSheet(
                     drawerContainerColor = SidebarBackground,
                     windowInsets = NoInsets,
