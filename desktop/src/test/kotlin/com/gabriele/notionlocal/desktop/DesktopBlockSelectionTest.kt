@@ -41,6 +41,7 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -84,6 +85,10 @@ class DesktopBlockSelectionTest {
     }
 
     private fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+
+    private fun remainingIn(pageId: String): List<String> = runBlocking {
+        AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce(pageId).map { it.id }
+    }
 
     private fun remaining(): List<String> = runBlocking {
         AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce("blocchi").sortedBy { it.orderIndex }.map { it.id }
@@ -194,6 +199,86 @@ class DesktopBlockSelectionTest {
     }
 
     private fun IntRange.center(): Float = (first + last) / 2f
+
+    /**
+     * **La rotella fa scorrere anche mentre si seleziona** (trovato dall'utente
+     * il 10/11/2026): col tasto del mouse premuto su una riga, la rotella
+     * prima non muoveva la pagina.
+     */
+    @Test
+    fun theWheelScrollsWhileSelecting() {
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            if (AppDatabase.getInstance(context).pageDao().getById("lunga") == null) repo.createPage(PageEntity(id = "lunga", title = "Lunga"))
+            for (i in 0 until 60) repo.saveBlock(BlockEntity(id = "lunga-$i", pageId = "lunga", textJson = """[{"text":"Riga numero $i"}]""", orderIndex = i))
+        }
+        for (acrossBlocks in listOf(false, true)) withPage("lunga") { scene, frames, picture ->
+            val before = textRows(picture())
+            val from = Offset(30f, before[5].center())
+            // Prima si seleziona del testo trascinando nella riga (o, la seconda volta, fino a quella sotto).
+            val at = if (acrossBlocks) Offset(80f, before[7].center()) else Offset(90f, before[5].center())
+            onWindowThread {
+                mouse(scene, PointerEventType.Move, from, pressed = false)
+                mouse(scene, PointerEventType.Press, from, pressed = true)
+            }
+            frames(3)
+            for (step in 1..4) {
+                onWindowThread { mouse(scene, PointerEventType.Move, Offset(from.x + (at.x - from.x) * step / 4f, from.y + (at.y - from.y) * step / 4f), pressed = true) }
+                frames(1)
+            }
+            onWindowThread {
+                scene.sendPointerEvent(
+                    PointerEventType.Scroll, at, scrollDelta = Offset(0f, 5f), type = PointerType.Mouse,
+                    buttons = PointerButtons(isPrimaryPressed = true)
+                )
+            }
+            frames(5)
+            val after = textRows(picture())
+            onWindowThread { mouse(scene, PointerEventType.Release, at, pressed = false) }
+            frames(3)
+            assertNotEquals("la pagina non si è mossa (fra più blocchi: $acrossBlocks)", before.take(8), after.take(8))
+        }
+    }
+
+    /**
+     * **Trascinando la selezione fino al bordo in basso la pagina scorre da
+     * sola** (chiesto dall'utente il 10/11/2026), e si passa ai blocchi interi.
+     */
+    @Test
+    fun draggingToTheBottomEdgeScrollsThePage() {
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            if (AppDatabase.getInstance(context).pageDao().getById("lunga") == null) repo.createPage(PageEntity(id = "lunga", title = "Lunga"))
+            for (i in 0 until 60) repo.saveBlock(BlockEntity(id = "lunga-$i", pageId = "lunga", textJson = """[{"text":"Riga numero $i"}]""", orderIndex = i))
+        }
+        withPage("lunga") { scene, frames, picture ->
+            val before = textRows(picture())
+            val from = Offset(30f, before[5].center())
+            val edge = Offset(60f, 690f)
+            onWindowThread {
+                mouse(scene, PointerEventType.Move, from, pressed = false)
+                mouse(scene, PointerEventType.Press, from, pressed = true)
+            }
+            frames(3)
+            for (step in 1..6) {
+                onWindowThread { mouse(scene, PointerEventType.Move, Offset(from.x + (edge.x - from.x) * step / 6f, from.y + (edge.y - from.y) * step / 6f), pressed = true) }
+                frames(1)
+            }
+            // Fermi sul bordo: la pagina scorre da sola.
+            frames(20)
+            val after = textRows(picture())
+            onWindowThread { mouse(scene, PointerEventType.Release, edge, pressed = false) }
+            frames(3)
+            File("build/desktop-screenshots", "edge_scroll.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(picture()).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            assertNotEquals("la pagina non è scesa", before.take(6), after.take(6))
+            // La selezione ha seguito la pagina: Canc toglie le righe dalla prima a quella sotto il bordo.
+            onWindowThread { key(scene, Key.Delete) }
+            frames(5)
+            val end = System.currentTimeMillis() + 5_000
+            while (System.currentTimeMillis() < end && remainingIn("lunga").size == 60) Thread.sleep(50)
+            assertTrue("rimaste ${remainingIn("lunga").size}", remainingIn("lunga").size < 45)
+        }
+    }
 
     /** Una pagina con una tabella 2×2: A1 B1 / A2 B2. */
     private fun tablePage(pageId: String, tableId: String) = runBlocking {

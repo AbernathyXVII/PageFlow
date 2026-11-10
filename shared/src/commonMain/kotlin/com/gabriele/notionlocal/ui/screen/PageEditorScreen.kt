@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
@@ -2639,6 +2641,7 @@ private fun PageEditorContent(
                         order = { latestRenderItems.value.flatMap { renderItemBlockIds(it) } },
                         selectsOnClick = { id -> viewModel.blocks.value.firstOrNull { it.id == id }?.type == BlockType.DIVIDER },
                         selected = { selectedBlocks.value.isNotEmpty() },
+                        scrollBy = { listState.scrollBy(it) },
                         onSelect = { ids ->
                             if (!ids.isNullOrEmpty() && selectedBlocks.value.isEmpty()) focusManager.clearFocus()
                             pageSelected = false
@@ -5398,6 +5401,11 @@ private fun MergedTextRunField(
 
     // I blocchi scelti col mouse, da velare (vedi `BlockSelection.kt`).
     val selectionLook = LocalBlockSelection.current
+    // Passati ai blocchi interi, il testo selezionato prima non resta disegnato sotto il velo.
+    val blocksChosen by remember(selectionLook) { derivedStateOf { selectionLook?.selected?.value?.isNotEmpty() == true } }
+    LaunchedEffect(blocksChosen) {
+        if (blocksChosen && !fieldValue.selection.collapsed) fieldValue = fieldValue.copy(selection = TextRange(fieldValue.selection.max))
+    }
 
     // L'altezza di ogni riga del campo: vedi il commento sul `lineHeight`
     // del `textStyle` qui sotto.
@@ -7598,7 +7606,10 @@ fun TableBlockContent(
                     picked = null
                     val start = cellAt(down.position) ?: return@awaitEachGesture
                     while (true) {
-                        val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        // La rotella fa scorrere la pagina anche mentre si scelgono le celle.
+                        if (event.type == PointerEventType.Scroll) continue
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         // Fuori dalla tabella la prende la pagina (più blocchi, vedi `BlockSelection.kt`).
                         if (!change.pressed || change.isConsumed) break
                         val now = cellAt(change.position) ?: continue

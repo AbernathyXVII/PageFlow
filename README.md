@@ -1151,6 +1151,32 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.37 — 10/11/2026 · 22:33 — Tolto un divider le righe restano strette, e la selezione col mouse fa scorrere la pagina
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1160 test passati)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **Cancellato un divider, le
+  righe sotto non prendono più lo spazio di un titolo.** Le righe prima e
+  dopo un divider sono due gruppi; tolto lui diventano uno, e il primo
+  pezzo del gruppo sotto non aveva un confine suo: finiva nello stesso
+  campo del titolo grande sopra il divider, con la sua altezza di riga, e
+  così restava finché si scriveva. Ora un gruppo che comincia diverso dalla
+  riga sopra il divider ha già il suo confine. Vale anche per il secondo
+  Backspace sotto un divider sul telefono. Non ancora provato dall'utente
+- **[Bug fix]** **[💻 PC]** **Trascinando la selezione verso il bordo in
+  alto o in basso, la pagina scorre da sola**, più veloce quanto più si è
+  vicini al bordo o oltre; mentre scorre, la selezione segue la pagina a
+  blocchi interi (come su Notion). La rotella, tenendo premuto, non viene
+  più presa dalla selezione. Non ancora provato dall'utente
+- **[Progetto]** `rechunk` dà un pezzo al primo di un gruppo che appare
+  diverso dalla riga sopra l'isola (`lookAboveIsland`);
+  `mouseBlockSelection` scorre con `scrollBy` vicino ai bordi, e il campo
+  lascia il testo selezionato quando si passa ai blocchi. Test:
+  `DividerRemovedChunksTest` (tolto il divisore sotto un titolo grande, le
+  righe sotto restano in un campo loro: senza la correzione fallisce),
+  `DesktopBlockSelectionTest` (+2: la rotella mentre si seleziona, e il
+  trascinamento fino al bordo che fa scorrere la pagina e porta la selezione
+  fin lì)
+
 ### ✏️ v0.153.36 — 10/11/2026 · 22:10 — Sul PC più blocchi col mouse, Ctrl+A, i divider e le celle delle tabelle
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1157 test passati)*
 

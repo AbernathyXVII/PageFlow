@@ -17,11 +17,17 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Job
 
 // ---------------------------------------------------------------------------
 // **Più blocchi selezionati col mouse** (dal 10/11/2026, chiesto dall'utente
@@ -91,6 +97,13 @@ val LocalBlockSelection = staticCompositionLocalOf<BlockSelectionLook?> { null }
  * puntatore ([order], l'ordine della pagina); un clic su un divisore
  * ([selectsOnClick]) seleziona lui; un clic altrove toglie la selezione
  * che c'era ([selected]) e arriva al testo come sempre.
+ *
+ * **Trascinando vicino al bordo in alto o in basso la pagina scorre da sola**
+ * (dal 10/11/2026, chiesto dall'utente: "non mi fa scorrere con il mouse se
+ * con esso seleziono il testo"), più veloce quanto più si è vicini al bordo
+ * o oltre, con [scrollBy]: anche mentre si seleziona il testo di un campo, e
+ * se sotto il puntatore arriva un altro blocco si passa ai blocchi interi.
+ * La rotella resta della pagina.
  */
 fun Modifier.mouseBlockSelection(
     picker: BlockPicker,
@@ -98,45 +111,89 @@ fun Modifier.mouseBlockSelection(
     order: () -> List<String>,
     selectsOnClick: (String) -> Boolean,
     selected: () -> Boolean,
+    scrollBy: suspend (Float) -> Unit,
     onSelect: (Set<String>?) -> Unit
 ): Modifier = pointerInput(picker) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        if (down.type != PointerType.Mouse || !currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
-        val page = coordinates() ?: return@awaitEachGesture
-        fun hit(position: Offset) = runCatching { picker.at(page.localToWindow(position)) }.getOrNull()
-        val start = hit(down.position)
-        val hadSelection = selected()
-        var blocks = false
-        while (true) {
-            val event = awaitPointerEvent(PointerEventPass.Initial)
-            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-            if (!change.pressed) {
-                if (!blocks) {
-                    when {
-                        start != null && selectsOnClick(start.second) -> {
-                            change.consume()
-                            onSelect(setOf(start.second))
+    coroutineScope {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            if (down.type != PointerType.Mouse || !currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
+            val page = coordinates() ?: return@awaitEachGesture
+            fun hit(position: Offset) = runCatching { picker.at(page.localToWindow(position)) }.getOrNull()
+            val start = hit(down.position)
+            val hadSelection = selected()
+            var blocks = false
+            var pointer = down.position
+            var moved = false
+
+            /**
+             * Sotto il puntatore: nel campo dov'è cominciato si seleziona il testo, fuori i blocchi.
+             * Con [scrolling] (la pagina che scorre da sola sotto il puntatore fermo) anche un'altra
+             * riga dello stesso campo: il testo selezionato non seguirebbe la pagina. Vero se ora si scelgono blocchi.
+             */
+            fun follow(position: Offset, scrolling: Boolean = false): Boolean {
+                if (start == null) return false
+                val now = hit(position) ?: return blocks
+                if (!blocks && now.first == start.first && !(scrolling && now.second != start.second)) return false
+                blocks = true
+                val ids = order()
+                val from = ids.indexOf(start.second)
+                val to = ids.indexOf(now.second)
+                if (from >= 0 && to >= 0) onSelect(ids.subList(minOf(from, to), maxOf(from, to) + 1).toSet())
+                return true
+            }
+
+            val zone = EDGE_ZONE.toPx()
+            fun edgeSpeed(y: Float): Float = when {
+                y < zone -> -EDGE_MAX_STEP * ((zone - y) / zone).coerceAtMost(2f)
+                y > size.height - zone -> EDGE_MAX_STEP * ((y - (size.height - zone)) / zone).coerceAtMost(2f)
+                else -> 0f
+            }
+            var edge: Job? = null
+            try {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    // La rotella mentre si seleziona fa scorrere la pagina: non è un trascinamento.
+                    if (event.type == PointerEventType.Scroll) continue
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    if (!change.pressed) {
+                        if (!blocks) {
+                            when {
+                                !moved && start != null && selectsOnClick(start.second) -> {
+                                    change.consume()
+                                    onSelect(setOf(start.second))
+                                }
+                                hadSelection -> onSelect(null)
+                            }
                         }
-                        hadSelection -> onSelect(null)
+                        break
+                    }
+                    pointer = change.position
+                    if ((pointer - down.position).getDistance() > viewConfiguration.touchSlop) moved = true
+                    if (follow(pointer)) change.consume()
+                    if (moved && edge?.isActive != true && edgeSpeed(pointer.y) != 0f) {
+                        edge = launch {
+                            while (true) {
+                                val step = edgeSpeed(pointer.y)
+                                if (step == 0f) break
+                                scrollBy(step)
+                                follow(pointer, scrolling = true)
+                                delay(EDGE_FRAME_MS)
+                            }
+                        }
                     }
                 }
-                break
+            } finally {
+                edge?.cancel()
             }
-            if (start == null) continue
-            val now = hit(change.position) ?: continue
-            // Ancora nel campo dov'è cominciato: lì si seleziona il testo.
-            if (!blocks && now.first == start.first) continue
-            blocks = true
-            change.consume()
-            val ids = order()
-            val from = ids.indexOf(start.second)
-            val to = ids.indexOf(now.second)
-            if (from < 0 || to < 0) continue
-            onSelect(ids.subList(minOf(from, to), maxOf(from, to) + 1).toSet())
         }
     }
 }
+
+/** Quanto vicino al bordo comincia lo scorrimento da soli, e quanto al massimo per giro (raddoppia oltre il bordo). */
+private val EDGE_ZONE = 48.dp
+private const val EDGE_MAX_STEP = 18f
+private const val EDGE_FRAME_MS = 16L
 
 /** I tasti della selezione: cosa fare, o null se il tasto non le serve. */
 enum class SelectionKey { DELETE, COPY, CUT, ALL, CLOSE }

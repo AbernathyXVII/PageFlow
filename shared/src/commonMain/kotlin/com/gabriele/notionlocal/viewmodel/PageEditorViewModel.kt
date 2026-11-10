@@ -486,6 +486,8 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         var inRun = false
         var previousId: String? = null
         var previousLook: LineLook? = null
+        // Come appare l'ultima riga di testo sopra l'isola che ha chiuso il gruppo: vedi sotto.
+        var lookAboveIsland: LineLook? = null
         // Il segno della prima riga del pezzo: vedi `markerSizeOf`.
         var pieceMarker = 0f
         fun close() {
@@ -498,6 +500,7 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                 close()
                 inRun = false
                 previousId = null
+                if (previousLook != null) lookAboveIsland = previousLook
                 previousLook = null
                 continue
             }
@@ -516,6 +519,14 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                 lines = 0
                 chars = 0
                 pieceMarker = markerSizeOf(block)
+                // **Un gruppo che comincia diverso dalla riga sopra l'isola ha già un
+                // pezzo suo** (dal 10/11/2026, trovato dall'utente sul PC): tolta l'isola
+                // (un divisore cancellato) i due gruppi diventano uno, e senza un confine
+                // le righe normali finivano nel campo di un titolo grande, con la sua
+                // altezza di riga, finché si scriveva (vedi [lineLookOf]).
+                if (lookAboveIsland != null && look != lookAboveIsland) {
+                    key = starts[block.id]?.takeUnless { it.startsWith("run:") } ?: ("chunk:" + block.id)
+                }
             } else if (lookChanged || !onScreen) {
                 val existing = starts[block.id]
                 val due = existing != null || lines >= CHUNK_MAX_LINES || chars + length > CHUNK_MAX_CHARS
