@@ -24,8 +24,11 @@ import kotlin.concurrent.thread
  */
 object SyncDiscovery {
     const val PORT = 47390
+    /** Dove il telefono, con PageFlow aperto, ascolta il PC che gli chiede di sincronizzare. */
+    const val PHONE_PORT = 47391
     private const val ASK = "PAGEFLOW-SYNC?"
     private const val ANSWER = "PAGEFLOW-SYNC!"
+    private const val SYNC_NOW = "PAGEFLOW-SYNC-NOW\n"
 
     data class Found(val host: String, val port: Int, val id: String, val name: String)
 
@@ -58,6 +61,12 @@ object SyncDiscovery {
 
     fun isQuestion(text: String) = text == ASK
 
+    /** Il PC al telefono: "sincronizza adesso", con chi lo chiede (deve essere un PC abbinato). */
+    fun syncRequest(pcId: String): String = SYNC_NOW + pcId
+
+    /** Il PC che chiede di sincronizzare, o null se non è una richiesta. */
+    fun requestingPc(text: String): String? = text.takeIf { it.startsWith(SYNC_NOW) }?.removePrefix(SYNC_NOW)?.takeIf { it.isNotBlank() }
+
     fun parse(text: String, host: String): Found? {
         if (!text.startsWith(ANSWER)) return null
         val parts = text.removePrefix(ANSWER).split('\n')
@@ -67,7 +76,7 @@ object SyncDiscovery {
     }
 
     /** Gli indirizzi "a tutti" delle reti di questo dispositivo (il Wi‑Fi di casa), oltre a 255.255.255.255. */
-    private fun broadcastAddresses(): List<InetAddress> = runCatching {
+    fun broadcastAddresses(): List<InetAddress> = runCatching {
         NetworkInterface.getNetworkInterfaces().toList()
             .filter { it.isUp && !it.isLoopback }
             .flatMap { it.interfaceAddresses }
@@ -127,6 +136,10 @@ object SyncServer {
     /** L'ultima sincronizzazione finita, per la schermata. */
     val last: StateFlow<SyncResult?> = _last
 
+    private val _syncedAt = MutableStateFlow(0L)
+    /** Quando è finita l'ultima: cambia a ogni sincronizzazione, anche uguale alla precedente. */
+    val syncedAt: StateFlow<Long> = _syncedAt
+
     /** Dopo una sincronizzazione (sul PC: la notifica). */
     var onSynced: (SyncResult) -> Unit = {}
 
@@ -171,9 +184,29 @@ object SyncServer {
                 val result = runCatching { runBlocking { SyncSession.serve(side, socket, SyncPrompts.confirm) } }.getOrNull()
                 if (result != null) {
                     _last.value = result
+                    _syncedAt.value = System.currentTimeMillis()
                     runCatching { onSynced(result) }
                 }
             }
+        }
+        return true
+    }
+
+    /**
+     * **Il tasto "Sincronizza col telefono"**: chiede ai telefoni abbinati di
+     * sincronizzare, all'indirizzo dell'ultima volta e a tutta la rete. È
+     * il telefono a partire (decide lui cosa va dove), quindi ci vuole
+     * PageFlow aperto sul telefono. Falso se nessun telefono è abbinato.
+     */
+    fun askPhones(side: SyncSide): Boolean {
+        val me = side.store.load()
+        if (me.peers.isEmpty()) return false
+        val request = SyncDiscovery.syncRequest(me.deviceId).encodeToByteArray()
+        val targets = me.peers.mapNotNull { peer -> peer.address?.let { runCatching { InetAddress.getByName(it) }.getOrNull() } } +
+            SyncDiscovery.broadcastAddresses() + InetAddress.getByName("255.255.255.255")
+        DatagramSocket().use { socket ->
+            socket.broadcast = true
+            repeat(2) { targets.forEach { runCatching { socket.send(DatagramPacket(request, request.size, it, SyncDiscovery.PHONE_PORT)) } } }
         }
         return true
     }

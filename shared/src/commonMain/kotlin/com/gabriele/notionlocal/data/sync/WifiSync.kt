@@ -14,6 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetSocketAddress
+import kotlin.concurrent.thread
 
 /** Sul PC si aspetta il telefono (`SyncServer`); sul telefono si cerca il PC (`WifiSync.start`). */
 expect val syncWaitsForPhone: Boolean
@@ -52,7 +56,10 @@ object WifiSync {
     private val _status = MutableStateFlow<Status>(Status.Idle)
     val status: StateFlow<Status> = _status
 
-    fun start(side: SyncSide) {
+    /** Dopo una sincronizzazione chiesta dal PC (sul telefono: la scritta in basso, ovunque si sia). */
+    var onPcRequestDone: (Status) -> Unit = {}
+
+    fun start(side: SyncSide, onDone: (Status) -> Unit = {}) {
         if (_status.value is Status.Working) return
         _status.value = Status.Working(SyncStep.SEARCHING, null)
         scope.launch {
@@ -81,7 +88,45 @@ object WifiSync {
             } catch (e: IOException) {
                 Status.Failed(Problem.NETWORK)
             }
+            onDone(_status.value)
+            // Abbinato adesso: da qui in poi anche il tasto del PC fa partire la sincronizzazione.
+            if (_status.value is Status.Done && !syncWaitsForPhone) listenForPc(side)
         }
+    }
+
+    @Volatile
+    private var listening: DatagramSocket? = null
+
+    /**
+     * **Il telefono ascolta il PC** finché PageFlow è aperto: al tasto
+     * "Sincronizza col telefono" di un PC abbinato parte la sincronizzazione,
+     * come col tasto del telefono. Una richiesta da un PC sconosciuto non fa niente.
+     */
+    @Synchronized
+    fun listenForPc(side: SyncSide) {
+        if (listening != null) return
+        val socket = runCatching {
+            DatagramSocket(null).apply {
+                reuseAddress = true
+                bind(InetSocketAddress(SyncDiscovery.PHONE_PORT))
+            }
+        }.getOrNull() ?: return
+        listening = socket
+        thread(isDaemon = true, name = "sync-listen") {
+            val buffer = ByteArray(256)
+            while (!socket.isClosed) {
+                val packet = DatagramPacket(buffer, buffer.size)
+                if (runCatching { socket.receive(packet) }.isFailure) continue
+                val pcId = SyncDiscovery.requestingPc(packet.data.decodeToString(0, packet.length)) ?: continue
+                if (side.store.load().peer(pcId) != null) start(side) { onPcRequestDone(it) }
+            }
+        }
+    }
+
+    @Synchronized
+    fun stopListening() {
+        runCatching { listening?.close() }
+        listening = null
     }
 
     /** Dimentica un dispositivo abbinato: la prossima volta si riabbina col codice. */

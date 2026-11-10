@@ -31,6 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,8 @@ import com.gabriele.notionlocal.ui.theme.DarkSurfaceVariant
 import com.gabriele.notionlocal.ui.theme.NotionGray400
 import com.gabriele.notionlocal.ui.theme.NotionWhite
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -134,7 +137,7 @@ private fun PhonePart(side: SyncSide, state: SyncState, status: WifiSync.Status,
         val message = when (status) {
             WifiSync.Status.Idle -> null
             is WifiSync.Status.Working -> stepLabel(status.step, status.otherName)
-            is WifiSync.Status.Done -> summary(status.result)
+            is WifiSync.Status.Done -> syncSummary(status.result)
             is WifiSync.Status.Failed -> when (status.problem) {
                 WifiSync.Problem.NOT_FOUND -> WifiSyncStrings.notFound
                 WifiSync.Problem.DIFFERENT_VERSION -> WifiSyncStrings.differentVersion
@@ -175,12 +178,56 @@ private fun PcPart(side: SyncSide, state: SyncState, running: Boolean, last: Syn
             })
         }
     )
+    // Il telefono decide cosa va dove: il tasto gli chiede di partire, e la risposta arriva come una sua sincronizzazione.
+    val scope = rememberCoroutineScope()
+    val syncedAt by SyncServer.syncedAt.collectAsState()
+    var askedAt by remember { mutableStateOf<Long?>(null) }
+    var noAnswer by remember { mutableStateOf(false) }
+    LaunchedEffect(syncedAt) { if (askedAt != null && syncedAt > askedAt!!) askedAt = null }
+    LaunchedEffect(askedAt) {
+        val asked = askedAt ?: return@LaunchedEffect
+        delay(PHONE_ANSWER_MS)
+        if (askedAt == asked) {
+            askedAt = null
+            noAnswer = true
+        }
+    }
+    if (running && state.peers.isNotEmpty()) {
+        Button(
+            onClick = {
+                noAnswer = false
+                askedAt = System.currentTimeMillis()
+                scope.launch(Dispatchers.IO) { SyncServer.askPhones(side) }
+            },
+            enabled = askedAt == null,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp).fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.size(8.dp))
+            Text(WifiSyncStrings.syncWithPhone)
+        }
+        val waiting = when {
+            askedAt != null -> WifiSyncStrings.askingPhone
+            noAnswer -> WifiSyncStrings.phoneNotAnswering
+            else -> null
+        }
+        if (waiting != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+            ) {
+                if (askedAt != null) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text(waiting, style = MaterialTheme.typography.bodyMedium, color = NotionWhite)
+            }
+        }
+    }
     if (portBusy) {
         Text(WifiSyncStrings.portBusy, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 20.dp))
     }
     Text(WifiSyncStrings.pcNote, style = MaterialTheme.typography.bodySmall, color = NotionGray400, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
     if (last != null) {
-        Text(summary(last), style = MaterialTheme.typography.bodyMedium, color = NotionWhite, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+        Text(syncSummary(last), style = MaterialTheme.typography.bodyMedium, color = NotionWhite, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
     }
     SectionHeader(WifiSyncStrings.pairedPhones)
     if (state.peers.isEmpty()) {
@@ -201,6 +248,9 @@ private fun PcPart(side: SyncSide, state: SyncState, running: Boolean, last: Syn
     }
 }
 
+/** Quanto aspettare che il telefono chiamato dal PC cominci e finisca (con la prima volta e i file, di più). */
+private const val PHONE_ANSWER_MS = 90_000L
+
 private fun stepLabel(step: SyncStep, otherName: String?): String = when (step) {
     SyncStep.SEARCHING -> WifiSyncStrings.searching
     SyncStep.CONNECTING -> WifiSyncStrings.connecting(otherName ?: "PC")
@@ -211,7 +261,7 @@ private fun stepLabel(step: SyncStep, otherName: String?): String = when (step) 
     SyncStep.PAGES -> WifiSyncStrings.pages
 }
 
-private fun summary(result: SyncResult): String = WifiSyncStrings.done(
+internal fun syncSummary(result: SyncResult): String = WifiSyncStrings.done(
     result.otherName,
     result.sent,
     result.received,

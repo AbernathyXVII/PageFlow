@@ -1151,6 +1151,23 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.34 — 10/11/2026 · 21:22 — Sul PC il tasto "Sincronizza col telefono"
+*(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1151 test passati)*
+
+- **[Progetto]** **"Sincronizza col telefono" anche sul PC**, in
+  Connections, sotto "Aspetta il telefono": il PC lo chiede al telefono
+  abbinato (all'indirizzo dell'ultima volta e a tutta la rete di casa), e
+  il telefono, con PageFlow aperto, parte da solo come col suo tasto —
+  decide sempre lui cosa va dove. Sul PC una rotellina finché non ha finito
+  e poi la notifica; sul telefono, su qualunque schermata, com'è andata in
+  basso. Se il telefono non risponde il PC lo dice. Prima si poteva
+  sincronizzare solo dal telefono. Non ancora provato dall'utente
+- **[Progetto]** Il telefono ascolta sulla porta 47391 finché PageFlow è
+  aperto, solo se è abbinato a un PC, e una richiesta da un PC sconosciuto
+  non fa niente (`WifiSync.listenForPc`, `SyncServer.askPhones`). Test:
+  `DesktopSyncTest` (il PC chiede, il telefono parte e porta a casa la
+  pagina nuova del PC)
+
 ### ✏️ v0.153.33 — 10/11/2026 · 19:47 — Sincronizzazione: una pagina cambiata da tutte e due le parti si unisce riga per riga
 *(Claude Code sul PC; installata sul telefono; la sincronizzazione provata dall'utente, l'unione della stessa pagina cambiata dalle due parti non ancora; 1150 test passati)*
 

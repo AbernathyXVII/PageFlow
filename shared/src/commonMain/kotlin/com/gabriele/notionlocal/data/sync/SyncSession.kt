@@ -317,14 +317,21 @@ object SyncSession {
                 if (input.readUTF() != OK) return@withContext null
                 out.writeUTF(OK)
                 out.flush()
-                answer(side, clientId, clientName, input, out)
+                answer(side, clientId, clientName, socket.inetAddress?.hostAddress, input, out)
             } catch (e: IOException) {
                 null
             }
         }
     }
 
-    private suspend fun answer(side: SyncSide, clientId: String, clientName: String, input: DataInputStream, out: DataOutputStream): SyncResult? {
+    private suspend fun answer(
+        side: SyncSide,
+        clientId: String,
+        clientName: String,
+        address: String?,
+        input: DataInputStream,
+        out: DataOutputStream
+    ): SyncResult? {
         var sent = 0
         var received = 0
         var trashed = 0
@@ -372,7 +379,9 @@ object SyncSession {
                 }
                 CMD_BYE -> {
                     side.store.update { state ->
-                        state.peer(clientId)?.let { state.withPeer(it.copy(name = clientName, lastSyncAt = System.currentTimeMillis())) } ?: state
+                        state.peer(clientId)?.let {
+                            state.withPeer(it.copy(name = clientName, lastSyncAt = System.currentTimeMillis(), address = address ?: it.address))
+                        } ?: state
                     }
                     return SyncResult(clientName, sent, received, trashed, 0, 0, filesSent, filesReceived)
                 }

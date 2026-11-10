@@ -84,6 +84,11 @@ import com.gabriele.notionlocal.ui.screen.PageEditorScreen
 import com.gabriele.notionlocal.ui.screen.ConnectionsScreen
 import com.gabriele.notionlocal.ui.screen.SettingsScreen
 import com.gabriele.notionlocal.ui.screen.SyncPairingDialog
+import com.gabriele.notionlocal.ui.screen.syncSummary
+import com.gabriele.notionlocal.data.sync.WifiSync
+import com.gabriele.notionlocal.data.sync.syncSide
+import com.gabriele.notionlocal.data.sync.syncWaitsForPhone
+import com.gabriele.notionlocal.platform.showMessage
 import com.gabriele.notionlocal.ui.screen.SearchScreen
 import com.gabriele.notionlocal.ui.screen.SidebarActions
 import com.gabriele.notionlocal.ui.screen.SidebarContent
@@ -343,6 +348,20 @@ fun AppNavHost(
 
     // Il codice della sincronizzazione Wi‑Fi, sopra qualunque schermata (vedi `SyncPrompts`).
     SyncPairingDialog()
+
+    // Sul telefono, con un PC abbinato: il tasto "Sincronizza col telefono" del PC fa partire la
+    // sincronizzazione anche da qui (vedi `WifiSync.listenForPc`), e com'è andata compare in basso.
+    val syncContext = LocalPlatformContext.current
+    LaunchedEffect(Unit) {
+        if (syncWaitsForPhone) return@LaunchedEffect
+        WifiSync.onPcRequestDone = { status ->
+            if (status is WifiSync.Status.Done) scope.launch(Dispatchers.Main) { showMessage(syncContext, syncSummary(status.result), long = true) }
+        }
+        withContext(Dispatchers.IO) {
+            val side = syncSide(syncContext)
+            if (side.store.load().peers.isNotEmpty()) WifiSync.listenForPc(side)
+        }
+    }
 
     // Ctrl+F sul PC (vedi `AppShortcuts`): la ricerca, come dalla barra laterale.
     DisposableEffect(navController) {

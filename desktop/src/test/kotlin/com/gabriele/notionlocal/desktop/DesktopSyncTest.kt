@@ -16,12 +16,14 @@ import com.gabriele.notionlocal.data.sync.SyncResult
 import com.gabriele.notionlocal.data.sync.SyncSession
 import com.gabriele.notionlocal.data.sync.SyncSide
 import com.gabriele.notionlocal.data.sync.SyncStore
+import com.gabriele.notionlocal.data.sync.WifiSync
 import com.gabriele.notionlocal.platform.DesktopContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -102,6 +104,30 @@ class DesktopSyncTest {
             assertEquals("telefono", pc.side.store.load().peers.single().name)
         } finally {
             answering.cancel()
+            SyncServer.stop()
+        }
+    }
+
+    /**
+     * **Il tasto "Sincronizza col telefono" del PC** (chiesto dall'utente il
+     * 10/11/2026): il PC lo chiede al telefono abbinato, all'indirizzo
+     * dell'ultima volta, e il telefono che ascolta parte da solo e porta a
+     * casa la pagina nuova del PC.
+     */
+    @Test
+    fun thePcAsksThePhoneToSync() = runBlocking<Unit> {
+        sync()
+        assertEquals("127.0.0.1", pc.side.store.load().peers.single().address)
+        pc.page("nuova", "ciao")
+        assertTrue(SyncServer.start(pc.side))
+        WifiSync.listenForPc(phone.side)
+        try {
+            assertTrue(SyncServer.askPhones(pc.side))
+            val done = withTimeout(30_000) { WifiSync.status.first { it is WifiSync.Status.Done || it is WifiSync.Status.Failed } }
+            assertTrue("$done", done is WifiSync.Status.Done)
+            assertEquals(listOf("ciao"), phone.texts("nuova"))
+        } finally {
+            WifiSync.stopListening()
             SyncServer.stop()
         }
     }

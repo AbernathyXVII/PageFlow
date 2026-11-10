@@ -123,6 +123,27 @@ object WifiSyncStrings {
         "휴대폰에서: Connections → \"PC와 동기화\", 같은 집 네트워크에서 (PC는 유선이어도 됩니다). 처음에는 Windows가 PageFlow의 네트워크 사용을 묻습니다. 허용을 선택하고 현재 네트워크 종류를 체크하세요 (집에서도 Windows가 공용이라고 부를 수 있습니다).",
         "スマホで：Connections →「PCと同期」、同じ家のネットワークで（PCは有線でも大丈夫）。初回はWindowsがPageFlowのネットワーク使用を尋ねます：「許可」を選び、今いるネットワークの種類にチェックを入れてください（自宅でもWindowsはパブリックと呼ぶことがあります）。"
     )
+    val syncWithPhone get() = t("Sync with the phone", "Sincronizza col telefono", "Mit dem Telefon synchronisieren", "Synchroniser avec le téléphone", "Sincronizar con el teléfono", "与手机同步", "휴대폰과 동기화", "スマホと同期")
+    val askingPhone get() = t(
+        "Asking the phone… (PageFlow must be open on it)",
+        "Lo chiedo al telefono… (lì PageFlow deve essere aperto)",
+        "Frage das Telefon… (PageFlow muss dort geöffnet sein)",
+        "Demande au téléphone… (PageFlow doit y être ouvert)",
+        "Preguntando al teléfono… (PageFlow debe estar abierto en él)",
+        "正在请求手机…（手机上需打开 PageFlow）",
+        "휴대폰에 요청하는 중… (휴대폰에서 PageFlow가 열려 있어야 합니다)",
+        "スマホに頼んでいます…（スマホでPageFlowを開いておいてください）"
+    )
+    val phoneNotAnswering get() = t(
+        "The phone didn't answer: open PageFlow on the phone, on the same home network, and try again.",
+        "Il telefono non ha risposto: apri PageFlow sul telefono, sulla stessa rete di casa, e riprova.",
+        "Das Telefon hat nicht geantwortet: öffne PageFlow am Telefon im selben Heimnetz und versuche es erneut.",
+        "Le téléphone n'a pas répondu : ouvrez PageFlow sur le téléphone, sur le même réseau domestique, et réessayez.",
+        "El teléfono no respondió: abre PageFlow en el teléfono, en la misma red de casa, e inténtalo de nuevo.",
+        "手机没有响应：请在同一家庭网络的手机上打开 PageFlow 后重试。",
+        "휴대폰이 응답하지 않았습니다. 같은 집 네트워크에서 휴대폰의 PageFlow를 열고 다시 시도하세요.",
+        "スマホが応答しませんでした。同じ家のネットワークでスマホのPageFlowを開いて、もう一度試してください。"
+    )
     val pairedPhones get() = t("Paired phones", "Telefoni abbinati", "Gekoppelte Telefone", "Téléphones associés", "Teléfonos vinculados", "已配对的手机", "연결된 휴대폰", "ペアリング済みのスマホ")
     val noPhones get() = t("No phone yet", "Ancora nessun telefono", "Noch kein Telefon", "Aucun téléphone pour l'instant", "Ningún teléfono todavía", "还没有手机", "아직 휴대폰 없음", "まだスマホはありません")
     val remove get() = t("Remove", "Rimuovi", "Entfernen", "Retirer", "Quitar", "移除", "삭제", "削除")
