@@ -3,6 +3,7 @@ package com.gabriele.notionlocal.data.ocr
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.PageImageStore
 import com.gabriele.notionlocal.platform.DesktopContext
+import com.gabriele.notionlocal.platform.WinRtScript
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -11,7 +12,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Rectangle
 import java.io.File
-import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 
 /**
@@ -54,16 +54,7 @@ object DesktopImageTexts {
     suspend fun read(context: DesktopContext, image: File): ReadText? = withContext(Dispatchers.IO) {
         val parts = tiles(image) ?: return@withContext ReadText("")
         try {
-            val script = File(context.dataDir, "ocr.ps1").apply { writeText(SCRIPT, Charsets.UTF_8) }
-            val process = ProcessBuilder(
-                listOf("powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script.path) + parts.map { it.path }
-            ).redirectErrorStream(false).start()
-            val output = process.inputStream.bufferedReader(Charsets.UTF_8).readText()
-            if (!process.waitFor(OCR_TIMEOUT_S, TimeUnit.SECONDS)) {
-                process.destroyForcibly()
-                return@withContext null
-            }
-            if (process.exitValue() != 0) return@withContext null
+            val output = WinRtScript.run(context, "ocr", SCRIPT, parts.map { it.path }, OCR_TIMEOUT_S) ?: return@withContext null
             ReadText(linesOf(output).joinToString("\n"))
         } finally {
             parts.forEach { it.delete() }
@@ -151,20 +142,8 @@ object DesktopImageTexts {
     private const val STARTUP_DELAY_MS = 8_000L
     private const val OCR_TIMEOUT_S = 120L
 
-    /** Lo script: per ogni immagine, una riga "main<TAB>testo" o "asian<TAB>testo" per riga trovata. */
+    /** Lo script (dopo l'aiuto di `WinRtScript`): per ogni immagine, una riga "main<TAB>testo" o "asian<TAB>testo" per riga trovata. */
     private val SCRIPT = """
-        param([Parameter(ValueFromRemainingArguments = ${'$'}true)][string[]]${'$'}Files)
-        ${'$'}ErrorActionPreference = 'Stop'
-        [Console]::OutputEncoding = [Text.Encoding]::UTF8
-        Add-Type -AssemblyName System.Runtime.WindowsRuntime
-        ${'$'}asTask = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
-            ${'$'}_.Name -eq 'AsTask' -and ${'$'}_.GetParameters().Count -eq 1 -and ${'$'}_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1'
-        } | Select-Object -First 1
-        function Await(${'$'}operation, [Type]${'$'}type) {
-            ${'$'}task = ${'$'}asTask.MakeGenericMethod(${'$'}type).Invoke(${'$'}null, @(${'$'}operation))
-            ${'$'}task.Wait(-1) | Out-Null
-            ${'$'}task.Result
-        }
         [Windows.Storage.StorageFile, Windows.Storage, ContentType = WindowsRuntime] | Out-Null
         [Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime] | Out-Null
         [Windows.Graphics.Imaging.BitmapDecoder, Windows.Graphics, ContentType = WindowsRuntime] | Out-Null
@@ -179,7 +158,7 @@ object DesktopImageTexts {
             }
         }
         if (${'$'}engines.Count -eq 0) { exit 3 }
-        foreach (${'$'}path in ${'$'}Files) {
+        foreach (${'$'}path in ${'$'}Arguments) {
             ${'$'}file = Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync(${'$'}path)) ([Windows.Storage.StorageFile])
             ${'$'}stream = Await (${'$'}file.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
             ${'$'}decoder = Await ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync(${'$'}stream)) ([Windows.Graphics.Imaging.BitmapDecoder])
@@ -190,5 +169,5 @@ object DesktopImageTexts {
             }
             ${'$'}stream.Dispose()
         }
-    """.trimIndent()
+    """
 }

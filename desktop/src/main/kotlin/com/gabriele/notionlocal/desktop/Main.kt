@@ -31,6 +31,7 @@ import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.navigation.AppNavHost
 import com.gabriele.notionlocal.ui.navigation.AppShortcuts
 import com.gabriele.notionlocal.ui.screen.AppRollupFormatter
+import com.gabriele.notionlocal.ui.screen.Biometrics
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 import kotlinx.coroutines.delay
@@ -59,6 +60,8 @@ fun main() {
     Backups.startDailyTasks()
     // Il testo delle foto aggiunte sul PC, per la ricerca (vedi `DesktopImageTexts`).
     DesktopImageTexts.init(context)
+    // Se Windows Hello è pronto, per le pagine bloccate (vedi `Biometrics`).
+    Biometrics.init(context)
     RollupFormatting.formatter = AppRollupFormatter
     val factory = ViewModelFactory(context)
     val icon = PlatformIcon.load()
@@ -95,6 +98,7 @@ fun main() {
         ) {
             // Cliccando una notifica la finestra torna davanti, anche se era ridotta a icona.
             LaunchedEffect(Unit) {
+                Biometrics.windowHandle = window.windowHandle
                 DesktopNotifications.bringToFront = {
                     windowState.isMinimized = false
                     window.toFront()

@@ -13,6 +13,7 @@ import com.gabriele.notionlocal.ui.i18n.LockStrings
  * app), da Android 11. Sotto non c'è: si usa solo la password.
  */
 actual object Biometrics {
+    actual val windowsHello: Boolean = false
 
     actual fun available(context: PlatformContext): Boolean = canAuthenticate(context, BiometricManager.Authenticators.BIOMETRIC_WEAK)
 

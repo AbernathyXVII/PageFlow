@@ -1151,6 +1151,26 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.30 — 10/11/2026 · 17:25 — Sul PC le pagine bloccate si aprono con Windows Hello
+*(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1143 test passati)*
+
+- **[Progetto]** **Windows Hello per le pagine bloccate**, come l'impronta
+  sul telefono: aprendo una pagina bloccata la finestra di Windows Hello
+  (volto, impronta o PIN di Windows) si apre davanti a PageFlow, e se si
+  annulla resta la password. Con "Password dimenticata?" Windows Hello
+  conferma che sei tu e poi si sceglie una password nuova, come col blocco
+  schermo del telefono. Sul PC le scritte dicono "Windows Hello" invece di
+  "impronta"; l'interruttore "Sblocca anche con Windows Hello" è nella
+  password delle pagine bloccate, nelle Impostazioni. Prima, sul PC, c'era
+  solo la password. Non ancora provato dall'utente
+- **[Progetto]** Lo chiede uno script PowerShell
+  (`IUserConsentVerifierInterop`, il modo delle app per il desktop, con la
+  finestra di PageFlow), lo stesso aiuto del testo delle foto
+  (`WinRtScript`). Provato il 10/11 col PC bloccato: la finestra di
+  Windows parte; annullarla da PageFlow non la chiude, quindi PageFlow
+  aspetta la risposta. Test: `DesktopHelloTest` (lo script si compila e
+  Windows risponde se Windows Hello è pronto)
+
 ### ✏️ v0.153.29 — 10/11/2026 · 17:20 — Sul PC si incolla coi link (e con la formattazione), come sul telefono
 *(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1142 test passati)*
 
