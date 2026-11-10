@@ -21,9 +21,6 @@ import java.io.File
 import kotlin.coroutines.resume
 import kotlin.math.roundToInt
 
-/** Una foto fatta: il file e le sue misure in pixel. */
-data class WebClipImage(val file: File, val width: Int, val height: Int)
-
 /** Le misure di una pagina aperta, in pixel CSS, e quanti pixel veri vale uno CSS adesso. */
 data class WebPageMetrics(val width: Double, val height: Double, val viewportHeight: Double, val scrollY: Double, val scale: Float)
 
@@ -251,16 +248,7 @@ class WebClipEngine(
      * "lazy" e le parti che arrivano scorrendo si caricano. Poi torna in cima.
      */
     suspend fun loadLazyContent() {
-        evaluate(
-            """
-            (function () {
-              document.querySelectorAll('img[loading="lazy"]').forEach(function (i) { i.loading = 'eager'; });
-              document.querySelectorAll('img[data-src]').forEach(function (i) {
-                if (!i.getAttribute('src') || i.getAttribute('src').indexOf('data:') === 0) i.src = i.getAttribute('data-src');
-              });
-            })()
-            """.trimIndent()
-        )
+        evaluate(WEB_CLIP_EAGER_IMAGES_SCRIPT)
         var steps = 0
         while (steps < MAX_LAZY_STEPS) {
             val state = evaluateJson(
@@ -369,22 +357,19 @@ class WebClipEngine(
     private fun asset(name: String): String = appContext.assets.open(name).bufferedReader().use { it.readText() }
 
     companion object {
-        const val DESKTOP_CSS_WIDTH = 1440
-        const val DESKTOP_CSS_HEIGHT = 900
-        const val OUTPUT_SCALE = 1.5f
-        const val CLEANUP_SCRIPT = "web_clipper_cleanup.js"
-        const val READER_SCRIPT = "web_clipper_reader.js"
+        const val DESKTOP_CSS_WIDTH = WEB_CLIP_CSS_WIDTH
+        const val DESKTOP_CSS_HEIGHT = WEB_CLIP_CSS_HEIGHT
+        const val OUTPUT_SCALE = WEB_CLIP_OUTPUT_SCALE
+        const val CLEANUP_SCRIPT = WEB_CLIP_CLEANUP_SCRIPT
+        const val READER_SCRIPT = WEB_CLIP_READER_SCRIPT
 
         /** Lo sfondo di una pagina scura, quello del tema scuro di Notion. */
         private const val DARK_PAGE = 0xFF191919.toInt()
 
-        /** "Article" più stretto, come una colonna da leggere. */
-        const val ARTICLE_CSS_WIDTH = 860
+        const val ARTICLE_CSS_WIDTH = WEB_CLIP_ARTICLE_CSS_WIDTH
         private const val MAX_REGION_SIDE = 8000
 
-        // Chrome per Windows: i siti mandano la loro pagina per il PC.
-        const val DESKTOP_USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+        const val DESKTOP_USER_AGENT = WEB_CLIP_USER_AGENT
 
         private const val LOAD_TIMEOUT_MS = 30_000L
         private const val SETTLE_TIMEOUT_MS = 10_000L

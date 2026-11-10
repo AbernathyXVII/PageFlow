@@ -69,7 +69,9 @@ sourceSets.main {
  * "0.153.11.1" diventa 0.153.1101): così cresce sempre, e l'installatore
  * riconosce un aggiornamento.
  */
-val installerVersion: String = run {
+// Per le prove fra una versione e l'altra: -PinstallerVersion=0.153.2401. Con lo stesso numero di quello
+// installato, l'installatore di Windows non fa niente (successo il 10/11/2026).
+val installerVersion: String = providers.gradleProperty("installerVersion").orNull ?: run {
     val readme = rootProject.file("README.md").readText(Charsets.UTF_8)
     val latest = Regex("""^### \S+ v(\d+)\.(\d+)(?:\.(\d+))?(?:\.(\d+))? — """, RegexOption.MULTILINE).find(readme)
         ?: error("Nel README non c'è una versione")
@@ -88,9 +90,9 @@ compose.desktop {
          */
         nativeDistributions {
             targetFormats(TargetFormat.Exe)
-            // I due che trova `suggestRuntimeModules`, più quelli che si caricano per nome:
+            // Quelli che trova `suggestRuntimeModules` (java.net.http: il Web Clipper parla con Edge), più quelli che si caricano per nome:
             // date e mesi nelle otto lingue, le connessioni sicure (meteo, sport…), le pagine web non UTF-8.
-            modules("java.instrument", "jdk.unsupported", "jdk.localedata", "jdk.crypto.ec", "jdk.charsets")
+            modules("java.instrument", "java.net.http", "jdk.unsupported", "jdk.localedata", "jdk.crypto.ec", "jdk.charsets")
             packageName = "PageFlow"
             packageVersion = installerVersion
             description = "PageFlow"

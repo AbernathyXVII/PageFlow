@@ -109,4 +109,27 @@ object WebClipStrings {
     val dragHint get() = t("Drag over the area to clip", "Trascina sopra l'area da catturare", "Ziehe über den Bereich", "Faites glisser sur la zone", "Arrastra sobre la zona", "在要剪辑的区域上拖动", "클립할 영역 위를 드래그하세요", "クリップする範囲をドラッグ")
     val select get() = t("Select", "Seleziona", "Auswählen", "Sélectionner", "Seleccionar", "选择", "선택", "選択")
     val browse get() = t("Scroll", "Scorri", "Scrollen", "Défiler", "Desplazar", "滚动", "스크롤", "スクロール")
+
+    // --- Sul PC (dal 10/11/2026) ---
+
+    val noBrowserOnPc get() = t(
+        "To clip on the computer PageFlow uses Microsoft Edge (or Chrome), which wasn't found",
+        "Per catturare sul computer PageFlow usa Microsoft Edge (o Chrome), che non c'è",
+        "Zum Erfassen am Computer nutzt PageFlow Microsoft Edge (oder Chrome), das nicht gefunden wurde",
+        "Pour capturer sur l'ordinateur, PageFlow utilise Microsoft Edge (ou Chrome), introuvable",
+        "Para capturar en el ordenador PageFlow usa Microsoft Edge (o Chrome), que no se encontró",
+        "在电脑上剪辑需要 Microsoft Edge（或 Chrome），但未找到",
+        "컴퓨터에서 클립하려면 Microsoft Edge(또는 Chrome)가 필요한데 찾을 수 없어요",
+        "パソコンでクリップするには Microsoft Edge（または Chrome）が必要ですが、見つかりません"
+    )
+    val regionHintOnPc get() = t(
+        "Drag with the mouse over the part you want; the wheel scrolls the page.",
+        "Trascina col mouse sopra la parte che vuoi; la rotella scorre la pagina.",
+        "Ziehe mit der Maus über den gewünschten Teil; das Mausrad scrollt die Seite.",
+        "Faites glisser la souris sur la partie voulue ; la molette fait défiler la page.",
+        "Arrastra con el ratón sobre la parte que quieras; la rueda desplaza la página.",
+        "用鼠标在想要的部分上拖动；滚轮可滚动页面。",
+        "원하는 부분 위를 마우스로 드래그하세요. 휠로 페이지를 스크롤해요.",
+        "必要な部分をマウスでドラッグしてください。ホイールでページをスクロールできます。"
+    )
 }

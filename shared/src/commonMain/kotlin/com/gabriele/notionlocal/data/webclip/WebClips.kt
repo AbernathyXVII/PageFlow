@@ -1,6 +1,7 @@
 package com.gabriele.notionlocal.data.webclip
 
 import com.gabriele.notionlocal.data.entity.RichTextSpan
+import java.io.File
 import java.net.URI
 
 /** Quello che si è scelto nel pannello del Web Clipper; `dark` = "Dark mode", per le foto. */
@@ -59,3 +60,38 @@ fun webClipCaptions(
 
 /** La grandezza della riga "Clipped from", in punti: più piccola del testo normale (16, vedi `RichTextSpan.size`). */
 const val CLIP_SOURCE_SIZE = 13
+
+/** Una foto fatta: il file e le sue misure in pixel. */
+data class WebClipImage(val file: File, val width: Int, val height: Int)
+
+/** Quanto è larga la pagina fotografata, in pixel CSS: 1440, come un portatile (è la larghezza a cui game8 viene come nella foto di OneNote). */
+const val WEB_CLIP_CSS_WIDTH = 1440
+
+/** Quanto è alta la finestra da cui la si guarda, in pixel CSS. */
+const val WEB_CLIP_CSS_HEIGHT = 900
+
+/** "Article" più stretto, come una colonna da leggere. */
+const val WEB_CLIP_ARTICLE_CSS_WIDTH = 860
+
+/** Pixel veri per pixel CSS nella foto: 1,5 come lo schermo di un portatile, nitida ingrandita. */
+const val WEB_CLIP_OUTPUT_SCALE = 1.5f
+
+/** Lo script che toglie banner, barre fisse e pubblicità (`assets/web_clipper_cleanup.js`). */
+const val WEB_CLIP_CLEANUP_SCRIPT = "web_clipper_cleanup.js"
+
+/** Lo script che trova l'articolo (`assets/web_clipper_reader.js`). */
+const val WEB_CLIP_READER_SCRIPT = "web_clipper_reader.js"
+
+/** Chrome per Windows: i siti mandano la loro pagina per il PC. */
+const val WEB_CLIP_USER_AGENT =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+
+/** Le immagini che si caricano solo scorrendo ("lazy"), caricate subito. */
+const val WEB_CLIP_EAGER_IMAGES_SCRIPT = """
+(function () {
+  document.querySelectorAll('img[loading="lazy"]').forEach(function (i) { i.loading = 'eager'; });
+  document.querySelectorAll('img[data-src]').forEach(function (i) {
+    if (!i.getAttribute('src') || i.getAttribute('src').indexOf('data:') === 0) i.src = i.getAttribute('data-src');
+  });
+})()
+"""

@@ -1151,6 +1151,37 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.25 — 10/11/2026 · 10:03 — Il Web Clipper anche sul PC, con Edge nascosto
+*(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2400), la nitidezza finale ancora no; non installata sul telefono (non collegato); 1135 test passati)*
+
+- **[Progetto]** **Il Web Clipper sul PC**, dai tre puntini di una pagina: la
+  stessa finestra del telefono (link, Full Page, Region, Bookmark, Article,
+  Text and Images, Dark mode, titolo, nota). Al posto del browser dentro
+  l'app, PageFlow usa **Microsoft Edge nascosto** (o Chrome), comandato col
+  protocollo dei suoi strumenti per sviluppatori: apre il sito come un
+  portatile (largo 1440), toglie i banner e fa arrivare le immagini con gli
+  stessi script del telefono, poi fotografa la pagina a strisce o ne legge
+  l'articolo. "Region": prima la foto della pagina intera, poi col mouse si
+  trascina il rettangolo da tenere. Edge ha un profilo suo, nella cartella
+  dei dati: non vede la cronologia né gli accessi dell'Edge di tutti i
+  giorni. Senza Edge né Chrome lo dice. Provato dall'utente sul PC
+- **[Progetto]** **Foto più nitide sul PC**: la pagina si disegna davvero a 2
+  pixel per pixel CSS (prima il browser la scattava a 1 e la ingrandiva) e
+  il JPEG ha qualità 94; nelle pagine del PC le immagini lunghe si leggono
+  grandi quanto il loro riquadro sullo schermo (prima sempre 1200 pixel) e
+  tutte, rimpicciolite, col filtro di qualità (prima i bordi a scalette).
+  La nitidezza finale non è ancora stata provata dall'utente
+- **[Progetto]** La finestra del Web Clipper, il suo collegamento con la
+  pagina, il velo della selezione, lo scaricamento delle immagini di "Text
+  and Images" e le costanti (larghezza, user agent, script) nel codice
+  comune; al telefono restano le sue finestre di cattura col WebView. Nell'installatore
+  c'è `java.net.http` (serve per parlare con Edge); `-PinstallerVersion` dà
+  un numero agli installatori di prova (con lo stesso numero di quello
+  installato, quello di Windows non partiva)
+- **[Progetto]** `DesktopWebClipTest`, con Edge vero su una pagina scritta lì:
+  la foto della pagina intera (larga 2880, alta tutta, blu in fondo), il
+  ritaglio di "Region", l'articolo letto da "Text and Images"
+
 ### ✏️ v0.153.24 — 10/11/2026 · 09:21 — Sul PC si registra l'audio dal microfono, nei blocchi audio
 *(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2301) e installata sul telefono; 1134 test passati)*
 

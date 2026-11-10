@@ -1,6 +1,5 @@
 package com.gabriele.notionlocal.data.webclip
 
-import android.webkit.CookieManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -27,10 +26,10 @@ object WebClipDownloads {
                 connection.instanceFollowRedirects = true
                 connection.connectTimeout = TIMEOUT_MS
                 connection.readTimeout = TIMEOUT_MS
-                connection.setRequestProperty("User-Agent", WebClipEngine.DESKTOP_USER_AGENT)
+                connection.setRequestProperty("User-Agent", WEB_CLIP_USER_AGENT)
                 connection.setRequestProperty("Accept", "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8")
                 referer?.let { connection.setRequestProperty("Referer", it) }
-                runCatching { CookieManager.getInstance().getCookie(url) }.getOrNull()?.let {
+                webClipCookies(url)?.let {
                     connection.setRequestProperty("Cookie", it)
                 }
                 if (connection.responseCode !in 200..299) return@runCatching null
@@ -53,3 +52,6 @@ object WebClipDownloads {
         }.getOrNull()
     }
 }
+
+/** I cookie del browser del Web Clipper per [url] (sul telefono quelli del WebView), se ce ne sono. */
+expect fun webClipCookies(url: String): String?

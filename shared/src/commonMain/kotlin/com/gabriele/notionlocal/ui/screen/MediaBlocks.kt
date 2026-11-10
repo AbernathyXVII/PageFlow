@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -133,6 +134,8 @@ private fun WholeImage(fileName: String, store: PageImageStore, description: Str
                 bitmap = image,
                 contentDescription = description,
                 contentScale = ContentScale.FillBounds,
+                // Letta al doppio e rimpicciolita: sul PC il filtro di serie faceva i bordi a scalette (sul telefono è lo stesso).
+                filterQuality = FilterQuality.High,
                 modifier = Modifier.fillMaxSize()
             )
         }
