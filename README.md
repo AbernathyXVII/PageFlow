@@ -1151,6 +1151,36 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.36 — 10/11/2026 · 22:10 — Sul PC più blocchi col mouse, Ctrl+A, i divider e le celle delle tabelle
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1157 test passati)*
+
+- **[Progetto]** **Più blocchi col mouse, come su Notion**: trascinando
+  dentro un campo si seleziona il testo come sempre; uscendo verso altri
+  blocchi (oltre un titolo, un'immagine, una tabella) si scelgono i blocchi
+  interi, velati di blu, con in basso Copy, Cut e Delete. Canc o Backspace
+  li eliminano (si può annullare), Ctrl+C e Ctrl+X li copiano e tagliano,
+  Esc o un clic altrove li lasciano. Sottopagine e database restano, come
+  quando si svuota la pagina intera
+- **[Progetto]** **Ctrl+A seleziona tutta la pagina**, non solo il pezzo
+  di testo col cursore: lo stesso velo di "Select all" del telefono, e i
+  tasti di sopra (Canc chiede prima di svuotare la pagina). Nel titolo e
+  nelle celle dei database Ctrl+A resta del campo
+- **[Progetto]** **Un clic su un divider lo sceglie**, e Canc o Backspace
+  lo eliminano
+- **[Progetto]** **Più celle di una tabella semplice**: trascinando da una
+  cella all'altra si sceglie il rettangolo di celle; Canc le svuota, e
+  scelte tutte se ne va la tabella intera. Ctrl+C le copia (una riga per
+  riga, tabulazioni fra le colonne), Ctrl+A le sceglie tutte. Dentro una
+  cella il testo si seleziona come prima. Non ancora provato dall'utente
+- **[Progetto]** Solo col mouse: col dito sul telefono non cambia niente.
+  `BlockSelection.kt` (chi sta dove, il gesto, i tasti), il velo riga per
+  riga nei campi di più righe, `pageCopyLines` e `deletePageContent` con i
+  blocchi scelti. Test: `DesktopBlockSelectionTest` (una pagina vera
+  disegnata e guidata col mouse: trascinando oltre il titolo grande e Canc
+  se ne vanno tre blocchi, clic sul divider e Backspace, Ctrl+A vela la
+  pagina ed Esc la lascia, due celle svuotate, tutte le celle e la tabella
+  se ne va)
+
 ### ✏️ v0.153.35 — 10/11/2026 · 22:08 — Selezionando un titolo grande le righe sotto non si allargano più
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1152 test passati)*
 

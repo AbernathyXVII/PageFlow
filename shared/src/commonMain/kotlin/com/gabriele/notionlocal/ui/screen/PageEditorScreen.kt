@@ -1,5 +1,14 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import java.util.concurrent.atomic.AtomicReference
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.draw.drawWithContent
 import com.gabriele.notionlocal.data.chosenEmoji
 import com.gabriele.notionlocal.data.hasChosenIcon
 import androidx.compose.ui.text.style.TextOverflow
@@ -1424,14 +1433,21 @@ private fun PageEditorContent(
     var linkDialogFor by remember { mutableStateOf<String?>(null) }
     // **Tutta la pagina selezionata** (dal 20/10/2026, vedi `PageSelection.kt`).
     var pageSelected by remember(pageId) { mutableStateOf(false) }
+    // **I blocchi selezionati col mouse** (dal 10/11/2026, vedi `BlockSelection.kt`).
+    val selectedBlocks = remember(pageId) { mutableStateOf<Set<String>>(emptySet()) }
+    val blockPicker = remember(pageId) { BlockPicker() }
+    val pageListCoordinates = remember { AtomicReference<LayoutCoordinates?>(null) }
+    val selectionKeys = remember { FocusRequester() }
     var confirmPageDelete by remember { mutableStateOf(false) }
     val selectWholePage: () -> Unit = remember(focusManager) {
         {
             focusManager.clearFocus()
+            selectedBlocks.value = emptySet()
             pageSelected = true
         }
     }
     BackHandler(enabled = pageSelected) { pageSelected = false }
+    BackHandler(enabled = selectedBlocks.value.isNotEmpty()) { selectedBlocks.value = emptySet() }
     var colorForBlockId by remember { mutableStateOf<String?>(null) }
     var colorOnBackground by remember { mutableStateOf(false) }
     var lastPickedHex by remember { mutableStateOf<String?>(null) }
@@ -2159,6 +2175,8 @@ private fun PageEditorContent(
                 LocalPageMentionOpen provides openMentionedPage,
                 LocalDateMentionTap provides tapDateMention,
                 LocalPageFingerDown provides pageFinger,
+                LocalBlockPicker provides blockPicker,
+                LocalBlockSelection provides remember(veilColor) { BlockSelectionLook(selectedBlocks, veilColor) },
                 // Mentre si disegna, il testo si legge e basta.
                 LocalPageLocked provides (readOnlyPage || drawingMode)
                 // (Fino al 25/09/2026 qui passavano anche il font e il corpo
@@ -2501,6 +2519,7 @@ private fun PageEditorContent(
             // home tredici, i database fuori dallo schermo compresi — anche quando
             // a cambiare era solo la tastiera che si apriva o si chiudeva: mezzo
             // millisecondo l'una, abbastanza per perdere il fotogramma.
+            val latestRenderItems = rememberUpdatedState(renderItems)
             val listContent: LazyListScope.() -> Unit = remember(
                 pageHeader, renderItems, itemEnv, paragraphLook, ordinals, childrenOf, continuedRuns,
                 continuingRuns, sideScroll, movedBlockNow, veilColor, pageSelected, focusRequestBlockId, formatRequest
@@ -2542,7 +2561,8 @@ private fun PageEditorContent(
                         when (item) {
                             is RenderItem.Run -> {
                                 val content = RunContent(item.blocks, item.blocks.numbersFrom(ordinals))
-                                Column(Modifier.pageVeil(pageSelected, veilColor)) {
+                                // Ctrl+A: tutta la pagina, non solo il pezzo di testo (vedi `BlockSelection.kt`).
+                                Column(Modifier.pageVeil(pageSelected, veilColor).onPreviewKeyEvent { isSelectAll(it).also { all -> if (all) selectWholePage() } }) {
                                 RunItem(
                                     content = content,
                                     runKey = item.key,
@@ -2570,7 +2590,12 @@ private fun PageEditorContent(
                                     (if (sideScroll != null) Modifier.nestedScroll(KeepSidewaysInside) else Modifier)
                                         .padding(vertical = (islandSpacing / 2f).sp.toDpIn(LocalDensity.current))
                                         .anchorDecor(item.block.id, item.block.attrs.linkTarget, movedBlockNow, PAGE_SIDE_PADDING)
-                                        .pageVeil(pageSelected, veilColor)
+                                        .pageVeil(pageSelected || LocalBlockSelection.current?.selected?.value?.contains(item.block.id) == true, veilColor)
+                                        .pickableAs(renderItemKey(item)) { item.block.id }
+                                        // Nelle celle di un database Ctrl+A resta della cella.
+                                        .onPreviewKeyEvent { event ->
+                                            item.block.type != BlockType.DATABASE_LINK && isSelectAll(event).also { all -> if (all) selectWholePage() }
+                                        }
                                 ) {
                                     IslandItem(
                                         content = content,
@@ -2606,6 +2631,20 @@ private fun PageEditorContent(
                     .nestedScroll(backToTop.connection)
                     // Con tutta la pagina selezionata, un tocco la lascia (vedi `PageSelection.kt`).
                     .tapToEndPageSelection(pageSelected) { pageSelected = false }
+                    // Col mouse: più blocchi trascinando, un divisore con un clic (vedi `BlockSelection.kt`).
+                    .onGloballyPositioned { pageListCoordinates.set(it) }
+                    .mouseBlockSelection(
+                        picker = blockPicker,
+                        coordinates = { pageListCoordinates.get() },
+                        order = { latestRenderItems.value.flatMap { renderItemBlockIds(it) } },
+                        selectsOnClick = { id -> viewModel.blocks.value.firstOrNull { it.id == id }?.type == BlockType.DIVIDER },
+                        selected = { selectedBlocks.value.isNotEmpty() },
+                        onSelect = { ids ->
+                            if (!ids.isNullOrEmpty() && selectedBlocks.value.isEmpty()) focusManager.clearFocus()
+                            pageSelected = false
+                            selectedBlocks.value = ids.orEmpty()
+                        }
+                    )
                     .stickyViewport(stickyViewport)
                     // Di lato, con "Full line view": il primo verso in cui si
                     // muove il dito decide per tutto il gesto.
@@ -2642,24 +2681,55 @@ private fun PageEditorContent(
             )
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
-            if (pageSelected) {
+            // Tutta la pagina, o i blocchi scelti col mouse (null): Copy, Cut, Delete per tutti e due.
+            val chosenBlocks = selectedBlocks.value.takeIf { it.isNotEmpty() }
+            val anySelection = pageSelected || chosenBlocks != null
+            fun endSelection() {
+                pageSelected = false
+                selectedBlocks.value = emptySet()
+            }
+            fun copySelection(thenDelete: Boolean) {
+                jumpScope.launch {
+                    copyPageToClipboard(context, viewModel.pageCopyLines(chosenBlocks))
+                    if (thenDelete) viewModel.deletePageContent(chosenBlocks)
+                    endSelection()
+                }
+            }
+            fun deleteSelection() {
+                if (chosenBlocks == null) {
+                    confirmPageDelete = true
+                } else {
+                    viewModel.deletePageContent(chosenBlocks)
+                    endSelection()
+                }
+            }
+            // I tasti della selezione li prende un punto invisibile col fuoco: Canc e Backspace, Ctrl+C, Ctrl+X, Ctrl+A, Esc.
+            Box(
+                Modifier
+                    .size(1.dp)
+                    .focusRequester(selectionKeys)
+                    .focusable()
+                    .onKeyEvent { event ->
+                        if (!anySelection) return@onKeyEvent false
+                        when (selectionKeyOf(event)) {
+                            SelectionKey.DELETE -> if (!readOnlyPage) deleteSelection()
+                            SelectionKey.COPY -> copySelection(thenDelete = false)
+                            SelectionKey.CUT -> if (!readOnlyPage) copySelection(thenDelete = true)
+                            SelectionKey.ALL -> selectWholePage()
+                            SelectionKey.CLOSE -> endSelection()
+                            null -> return@onKeyEvent false
+                        }
+                        true
+                    }
+            )
+            LaunchedEffect(anySelection) { if (anySelection) runCatching { selectionKeys.requestFocus() } }
+            if (anySelection) {
                 PageSelectionBar(
                     editable = !readOnlyPage,
-                    onCopy = {
-                        jumpScope.launch {
-                            copyPageToClipboard(context, viewModel.pageCopyLines())
-                            pageSelected = false
-                        }
-                    },
-                    onCut = {
-                        jumpScope.launch {
-                            copyPageToClipboard(context, viewModel.pageCopyLines())
-                            viewModel.deletePageContent()
-                            pageSelected = false
-                        }
-                    },
-                    onDelete = { confirmPageDelete = true },
-                    onClose = { pageSelected = false },
+                    onCopy = { copySelection(thenDelete = false) },
+                    onCut = { copySelection(thenDelete = true) },
+                    onDelete = { deleteSelection() },
+                    onClose = { endSelection() },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 24.dp)
@@ -4619,6 +4689,41 @@ fun fontStyleOf(span: RichTextSpan): SpanStyle? {
 }
 
 /**
+ * Da dove a dove sta ogni riga del campo nel testo **mostrato**, coi prefissi
+ * (lo stesso conto del lampo di una riga spostata): per velarla e per
+ * trovarla col mouse (vedi `BlockSelection.kt`).
+ */
+private fun shownLineRanges(
+    fieldText: String,
+    runBlocks: List<BlockEntity>,
+    ordinals: Map<String, Int>,
+    viewModel: PageEditorViewModel
+): List<IntRange> {
+    val lines = bodyOf(fieldText).split('\n')
+    val prefixes = runPrefixes(lines, runBlocks, ordinals, viewModel)
+    var start = 0
+    return lines.indices.map { i ->
+        val length = (prefixes.getOrNull(i)?.text?.length ?: 0) + lines[i].length
+        (start..start + length).also { start += length + 1 }
+    }
+}
+
+/** Il blocco della riga del campo all'altezza [y], per il mouse. */
+private fun runLineAt(
+    layout: TextLayoutResult,
+    y: Float,
+    fieldText: String,
+    runBlocks: List<BlockEntity>,
+    ordinals: Map<String, Int>,
+    viewModel: PageEditorViewModel
+): String? {
+    val offset = layout.getOffsetForPosition(Offset(0f, y))
+    val ranges = shownLineRanges(fieldText, runBlocks, ordinals, viewModel)
+    val index = ranges.indexOfFirst { offset <= it.last }.takeIf { it >= 0 } ?: ranges.lastIndex
+    return runBlocks.getOrNull(index)?.id
+}
+
+/**
  * Di quanto vanno allungate le righe perché il pezzo di testo più grande ci
  * stia senza toccare quelle vicine: il suo corpo diviso 16, mai meno di 1.
  *
@@ -5291,6 +5396,9 @@ private fun MergedTextRunField(
         viewModel.updateRun(runBlocks.map { it.id }, newLines, lines, word.line)
     }
 
+    // I blocchi scelti col mouse, da velare (vedi `BlockSelection.kt`).
+    val selectionLook = LocalBlockSelection.current
+
     // L'altezza di ogni riga del campo: vedi il commento sul `lineHeight`
     // del `textStyle` qui sotto.
     val lineHeight = (
@@ -5694,6 +5802,27 @@ private fun MergedTextRunField(
                 .fillMaxWidth()
                 .atLeastLane(sideLane, (2 * sidePadPx).roundToInt())
                 .drawBehind { drawMisspellings(textLayout) }
+                // Col mouse: quale riga c'è a un'altezza, e il velo sulle righe scelte (vedi `BlockSelection.kt`).
+                .pickableAs(runKey) { y -> textLayout?.let { layout -> runLineAt(layout, y, fieldValue.text, runBlocks, ordinals, viewModel) } }
+                .drawWithContent {
+                    drawContent()
+                    val chosen = selectionLook?.selected?.value
+                    val layout = textLayout
+                    if (chosen.isNullOrEmpty() || layout == null || runBlocks.none { it.id in chosen }) return@drawWithContent
+                    val ranges = shownLineRanges(fieldValue.text, runBlocks, ordinals, viewModel)
+                    val last = layout.layoutInput.text.length
+                    runBlocks.forEachIndexed { i, block ->
+                        val range = ranges.getOrNull(i)
+                        if (block.id !in chosen || range == null) return@forEachIndexed
+                        val top = layout.getLineTop(layout.getLineForOffset(range.first.coerceIn(0, last)))
+                        val bottom = layout.getLineBottom(layout.getLineForOffset(range.last.coerceIn(0, last)))
+                        drawRect(
+                            color = selectionLook.veil.copy(alpha = 0.18f),
+                            topLeft = Offset(-6.dp.toPx(), top),
+                            size = Size(size.width + 12.dp.toPx(), bottom - top)
+                        )
+                    }
+                }
                 // L'indice navigabile (vedi `PageAnchors.kt`): la freccia dei
                 // collegamenti dentro la pagina e il segnalibro delle righe col pin.
                 .drawBehind {
@@ -7390,6 +7519,11 @@ private fun DividerBlockContent(
     }
 }
 
+/** Le celle scelte col mouse in una tabella: le righe e le colonne del rettangolo. */
+data class CellRange(val rows: IntRange, val cols: IntRange) {
+    fun contains(row: Int, col: Int) = row in rows && col in cols
+}
+
 @Composable
 fun TableBlockContent(
     block: BlockEntity,
@@ -7412,31 +7546,114 @@ fun TableBlockContent(
     // (dal 21/10/2026, chiesto dall'utente): sempre accesi restavano in mezzo
     // al testo, sotto ogni tabella di un articolo preso col Web Clipper.
     var editing by remember(block.id) { mutableStateOf(false) }
+    // Il testo di ogni casella, nato coi valori del database quando arrivano
+    // (vedi sopra): qui e non dentro la casella, così svuotare più celle
+    // insieme le svuota anche sullo schermo.
+    val texts = remember(block.id, loaded) { mutableStateMapOf<Pair<Int, Int>, String>().apply { putAll(cellMap) } }
+
+    // **Più celle col mouse** (dal 10/11/2026, chiesto dall'utente sul PC):
+    // trascinando da una cella all'altra si scelgono le celle del rettangolo.
+    // Canc o Backspace le svuotano, e scelte tutte se ne va la tabella; Ctrl+C
+    // le copia (una riga per riga, tabulazioni fra le colonne), Ctrl+X anche;
+    // Ctrl+A le sceglie tutte; Esc o un clic altrove le lasciano.
+    var picked by remember(block.id) { mutableStateOf<CellRange?>(null) }
+    val cellBounds = remember(block.id) { HashMap<Pair<Int, Int>, Rect>() }
+    val tableCoordinates = remember { AtomicReference<LayoutCoordinates?>(null) }
+    val cellKeys = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val context = LocalPlatformContext.current
+    val veil = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+    val locked = LocalPageLocked.current
+    LaunchedEffect(picked != null) { if (picked != null) runCatching { cellKeys.requestFocus() } }
+    fun clearPicked(range: CellRange) {
+        if (range.rows == 0 until block.tableRows && range.cols == 0 until block.tableCols) {
+            viewModel.deleteBlock(block)
+            return
+        }
+        for (r in range.rows) for (c in range.cols) {
+            texts[r to c] = ""
+            viewModel.setTableCell(block.id, r, c, "")
+        }
+    }
+    fun copyPicked(range: CellRange) {
+        val rows = range.rows.map { r -> range.cols.joinToString("\t") { c -> texts[r to c].orEmpty().replace('\n', ' ') } }
+        copyPageToClipboard(context, rows.map { PageEditorViewModel.PageCopyLine(listOf(RichTextSpan(text = it)), null) })
+    }
 
     Column(
         modifier = Modifier
             .padding(start = PAGE_SIDE_PADDING + (depth * 20).dp, end = PAGE_SIDE_PADDING, top = 8.dp, bottom = 8.dp)
             .onFocusChanged { editing = it.hasFocus }
             .focusGroup()
+            .onGloballyPositioned { tableCoordinates.set(it) }
+            .pointerInput(block.id) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    if (down.type != PointerType.Mouse || !currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
+                    val table = tableCoordinates.get() ?: return@awaitEachGesture
+                    fun cellAt(position: Offset): Pair<Int, Int>? {
+                        val window = runCatching { table.localToWindow(position) }.getOrNull() ?: return null
+                        return cellBounds.entries.firstOrNull { it.value.contains(window) }?.key
+                    }
+                    picked = null
+                    val start = cellAt(down.position) ?: return@awaitEachGesture
+                    while (true) {
+                        val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
+                        // Fuori dalla tabella la prende la pagina (più blocchi, vedi `BlockSelection.kt`).
+                        if (!change.pressed || change.isConsumed) break
+                        val now = cellAt(change.position) ?: continue
+                        if (now == start && picked == null) continue
+                        change.consume()
+                        if (picked == null) focusManager.clearFocus()
+                        picked = CellRange(minOf(start.first, now.first)..maxOf(start.first, now.first), minOf(start.second, now.second)..maxOf(start.second, now.second))
+                    }
+                }
+            }
     ) {
+        // I tasti delle celle scelte li prende un punto invisibile col fuoco.
+        Box(
+            Modifier
+                .size(1.dp)
+                .focusRequester(cellKeys)
+                .onFocusChanged { if (!it.isFocused) picked = null }
+                .focusable()
+                .onKeyEvent { event ->
+                    val range = picked ?: return@onKeyEvent false
+                    when (selectionKeyOf(event)) {
+                        SelectionKey.DELETE -> if (!locked) {
+                            picked = null
+                            clearPicked(range)
+                        }
+                        SelectionKey.COPY -> copyPicked(range)
+                        SelectionKey.CUT -> if (!locked) {
+                            copyPicked(range)
+                            picked = null
+                            clearPicked(range)
+                        }
+                        SelectionKey.ALL -> picked = CellRange(0 until block.tableRows, 0 until block.tableCols)
+                        SelectionKey.CLOSE -> picked = null
+                        null -> return@onKeyEvent false
+                    }
+                    true
+                }
+        )
         for (r in 0 until block.tableRows) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 for (c in 0 until block.tableCols) {
                     key(r, c, loaded) {
-                        val cellText = cellMap[r to c] ?: ""
-                        var localCellText by remember { mutableStateOf(cellText) }
-
                         AutoCaps {
                             BasicTextField(
-                                value = localCellText,
+                                value = texts[r to c] ?: "",
                                 onValueChange = { newText ->
-                                    localCellText = newText
+                                    texts[r to c] = newText
                                     viewModel.setTableCell(block.id, r, c, newText)
                                 },
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = NotionWhite),
                                 cursorBrush = SolidColor(NotionWhite),
                                 modifier = Modifier
                                     .weight(1f)
+                                    .onGloballyPositioned { cellBounds[r to c] = it.boundsInWindow() }
+                                    .background(if (picked?.contains(r, c) == true) veil else Color.Transparent)
                                     .border(0.5.dp, MaterialTheme.colorScheme.outline)
                                     .padding(8.dp)
                                     .markFocusChanges()

@@ -3078,12 +3078,16 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
      * una riga per riga, con le celle separate da una tabulazione (come la
      * copia un foglio di calcolo); un divisore "---". Sottopagine e database
      * non hanno testo da copiare.
+     *
+     * Con [only] (dal 10/11/2026, i blocchi selezionati col mouse) solo quei
+     * blocchi di primo livello, con quello che contengono.
      */
-    suspend fun pageCopyLines(): List<PageCopyLine> {
+    suspend fun pageCopyLines(only: Set<String>? = null): List<PageCopyLine> {
         val children = _blocks.value.groupBy { it.parentBlockId }.mapValues { (_, list) -> list.sortedBy { it.orderIndex } }
         val lines = mutableListOf<PageCopyLine>()
         suspend fun visit(parentId: String?, depth: Int) {
             for (block in children[parentId].orEmpty()) {
+                if (parentId == null && only != null && block.id !in only) continue
                 when (block.type) {
                     BlockType.PARAGRAPH, BlockType.BULLET_LIST_ITEM, BlockType.NUMBERED_LIST_ITEM, BlockType.CHECKBOX ->
                         lines += PageCopyLine(spansOf(block), CopiedLine(block.type, block.isChecked, (block.indentLevel + depth).coerceIn(0, 10)))
@@ -3113,10 +3117,15 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
      * **"Cut" e "Delete" della pagina intera**: tutto quello che c'è nella
      * pagina se ne va, tranne le sottopagine e i database (e i toggle che li
      * contengono), che si tolgono uno alla volta dal loro menu. Si può annullare.
+     * Con [only], solo quei blocchi di primo livello e quello che contengono.
      */
-    fun deletePageContent() {
-        val all = _blocks.value
-        val byId = all.associateBy { it.id }
+    fun deletePageContent(only: Set<String>? = null) {
+        val byId = _blocks.value.associateBy { it.id }
+        fun topOf(block: BlockEntity): String {
+            var current = block
+            while (true) current = byId[current.parentBlockId ?: return current.id] ?: return current.id
+        }
+        val all = if (only == null) _blocks.value else _blocks.value.filter { topOf(it) in only }
         // Chi contiene una sottopagina o un database resta, per non portarseli via.
         val holders = HashSet<String>()
         for (block in all) {
