@@ -4,8 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.PageImageStore
-import com.gabriele.notionlocal.data.entity.ImageTextEntity
-import com.gabriele.notionlocal.data.entity.attrs
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
@@ -21,16 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.resume
-
-/**
- * Quello che il lettore ha trovato in una foto: [text] vuoto se non c'è
- * niente di scritto; [complete] falso se qualche alfabeto non si è potuto
- * leggere (il suo modello non era ancora arrivato).
- */
-data class ReadText(val text: String, val complete: Boolean = true)
 
 /**
  * **Chi legge il testo di una foto.** Null se adesso non si può proprio (il
@@ -53,7 +42,6 @@ fun interface TextReader {
  */
 object ImageTexts {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val running = Mutex()
 
     @Volatile
     private var appContext: Context? = null
@@ -96,26 +84,16 @@ object ImageTexts {
      * Restituisce quante ne ha lette. Due giri insieme non si pestano i piedi:
      * il secondo aspetta il primo e trova già fatto quello che ha fatto lui.
      */
-    suspend fun readPending(db: AppDatabase, store: PageImageStore, reader: TextReader): Int = running.withLock {
-        val done = db.imageTextDao().readFiles().toHashSet()
-        val files = db.blockDao().getImageBlocks().mapNotNull { it.attrs.file }.distinct().filter { it !in done }
-        var count = 0
-        for (name in files) {
-            if (!store.fileFor(name).exists()) continue
+    suspend fun readPending(db: AppDatabase, store: PageImageStore, reader: TextReader): Int =
+        ImageTextScan.readPending(db, store) { name ->
             val image = store.load(name, READ_WIDTH_PX)
             // Un file che non si apre come immagine: letto, e niente scritto.
-            val read = try {
+            try {
                 if (image == null) ReadText("") else reader.read(image)
             } finally {
                 image?.recycle()
-            } ?: continue
-            db.imageTextDao().upsert(
-                ImageTextEntity(file = name, text = read.text.trim(), readAt = if (read.complete) System.currentTimeMillis() else 0)
-            )
-            count++
+            }
         }
-        count
-    }
 
     /** Larga abbastanza per leggere le scritte piccole di un foglio A4. */
     private const val READ_WIDTH_PX = 2000

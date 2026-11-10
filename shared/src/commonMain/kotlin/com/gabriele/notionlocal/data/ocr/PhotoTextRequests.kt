@@ -6,7 +6,7 @@ package com.gabriele.notionlocal.data.ocr
  * L'editor, che ora sta nel codice comune, non conosce il lettore di testo
  * di Google: chiama [request], e a fare il lavoro è chi si è registrato. Sul
  * telefono è `ImageTexts`, quando parte (`ImageTexts.init`); prima di allora,
- * come prima, non succede niente. Sul PC, per ora, nessuno.
+ * come prima, non succede niente. Sul PC, dal 10/11/2026, `DesktopImageTexts`.
  */
 object PhotoTextRequests {
     @Volatile

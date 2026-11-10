@@ -21,6 +21,7 @@ import com.gabriele.notionlocal.data.entity.RollupFormatting
 import com.gabriele.notionlocal.data.ink.InkPrefs
 import com.gabriele.notionlocal.data.notify.DesktopNotifications
 import com.gabriele.notionlocal.data.notify.DesktopReminders
+import com.gabriele.notionlocal.data.ocr.DesktopImageTexts
 import com.gabriele.notionlocal.data.record.AudioRecorder
 import com.gabriele.notionlocal.data.security.AppLock
 import com.gabriele.notionlocal.data.settings.AppSettings
@@ -56,6 +57,8 @@ fun main() {
     // I backup: quello di ogni giorno e il promemoria per caricarne uno (vedi `Backups`).
     Backups.init(context)
     Backups.startDailyTasks()
+    // Il testo delle foto aggiunte sul PC, per la ricerca (vedi `DesktopImageTexts`).
+    DesktopImageTexts.init(context)
     RollupFormatting.formatter = AppRollupFormatter
     val factory = ViewModelFactory(context)
     val icon = PlatformIcon.load()

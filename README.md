@@ -1151,6 +1151,25 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.27 — 10/11/2026 · 10:18 — Sul PC si legge il testo delle foto, per ritrovarle cercando
+*(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1140 test passati)*
+
+- **[Progetto]** **Il testo delle foto anche sul PC**: le foto dei blocchi
+  aggiunte sul PC (immagini, scansioni, catture del Web Clipper) si leggono
+  in sottofondo, una alla volta, col lettore di testo di Windows (quello
+  dello Strumento di cattura, chiamato da PowerShell), e la ricerca trova
+  quello che c'è scritto, come sul telefono. Legge le lingue di Windows e
+  giapponese, coreano e cinese (di queste si tengono solo le righe coi loro
+  caratteri, senza gli spazi che Windows mette fra gli ideogrammi); le foto
+  molto alte si leggono a pezzi, rimpicciolite come sul telefono. Quelle
+  arrivate dal telefono avevano già il loro testo. Non ancora provato
+  dall'utente
+- **[Progetto]** Scegliere le foto da leggere e salvarne il testo
+  (`ImageTextScan`) nel codice comune: il telefono lo usa come prima col
+  lettore di Google. Test: `DesktopImageTextsTest` (una scritta disegnata
+  lì letta dal vero lettore di Windows e salvata, le righe ripulite, una
+  foto alta 20000 pixel letta in tre pezzi)
+
 ### ✏️ v0.153.26 — 10/11/2026 · 10:11 — I suoni anche sul PC: il contatore, la sveglia di timer e pomodoro
 *(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1137 test passati)*
 
