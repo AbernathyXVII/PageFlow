@@ -34,8 +34,8 @@ data class BackupManifest(
     val reason: String = BackupReason.DAILY.name
 )
 
-/** Perché è nato un backup. */
-enum class BackupReason { DAILY, MANUAL, BEFORE_RESTORE }
+/** Perché è nato un backup (prima della prima sincronizzazione con un dispositivo: dal 10/11/2026). */
+enum class BackupReason { DAILY, MANUAL, BEFORE_RESTORE, BEFORE_SYNC }
 
 /** Il valore di una preferenza, col suo tipo, per rimetterla com'era. */
 @Serializable

@@ -61,7 +61,10 @@ enum class VersionReason {
     CLOSED,
 
     /** Com'era subito prima di rimettere un'altra versione: per tornarci. */
-    BEFORE_RESTORE
+    BEFORE_RESTORE,
+
+    /** Com'era qui prima che la sincronizzazione ci mettesse quella dell'altro lato (dal 10/11/2026). */
+    BEFORE_SYNC
 }
 
 /** Una versione senza il contenuto: quello che mostra l'elenco. */

@@ -44,6 +44,7 @@ object HistoryStrings {
         "$lines 行 · $words 語"
     )
 
+    val beforeSyncing get() = t("Before syncing", "Prima della sincronizzazione", "Vor dem Synchronisieren", "Avant la synchronisation", "Antes de sincronizar", "同步之前", "동기화하기 전", "同期する前")
     val beforeRestoring get() = t("Before restoring", "Prima del ripristino", "Vor dem Wiederherstellen", "Avant la restauration", "Antes de restaurar", "恢复之前", "복원하기 전", "復元する前")
 
     val restoreThisVersion get() = t("Restore this version", "Ripristina questa versione", "Diese Version wiederherstellen", "Restaurer cette version", "Restaurar esta versión", "恢复此版本", "이 버전 복원", "このバージョンを復元")

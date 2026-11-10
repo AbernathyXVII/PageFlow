@@ -24,6 +24,9 @@ import com.gabriele.notionlocal.data.notify.DesktopReminders
 import com.gabriele.notionlocal.data.ocr.DesktopImageTexts
 import com.gabriele.notionlocal.data.record.AudioRecorder
 import com.gabriele.notionlocal.data.security.AppLock
+import com.gabriele.notionlocal.data.sync.SyncPrompts
+import com.gabriele.notionlocal.data.sync.SyncServer
+import com.gabriele.notionlocal.data.sync.syncSide
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.data.widgets.WidgetStore
 import com.gabriele.notionlocal.platform.DesktopContext
@@ -32,11 +35,13 @@ import com.gabriele.notionlocal.ui.navigation.AppNavHost
 import com.gabriele.notionlocal.ui.navigation.AppShortcuts
 import com.gabriele.notionlocal.ui.screen.AppRollupFormatter
 import com.gabriele.notionlocal.ui.screen.Biometrics
+import com.gabriele.notionlocal.ui.i18n.WifiSyncStrings
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import org.jetbrains.skia.Image
+import java.awt.EventQueue
 
 /**
  * **PageFlow sul PC** (dal 04/11/2026): la stessa app del telefono, con lo
@@ -62,6 +67,17 @@ fun main() {
     DesktopImageTexts.init(context)
     // Se Windows Hello è pronto, per le pagine bloccate (vedi `Biometrics`).
     Biometrics.init(context)
+    // La sincronizzazione Wi‑Fi: se il PC aspetta il telefono, comincia subito (vedi `SyncServer`).
+    val sync = syncSide(context)
+    SyncServer.onSynced = { result ->
+        DesktopNotifications.show(
+            WifiSyncStrings.syncedWith(result.otherName),
+            WifiSyncStrings.done(result.otherName, result.sent, result.received, result.trashedHere, result.conflicts, result.filesSent + result.filesReceived)
+        )
+    }
+    // Un telefono nuovo chiede il codice: la finestra torna davanti, con la domanda.
+    SyncPrompts.onRequest = { EventQueue.invokeLater { DesktopNotifications.bringToFront() } }
+    if (sync.store.load().acceptPhones) SyncServer.start(sync)
     RollupFormatting.formatter = AppRollupFormatter
     val factory = ViewModelFactory(context)
     val icon = PlatformIcon.load()
@@ -80,6 +96,7 @@ fun main() {
             onCloseRequest = {
                 windowMemory.save(windowState)
                 AudioRecorder.stopBeforeExit(context)
+                SyncServer.stop()
                 DesktopNotifications.close()
                 exitApplication()
             },

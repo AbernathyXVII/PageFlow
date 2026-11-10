@@ -81,7 +81,9 @@ import androidx.compose.runtime.produceState
 import com.gabriele.notionlocal.ui.screen.FavoritesScreen
 import com.gabriele.notionlocal.ui.screen.NoInsets
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
+import com.gabriele.notionlocal.ui.screen.ConnectionsScreen
 import com.gabriele.notionlocal.ui.screen.SettingsScreen
+import com.gabriele.notionlocal.ui.screen.SyncPairingDialog
 import com.gabriele.notionlocal.ui.screen.SearchScreen
 import com.gabriele.notionlocal.ui.screen.SidebarActions
 import com.gabriele.notionlocal.ui.screen.SidebarContent
@@ -339,6 +341,9 @@ fun AppNavHost(
 
     BackHandler(enabled = drawerState.isOpen) { closeSidebar() }
 
+    // Il codice della sincronizzazione Wi‑Fi, sopra qualunque schermata (vedi `SyncPrompts`).
+    SyncPairingDialog()
+
     // Ctrl+F sul PC (vedi `AppShortcuts`): la ricerca, come dalla barra laterale.
     DisposableEffect(navController) {
         AppShortcuts.openSearch = { closeSidebar(); navController.navigate(Routes.SEARCH) { launchSingleTop = true } }
@@ -378,7 +383,8 @@ fun AppNavHost(
         onTemplates = { closeSidebar(); navController.navigate(Routes.TEMPLATES) { launchSingleTop = true } },
         onTrash = { closeSidebar(); navController.navigate(Routes.TRASH) { launchSingleTop = true } },
         onSettings = { closeSidebar(); navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
-        onBackup = { closeSidebar(); navController.navigate(Routes.BACKUP) { launchSingleTop = true } }
+        onBackup = { closeSidebar(); navController.navigate(Routes.BACKUP) { launchSingleTop = true } },
+        onConnections = { closeSidebar(); navController.navigate(Routes.CONNECTIONS) { launchSingleTop = true } }
     )
 
     // Il pulsante in cima alla barra, sul PC: fissarla accanto alla pagina, o richiuderla.
@@ -738,6 +744,10 @@ private fun AppRoutes(
 
         composable(Routes.BACKUP) {
             BackupScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.CONNECTIONS) {
+            ConnectionsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.PATCH_NOTES) {

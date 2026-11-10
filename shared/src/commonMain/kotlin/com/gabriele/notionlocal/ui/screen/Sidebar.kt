@@ -79,7 +79,9 @@ class SidebarActions(
     val onTrash: () -> Unit,
     val onSettings: () -> Unit,
     /** "Backup" (dal 28/10/2026). */
-    val onBackup: () -> Unit = {}
+    val onBackup: () -> Unit = {},
+    /** "Connections": la sincronizzazione Wi‑Fi (dal 10/11/2026; prima la voce era grigia). */
+    val onConnections: () -> Unit = {}
 )
 
 /**
@@ -196,7 +198,7 @@ fun SidebarContent(
         // "Import" ed "Export" grigi non ci sono più (dal 03/11/2026, chiesto
         // dall'utente): l'export si fa dai tre puntini di una pagina o di un
         // database, vedi `PageExportSheet`.
-        SidebarItem(Icons.Filled.Devices, Strings.connections, enabled = false)
+        SidebarItem(Icons.Filled.Devices, Strings.connections, onClick = actions.onConnections)
         SidebarItem(Icons.Filled.Settings, Strings.settings, onClick = actions.onSettings)
     }
 }

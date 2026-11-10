@@ -189,7 +189,11 @@ private fun VersionRow(version: PageVersionInfo, onClick: () -> Unit) {
             )
             Text(
                 text = HistoryStrings.linesAndWords(version.lines, version.words) +
-                    if (version.reason == VersionReason.BEFORE_RESTORE) " · ${HistoryStrings.beforeRestoring}" else "",
+                    when (version.reason) {
+                        VersionReason.BEFORE_RESTORE -> " · ${HistoryStrings.beforeRestoring}"
+                        VersionReason.BEFORE_SYNC -> " · ${HistoryStrings.beforeSyncing}"
+                        else -> ""
+                    },
                 style = MaterialTheme.typography.bodySmall,
                 color = NotionGray400
             )

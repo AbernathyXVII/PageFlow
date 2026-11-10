@@ -63,10 +63,14 @@ fun isBackupName(name: String) =
 fun renamedBackup(name: String) =
     if (name.startsWith(OLD_BACKUP_PREFIX)) BACKUP_PREFIX + name.removePrefix(OLD_BACKUP_PREFIX) else name
 
-/** "PageFlow-backup-2026-10-28-143205.zip"; prima di un ripristino, con "-before-restore". */
+/** "PageFlow-backup-2026-10-28-143205.zip"; prima di un ripristino, con "-before-restore"; prima di sincronizzare, "-before-sync". */
 fun backupFileName(at: Long, reason: BackupReason, zone: ZoneId): String {
     val stamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss").format(Instant.ofEpochMilli(at).atZone(zone))
-    val tail = if (reason == BackupReason.BEFORE_RESTORE) "-before-restore" else ""
+    val tail = when (reason) {
+        BackupReason.BEFORE_RESTORE -> "-before-restore"
+        BackupReason.BEFORE_SYNC -> "-before-sync"
+        else -> ""
+    }
     return "$BACKUP_PREFIX$stamp$tail.zip"
 }
 

@@ -43,6 +43,10 @@ import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import com.gabriele.notionlocal.ui.screen.SyncPairingDialog
+import com.gabriele.notionlocal.ui.screen.ConnectionsScreen
+import com.gabriele.notionlocal.data.sync.SyncPrompts
 import org.jetbrains.skia.EncodedImageFormat
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -165,6 +169,25 @@ class DesktopEditorTest {
         val factory = ViewModelFactory(context)
         draw("app_home.png") { AppNavHost(factory = factory) }
         assertEquals(Routes.HOME, AppSettings.lastVisitedRoute)
+    }
+
+    /**
+     * **"Connections" sul PC** (dal 10/11/2026), con la domanda del codice di
+     * un telefono che chiede di abbinarsi. Foto in `connections.png`.
+     */
+    @Test
+    fun theConnectionsPageAsksForTheCode() {
+        val asking = kotlinx.coroutines.GlobalScope.launch { SyncPrompts.confirm.confirm("Pixel 8", "123456") }
+        try {
+            draw("connections.png", width = 900, height = 700) {
+                ConnectionsScreen(onBack = {})
+                SyncPairingDialog()
+            }
+            assertEquals("123456", SyncPrompts.current.value?.code)
+        } finally {
+            SyncPrompts.current.value?.answer?.complete(false)
+            runBlocking { asking.join() }
+        }
     }
 
     /**

@@ -1151,6 +1151,33 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.32 — 10/11/2026 · 17:53 — La sincronizzazione Wi‑Fi fra telefono e PC
+*(Claude Code sul PC; non pubblicata, da provare dall'utente col telefono e col PC (ramo sync-wifi); non installata sul telefono; 1149 test passati)*
+
+- **[Progetto]** **Telefono e PC si sincronizzano sulla rete di casa**, senza
+  cloud: nella barra laterale "Connections" (la voce che c'era già, grigia).
+  Sul PC si accende "Aspetta il telefono"; sul telefono "Sincronizza col PC"
+  trova il PC da solo. La prima volta i due schermi mostrano lo stesso
+  codice di sei cifre da confermare (l'abbinamento), e tutti e due fanno un
+  backup. Vanno nei due sensi pagine, database (riga per riga), quaderni,
+  file, cronologia, "Updates", il testo delle foto e le parole del
+  correttore; impostazioni e widget restano di ogni dispositivo. Solo quello
+  che è cambiato: cambiato da una parte va dall'altra; cancellato da una
+  parte va nel cestino dall'altra; cambiato da tutte e due vince l'ultima
+  modifica, e l'altra resta nella cronologia della pagina ("Before
+  syncing"). Le pagine nuove fatte dalle due parti nella stessa pagina non
+  perdono il loro posto. Non ancora provato dall'utente
+- **[Progetto]** Tutto cifrato: l'abbinamento con ECDH (P-256) e il codice
+  da confrontare, poi AES-GCM con chiavi nuove a ogni sincronizzazione.
+  Le righe si copiano tali e quali con l'SQL (`SyncDatabase`), per nome di
+  colonna; il piano (`SyncPlan`) confronta le impronte di qua, di là e
+  dell'ultima volta. Sul PC, Windows chiede la prima volta se PageFlow può
+  usare la rete. Test: `DesktopSyncTest` (due PageFlow con la loro
+  cartella, su una vera connessione: abbinamento, pagine e file nuovi,
+  modifiche, conflitto, cestino, la ricerca del PC in rete, le pagine nuove
+  nello stesso menu), `SyncPhoneTest` (le stesse righe col database del
+  telefono), la foto di "Connections" con la domanda del codice
+
 ### ✏️ v0.153.31 — 10/11/2026 · 17:30 — Sul PC Ctrl+N fa una pagina nuova
 *(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1144 test passati)*
 

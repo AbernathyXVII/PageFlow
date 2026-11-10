@@ -59,6 +59,7 @@ import com.gabriele.notionlocal.data.backup.Backups
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.ui.format.Formats
 import com.gabriele.notionlocal.ui.i18n.BackupStrings
+import com.gabriele.notionlocal.ui.i18n.HistoryStrings
 import com.gabriele.notionlocal.ui.i18n.Strings
 import com.gabriele.notionlocal.ui.theme.DarkBackground
 import com.gabriele.notionlocal.ui.theme.DarkSheet
@@ -354,7 +355,11 @@ private fun BackupRow(file: BackupFile, enabled: Boolean, onUpload: () -> Unit, 
         Column(modifier = Modifier.weight(1f)) {
             Text(whenLabel(file.createdAt), color = NotionWhite, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val detail = formatFileSize(file.size) +
-                if (file.name.contains("-before-restore")) " · " + BackupStrings.beforeRestore else ""
+                when {
+                    file.name.contains("-before-restore") -> " · " + BackupStrings.beforeRestore
+                    file.name.contains("-before-sync") -> " · " + HistoryStrings.beforeSyncing
+                    else -> ""
+                }
             Text(detail, color = NotionGray400, style = MaterialTheme.typography.bodySmall)
         }
         Box {
@@ -374,7 +379,7 @@ private fun BackupRow(file: BackupFile, enabled: Boolean, onUpload: () -> Unit, 
 }
 
 /** "Oggi alle 14:32", "Ieri alle 9:05", o la data con l'ora. */
-private fun whenLabel(millis: Long): String {
+internal fun whenLabel(millis: Long): String {
     val zone = AppSettings.zoneId
     val day = Instant.ofEpochMilli(millis).atZone(zone).toLocalDate()
     val today = LocalDate.now(zone)

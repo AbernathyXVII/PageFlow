@@ -26,6 +26,7 @@ object Routes {
 
     /** I backup (dal 28/10/2026): vedi `BackupScreen`. */
     const val BACKUP = "backup"
+    const val CONNECTIONS = "connections"
 
     /** Settings → Patch Notes (dal 30/09/2026): le versioni dell'app. */
     const val PATCH_NOTES = "patchNotes"
