@@ -1151,6 +1151,26 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.26 — 10/11/2026 · 10:11 — I suoni anche sul PC: il contatore, la sveglia di timer e pomodoro
+*(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1137 test passati)*
+
+- **[Progetto]** **I suoni sul PC**, con Java Sound: i clic del widget
+  contatore (gli stessi suoni del telefono, col suo volume) e la **sveglia**
+  quando un timer finisce o il pomodoro cambia fase: il suono scelto per
+  quella fase o, se non c'è, una suoneria di PageFlow (tre note di
+  campanello, due volte). Con le notifiche spente la sveglia tace, come sul
+  telefono. Nelle impostazioni del pomodoro, sul PC, "suono" apre "Apri"
+  di Windows per un file .wav (anche .aiff e .au; gli mp3 Java non li
+  suona); un suono scelto sul telefono, sul PC, diventa la suoneria di
+  PageFlow. I promemoria non hanno un suono in più: suonano già col suono
+  delle notifiche di Windows. Prima, sul PC, era tutto muto. Non ancora
+  provato dall'utente
+- **[Progetto]** Le onde dei suoni del contatore (`CounterSoundWaves`) nel
+  codice comune: il telefono le suona come prima, il PC con
+  `DesktopSounds`. Test: `DesktopSoundsTest` (la sveglia dura due secondi e
+  mezzo, si sente e fra i due giri tace; i WAV del contatore si aprono con
+  Java Sound); `CounterSoundsTest` del telefono sulle onde comuni
+
 ### ✏️ v0.153.25 — 10/11/2026 · 10:03 — Il Web Clipper anche sul PC, con Edge nascosto
 *(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2400), la nitidezza finale ancora no; non installata sul telefono (non collegato); 1135 test passati)*
 

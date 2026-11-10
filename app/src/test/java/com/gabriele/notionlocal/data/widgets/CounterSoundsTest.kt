@@ -22,18 +22,18 @@ class CounterSoundsTest {
 
     @Test
     fun everySoundIsShortAudibleAndItsOwn() {
-        val waves = CounterSound.entries.associateWith { CounterSounds.samples(it) }
+        val waves = CounterSound.entries.associateWith { CounterSoundWaves.samples(it) }
         waves.forEach { (sound, samples) ->
             // Corto: un tocco non deve aspettare il suono di prima.
             assertTrue(sound.name, samples.size in 100..(COUNTER_SAMPLE_RATE / 4))
-            assertTrue(sound.name, CounterSounds.peak(sound) > 0.1)
+            assertTrue(sound.name, CounterSoundWaves.peak(sound) > 0.1)
         }
         // Tutti diversi.
         assertEquals(CounterSound.entries.size, waves.values.map { it.toList() }.toSet().size)
         // Sempre uguali (il fruscio ha il seme fisso).
-        assertTrue(CounterSounds.samples(CounterSound.CLICK).contentEquals(CounterSounds.samples(CounterSound.CLICK)))
+        assertTrue(CounterSoundWaves.samples(CounterSound.CLICK).contentEquals(CounterSoundWaves.samples(CounterSound.CLICK)))
         // Il meno, di partenza, è più lieve del più.
-        assertTrue(CounterSounds.peak(CounterSound.SOFT_CLICK) < CounterSounds.peak(CounterSound.CLICK) / 2)
+        assertTrue(CounterSoundWaves.peak(CounterSound.SOFT_CLICK) < CounterSoundWaves.peak(CounterSound.CLICK) / 2)
         // Suonarli senza audio vero non rompe niente, nemmeno a volume zero.
         CounterSounds.play(CounterSound.POP)
         CounterSounds.play(CounterSound.POP, volume = 0)
@@ -41,14 +41,14 @@ class CounterSoundsTest {
 
     @Test
     fun theVolumeBarFollowsTheEar() {
-        assertEquals(0f, CounterSounds.gain(0), 0f)
-        assertEquals(1f, CounterSounds.gain(100), 0f)
+        assertEquals(0f, CounterSoundWaves.gain(0), 0f)
+        assertEquals(1f, CounterSoundWaves.gain(100), 0f)
         // A metà barra un quarto del guadagno: all'orecchio, circa metà.
-        assertEquals(0.25f, CounterSounds.gain(50), 0.001f)
+        assertEquals(0.25f, CounterSoundWaves.gain(50), 0.001f)
         // Fuori dalla barra si ferma ai capi; e sale sempre.
-        assertEquals(1f, CounterSounds.gain(150), 0f)
-        assertEquals(0f, CounterSounds.gain(-10), 0f)
-        assertTrue((0..100).zipWithNext().all { (a, b) -> CounterSounds.gain(a) < CounterSounds.gain(b) })
+        assertEquals(1f, CounterSoundWaves.gain(150), 0f)
+        assertEquals(0f, CounterSoundWaves.gain(-10), 0f)
+        assertTrue((0..100).zipWithNext().all { (a, b) -> CounterSoundWaves.gain(a) < CounterSoundWaves.gain(b) })
     }
 
     @Test
@@ -68,8 +68,8 @@ class CounterSoundsTest {
     @Test
     fun eachSoundBecomesAWavFileForTheSoundPool() {
         // 27/10/2026: i suoni passano dal `SoundPool`, che li legge da un file.
-        val samples = CounterSounds.samples(CounterSound.CLICK)
-        val wav = CounterSounds.wav(samples)
+        val samples = CounterSoundWaves.samples(CounterSound.CLICK)
+        val wav = CounterSoundWaves.wav(samples)
         val header = java.nio.ByteBuffer.wrap(wav).order(java.nio.ByteOrder.LITTLE_ENDIAN)
         assertEquals(44 + samples.size * 2, wav.size)
         assertEquals("RIFF", String(wav, 0, 4))

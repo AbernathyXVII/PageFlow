@@ -11,9 +11,14 @@ internal actual fun syncTimerNotifications(context: PlatformContext, before: Wid
 
 internal actual fun restoreTimerNotifications(context: PlatformContext, state: WidgetsState) = Unit
 
-/** Timer finito, pomodoro che cambia fase: le stesse notifiche del telefono (`Notifier.postWidgetEvents`). */
+/**
+ * Timer finito, pomodoro che cambia fase: le stesse notifiche del telefono
+ * (`Notifier.postWidgetEvents`) e, una volta per tutte, la sveglia
+ * (`DesktopSounds.alarm`: il suono scelto per il pomodoro o quello di PageFlow).
+ */
 internal actual fun postWidgetEvents(context: PlatformContext, events: List<WidgetEvent>, pomodoroSound: String?) {
-    if (DesktopNotifications.muted) return
+    if (events.isEmpty() || DesktopNotifications.muted) return
+    DesktopSounds.alarm(pomodoroSound)
     events.forEach { event ->
         val (title, body) = when (event) {
             is WidgetEvent.TimerDone -> NotifyStrings.timeIsUp to NotifyStrings.timerOf(durationLabel(event.durationMs))
