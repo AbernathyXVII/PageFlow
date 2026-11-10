@@ -260,6 +260,8 @@ object Strings {
     // --- Barra laterale ---
 
     val openSidebar get() = t("Open sidebar", "Apri la barra laterale", "Seitenleiste öffnen", "Ouvrir la barre latérale", "Abrir la barra lateral", "打开侧边栏", "사이드바 열기", "サイドバーを開く")
+    val keepSidebarOpen get() = t("Keep the sidebar open", "Tieni aperta la barra laterale", "Seitenleiste geöffnet lassen", "Garder la barre latérale ouverte", "Mantener abierta la barra lateral", "保持侧边栏打开", "사이드바를 열어 두기", "サイドバーを開いたままにする")
+    val closeSidebar get() = t("Close sidebar", "Chiudi la barra laterale", "Seitenleiste schließen", "Fermer la barre latérale", "Cerrar la barra lateral", "关闭侧边栏", "사이드바 닫기", "サイドバーを閉じる")
     val widgets get() = t("Widgets", "Widget", "Widgets", "Widgets", "Widgets", "小组件", "위젯", "ウィジェット")
     val notebook get() = t("Notebook", "Quaderno", "Notizbuch", "Carnet", "Cuaderno", "笔记本", "노트북", "ノートブック")
     val mainMenu get() = t("Main menu", "Menu principale", "Hauptmenü", "Menu principal", "Menú principal", "主菜单", "메인 메뉴", "メインメニュー")

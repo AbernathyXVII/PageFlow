@@ -7,6 +7,31 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowLeft
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
+import com.gabriele.notionlocal.ui.screen.LocalSidebarPinned
+import com.gabriele.notionlocal.ui.theme.NotionGray400
+import com.gabriele.notionlocal.ui.theme.NotionGray900
+import kotlin.math.roundToInt
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -30,12 +55,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.gabriele.notionlocal.data.AppDatabase
+import com.gabriele.notionlocal.platform.LocalPlatformContext
+import kotlinx.coroutines.flow.collectLatest
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.notify.NotificationTarget
 import com.gabriele.notionlocal.data.settings.AnimationLevel
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.data.share.QuickNotes
 import com.gabriele.notionlocal.ui.i18n.ShareStrings
+import com.gabriele.notionlocal.ui.i18n.Strings
 import com.gabriele.notionlocal.data.settings.StartupMode
 import com.gabriele.notionlocal.data.settings.TrashPolicy
 import com.gabriele.notionlocal.ui.screen.BackupScreen
@@ -120,7 +149,23 @@ fun AppNavHost(
     val currentNotebookId = backStackEntry?.takeIf { it.destination.route == Routes.NOTEBOOK }
         ?.arguments?.read { getStringOrNull("notebookId") }
 
+    // Sul PC la barra si può fissare accanto alla pagina (vedi `AppSettings.sidebarPinned`).
+    val pinned = canPinSidebar && AppSettings.sidebarPinned
+
+    // Fissata, la barra è sempre in vista: l'albero si rilegge quando cambiano pagine e righe
+    // (aperta e chiusa, lo rilegge `openSidebar`), poco dopo l'ultima modifica.
+    if (pinned) {
+        val context = LocalPlatformContext.current
+        LaunchedEffect(Unit) {
+            AppDatabase.getInstance(context).invalidationTracker.createFlow("pages", "database_rows", "database_cells").collectLatest {
+                delay(PINNED_REFRESH_DELAY_MS)
+                sidebar.refresh()
+            }
+        }
+    }
+
     fun openSidebar() {
+        if (pinned) return
         sidebar.refresh()
         scope.launch {
             if (animations == AnimationLevel.OFF) drawerState.snapTo(DrawerValue.Open) else drawerState.open()
@@ -321,28 +366,25 @@ fun AppNavHost(
         onBackup = { closeSidebar(); navController.navigate(Routes.BACKUP) { launchSingleTop = true } }
     )
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        // Il trascinamento serve solo a chiuderla: aperta col dito dal bordo
-        // sinistro litigherebbe col gesto "indietro" del telefono, che parte
-        // proprio da lì.
-        gesturesEnabled = drawerState.isOpen,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = SidebarBackground,
-                windowInsets = NoInsets,
-                modifier = Modifier.width(SIDEBAR_WIDTH)
-            ) {
+    // Il pulsante in cima alla barra, sul PC: fissarla accanto alla pagina, o richiuderla.
+    val pinButton: @Composable () -> Unit = {
+        if (canPinSidebar) {
+            SidebarPinButton(pinned = pinned) {
+                AppSettings.sidebarPinned = !pinned
+                if (!pinned) scope.launch { drawerState.snapTo(DrawerValue.Closed) }
+            }
+        }
+    }
+
+    val sidebarBody: @Composable (widgetsActive: Boolean) -> Unit = { widgetsActive ->
                 SidebarContent(
                     root = treeRoot,
                     children = treeChildren,
                     expanded = treeExpanded,
                     currentPageId = currentPageId,
                     actions = actions,
-                    // Aperta o mentre si apre: da chiusa la barra resta
-                    // disegnata dietro alla pagina, e gli orologi non
-                    // devono ridisegnarsi ogni secondo per nessuno.
-                    widgetsActive = drawerState.isOpen || drawerState.targetValue == DrawerValue.Open,
+                    widgetsActive = widgetsActive,
+                    header = pinButton,
                     notebooks = {
                         NotebooksSidebarSection(
                             viewModel = notebooks,
@@ -360,22 +402,96 @@ fun AppNavHost(
                         )
                     }
                 )
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        // Il trascinamento serve solo a chiuderla: aperta col dito dal bordo
+        // sinistro litigherebbe col gesto "indietro" del telefono, che parte
+        // proprio da lì.
+        gesturesEnabled = drawerState.isOpen,
+        drawerContent = {
+            if (!pinned) {
+                ModalDrawerSheet(
+                    drawerContainerColor = SidebarBackground,
+                    windowInsets = NoInsets,
+                    modifier = Modifier.width(SIDEBAR_WIDTH)
+                ) {
+                    // Aperta o mentre si apre: da chiusa la barra resta
+                    // disegnata dietro alla pagina, e gli orologi non
+                    // devono ridisegnarsi ogni secondo per nessuno.
+                    sidebarBody(drawerState.isOpen || drawerState.targetValue == DrawerValue.Open)
+                }
             }
         }
     ) {
-        AppRoutes(
-            navController = navController,
-            factory = factory,
-            animations = animations,
-            onOpenSidebar = ::openSidebar,
-            onOpenRowPage = { rowId, then ->
-                scope.launch { factory.pageRepository.ensureRowPage(rowId)?.let(then) }
+        CompositionLocalProvider(LocalSidebarPinned provides pinned) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Fissata: la barra accanto alla pagina, col bordo che la allarga e la stringe.
+                if (pinned) {
+                    var width by remember { mutableFloatStateOf(AppSettings.sidebarWidth.toFloat()) }
+                    Box(modifier = Modifier.width(width.dp).fillMaxHeight()) { sidebarBody(true) }
+                    SidebarResizeHandle(
+                        onDrag = { delta ->
+                            width = (width + delta).coerceIn(AppSettings.SIDEBAR_MIN_WIDTH.toFloat(), AppSettings.SIDEBAR_MAX_WIDTH.toFloat())
+                        },
+                        onDragStopped = { AppSettings.sidebarWidth = width.roundToInt() }
+                    )
+                }
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    AppRoutes(
+                        navController = navController,
+                        factory = factory,
+                        animations = animations,
+                        onOpenSidebar = ::openSidebar,
+                        onOpenRowPage = { rowId, then ->
+                            scope.launch { factory.pageRepository.ensureRowPage(rowId)?.let(then) }
+                        }
+                    )
+                }
             }
-        )
+        }
     }
 }
 
 private val SIDEBAR_WIDTH = 300.dp
+
+private const val PINNED_REFRESH_DELAY_MS = 300L
+
+/** In cima alla barra, sul PC: la puntina per fissarla accanto alla pagina; fissata, le due frecce per richiuderla. */
+@Composable
+private fun SidebarPinButton(pinned: Boolean, onClick: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 4.dp), horizontalArrangement = Arrangement.End) {
+        IconButton(onClick = onClick) {
+            Icon(
+                if (pinned) Icons.Filled.KeyboardDoubleArrowLeft else Icons.Filled.PushPin,
+                contentDescription = if (pinned) Strings.closeSidebar else Strings.keepSidebarOpen,
+                tint = NotionGray400
+            )
+        }
+    }
+}
+
+/** Il bordo destro della barra fissata: trascinato, la allarga o la stringe ([onDrag] in dp). */
+@Composable
+private fun SidebarResizeHandle(onDrag: (Float) -> Unit, onDragStopped: () -> Unit) {
+    val density = LocalDensity.current
+    val drag by rememberUpdatedState(onDrag)
+    Box(
+        modifier = Modifier
+            .width(6.dp)
+            .fillMaxHeight()
+            .horizontalResizeCursor()
+            .draggable(
+                state = rememberDraggableState { delta -> drag(with(density) { delta.toDp().value }) },
+                orientation = Orientation.Horizontal,
+                onDragStopped = { onDragStopped() }
+            ),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(modifier = Modifier.width(1.dp).fillMaxHeight().background(NotionGray900))
+    }
+}
 
 @Composable
 private fun AppRoutes(

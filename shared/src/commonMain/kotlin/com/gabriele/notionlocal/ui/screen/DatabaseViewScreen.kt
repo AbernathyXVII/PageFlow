@@ -605,11 +605,13 @@ fun DatabaseViewScreen(
                             }
                             // La barra laterale, accanto a indietro come
                             // nelle pagine.
-                            IconButton(onClick = {
-                                focusManager.clearFocus()
-                                onOpenSidebar()
-                            }) {
-                                Icon(Icons.Filled.Menu, contentDescription = Strings.openSidebar)
+                            if (!LocalSidebarPinned.current) {
+                                IconButton(onClick = {
+                                    focusManager.clearFocus()
+                                    onOpenSidebar()
+                                }) {
+                                    Icon(Icons.Filled.Menu, contentDescription = Strings.openSidebar)
+                                }
                             }
                         }
                     },

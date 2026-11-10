@@ -170,6 +170,8 @@ object AppSettings {
             ?: ProofingLanguage.forApp(languageState.value)
         blockSpacingState.value = prefs.getInt(KEY_BLOCK_SPACING, 0).coerceIn(0, BLOCK_SPACING_STEPS.last())
         listGapsState.value = ListGaps.parse(prefs.getString(KEY_LIST_GAPS, null)) ?: ListGaps()
+        sidebarPinnedState.value = prefs.getBoolean(KEY_SIDEBAR_PINNED, false)
+        sidebarWidthState.value = prefs.getInt(KEY_SIDEBAR_WIDTH, SIDEBAR_DEFAULT_WIDTH).coerceIn(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
     }
 
     // --- Aspetto ---
@@ -218,6 +220,34 @@ object AppSettings {
             fullLineViewState.value = value
             if (::prefs.isInitialized) prefs.edit().putBoolean(KEY_FULL_LINE_VIEW, value).apply()
         }
+
+    private val sidebarPinnedState = mutableStateOf(false)
+
+    /**
+     * **La barra laterale fissata** (sul PC, dal 09/11/2026, chiesto
+     * dall'utente: "come fa Notion, concedimi di bloccare la sidebar"): resta
+     * aperta accanto alla pagina finché la si richiude.
+     */
+    var sidebarPinned: Boolean
+        get() = sidebarPinnedState.value
+        set(value) {
+            sidebarPinnedState.value = value
+            if (::prefs.isInitialized) prefs.edit().putBoolean(KEY_SIDEBAR_PINNED, value).apply()
+        }
+
+    private val sidebarWidthState = mutableStateOf(SIDEBAR_DEFAULT_WIDTH)
+
+    /** Quanto è larga la barra fissata, in dp: si cambia trascinandone il bordo. */
+    var sidebarWidth: Int
+        get() = sidebarWidthState.value
+        set(value) {
+            sidebarWidthState.value = value.coerceIn(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
+            if (::prefs.isInitialized) prefs.edit().putInt(KEY_SIDEBAR_WIDTH, sidebarWidthState.value).apply()
+        }
+
+    const val SIDEBAR_DEFAULT_WIDTH = 300
+    const val SIDEBAR_MIN_WIDTH = 220
+    const val SIDEBAR_MAX_WIDTH = 480
 
     // --- Formati ---
 
@@ -575,6 +605,8 @@ object AppSettings {
     private const val KEY_ANIMATIONS = "animations"
     private const val KEY_TITLE_POSITION = "title_position"
     private const val KEY_FULL_LINE_VIEW = "full_line_view"
+    private const val KEY_SIDEBAR_PINNED = "sidebar_pinned"
+    private const val KEY_SIDEBAR_WIDTH = "sidebar_width"
     private const val KEY_NUMBER_STYLE = "number_style"
     private const val KEY_DATE_STYLE = "date_style"
     private const val KEY_TIME_FORMAT = "time_format"

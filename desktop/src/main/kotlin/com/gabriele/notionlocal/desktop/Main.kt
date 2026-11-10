@@ -1,14 +1,11 @@
 package com.gabriele.notionlocal.desktop
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -17,10 +14,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberWindowState
 import com.gabriele.notionlocal.data.backup.Backups
 import com.gabriele.notionlocal.data.entity.RollupFormatting
 import com.gabriele.notionlocal.data.ink.InkPrefs
@@ -36,6 +31,8 @@ import com.gabriele.notionlocal.ui.navigation.AppShortcuts
 import com.gabriele.notionlocal.ui.screen.AppRollupFormatter
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import org.jetbrains.skia.Image
 
 /**
@@ -61,11 +58,20 @@ fun main() {
     RollupFormatting.formatter = AppRollupFormatter
     val factory = ViewModelFactory(context)
     val icon = PlatformIcon.load()
+    val windowMemory = WindowMemory(context)
     application {
-        val windowState = rememberWindowState(width = 520.dp, height = 900.dp)
+        val windowState = remember { windowMemory.initialState() }
+        // Mentre la si sposta o la si allarga, la finestra si ricorda com'è (poco dopo l'ultimo movimento).
+        LaunchedEffect(windowState) {
+            snapshotFlow { Triple(windowState.placement, windowState.position, windowState.size) }.collectLatest {
+                delay(WINDOW_SAVE_DELAY_MS)
+                windowMemory.save(windowState)
+            }
+        }
         Window(
             // Senza togliere l'icona dall'area di notifica il programma resterebbe acceso.
             onCloseRequest = {
+                windowMemory.save(windowState)
                 DesktopNotifications.close()
                 exitApplication()
             },
@@ -91,13 +97,10 @@ fun main() {
             }
             CompositionLocalProvider(LocalPlatformContext provides context) {
                 NotionLocalTheme {
+                    // Tutta la finestra, come Notion (chiesto dall'utente il 09/11/2026): la barra
+                    // laterale attaccata al bordo sinistro, la pagina larga quanto lo spazio che resta.
                     Surface(modifier = Modifier.fillMaxSize()) {
-                        // A finestra larga l'app sta al centro, larga come una pagina e non come lo schermo.
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                            Box(modifier = Modifier.widthIn(max = PAGE_MAX_WIDTH).fillMaxWidth().fillMaxHeight()) {
-                                AppNavHost(factory = factory)
-                            }
-                        }
+                        AppNavHost(factory = factory)
                     }
                 }
             }
@@ -105,8 +108,7 @@ fun main() {
     }
 }
 
-/** Quanto può essere larga l'app nella finestra: oltre, ai lati resta lo sfondo. */
-private val PAGE_MAX_WIDTH = 900.dp
+private const val WINDOW_SAVE_DELAY_MS = 500L
 
 /** L'icona di PageFlow, la stessa del telefono (cartella `branding`). */
 private object PlatformIcon {

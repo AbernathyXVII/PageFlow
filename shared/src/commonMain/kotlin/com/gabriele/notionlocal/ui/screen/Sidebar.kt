@@ -35,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -60,6 +61,13 @@ import com.gabriele.notionlocal.ui.theme.SidebarBackground
  * li passa tutti insieme, e un ordine sbagliato fra dieci lambda uguali
  * non lo segnalerebbe nessuno.
  */
+/**
+ * **La barra laterale è fissata accanto alla pagina** (sul PC, vedi
+ * `AppSettings.sidebarPinned`): allora le pagine non mostrano il pulsante
+ * per aprirla.
+ */
+val LocalSidebarPinned = compositionLocalOf { false }
+
 class SidebarActions(
     val onMainMenu: () -> Unit,
     val onFavorites: () -> Unit,
@@ -93,7 +101,9 @@ fun SidebarContent(
     /** La barra è aperta: solo allora gli orologi dei widget si aggiornano ogni secondo. */
     widgetsActive: Boolean = true,
     /** La voce "Notebooks" coi quaderni: vedi `NotebooksSidebarSection`. */
-    notebooks: @Composable () -> Unit = {}
+    notebooks: @Composable () -> Unit = {},
+    /** In cima, sopra i quaderni: sul PC il pulsante per fissarla o richiuderla (vedi `AppNavHost`). */
+    header: @Composable () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -109,6 +119,7 @@ fun SidebarContent(
         // i quaderni come in OneNote. Un mondo a parte dal menu principale.
         // **In cima a tutto**, sopra i widget: chiesto dall'utente il
         // 28/09/2026.
+        header()
         Spacer(modifier = Modifier.height(8.dp))
         notebooks()
         // Un divisore sotto i quaderni (chiesto dall'utente il 26/09/2026):

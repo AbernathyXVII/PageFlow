@@ -3064,16 +3064,18 @@ private fun PageEditorContent(
                 // La barra laterale: stesso cerchio dei tre puntini, con le
                 // tre lineette. Il cursore si spegne prima di aprirla,
                 // altrimenti la tastiera resterebbe su sopra la barra.
-                FloatingPageButton(onClick = {
-                    focusManager.clearFocus()
-                    onOpenSidebar()
-                }) {
-                    Icon(
-                        Icons.Filled.Menu,
-                        contentDescription = Strings.openSidebar,
-                        tint = NotionWhite,
-                        modifier = Modifier.size(FLOATING_ICON_SIZE)
-                    )
+                if (!LocalSidebarPinned.current) {
+                    FloatingPageButton(onClick = {
+                        focusManager.clearFocus()
+                        onOpenSidebar()
+                    }) {
+                        Icon(
+                            Icons.Filled.Menu,
+                            contentDescription = Strings.openSidebar,
+                            tint = NotionWhite,
+                            modifier = Modifier.size(FLOATING_ICON_SIZE)
+                        )
+                    }
                 }
             }
             Row(

@@ -1,6 +1,9 @@
 package com.gabriele.notionlocal.desktop
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.Lifecycle
@@ -76,11 +79,17 @@ class DesktopEditorTest {
     }
 
     /** Disegna [content] per qualche secondo, come la finestra, e salva la foto in `build/desktop-screenshots`. */
-    private fun draw(name: String, owner: ScreenOwner = ScreenOwner(), content: @androidx.compose.runtime.Composable () -> Unit) {
+    private fun draw(
+        name: String,
+        owner: ScreenOwner = ScreenOwner(),
+        width: Int = 520,
+        height: Int = 900,
+        content: @androidx.compose.runtime.Composable () -> Unit
+    ) {
         // Sul filo della finestra (quello di Swing), come nella finestra vera: la navigazione lo pretende.
         fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
         val scene = onWindowThread {
-            ImageComposeScene(width = 520, height = 900, density = Density(1f)) {
+            ImageComposeScene(width = width, height = height, density = Density(1f)) {
                 CompositionLocalProvider(
                     LocalPlatformContext provides context,
                     LocalLifecycleOwner provides owner,
@@ -147,6 +156,26 @@ class DesktopEditorTest {
         val factory = ViewModelFactory(context)
         draw("app_home.png") { AppNavHost(factory = factory) }
         assertEquals(Routes.HOME, AppSettings.lastVisitedRoute)
+    }
+
+    /**
+     * La barra laterale fissata, in una finestra larga (chiesto dall'utente il
+     * 09/11/2026, "come fa Notion"): la barra a sinistra, la pagina in tutto lo
+     * spazio che resta, senza il pulsante per aprire la barra. Foto in `app_pinned.png`.
+     */
+    @Test
+    fun thePinnedSidebarSitsBesideThePage() {
+        AppSettings.sidebarPinned = true
+        AppSettings.sidebarWidth = 260
+        try {
+            val factory = ViewModelFactory(context)
+            draw("app_pinned.png", width = 1200, height = 800) {
+                Surface(modifier = Modifier.fillMaxSize()) { AppNavHost(factory = factory) }
+            }
+        } finally {
+            AppSettings.sidebarPinned = false
+            AppSettings.sidebarWidth = AppSettings.SIDEBAR_DEFAULT_WIDTH
+        }
     }
 
     @Test

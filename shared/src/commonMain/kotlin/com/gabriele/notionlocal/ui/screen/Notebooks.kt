@@ -1047,8 +1047,10 @@ fun NotebookSectionScreen(
                         IconButton(onClick = onBack) {
                             Icon(Icons.Filled.ArrowBack, contentDescription = Strings.back)
                         }
-                        IconButton(onClick = onOpenSidebar) {
-                            Icon(Icons.Filled.Menu, contentDescription = Strings.openSidebar)
+                        if (!LocalSidebarPinned.current) {
+                            IconButton(onClick = onOpenSidebar) {
+                                Icon(Icons.Filled.Menu, contentDescription = Strings.openSidebar)
+                            }
                         }
                     }
                 },
@@ -1286,8 +1288,10 @@ fun NotebookScreen(
                         IconButton(onClick = onBack) {
                             Icon(Icons.Filled.ArrowBack, contentDescription = Strings.back)
                         }
-                        IconButton(onClick = onOpenSidebar) {
-                            Icon(Icons.Filled.Menu, contentDescription = Strings.openSidebar)
+                        if (!LocalSidebarPinned.current) {
+                            IconButton(onClick = onOpenSidebar) {
+                                Icon(Icons.Filled.Menu, contentDescription = Strings.openSidebar)
+                            }
                         }
                     }
                 },

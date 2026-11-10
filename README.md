@@ -1151,6 +1151,27 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.23 — 10/11/2026 · 07:44 — Sul PC la finestra si riapre com'era, l'app usa tutta la finestra e la barra laterale si fissa e si allarga, come in Notion
+*(Claude Code sul PC; provata coi test del PC (installatore 0.153.2200) e sul telefono (la barra laterale di sempre); 1131 test passati)*
+
+- **[Progetto]** **La finestra del PC si riapre com'era**: grandezza,
+  posizione e se era ingrandita (file "window" nella cartella dei dati).
+  La prima volta 1200 × 800, al centro; prima si apriva sempre stretta
+  come un telefono. Se lo schermo dov'era non c'è più, si apre al centro
+- **[Progetto]** **L'app usa tutta la finestra**: niente più colonna di 900
+  punti al centro; la barra laterale si apre dal bordo sinistro della
+  finestra e la pagina è larga quanto lo spazio che resta (scelto
+  dall'utente: "Tutta la larghezza")
+- **[Progetto]** **La barra laterale fissata, come in Notion**: la puntina in
+  cima alla barra la fissa accanto alla pagina, dove resta finché non la si
+  richiude con le due frecce («); trascinandone il bordo destro si allarga
+  o si stringe (da 220 a 480). Fissata e larghezza si ricordano anche alla
+  riapertura. Fissata, le pagine non mostrano il pulsante per aprirla, e
+  l'albero delle pagine si aggiorna da solo quando cambiano pagine e righe.
+  Sul telefono non cambia niente
+- **[Progetto]** Nel `DesktopEditorTest` l'app intera disegnata in una
+  finestra di 1200 × 800 con la barra fissata (foto in `app_pinned.png`)
+
 ### ✏️ v0.153.22 — 09/11/2026 · 23:07 — Il PDF anche sul PC, col testo vero, e "Print"
 *(Claude Code sul PC; provata sul PC dall'utente (installatore 0.153.2100) e sul telefono (il PDF si prepara e si apre la stampa; l'anteprima no, la stampante era spenta); 1130 test passati)*
 
