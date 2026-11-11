@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.foundation.layout.PaddingValues
 import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.runtime.derivedStateOf
@@ -377,6 +378,27 @@ private val RUN_LINE_HEIGHT = 24.sp
  * la larghezza, come fa a schermo intero.
  */
 private val PAGE_SIDE_PADDING = 20.dp
+
+/**
+ * **Sul PC tutta la pagina sta un po' più a destra** (dal 11/11/2026, chiesto
+ * dall'utente): nel margine a sinistra ci stanno i sei puntini dei blocchi
+ * (`BlockHandle.kt`) senza toccare il testo né l'icona di un database. Si
+ * spostano anche i database incorporati e i disegni; la copertina resta a
+ * tutta larghezza (`bleedStart`). Sul telefono niente.
+ */
+private val PAGE_INSET = if (isPc) 30.dp else 0.dp
+
+/** Allarga a sinistra di [inset] chi sta nella pagina spostata (`PAGE_INSET`): la copertina arriva al bordo. */
+private fun Modifier.bleedStart(inset: Dp): Modifier = layout { measurable, constraints ->
+    val extra = inset.roundToPx()
+    if (extra == 0 || !constraints.hasBoundedWidth) {
+        val placeable = measurable.measure(constraints)
+        return@layout layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
+    val width = constraints.maxWidth + extra
+    val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+    layout(constraints.maxWidth, placeable.height) { placeable.place(-extra, 0) }
+}
 
 private const val RUN_LEAD = "\n"
 
@@ -2143,11 +2165,12 @@ private fun PageEditorContent(
                             }
                         }
                     }
-                    .inkLayer(inkState, inkStrokes, inkCache, NotionWhite)
+                    .inkLayer(inkState, inkStrokes, inkCache, NotionWhite, originX = PAGE_INSET)
                     .then(
                         if (drawingMode) {
                             Modifier.inkInput(
                                 state = inkState,
+                                originX = PAGE_INSET,
                                 onStroke = { anchor, pen, points ->
                                     inkViewModel.addStroke(anchor, pen.tool, pen.color, pen.width, points)
                                 },
@@ -2227,6 +2250,7 @@ private fun PageEditorContent(
 
                     Box(
                         modifier = Modifier
+                            .bleedStart(PAGE_INSET)
                             .fillMaxWidth()
                             .height(COVER_HEIGHT)
                             .onSizeChanged { coverBox = it }
@@ -2649,6 +2673,8 @@ private fun PageEditorContent(
             }
             LazyColumn(
                 state = listState,
+                // Sul PC il margine in più a sinistra (vedi `PAGE_INSET`).
+                contentPadding = PaddingValues(start = PAGE_INSET),
                 modifier = Modifier
                     .fillMaxSize()
                     // Il verso del dito, per "Back" quando si è scesi molto (`BackToTop.kt`).
@@ -2709,7 +2735,7 @@ private fun PageEditorContent(
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
             // Nel margine a sinistra: un clic apre il menu del blocco.
-            if (isPc && !readOnlyPage && !drawingMode) BlockHandle(blockSpot, PAGE_SIDE_PADDING) { id -> blockMenuFor = id }
+            if (isPc && !readOnlyPage && !drawingMode) BlockHandle(blockSpot, endsAt = PAGE_INSET + PAGE_SIDE_PADDING) { id -> blockMenuFor = id }
             // Tutta la pagina, o i blocchi scelti col mouse (null): Copy, Cut, Delete per tutti e due.
             val chosenBlocks = selectedBlocks.value.takeIf { it.isNotEmpty() }
             val anySelection = pageSelected || chosenBlocks != null

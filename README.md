@@ -1151,6 +1151,24 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.45 — 11/11/2026 · 10:38 — Sul PC la pagina sta un po' più a destra, coi sei puntini nel margine
+*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1166 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Tutta la pagina si sposta di 30 punti verso
+  destra**: testo, titolo, icona, database incorporati, tabelle, immagini e
+  anche i disegni a mano, che restano sopra il testo dove erano. Nel
+  margine che si libera stanno i sei puntini, staccati dal testo e
+  dall'icona di un database (prima la toccavano). La copertina resta da un
+  bordo all'altro. Sul telefono non cambia niente. Non ancora provato
+  dall'utente
+- **[Progetto]** `PAGE_INSET` (30 dp sul PC, 0 sul telefono) come margine
+  della lista della pagina; la copertina si allarga a sinistra
+  (`bleedStart`); `inkLayer` e `inkInput` hanno `originX`, così i tratti si
+  disegnano e si salvano rispetto alla pagina spostata. Test in
+  `DesktopBlockSelectionTest`: il testo comincia dopo il margine dei
+  puntini, e la copertina tocca tutti e due i bordi (senza `bleedStart`
+  fallisce)
+
 ### ✏️ v0.153.44 — 11/11/2026 · 10:17 — Sul PC le finestrelle si aprono accanto al clic, e i blocchi hanno i sei puntini
 *(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1165 test passati)*
 

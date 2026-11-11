@@ -71,17 +71,23 @@ fun Modifier.blockHover(
 }
 
 /**
- * I sei puntini, larghi [width], a metà della prima riga di [spotState]; il
- * clic li passa a [onClick]. Lo stato si legge qui dentro: muovendo il mouse
- * si ridisegnano solo i puntini, non la pagina.
+ * I sei puntini a metà della prima riga di [spotState], che finiscono un
+ * poco prima di [endsAt] (dove comincia il testo); il clic li passa a
+ * [onClick]. Lo stato si legge qui dentro: muovendo il mouse si ridisegnano
+ * solo i puntini, non la pagina.
  */
 @Composable
-fun BlockHandle(spotState: State<BlockSpot?>, width: Dp, onClick: (String) -> Unit) {
+fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, onClick: (String) -> Unit) {
     val spot = spotState.value ?: return
     Box(
         modifier = Modifier
-            .offset { IntOffset(0, ((spot.top + spot.bottom) / 2f - HANDLE_HEIGHT.toPx() / 2f).roundToInt()) }
-            .size(width, HANDLE_HEIGHT)
+            .offset {
+                IntOffset(
+                    (endsAt - HANDLE_GAP - HANDLE_WIDTH).roundToPx(),
+                    ((spot.top + spot.bottom) / 2f - HANDLE_HEIGHT.toPx() / 2f).roundToInt()
+                )
+            }
+            .size(HANDLE_WIDTH, HANDLE_HEIGHT)
             .clip(RoundedCornerShape(4.dp))
             .clickable { onClick(spot.blockId) },
         contentAlignment = Alignment.Center
@@ -96,3 +102,5 @@ fun BlockHandle(spotState: State<BlockSpot?>, width: Dp, onClick: (String) -> Un
 }
 
 private val HANDLE_HEIGHT = 24.dp
+private val HANDLE_WIDTH = 20.dp
+private val HANDLE_GAP = 2.dp

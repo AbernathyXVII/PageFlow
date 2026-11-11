@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -304,13 +305,15 @@ private const val HIGHLIGHTER_ALPHA = 0.38f
 /**
  * **Lo strato dei disegni**, sopra la pagina: i tratti salvati (prima gli
  * evidenziatori, che stanno sotto gli altri), il tratto in corso e il
- * cerchio della gomma. Mai sopra la copertina.
+ * cerchio della gomma. Mai sopra la copertina. [originX]: dove comincia la
+ * pagina da sinistra (sul PC è spostata, vedi `PAGE_INSET`): i tratti la seguono.
  */
 fun Modifier.inkLayer(
     state: InkPageState,
     strokes: List<InkStroke>,
     cache: InkPathCache,
-    textColor: Color
+    textColor: Color,
+    originX: Dp = 0.dp
 ): Modifier = drawWithContent {
     drawContent()
     val info = state.listState.layoutInfo
@@ -324,7 +327,7 @@ fun Modifier.inkLayer(
                 val index = resolveAnchor(stroke.entity.anchor, state.itemOfBlock) ?: continue
                 val top = state.itemTop(info, index) ?: continue
                 if (top + stroke.bounds.bottom * density < boundary || top + stroke.bounds.top * density > size.height) continue
-                val left = if (index in state.slidingItems) -state.sideOffset() else 0f
+                val left = originX.toPx() + if (index in state.slidingItems) -state.sideOffset() else 0f
                 translate(left = left, top = top) {
                     drawInk(cache.pathOf(stroke, density), stroke.entity.tool, stroke.entity.width, inkColor(stroke.entity.color, textColor))
                 }
@@ -368,6 +371,8 @@ fun Modifier.inkLayer(
 @OptIn(ExperimentalComposeUiApi::class)
 fun Modifier.inkInput(
     state: InkPageState,
+    /** Dove comincia la pagina da sinistra: i tratti si salvano rispetto a lei (vedi `inkLayer`). */
+    originX: Dp = 0.dp,
     onStroke: (anchor: String, pen: InkPen, points: List<InkPoint>) -> Unit,
     onErase: (xPx: Float, yPx: Float) -> Unit,
     onEraseEnd: () -> Unit
@@ -393,6 +398,7 @@ fun Modifier.inkInput(
             val settings = InkPrefs.settings
             val pen = settings.pen
             val boundary = state.boundary(state.listState.layoutInfo)
+            val origin = originX.toPx()
 
             var trackedId = down.id
             var stylus = down.type.isPen()
@@ -413,7 +419,7 @@ fun Modifier.inkInput(
                 if (!drawing) return
                 if (erasing) {
                     state.eraserAt = position
-                    onErase(position.x, position.y)
+                    onErase(position.x - origin, position.y)
                 } else {
                     val last = state.current.lastOrNull()
                     if (last == null || hypot(position.x - last.x, position.y - last.y) >= 1f) {
@@ -471,7 +477,7 @@ fun Modifier.inkInput(
                 val anchor = anchorItem?.let { state.anchorOfItem.getOrNull(it.first) }
                 if (anchorItem != null && anchor != null) {
                     val top = anchorItem.second
-                    onStroke(anchor, pen, points.map { InkPoint(it.x / density, (it.y - top) / density, it.p) })
+                    onStroke(anchor, pen, points.map { InkPoint((it.x - origin) / density, (it.y - top) / density, it.p) })
                 }
                 state.current.clear()
             } else {

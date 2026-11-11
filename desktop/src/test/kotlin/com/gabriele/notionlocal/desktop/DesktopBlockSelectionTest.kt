@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.desktop
 
+import com.gabriele.notionlocal.data.PageImageStore
 import kotlin.math.abs
 import com.gabriele.notionlocal.ui.screen.notePresses
 import androidx.compose.ui.Modifier
@@ -249,9 +250,9 @@ class DesktopBlockSelectionTest {
 
     private fun IntRange.center(): Float = (first + last) / 2f
 
-    /** Le altezze dove il margine a sinistra (x 0–19) è diverso da [clean]: dove sono i sei puntini. */
+    /** Le altezze dove il margine a sinistra del testo (x 24–48) è diverso da [clean]: dove sono i sei puntini. */
     private fun dotsRows(bitmap: Bitmap, clean: Bitmap): List<Int> =
-        (0 until bitmap.height).filter { y -> (0 until 20).any { x -> bitmap.getColor(x, y) != clean.getColor(x, y) } }
+        (0 until bitmap.height).filter { y -> (DOTS_X).any { x -> bitmap.getColor(x, y) != clean.getColor(x, y) } }
 
     /**
      * **I sei puntini accanto al blocco sotto il mouse** (chiesto dall'utente
@@ -263,6 +264,9 @@ class DesktopBlockSelectionTest {
     fun theSixDotsOpenTheMenuOfTheBlockUnderTheMouse() = withPage { scene, frames, picture ->
         val clean = picture()
         val rows = textRows(clean)
+        // Sul PC la pagina sta più a destra (chiesto dall'utente): a sinistra del testo c'è il posto per i puntini.
+        val firstInk = (0 until 200).first { x -> bright(clean.getColor(x, rows[5].center().toInt())) }
+        assertTrue("il testo comincia a $firstInk", firstInk >= 50)
         onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, rows[5].center()), pressed = false) }
         frames(5)
         val onLine = dotsRows(picture(), clean)
@@ -273,7 +277,7 @@ class DesktopBlockSelectionTest {
         val onDivider = dotsRows(picture(), clean)
         assertTrue("puntini accanto al divisore: $onDivider", onDivider.isNotEmpty() && onDivider.average() > rows[5].last && onDivider.average() < rows[6].first)
         // Andandoci sopra restano.
-        val dots = Offset(10f, onDivider.average().toFloat())
+        val dots = Offset(38f, onDivider.average().toFloat())
         onWindowThread { mouse(scene, PointerEventType.Move, dots, pressed = false) }
         frames(5)
         assertTrue("i puntini restano col mouse sopra", dotsRows(picture(), clean).isNotEmpty())
@@ -304,6 +308,34 @@ class DesktopBlockSelectionTest {
         waitForBlocks(listOf("uno", "titolo", "due", "tre"))
     }
 
+    /**
+     * **Sul PC la pagina sta più a destra, ma la copertina no** (chiesto
+     * dall'utente l'11/11/2026): il testo comincia dopo il margine dei
+     * puntini, la copertina va ancora da un bordo all'altro.
+     */
+    @Test
+    fun theCoverStillReachesBothEdges() {
+        runBlocking {
+            val bitmap = Bitmap().apply { allocN32Pixels(400, 200) }
+            org.jetbrains.skia.Canvas(bitmap).clear(0xFFCC2233.toInt())
+            PageImageStore(context).fileFor("copertina.png")
+                .writeBytes(org.jetbrains.skia.Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "copertina", title = "Copertina", coverImage = "copertina.png"))
+            repo.saveBlock(BlockEntity(id = "riga", pageId = "copertina", textJson = """[{"text":"Sotto la copertina"}]""", orderIndex = 0))
+        }
+        withPage("copertina") { _, frames, picture ->
+            frames(20)
+            val page = picture()
+            fun red(x: Int, y: Int) = page.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 150 && ((c shr 8) and 0xFF) < 90 }
+            assertTrue("la copertina comincia al bordo sinistro", red(2, 100))
+            assertTrue("la copertina arriva al bordo destro", red(page.width - 3, 100))
+            val line = textRows(page).last()
+            val firstInk = (0 until 300).first { x -> bright(page.getColor(x, line.center().toInt())) }
+            assertTrue("il testo comincia a $firstInk", firstInk >= 50)
+        }
+    }
+
     /** Scorrendo con la rotella, col mouse fermo, i puntini passano alla riga che ora c'è sotto. */
     @Test
     fun theSixDotsFollowTheWheel() {
@@ -330,7 +362,7 @@ class DesktopBlockSelectionTest {
             assertNotEquals("la pagina non si è mossa", rows.take(8), after.take(8))
             val under = after.first { at.y.toInt() in (it.first - 8)..(it.last + 8) }
             // I puntini sono grigi su fondo scuro: i punti del margine più chiari del fondo.
-            val dots = (0 until scrolled.height).filter { y -> (0 until 20).any { x -> ((scrolled.getColor(x, y) shr 16) and 0xFF) > 70 } }
+            val dots = (TOP_BAR until scrolled.height).filter { y -> DOTS_X.any { x -> ((scrolled.getColor(x, y) shr 16) and 0xFF) > 70 } }
             assertTrue("puntini $dots (prima a $before) accanto alla riga sotto il mouse $under", dots.isNotEmpty() && abs(dots.average() - under.center()) < 6)
         }
     }
@@ -476,18 +508,16 @@ class DesktopBlockSelectionTest {
         }
     }
 
-    /** Le fasce di righe dello schermo con del testo chiaro, fra x 20 e 300: dove sono le righe della pagina. */
+    private fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
+
+    /** Le fasce di righe dello schermo con del testo chiaro, fra x 50 (dopo i puntini) e 300: dove sono le righe della pagina. */
     private fun textRows(bitmap: Bitmap): List<IntRange> {
-        val rows = (0 until bitmap.height).filter { y ->
-            (20 until 300).any { x ->
-                val c = bitmap.getColor(x, y)
-                ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
-            }
-        }
+        val rows = (0 until bitmap.height).filter { y -> (50 until 300).any { x -> bright(bitmap.getColor(x, y)) } }
         val bands = ArrayList<IntRange>()
         for (y in rows) {
             val last = bands.lastOrNull()
-            if (last != null && y <= last.last + 1) bands[bands.lastIndex] = last.first..y else bands += y..y
+            // La barra in alto (indietro, menu) conta come una riga sola.
+            if (last != null && (y <= last.last + 1 || y < TOP_BAR)) bands[bands.lastIndex] = last.first..y else bands += y..y
         }
         return bands
     }
@@ -499,6 +529,12 @@ class DesktopBlockSelectionTest {
             buttons = if (pressed) PointerButtons(isPrimaryPressed = true) else PointerButtons(),
             button = if (type == PointerEventType.Move) null else PointerButton.Primary
         )
+
+    /** Dove stanno i sei puntini: fra il bordo della pagina spostata e il testo (x 50). */
+    private val DOTS_X = 24 until 49
+
+    /** Sopra quest'altezza c'è la barra coi pulsanti indietro e menu. */
+    private val TOP_BAR = 60
 
     private fun key(scene: ImageComposeScene, key: Key) {
         scene.sendKeyEvent(KeyEvent(key, KeyEventType.KeyDown))
