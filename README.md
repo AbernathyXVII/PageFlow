@@ -1151,6 +1151,24 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.38 — 11/11/2026 · 08:25 — Sul PC Ctrl+Z e Ctrl+Y sono l'Annulla e il Ripristina della pagina
+*(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1161 test passati)*
+
+- **[Bug fix]** **[💻 PC]** **Ctrl+Z annulla come il pulsante Annulla della
+  pagina**, e Ctrl+Y (o Ctrl+Maiusc+Z) ripristina. Prima, dentro una riga,
+  Ctrl+Z usava l'annulla del campo di testo, che conosce solo il testo del
+  campo: rimetteva un testo vecchio del gruppo di righe, che la pagina poi
+  riscriveva sui blocchi (righe unite o spezzate), e non sapeva niente di
+  divider, tabelle o blocchi eliminati. Ora vale nelle righe, nei blocchi
+  di codice e negli altri campi della pagina, e anche dopo aver eliminato
+  dei blocchi scelti col mouse. Nel titolo, nelle celle delle tabelle e in
+  quelle dei database resta l'annulla del campo. Non ancora provato
+  dall'utente
+- **[Progetto]** `undoKeyOf` in `BlockSelection.kt`, preso dai campi della
+  pagina prima del campo di testo. Test: in `DesktopBlockSelectionTest`,
+  tolto un divider e messo il cursore in una riga, Ctrl+Z lo rimette e
+  Ctrl+Y lo toglie di nuovo (senza la correzione fallisce)
+
 ### ✏️ v0.153.37 — 10/11/2026 · 22:33 — Tolto un divider le righe restano strette, e la selezione col mouse fa scorrere la pagina
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1160 test passati)*
 

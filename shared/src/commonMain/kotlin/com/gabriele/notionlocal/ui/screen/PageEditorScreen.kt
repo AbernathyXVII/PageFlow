@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.runtime.mutableStateMapOf
@@ -2522,6 +2523,19 @@ private fun PageEditorContent(
             // a cambiare era solo la tastiera che si apriva o si chiudeva: mezzo
             // millisecondo l'una, abbastanza per perdere il fotogramma.
             val latestRenderItems = rememberUpdatedState(renderItems)
+            // I tasti della pagina dentro i suoi campi (vedi `BlockSelection.kt`): Ctrl+A tutta la
+            // pagina, Ctrl+Z e Ctrl+Y l'Annulla e il Ripristina della pagina. Vero se presi.
+            val pageKey: (KeyEvent) -> Boolean = remember(viewModel, selectWholePage) {
+                { event ->
+                    val undo = undoKeyOf(event)
+                    when {
+                        undo == true -> viewModel.undo()
+                        undo == false -> viewModel.redo()
+                        isSelectAll(event) -> selectWholePage()
+                    }
+                    undo != null || isSelectAll(event)
+                }
+            }
             val listContent: LazyListScope.() -> Unit = remember(
                 pageHeader, renderItems, itemEnv, paragraphLook, ordinals, childrenOf, continuedRuns,
                 continuingRuns, sideScroll, movedBlockNow, veilColor, pageSelected, focusRequestBlockId, formatRequest
@@ -2564,7 +2578,7 @@ private fun PageEditorContent(
                             is RenderItem.Run -> {
                                 val content = RunContent(item.blocks, item.blocks.numbersFrom(ordinals))
                                 // Ctrl+A: tutta la pagina, non solo il pezzo di testo (vedi `BlockSelection.kt`).
-                                Column(Modifier.pageVeil(pageSelected, veilColor).onPreviewKeyEvent { isSelectAll(it).also { all -> if (all) selectWholePage() } }) {
+                                Column(Modifier.pageVeil(pageSelected, veilColor).onPreviewKeyEvent { pageKey(it) }) {
                                 RunItem(
                                     content = content,
                                     runKey = item.key,
@@ -2594,9 +2608,14 @@ private fun PageEditorContent(
                                         .anchorDecor(item.block.id, item.block.attrs.linkTarget, movedBlockNow, PAGE_SIDE_PADDING)
                                         .pageVeil(pageSelected || LocalBlockSelection.current?.selected?.value?.contains(item.block.id) == true, veilColor)
                                         .pickableAs(renderItemKey(item)) { item.block.id }
-                                        // Nelle celle di un database Ctrl+A resta della cella.
+                                        // Nelle celle di un database Ctrl+A resta della cella; in quelle di una
+                                        // tabella Ctrl+Z resta della cella (l'Annulla della pagina non le conosce).
                                         .onPreviewKeyEvent { event ->
-                                            item.block.type != BlockType.DATABASE_LINK && isSelectAll(event).also { all -> if (all) selectWholePage() }
+                                            when (item.block.type) {
+                                                BlockType.DATABASE_LINK -> false
+                                                BlockType.TABLE -> isSelectAll(event).also { all -> if (all) selectWholePage() }
+                                                else -> pageKey(event)
+                                            }
                                         }
                                 ) {
                                     IslandItem(
@@ -2713,6 +2732,7 @@ private fun PageEditorContent(
                     .focusRequester(selectionKeys)
                     .focusable()
                     .onKeyEvent { event ->
+                        if (pageKey(event)) return@onKeyEvent true
                         if (!anySelection) return@onKeyEvent false
                         when (selectionKeyOf(event)) {
                             SelectionKey.DELETE -> if (!readOnlyPage) deleteSelection()

@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
@@ -206,6 +207,24 @@ fun selectionKeyOf(event: KeyEvent): SelectionKey? {
         event.isCtrlPressed && event.key == Key.C -> SelectionKey.COPY
         event.isCtrlPressed && event.key == Key.X -> SelectionKey.CUT
         event.isCtrlPressed && event.key == Key.A -> SelectionKey.ALL
+        else -> null
+    }
+}
+
+/**
+ * **Ctrl+Z e Ctrl+Y (o Ctrl+Maiusc+Z) sono l'Annulla della pagina** (dal
+ * 11/11/2026, trovato dall'utente sul PC: "CTRL + Z non funziona
+ * correttamente"). Il campo di testo di Compose ha un annulla suo, che
+ * conosce solo il testo del campo: rimetteva un testo vecchio del gruppo di
+ * righe, che la pagina riscriveva sui blocchi, e non sapeva niente di
+ * divisori o blocchi eliminati. Vero per Annulla, falso per Ripristina, null
+ * per gli altri tasti.
+ */
+fun undoKeyOf(event: KeyEvent): Boolean? {
+    if (event.type != KeyEventType.KeyDown || !event.isCtrlPressed) return null
+    return when {
+        event.key == Key.Z && !event.isShiftPressed -> true
+        event.key == Key.Y || (event.key == Key.Z && event.isShiftPressed) -> false
         else -> null
     }
 }

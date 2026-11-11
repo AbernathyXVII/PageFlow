@@ -173,6 +173,47 @@ class DesktopBlockSelectionTest {
         waitForBlocks(listOf("uno", "titolo", "due", "tre"))
     }
 
+    /**
+     * **Ctrl+Z dentro una riga è l'Annulla della pagina** (trovato dall'utente
+     * l'11/11/2026): tolto il divisore, col cursore in una riga Ctrl+Z lo
+     * rimette (l'annulla del solo campo di testo non lo sapeva fare), e Ctrl+Y
+     * lo toglie di nuovo.
+     */
+    @Test
+    fun ctrlZInALineUndoesThePageAndCtrlYRedoes() = withPage { scene, frames, picture ->
+        val rows = textRows(picture())
+        val divider = Offset(60f, (rows[5].last + rows[6].first) / 2f)
+        onWindowThread {
+            mouse(scene, PointerEventType.Move, divider, pressed = false)
+            mouse(scene, PointerEventType.Press, divider, pressed = true)
+            mouse(scene, PointerEventType.Release, divider, pressed = false)
+        }
+        frames(5)
+        onWindowThread { key(scene, Key.Backspace) }
+        frames(5)
+        waitForBlocks(listOf("uno", "titolo", "due", "tre"))
+        val line = Offset(60f, rows[3].center())
+        onWindowThread {
+            mouse(scene, PointerEventType.Move, line, pressed = false)
+            mouse(scene, PointerEventType.Press, line, pressed = true)
+            mouse(scene, PointerEventType.Release, line, pressed = false)
+        }
+        frames(5)
+        fun ctrl(key: Key, shift: Boolean = false) = onWindowThread {
+            scene.sendKeyEvent(KeyEvent(key, KeyEventType.KeyDown, isCtrlPressed = true, isShiftPressed = shift))
+            scene.sendKeyEvent(KeyEvent(key, KeyEventType.KeyUp, isCtrlPressed = true, isShiftPressed = shift))
+        }
+        ctrl(Key.Z)
+        frames(5)
+        waitForBlocks(ids)
+        ctrl(Key.Y)
+        frames(5)
+        waitForBlocks(listOf("uno", "titolo", "due", "tre"))
+        ctrl(Key.Z, shift = false)
+        frames(5)
+        waitForBlocks(ids)
+    }
+
     /** Col cursore in una riga, Ctrl+A vela tutta la pagina (non solo il testo della riga), ed Esc la lascia. */
     @Test
     fun ctrlASelectsTheWholePage() = withPage { scene, frames, picture ->
