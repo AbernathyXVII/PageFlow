@@ -10,6 +10,12 @@ import androidx.compose.ui.unit.Dp
  * sempre (`PlatformActions.android.kt`), sul PC quelle di Windows e Mac.
  */
 
+/**
+ * Vero sul PC (mouse e finestra): le finestrelle si aprono accanto al clic e
+ * i blocchi hanno i sei puntini (dal 11/11/2026, vedi `PcPanel.desktop.kt`).
+ */
+expect val isPc: Boolean
+
 /** Un avviso breve in basso: il `Toast` del telefono ([long]: quello che resta di più). */
 expect fun showMessage(context: PlatformContext, text: String, long: Boolean = false)
 

@@ -1,5 +1,10 @@
 package com.gabriele.notionlocal.desktop
 
+import kotlin.math.abs
+import com.gabriele.notionlocal.ui.screen.notePresses
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
@@ -103,10 +108,13 @@ class DesktopBlockSelectionTest {
             ImageComposeScene(width = 520, height = 700, density = Density(1f)) {
                 CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
                     NotionLocalTheme {
-                        PageEditorScreen(
-                            pageId = pageId, factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
-                            onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
-                        )
+                        // I clic segnati come nella finestra vera: i riquadri si aprono lì accanto.
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            PageEditorScreen(
+                                pageId = pageId, factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                                onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                            )
+                        }
                     }
                 }
             }
@@ -240,6 +248,92 @@ class DesktopBlockSelectionTest {
     }
 
     private fun IntRange.center(): Float = (first + last) / 2f
+
+    /** Le altezze dove il margine a sinistra (x 0–19) è diverso da [clean]: dove sono i sei puntini. */
+    private fun dotsRows(bitmap: Bitmap, clean: Bitmap): List<Int> =
+        (0 until bitmap.height).filter { y -> (0 until 20).any { x -> bitmap.getColor(x, y) != clean.getColor(x, y) } }
+
+    /**
+     * **I sei puntini accanto al blocco sotto il mouse** (chiesto dall'utente
+     * l'11/11/2026, come su Notion): compaiono nel margine accanto alla riga
+     * sotto il mouse, passano al divisore, restano andandoci sopra, e il clic
+     * apre il menu del divisore in un riquadro lì accanto: "Delete" lo toglie.
+     */
+    @Test
+    fun theSixDotsOpenTheMenuOfTheBlockUnderTheMouse() = withPage { scene, frames, picture ->
+        val clean = picture()
+        val rows = textRows(clean)
+        onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, rows[5].center()), pressed = false) }
+        frames(5)
+        val onLine = dotsRows(picture(), clean)
+        assertTrue("puntini accanto a \"Seconda riga\": $onLine, riga ${rows[5]}", onLine.isNotEmpty() && abs(onLine.average() - rows[5].center()) < 6)
+        val dividerY = (rows[5].last + rows[6].first) / 2f
+        onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, dividerY), pressed = false) }
+        frames(5)
+        val onDivider = dotsRows(picture(), clean)
+        assertTrue("puntini accanto al divisore: $onDivider", onDivider.isNotEmpty() && onDivider.average() > rows[5].last && onDivider.average() < rows[6].first)
+        // Andandoci sopra restano.
+        val dots = Offset(10f, onDivider.average().toFloat())
+        onWindowThread { mouse(scene, PointerEventType.Move, dots, pressed = false) }
+        frames(5)
+        assertTrue("i puntini restano col mouse sopra", dotsRows(picture(), clean).isNotEmpty())
+        onWindowThread {
+            mouse(scene, PointerEventType.Press, dots, pressed = true)
+            mouse(scene, PointerEventType.Release, dots, pressed = false)
+        }
+        frames(15)
+        val menu = picture()
+        File("build/desktop-screenshots", "block_menu.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(menu).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        // "Delete" è scritto col colore degli errori, rossastro: lì si clicca.
+        val red = (0 until menu.height).flatMap { y ->
+            (0 until menu.width).filter { x ->
+                val c = menu.getColor(x, y)
+                val r = (c shr 16) and 0xFF
+                r > 180 && r - ((c shr 8) and 0xFF) > 40 && r - (c and 0xFF) > 40
+            }.map { x -> Offset(x.toFloat(), y.toFloat()) }
+        }
+        assertTrue("nel menu c'è \"Delete\"", red.size > 20)
+        assertTrue("il menu si apre accanto ai puntini", red.minOf { it.x } < 300 && red.minOf { it.y } > dots.y)
+        val delete = Offset(red.map { it.x }.average().toFloat(), red.map { it.y }.average().toFloat())
+        onWindowThread {
+            mouse(scene, PointerEventType.Move, delete, pressed = false)
+            mouse(scene, PointerEventType.Press, delete, pressed = true)
+            mouse(scene, PointerEventType.Release, delete, pressed = false)
+        }
+        frames(5)
+        waitForBlocks(listOf("uno", "titolo", "due", "tre"))
+    }
+
+    /** Scorrendo con la rotella, col mouse fermo, i puntini passano alla riga che ora c'è sotto. */
+    @Test
+    fun theSixDotsFollowTheWheel() {
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            if (AppDatabase.getInstance(context).pageDao().getById("alterna") == null) repo.createPage(PageEntity(id = "alterna", title = "Alterna"))
+            for (i in 0 until 60) {
+                // Righe alte e basse alternate: dopo lo scorrimento i puntini fermi non starebbero su una riga.
+                val size = if (i % 3 == 0) ""","size":30""" else ""
+                repo.saveBlock(BlockEntity(id = "alterna-$i", pageId = "alterna", textJson = """[{"text":"Riga numero $i"$size}]""", orderIndex = i))
+            }
+        }
+        withPage("alterna") { scene, frames, picture ->
+            val clean = picture()
+            val rows = textRows(clean)
+            val at = Offset(200f, rows[6].center())
+            onWindowThread { mouse(scene, PointerEventType.Move, at, pressed = false) }
+            frames(5)
+            val before = dotsRows(picture(), clean).average()
+            onWindowThread { scene.sendPointerEvent(PointerEventType.Scroll, at, scrollDelta = Offset(0f, 1f), type = PointerType.Mouse) }
+            frames(10)
+            val scrolled = picture()
+            val after = textRows(scrolled)
+            assertNotEquals("la pagina non si è mossa", rows.take(8), after.take(8))
+            val under = after.first { at.y.toInt() in (it.first - 8)..(it.last + 8) }
+            // I puntini sono grigi su fondo scuro: i punti del margine più chiari del fondo.
+            val dots = (0 until scrolled.height).filter { y -> (0 until 20).any { x -> ((scrolled.getColor(x, y) shr 16) and 0xFF) > 70 } }
+            assertTrue("puntini $dots (prima a $before) accanto alla riga sotto il mouse $under", dots.isNotEmpty() && abs(dots.average() - under.center()) < 6)
+        }
+    }
 
     /**
      * **La rotella fa scorrere anche mentre si seleziona** (trovato dall'utente

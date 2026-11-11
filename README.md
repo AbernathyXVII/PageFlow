@@ -1151,6 +1151,38 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.44 — 11/11/2026 · 10:17 — Sul PC le finestrelle si aprono accanto al clic, e i blocchi hanno i sei puntini
+*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1165 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Le finestrelle non salgono più dal basso**:
+  impostazioni di un database, "Property visibility", filtri, ordinamenti,
+  colori, icone, il menu di una pagina e tutte le altre si aprono in un
+  riquadro che parte dal punto in cui si è cliccato, come i menu di Notion.
+  Resta sempre dentro la finestra (sopra il clic se sotto non c'è posto) e
+  non scurisce la pagina; Esc o un clic fuori lo chiudono. Una finestra
+  aperta da un'altra (un colore dal menu di un blocco) prende il suo posto.
+  Sul telefono non cambia niente. Non ancora provato dall'utente
+- **[Progetto]** **[💻 PC]** **I sei puntini di Notion**: passando col
+  mouse su un blocco compaiono nel margine a sinistra, all'altezza della
+  sua prima riga, e seguono il mouse (anche scorrendo con la rotella). Un
+  clic apre il menu di quel blocco, nel riquadro accanto, con le voci del
+  suo tipo: una riga di testo (Turn into, Color, Duplicate…), un database
+  (Lock database, Open as page, Move to trash…), un divisore, un'immagine,
+  un bottone. È lo stesso menu che sul telefono si apre dalla barra sopra
+  la tastiera. Non ci sono nelle pagine bloccate né mentre si disegna.
+  Trascinarli per spostare il blocco non c'è ancora. Non ancora provato
+  dall'utente
+- **[Progetto]** Tutte le finestrelle passano da `NoteBottomSheet`: sul PC
+  chiama `PcPanel` (`PcPanel.desktop.kt`, un `Popup` accanto all'ultimo
+  clic, segnato da `notePresses` sulla finestra). I puntini: `BlockHandle.kt`
+  (`blockHover` guarda il mouse sulla pagina, `BlockHandle` li disegna) e
+  `BlockPicker.lineAt` (dove sta la prima riga di un blocco). Test:
+  `DesktopDatabaseTableTest` (i tre puntini aprono il riquadro sotto il
+  clic, non il pannello dal basso; Esc lo chiude) e `DesktopBlockSelectionTest`
+  (i puntini compaiono accanto alla riga e al divisore, restano col mouse
+  sopra, il clic apre il menu del divisore e "Delete" lo toglie; con la
+  rotella passano alla riga che arriva sotto il mouse)
+
 ### ✏️ v0.153.43 — 11/11/2026 · 09:36 — Tabelle dei database come Notion: righe fino in fondo, e i tre puntini accanto al "+"
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1163 test passati)*
 

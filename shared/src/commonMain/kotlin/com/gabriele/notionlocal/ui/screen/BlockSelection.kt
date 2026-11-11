@@ -48,41 +48,65 @@ import kotlinx.coroutines.Job
  * campo di più righe sa dire quale riga c'è a una certa altezza.
  */
 class BlockPicker {
-    private class Entry(val coordinates: LayoutCoordinates, val blockAt: (Float) -> String?)
+    private class Entry(
+        val coordinates: LayoutCoordinates,
+        val blockAt: (Float) -> String?,
+        val lineOf: ((String) -> Pair<Float, Float>?)?
+    )
 
     private val entries = HashMap<String, Entry>()
 
-    fun put(key: String, coordinates: LayoutCoordinates, blockAt: (Float) -> String?) {
-        entries[key] = Entry(coordinates, blockAt)
+    fun put(key: String, coordinates: LayoutCoordinates, blockAt: (Float) -> String?, lineOf: ((String) -> Pair<Float, Float>?)? = null) {
+        entries[key] = Entry(coordinates, blockAt, lineOf)
     }
 
     fun remove(key: String) {
         entries.remove(key)
     }
 
-    /** La voce e il blocco sotto il punto [window] della finestra, o null fra due voci. */
-    fun at(window: Offset): Pair<String, String>? {
+    private fun find(window: Offset): Triple<String, Entry, String>? {
         for ((key, entry) in entries) {
             if (!entry.coordinates.isAttached) continue
             val local = entry.coordinates.windowToLocal(window)
             if (local.y < 0f || local.y > entry.coordinates.size.height) continue
             val id = entry.blockAt(local.y) ?: continue
-            return key to id
+            return Triple(key, entry, id)
         }
         return null
+    }
+
+    /** La voce e il blocco sotto il punto [window] della finestra, o null fra due voci. */
+    fun at(window: Offset): Pair<String, String>? = find(window)?.let { (key, _, id) -> key to id }
+
+    /**
+     * Il blocco sotto il punto e dove sta la sua prima riga, dall'alto al
+     * basso nella finestra, per i sei puntini (`BlockHandle.kt`). Un blocco
+     * che non è testo (un divisore, un database) dice solo dove comincia:
+     * la sua "riga" è alta al massimo [islandLine].
+     */
+    fun lineAt(window: Offset, islandLine: Float): Pair<String, ClosedFloatingPointRange<Float>>? {
+        val (_, entry, id) = find(window) ?: return null
+        val height = entry.coordinates.size.height.toFloat()
+        val (top, bottom) = entry.lineOf?.invoke(id) ?: (0f to minOf(height, islandLine))
+        val origin = entry.coordinates.localToWindow(Offset.Zero).y
+        return id to (origin + top)..(origin + bottom)
     }
 }
 
 /**
  * Questa voce si segna fra quelle che il mouse può scegliere ([BlockPicker]):
- * [blockAt] dice quale blocco c'è a un'altezza della voce. Se ne va con lei.
+ * [blockAt] dice quale blocco c'è a un'altezza della voce, [lineOf] dove sta
+ * la prima riga di un blocco (null: la voce è un blocco solo). Se ne va con lei.
  */
 @Composable
-fun Modifier.pickableAs(key: String, blockAt: (Float) -> String?): Modifier {
+fun Modifier.pickableAs(key: String, lineOf: ((String) -> Pair<Float, Float>?)? = null, blockAt: (Float) -> String?): Modifier {
     val picker = LocalBlockPicker.current ?: return this
     val latest = rememberUpdatedState(blockAt)
+    val latestLine = rememberUpdatedState(lineOf)
     DisposableEffect(picker, key) { onDispose { picker.remove(key) } }
-    return onGloballyPositioned { coordinates -> picker.put(key, coordinates) { y -> latest.value(y) } }
+    return onGloballyPositioned { coordinates ->
+        picker.put(key, coordinates, { y -> latest.value(y) }, latestLine.value?.let { { id -> latestLine.value?.invoke(id) } })
+    }
 }
 
 /** I blocchi selezionati (quelli di primo livello) e il colore del velo, per chi li disegna. */

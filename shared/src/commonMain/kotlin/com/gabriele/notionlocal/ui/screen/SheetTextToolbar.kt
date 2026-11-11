@@ -44,6 +44,7 @@ import com.gabriele.notionlocal.ui.theme.NotionWhite
 import kotlin.math.roundToInt
 import com.gabriele.notionlocal.platform.EditCommand
 import com.gabriele.notionlocal.platform.editCommandLabel
+import com.gabriele.notionlocal.platform.isPc
 
 /**
  * **Le finestrelle che salgono dal basso, con la barrettina Copy / Cut /
@@ -74,6 +75,8 @@ fun NoteBottomSheet(
     containerColor: Color = BottomSheetDefaults.ContainerColor,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    // Sul PC un riquadro accanto al clic (vedi `PcPanel.desktop.kt`).
+    if (isPc) return PcPanel(onDismissRequest, modifier, containerColor, content)
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier,

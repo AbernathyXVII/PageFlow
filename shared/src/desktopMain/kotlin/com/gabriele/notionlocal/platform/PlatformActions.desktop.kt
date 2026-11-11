@@ -67,3 +67,5 @@ actual fun editCommandLabel(command: EditCommand): String = when (command) {
     EditCommand.PASTE -> EditorStrings.paste
     EditCommand.SELECT_ALL -> EditorStrings.selectAll
 }
+
+actual val isPc: Boolean = true

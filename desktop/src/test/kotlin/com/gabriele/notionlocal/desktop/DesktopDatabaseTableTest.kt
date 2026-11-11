@@ -1,5 +1,13 @@
 package com.gabriele.notionlocal.desktop
 
+import androidx.compose.ui.InternalComposeUiApi
+import com.gabriele.notionlocal.ui.screen.notePresses
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
@@ -34,6 +42,7 @@ import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -44,9 +53,10 @@ import java.nio.file.Files
  * **La tabella di un database sul PC** (dal 11/11/2026, chiesto dall'utente,
  * come su Notion): in una finestra larga le linee fra le righe arrivano fino
  * in fondo, non si fermano dopo l'ultima colonna; accanto al "+" delle colonne
- * ci sono i tre puntini, che aprono "Property visibility".
+ * ci sono i tre puntini, che aprono "Property visibility" in un riquadro
+ * accanto al clic, non più nel pannello che sale dal basso (`PcPanel.desktop.kt`).
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 class DesktopDatabaseTableTest {
     private val dir: File = Files.createTempDirectory("pageflow-table").toFile()
     private val context = DesktopContext(dir)
@@ -83,10 +93,12 @@ class DesktopDatabaseTableTest {
             ImageComposeScene(width = 1200, height = 600, density = Density(1f)) {
                 CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
                     NotionLocalTheme {
-                        DatabaseViewScreen(
-                            pageId = "giochi", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
-                            onOpenUpdates = {}, onOpenPage = {}, onOpenDatabase = {}
-                        )
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            DatabaseViewScreen(
+                                pageId = "giochi", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
+                                onOpenUpdates = {}, onOpenPage = {}, onOpenDatabase = {}
+                            )
+                        }
                     }
                 }
             }
@@ -111,12 +123,23 @@ class DesktopDatabaseTableTest {
             assertTrue("le linee delle righe arrivano fino al bordo destro", lines.size >= 3)
             // I tre puntini: subito a destra del "+", nell'intestazione (sopra la prima linea).
             val before = picture()
-            click(scene, Offset(418f, lines.first() - 22f))
+            val dots = Offset(418f, lines.first() - 22f)
+            click(scene, dots)
             frames(15)
             val after = picture()
             save(after, "database_property_visibility.png")
-            val changed = (0 until after.height step 10).count { y -> (0 until after.width step 10).any { x -> after.getColor(x, y) != before.getColor(x, y) } }
-            assertTrue("i tre puntini aprono un pannello", changed > 10)
+            // Il riquadro parte dal clic e va a destra e in basso; dove stava il pannello
+            // dal basso (a sinistra del clic, in fondo alla finestra) non c'è niente.
+            fun changedAt(x: Int, y: Int) = after.getColor(x, y) != before.getColor(x, y)
+            assertTrue("il riquadro si apre sotto il clic", changedAt(dots.x.toInt() + 150, dots.y.toInt() + 60))
+            assertTrue("niente pannello dal basso", !changedAt(300, 560) && !changedAt(dots.x.toInt() - 60, 560))
+            // Esc lo chiude tutto, come su Notion.
+            onWindowThread {
+                scene.sendKeyEvent(KeyEvent(Key.Escape, KeyEventType.KeyDown))
+                scene.sendKeyEvent(KeyEvent(Key.Escape, KeyEventType.KeyUp))
+            }
+            frames(10)
+            assertEquals("Esc chiude il riquadro", before.getColor(dots.x.toInt() + 150, dots.y.toInt() + 60), picture().getColor(dots.x.toInt() + 150, dots.y.toInt() + 60))
         } finally {
             onWindowThread { scene.close() }
         }

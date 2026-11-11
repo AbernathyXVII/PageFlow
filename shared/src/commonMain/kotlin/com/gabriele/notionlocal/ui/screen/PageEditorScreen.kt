@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -1458,6 +1459,8 @@ private fun PageEditorContent(
     // Il menu del blocco (sei puntini): su quale blocco è aperto. Vedi
     // `BlockActionsHost`, che si occupa di tutto il resto.
     var blockMenuFor by remember { mutableStateOf<String?>(null) }
+    // Sul PC: il blocco sotto il mouse, coi sei puntini accanto (vedi `BlockHandle.kt`).
+    val blockSpot = remember(pageId) { mutableStateOf<BlockSpot?>(null) }
 
     // "Linked view of data source": su quale riga si sta scegliendo il
     // database da mostrare, e l'elenco fra cui sceglierlo.
@@ -2667,6 +2670,8 @@ private fun PageEditorContent(
                             selectedBlocks.value = ids.orEmpty()
                         }
                     )
+                    // Sul PC i sei puntini accanto al blocco sotto il mouse (vedi `BlockHandle.kt`).
+                    .then(if (isPc) Modifier.blockHover(blockPicker, { pageListCoordinates.get() }) { blockSpot.value = it } else Modifier)
                     .stickyViewport(stickyViewport)
                     // Di lato, con "Full line view": il primo verso in cui si
                     // muove il dito decide per tutto il gesto.
@@ -2703,6 +2708,8 @@ private fun PageEditorContent(
             )
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
+            // Nel margine a sinistra: un clic apre il menu del blocco.
+            if (isPc && !readOnlyPage && !drawingMode) BlockHandle(blockSpot, PAGE_SIDE_PADDING) { id -> blockMenuFor = id }
             // Tutta la pagina, o i blocchi scelti col mouse (null): Copy, Cut, Delete per tutti e due.
             val chosenBlocks = selectedBlocks.value.takeIf { it.isNotEmpty() }
             val anySelection = pageSelected || chosenBlocks != null
@@ -4731,6 +4738,21 @@ private fun shownLineRanges(
     }
 }
 
+/** Dall'alto al basso, la prima riga del blocco [id] nel campo: per i sei puntini (`BlockHandle.kt`). */
+private fun runLineBounds(
+    layout: TextLayoutResult,
+    id: String,
+    fieldText: String,
+    runBlocks: List<BlockEntity>,
+    ordinals: Map<String, Int>,
+    viewModel: PageEditorViewModel
+): Pair<Float, Float>? {
+    val index = runBlocks.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return null
+    val range = shownLineRanges(fieldText, runBlocks, ordinals, viewModel).getOrNull(index) ?: return null
+    val line = layout.getLineForOffset(range.first.coerceIn(0, layout.layoutInput.text.length))
+    return layout.getLineTop(line) to layout.getLineBottom(line)
+}
+
 /** Il blocco della riga del campo all'altezza [y], per il mouse. */
 private fun runLineAt(
     layout: TextLayoutResult,
@@ -5831,7 +5853,10 @@ private fun MergedTextRunField(
                 .atLeastLane(sideLane, (2 * sidePadPx).roundToInt())
                 .drawBehind { drawMisspellings(textLayout) }
                 // Col mouse: quale riga c'è a un'altezza, e il velo sulle righe scelte (vedi `BlockSelection.kt`).
-                .pickableAs(runKey) { y -> textLayout?.let { layout -> runLineAt(layout, y, fieldValue.text, runBlocks, ordinals, viewModel) } }
+                .pickableAs(
+                    runKey,
+                    lineOf = { id -> textLayout?.let { layout -> runLineBounds(layout, id, fieldValue.text, runBlocks, ordinals, viewModel) } }
+                ) { y -> textLayout?.let { layout -> runLineAt(layout, y, fieldValue.text, runBlocks, ordinals, viewModel) } }
                 .drawWithContent {
                     drawContent()
                     val chosen = selectionLook?.selected?.value

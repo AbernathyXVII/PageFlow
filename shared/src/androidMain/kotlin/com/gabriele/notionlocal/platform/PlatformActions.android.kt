@@ -76,3 +76,5 @@ actual fun editCommandLabel(command: EditCommand): String = stringResource(
         EditCommand.SELECT_ALL -> android.R.string.selectAll
     }
 )
+
+actual val isPc: Boolean = false
