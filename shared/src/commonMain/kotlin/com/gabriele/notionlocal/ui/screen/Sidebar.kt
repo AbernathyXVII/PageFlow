@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -224,7 +225,8 @@ private fun SidebarSectionTitle(text: String) {
     Text(
         text = text,
         color = NotionGray400,
-        style = MaterialTheme.typography.labelLarge,
+        // Sul PC piccole come "Recents" e "Private" di Notion (dal 11/11/2026, vedi `PC_TEXT_SCALE`).
+        style = if (isPc) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 6.dp)
     )

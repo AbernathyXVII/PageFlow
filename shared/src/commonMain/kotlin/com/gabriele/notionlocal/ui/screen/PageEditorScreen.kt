@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.theme.chosenSizeSp
 import androidx.compose.foundation.layout.PaddingValues
 import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.ui.input.key.KeyEvent
@@ -4745,7 +4746,8 @@ fun fontStyleOf(span: RichTextSpan): SpanStyle? {
     val family = span.font?.let { name -> runCatching { PageFont.valueOf(name) }.getOrNull()?.fontFamily() }
     val size = span.size?.takeIf { it != DEFAULT_PAGE_FONT_SIZE }
     if (family == null && size == null) return null
-    return SpanStyle(fontFamily = family, fontSize = size?.sp ?: TextUnit.Unspecified)
+    // Sul PC il tema rimpicciolisce il testo: una grandezza scelta a mano resta quella (`chosenSizeSp`).
+    return SpanStyle(fontFamily = family, fontSize = size?.let { chosenSizeSp(it) } ?: TextUnit.Unspecified)
 }
 
 /**
@@ -4828,8 +4830,10 @@ private fun runLineAt(
  * allungava tutte le righe del suo pezzo da 50.
  */
 fun lineScaleFor(spans: List<RichTextSpan>): Float {
-    val largest = spans.maxOfOrNull { it.size ?: DEFAULT_PAGE_FONT_SIZE } ?: DEFAULT_PAGE_FONT_SIZE
-    return (largest / DEFAULT_PAGE_FONT_SIZE.toFloat()).coerceAtLeast(1f)
+    // In sp come li scrive `fontStyleOf`: sul PC una grandezza scelta a mano vale di più (`chosenSizeSp`).
+    val largest = spans.maxOfOrNull { span -> span.size?.takeIf { it != DEFAULT_PAGE_FONT_SIZE }?.let { chosenSizeSp(it).value } ?: DEFAULT_PAGE_FONT_SIZE.toFloat() }
+        ?: DEFAULT_PAGE_FONT_SIZE.toFloat()
+    return (largest / DEFAULT_PAGE_FONT_SIZE).coerceAtLeast(1f)
 }
 
 /**

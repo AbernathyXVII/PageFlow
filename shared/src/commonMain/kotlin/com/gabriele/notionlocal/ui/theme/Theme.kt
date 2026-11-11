@@ -1,5 +1,10 @@
 package com.gabriele.notionlocal.ui.theme
 
+import com.gabriele.notionlocal.platform.isPc
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -47,9 +52,20 @@ fun NotionLocalTheme(content: @Composable () -> Unit) {
             outline = NotionGray900
         )
     }
-    MaterialTheme(
-        colorScheme = colors,
-        typography = Typography,
-        content = content
-    )
+    // Sul PC il testo come Notion (vedi `PC_TEXT_SCALE`): una volta sola, anche se il tema si annida.
+    val density = LocalDensity.current
+    val scaled = isPc && !LocalTextScaled.current
+    CompositionLocalProvider(
+        LocalDensity provides if (scaled) Density(density.density, density.fontScale * PC_TEXT_SCALE) else density,
+        LocalTextScaled provides (LocalTextScaled.current || scaled)
+    ) {
+        MaterialTheme(
+            colorScheme = colors,
+            typography = if (isPc) PcTypography else Typography,
+            content = content
+        )
+    }
 }
+
+/** Vero dentro un tema che ha già rimpicciolito il testo del PC. */
+private val LocalTextScaled = staticCompositionLocalOf { false }

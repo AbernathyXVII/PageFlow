@@ -1151,6 +1151,26 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.47 — 11/11/2026 · 14:19 — Sul PC il testo è grande come in Notion
+*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1168 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Prima fase dell'aspetto da Notion: le
+  grandezze del testo**, misurate nella foto dell'utente (Notion con
+  "Small text" e lo zoom al 90%) confrontando la larghezza delle stesse
+  parole. Il testo della pagina, le voci della barra laterale, dei menu,
+  delle liste e delle tabelle passano a 12,6 (prima 16 e 14); il titolo
+  della pagina a 28,8, il titolo di un database a 21, le scritte piccole e
+  grigie (come "Pages" e "Favorite pages" nella barra) a 10,8. Pallini,
+  numeri e altezze delle righe si rimpiccioliscono insieme al testo. Niente
+  più spazio in più fra le lettere. Il testo ingrandito a mano dalla barra
+  Aa resta grande come era. Sul telefono non cambia niente. Non ancora
+  provato dall'utente
+- **[Progetto]** `PC_TEXT_SCALE` (12,6/16): sul PC `NotionLocalTheme`
+  rimpicciolisce tutto quello che è in sp (`Density.fontScale`) e usa
+  `PcTypography`; `chosenSizeSp` compensa le grandezze scelte a mano
+  (`fontStyleOf`, `lineScaleFor`). Test: `DesktopNotionSizesTest` (titolo,
+  riga di testo e titolo del database larghi come in Notion, entro il 4%)
+
 ### ✏️ v0.153.46 — 11/11/2026 · 13:12 — Sul PC i sei puntini dritti, a metà delle lettere e del titolo dei database
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1167 test passati)*
 
