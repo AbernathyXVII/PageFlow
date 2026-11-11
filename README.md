@@ -1151,7 +1151,27 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
-### 🔧 v0.153.54 — 11/11/2026 · 16:39 — Sul PC la classifica del widget sport intera, con tutte le squadre
+### ✏️ v0.153.55 — 11/11/2026 · 16:53 — Sul PC lo zoom come in un browser: Ctrl +, Ctrl − e Ctrl con la rotella
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1177 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Lo zoom, come in un browser**: Ctrl + (anche
+  Ctrl = e il "+" del tastierino) ingrandisce, Ctrl − rimpicciolisce, e così
+  la rotella con Ctrl premuto (in su ingrandisce). Gli scatti sono quelli
+  di Chrome, dal 50% al 300%. Non si ingrandisce un'immagine: diventa più
+  grande tutta l'app (testo, righe, barra laterale, riquadri) e la pagina
+  si ridispone, col testo che va a capo prima e i margini più larghi. Con
+  "Full line view" accesa (com'è di partenza) le righe lunghe restano su
+  una riga e si scorrono di lato, come sempre. Lo zoom resta anche
+  chiudendo e riaprendo PageFlow. Sul telefono non cambia niente. Non
+  ancora provato dall'utente
+- **[Progetto]** `PcZoom`, `zoomKeyOf` e `ctrlWheelZoom` in
+  `ui/theme/PcZoom.kt`; `AppSettings.zoom`; il tema del PC moltiplica la
+  densità per lo zoom; `Main.kt` prende i tasti e la rotella. Test:
+  `DesktopZoomTest` (i tasti, gli scatti, al 150% lo stesso testo va a capo
+  più volte, Ctrl con la rotella fa lo zoom senza scorrere e senza Ctrl la
+  rotella scorre)
+
+### ✏️ v0.153.54 — 11/11/2026 · 16:39 — Sul PC la classifica del widget sport intera, con tutte le squadre
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1174 test passati)*
 
 - **[Progetto]** **[💻 PC]** **La classifica si vede tutta**: era alta al

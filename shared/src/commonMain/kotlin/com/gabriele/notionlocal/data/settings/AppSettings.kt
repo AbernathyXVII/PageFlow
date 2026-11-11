@@ -172,6 +172,7 @@ object AppSettings {
         listGapsState.value = ListGaps.parse(prefs.getString(KEY_LIST_GAPS, null)) ?: ListGaps()
         sidebarPinnedState.value = prefs.getBoolean(KEY_SIDEBAR_PINNED, false)
         sidebarWidthState.value = prefs.getInt(KEY_SIDEBAR_WIDTH, SIDEBAR_DEFAULT_WIDTH).coerceIn(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
+        zoomState.value = prefs.getInt(KEY_ZOOM, 100).coerceIn(ZOOM_MIN, ZOOM_MAX)
     }
 
     // --- Aspetto ---
@@ -244,6 +245,23 @@ object AppSettings {
             sidebarWidthState.value = value.coerceIn(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
             if (::prefs.isInitialized) prefs.edit().putInt(KEY_SIDEBAR_WIDTH, sidebarWidthState.value).apply()
         }
+
+    private val zoomState = mutableStateOf(100)
+
+    /**
+     * **Lo zoom del PC, in percento** (dal 11/11/2026, chiesto dall'utente):
+     * come quello di un browser, con Ctrl + e Ctrl − o con Ctrl e la rotella
+     * (vedi `PcZoom`). Resta fino alla volta dopo.
+     */
+    var zoom: Int
+        get() = zoomState.value
+        set(value) {
+            zoomState.value = value.coerceIn(ZOOM_MIN, ZOOM_MAX)
+            if (::prefs.isInitialized) prefs.edit().putInt(KEY_ZOOM, zoomState.value).apply()
+        }
+
+    const val ZOOM_MIN = 50
+    const val ZOOM_MAX = 300
 
     const val SIDEBAR_DEFAULT_WIDTH = 300
     const val SIDEBAR_MIN_WIDTH = 220
@@ -607,6 +625,7 @@ object AppSettings {
     private const val KEY_FULL_LINE_VIEW = "full_line_view"
     private const val KEY_SIDEBAR_PINNED = "sidebar_pinned"
     private const val KEY_SIDEBAR_WIDTH = "sidebar_width"
+    private const val KEY_ZOOM = "zoom"
     private const val KEY_NUMBER_STYLE = "number_style"
     private const val KEY_DATE_STYLE = "date_style"
     private const val KEY_TIME_FORMAT = "time_format"

@@ -58,7 +58,8 @@ fun NotionLocalTheme(content: @Composable () -> Unit) {
     val density = LocalDensity.current
     val scaled = isPc && !LocalTextScaled.current
     CompositionLocalProvider(
-        LocalDensity provides if (scaled) Density(density.density, density.fontScale * PC_TEXT_SCALE) else density,
+        // Sul PC anche lo zoom (vedi `PcZoom`): come in un browser tutto è più grande e la pagina si ridispone.
+        LocalDensity provides if (scaled) Density(density.density * AppSettings.zoom / 100f, density.fontScale * PC_TEXT_SCALE) else density,
         LocalTextScaled provides (LocalTextScaled.current || scaled),
         // Sul PC i pulsanti di Material non si allargano a 48 per il dito (fase 2, come Notion).
         LocalMinimumInteractiveComponentSize provides if (isPc) Dp.Unspecified else LocalMinimumInteractiveComponentSize.current

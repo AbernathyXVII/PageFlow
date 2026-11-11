@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.desktop
 
+import com.gabriele.notionlocal.ui.theme.zoomKeyOf
+import com.gabriele.notionlocal.ui.theme.ctrlWheelZoom
+import com.gabriele.notionlocal.ui.theme.PcZoom
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
@@ -106,6 +109,11 @@ fun main() {
             state = windowState,
             // Le scorciatoie da tastiera (vedi `AppShortcuts`): la finestra le riceve anche senza un cursore.
             onPreviewKeyEvent = { event ->
+                // Lo zoom come nei browser: Ctrl + e Ctrl − (vedi `PcZoom`).
+                zoomKeyOf(event)?.let { bigger ->
+                    PcZoom.step(bigger)
+                    return@Window true
+                }
                 val shortcut = when {
                     event.type != KeyEventType.KeyDown || !event.isCtrlPressed -> null
                     event.key == Key.F -> AppShortcuts.openSearch
@@ -129,7 +137,7 @@ fun main() {
                     // Tutta la finestra, come Notion (chiesto dall'utente il 09/11/2026): la barra
                     // laterale attaccata al bordo sinistro, la pagina larga quanto lo spazio che resta.
                     // I clic segnati: le finestrelle si aprono lì accanto (vedi `PcPanel.desktop.kt`).
-                    Surface(modifier = Modifier.fillMaxSize().notePresses()) {
+                    Surface(modifier = Modifier.fillMaxSize().notePresses().ctrlWheelZoom()) {
                         AppNavHost(factory = factory)
                     }
                 }
