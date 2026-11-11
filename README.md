@@ -1151,6 +1151,20 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### 🔧 v0.153.54 — 11/11/2026 · 16:39 — Sul PC la classifica del widget sport intera, con tutte le squadre
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1174 test passati)*
+
+- **[Progetto]** **[💻 PC]** **La classifica si vede tutta**: era alta al
+  massimo 640 e scorreva dentro sé stessa, come sul telefono, e con le
+  scritte delle zone (Champions League, Europa League, Conference League,
+  retrocessione) le ultime squadre della Serie A restavano sotto, senza una
+  barra di scorrimento a dirlo. Sul PC la classifica e i giocatori usano
+  tutta l'altezza della finestra (e scorrono solo se non basta). Sul
+  telefono non cambia niente. Non ancora provato dall'utente
+- **[Progetto]** `TableHeight` in `SidebarSports.kt`. Provato con la
+  classifica vera della Serie A dell'11/11: tutte e 20 le squadre, alta
+  circa 700
+
 ### ✏️ v0.153.53 — 11/11/2026 · 16:27 — Sul PC "Players" coi cartellini, da solo, e "Show less"
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1174 test passati)*
 

@@ -212,6 +212,14 @@ fun SportsView(
     }
 }
 
+/**
+ * Quanto sono alte al massimo la classifica e i giocatori: sul telefono 640,
+ * poi scorrono; **sul PC tutta la finestra** (dal 11/11/2026, chiesto
+ * dall'utente: con le scritte delle zone l'ultima squadra della Serie A
+ * restava sotto, e sul PC non c'è la barra di scorrimento a dirlo).
+ */
+private val TableHeight: Modifier get() = if (isPc) Modifier else Modifier.heightIn(max = 640.dp)
+
 /** Sul PC, quanti giocatori si vedono per classifica prima di "Mostra tutti". */
 private const val PC_PLAYERS_SHOWN = 10
 
@@ -961,7 +969,7 @@ private fun PlayersTable(competition: SportCompetition, seasonYear: Int, current
     }
     // Sul PC gol e assist, i primi dieci e poi tutti (vedi `SportsApi.leaders`).
     var expanded by remember { mutableStateOf(setOf<String>()) }
-    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 640.dp)) {
+    LazyColumn(modifier = Modifier.fillMaxWidth().then(TableHeight)) {
         categories.filter { it.leaders.isNotEmpty() }.forEach { category ->
             val all = !isPc || category.key in expanded
             val shown = if (all) category.leaders else category.leaders.take(PC_PLAYERS_SHOWN)
@@ -1015,7 +1023,7 @@ private fun StandingsTable(groups: List<StandingGroup>, sport: Sport) {
         Text(WidgetStrings.noStandings, color = NotionGray400, modifier = Modifier.padding(vertical = 24.dp))
         return
     }
-    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 640.dp)) {
+    LazyColumn(modifier = Modifier.fillMaxWidth().then(TableHeight)) {
         groups.forEachIndexed { g, group ->
             item(key = "group-$g") {
                 if (groups.size > 1) {
