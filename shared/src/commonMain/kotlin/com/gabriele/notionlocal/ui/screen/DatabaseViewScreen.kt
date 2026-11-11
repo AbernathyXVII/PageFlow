@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.theme.pcOr
 import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.material.icons.filled.BorderTop
 import androidx.compose.material.icons.filled.BorderLeft
@@ -473,7 +474,8 @@ private const val IME_CLOSE_SETTLE_MS = 250L
 
 /** Spessore delle linee della griglia, lo stesso che usa VerticalDivider. */
 private val SEPARATOR_WIDTH = 1.dp
-private val ROW_HEIGHT = 44.dp
+// Sul PC come le righe delle tabelle di Notion (vedi `pcOr`).
+private val ROW_HEIGHT: Dp get() = pcOr(32.dp, 44.dp)
 
 /** L'icona della pagina accanto al nome di una riga: quanto una lettera maiuscola, poco di più. */
 private val ROW_ICON_SIZE = 18.dp
@@ -4752,7 +4754,7 @@ private fun ListRow(
                     onLongPress = { onRowLongPress(row) }
                 )
             }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = pcOr(5.dp, 14.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RowIconBadge(row.id, ROW_ICON_SIZE)
@@ -5517,8 +5519,9 @@ fun Modifier.foundInside(rowId: String, shape: Shape = RectangleShape): Modifier
  * sia diversa dalle altre. Per aggiungerne una si usa
  * `ToolbarIconButton`, non un `IconButton` nudo.
  */
-private val TOOLBAR_ICON_SIZE = 20.dp
-private val TOOLBAR_BUTTON_SIZE = 36.dp
+// Sul PC come la riga della vista di Notion (vedi `pcOr`).
+private val TOOLBAR_ICON_SIZE: Dp get() = pcOr(16.dp, 20.dp)
+private val TOOLBAR_BUTTON_SIZE: Dp get() = pcOr(28.dp, 36.dp)
 
 /** Un'icona della barra della vista. Vedi `TOOLBAR_ICON_SIZE`. */
 @Composable
@@ -5612,14 +5615,14 @@ private fun ViewToolbar(
                     RoundedCornerShape(percent = 50)
                 )
                 .clickable { onOpenViews() }
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = pcOr(8.dp, 10.dp), vertical = pcOr(4.dp, 8.dp)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val chipTint = MaterialTheme.colorScheme.onSurfaceVariant
             Icon(
                 layout.icon(),
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(pcOr(16.dp, 18.dp)),
                 tint = chipTint
             )
             Spacer(modifier = Modifier.size(6.dp))
@@ -5636,7 +5639,7 @@ private fun ViewToolbar(
             Icon(
                 Icons.Filled.KeyboardArrowDown,
                 contentDescription = DbStrings.views,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(pcOr(16.dp, 18.dp)),
                 tint = chipTint
             )
         }
@@ -10920,11 +10923,11 @@ private fun SheetAction(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { onClick() }
-            .padding(vertical = 14.dp),
+            .padding(vertical = pcOr(5.dp, 14.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = tint)
-        Spacer(modifier = Modifier.size(12.dp))
+        Icon(icon, contentDescription = null, modifier = Modifier.size(pcOr(18.dp, 20.dp)), tint = tint)
+        Spacer(modifier = Modifier.size(pcOr(10.dp, 12.dp)))
         Text(label, color = tint)
     }
 }

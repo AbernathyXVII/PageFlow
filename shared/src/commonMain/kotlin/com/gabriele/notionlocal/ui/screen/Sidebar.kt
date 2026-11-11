@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.ui.unit.Dp
+import com.gabriele.notionlocal.ui.theme.pcOr
 import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -211,10 +213,11 @@ fun SidebarContent(
     }
 }
 
-private val ITEM_ICON = 22.dp
+// Sul PC più piccole, come in Notion (vedi `pcOr`).
+private val ITEM_ICON: Dp get() = pcOr(18.dp, 22.dp)
 val TREE_START = 12.dp
 val TREE_INDENT = 16.dp
-val TREE_ARROW = 24.dp
+val TREE_ARROW: Dp get() = pcOr(20.dp, 24.dp)
 private const val DISABLED_ROW_ALPHA = 0.35f
 
 /** Il grigio delle voci spente: lo stesso ovunque nella barra. */
@@ -228,7 +231,7 @@ private fun SidebarSectionTitle(text: String) {
         // Sul PC piccole come "Recents" e "Private" di Notion (dal 11/11/2026, vedi `PC_TEXT_SCALE`).
         style = if (isPc) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 6.dp)
+        modifier = Modifier.padding(start = pcOr(14.dp, 20.dp), end = 20.dp, top = pcOr(12.dp, 18.dp), bottom = pcOr(4.dp, 6.dp))
     )
 }
 
@@ -245,11 +248,11 @@ private fun SidebarItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 11.dp),
+            .padding(horizontal = pcOr(14.dp, 20.dp), vertical = pcOr(5.dp, 11.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(ITEM_ICON))
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(pcOr(10.dp, 16.dp)))
         Text(label, color = tint, style = MaterialTheme.typography.bodyLarge)
     }
 }
@@ -318,7 +321,7 @@ fun TreeRow(
             .background(if (isCurrent && currentBackground) DarkSurfaceVariant else Color.Transparent)
             .clickable(enabled = enabled, onClick = onOpen)
             .padding(start = TREE_START - 8.dp + TREE_INDENT * row.depth, end = 8.dp)
-            .height(36.dp)
+            .height(pcOr(28.dp, 36.dp))
             .alpha(if (enabled) 1f else DISABLED_ROW_ALPHA),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -338,8 +341,8 @@ fun TreeRow(
             }
         }
         Spacer(modifier = Modifier.width(4.dp))
-        PageIconView(emoji = node.emoji, iconImage = node.iconImage, isDatabase = node.isDatabase, size = 18.dp, iconSymbol = node.iconSymbol)
-        Spacer(modifier = Modifier.width(8.dp))
+        PageIconView(emoji = node.emoji, iconImage = node.iconImage, isDatabase = node.isDatabase, size = pcOr(16.dp, 18.dp), iconSymbol = node.iconSymbol)
+        Spacer(modifier = Modifier.width(pcOr(6.dp, 8.dp)))
         Text(
             text = node.title.ifBlank { Strings.untitled },
             color = NotionWhite,

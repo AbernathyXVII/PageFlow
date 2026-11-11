@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.isPc
+import com.gabriele.notionlocal.ui.theme.pcOr
 import com.gabriele.notionlocal.data.replacedImage
 import com.gabriele.notionlocal.data.hasChosenIcon
 import androidx.compose.foundation.layout.Column
@@ -917,13 +919,15 @@ private fun blockTypeLabel(type: BlockType): String =
 
 @Composable
 private fun MenuTitle(text: String) {
+    // Sul PC piccolo e grigio, come "Database · Calendar" in cima al menu di Notion.
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
+        style = if (isPc) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleMedium,
+        fontWeight = if (isPc) FontWeight.Medium else FontWeight.Bold,
+        color = if (isPc) MaterialTheme.colorScheme.onSurfaceVariant else androidx.compose.ui.graphics.Color.Unspecified,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.padding(bottom = 12.dp)
+        modifier = Modifier.padding(start = pcOr(6.dp, 0.dp), bottom = pcOr(6.dp, 12.dp))
     )
 }
 

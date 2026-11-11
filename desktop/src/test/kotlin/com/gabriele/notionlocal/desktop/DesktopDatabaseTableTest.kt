@@ -121,6 +121,8 @@ class DesktopDatabaseTableTest {
             val background = table.getColor(1100, table.height - 5)
             val lines = (60 until table.height - 20).filter { y -> (1000..1150).all { x -> table.getColor(x, y) != background } }
             assertTrue("le linee delle righe arrivano fino al bordo destro", lines.size >= 3)
+            // Sul PC le righe sono alte come in Notion (fase 2, 11/11/2026): 32 più la linea.
+            assertTrue("righe a ${lines.zipWithNext { a, b -> b - a }} l'una dall'altra", lines.zipWithNext { a, b -> b - a }.all { it == 33 })
             // I tre puntini: subito a destra del "+", nell'intestazione (sopra la prima linea).
             val before = picture()
             val dots = Offset(418f, lines.first() - 22f)

@@ -118,5 +118,6 @@ internal class BesidePoint(private val point: Offset?, private val margin: Int) 
     }
 }
 
-private val PANEL_WIDTH = 380.dp
+// Come i menu di Notion (240–290), con un po' di posto per le finestrelle più piene.
+private val PANEL_WIDTH = 320.dp
 private val PANEL_MARGIN = 8.dp

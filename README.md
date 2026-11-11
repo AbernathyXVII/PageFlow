@@ -1151,6 +1151,29 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.48 — 11/11/2026 · 14:38 — Sul PC righe, menu e barra laterale fitti come in Notion
+*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1169 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Seconda fase dell'aspetto da Notion: le
+  misure**, prese dalle foto di Notion dell'utente. Le voci della barra
+  laterale (pagine, quaderni, Main menu) sono alte 28 come in Notion (prima
+  36–40), con icone più piccole e margini più stretti; la fascia
+  "Notebooks" è alta la metà. Le righe delle tabelle sono alte 32 (prima
+  44), quelle della vista List circa 28; la riga della vista ("Table ⌄" e
+  le icone a destra) è più bassa. Nei menu e nei riquadri (il menu dei sei
+  puntini, le impostazioni di un database, "Property visibility"…) le voci
+  sono alte circa 28 (prima 48), senza i riquadri grigi e senza le linee
+  fra una voce e l'altra, e il riquadro è largo 320 (prima 380). I pulsanti
+  di Material non si allargano più a 48 per il dito. Sul telefono non
+  cambia niente. Non ancora provato dall'utente
+- **[Progetto]** `pcOr(pc, telefono)` per le misure; `NoRowLinesOnPc` rende
+  trasparenti le linee dentro i gruppi (`OptionsGroup`, `SheetGroup`);
+  `LocalMinimumInteractiveComponentSize` spento sul PC dal tema. Test: in
+  `DesktopNotionSizesTest` una riga dell'albero è alta 28, due voci di menu
+  fra 52 e 61 senza linea in mezzo, una riga delle impostazioni fra 26 e
+  30; in `DesktopDatabaseTableTest` le righe della tabella stanno a 33
+  l'una dall'altra (32 più la linea)
+
 ### ✏️ v0.153.47 — 11/11/2026 · 14:19 — Sul PC il testo è grande come in Notion
 *(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1168 test passati)*
 

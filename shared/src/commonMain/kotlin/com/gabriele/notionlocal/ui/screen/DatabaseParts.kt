@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.isPc
+import com.gabriele.notionlocal.ui.theme.NoRowLinesOnPc
+import com.gabriele.notionlocal.ui.theme.pcOr
 import com.gabriele.notionlocal.data.entity.DateUnit
 import com.gabriele.notionlocal.data.entity.endOf
 import java.time.LocalDate
@@ -415,10 +418,11 @@ fun SheetGroup(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(DarkSurface, RoundedCornerShape(10.dp))
-            .padding(horizontal = 14.dp)
+            // Sul PC niente riquadro grigio, come i menu di Notion.
+            .then(if (isPc) Modifier else Modifier.background(DarkSurface, RoundedCornerShape(10.dp)))
+            .padding(horizontal = pcOr(6.dp, 14.dp))
     ) {
-        content()
+        NoRowLinesOnPc(content)
     }
 }
 
@@ -446,16 +450,16 @@ fun SettingsRow(
         modifier = Modifier
             .fillMaxWidth()
             .let { if (enabled) it.clickable { onClick() } else it }
-            .padding(vertical = 14.dp),
+            .padding(vertical = pcOr(5.dp, 14.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             icon,
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(pcOr(18.dp, 20.dp)),
             tint = tint
         )
-        Spacer(modifier = Modifier.size(14.dp))
+        Spacer(modifier = Modifier.size(pcOr(10.dp, 14.dp)))
         Text(
             text = label,
             color = when {

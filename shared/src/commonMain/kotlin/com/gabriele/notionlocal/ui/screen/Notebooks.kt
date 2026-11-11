@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.isPc
+import com.gabriele.notionlocal.ui.theme.pcOr
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -241,8 +243,9 @@ fun NotebooksSidebarSection(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
-        IconButton(onClick = { menus.dialog = NotebookDialog.NewNotebook }) {
-            Icon(Icons.Filled.Add, contentDescription = NotebookStrings.newNotebook, tint = NotionWhite)
+        // Sul PC piccolo come i "+" della barra di Notion (vedi `pcOr`).
+        IconButton(onClick = { menus.dialog = NotebookDialog.NewNotebook }, modifier = if (isPc) Modifier.size(28.dp) else Modifier) {
+            Icon(Icons.Filled.Add, contentDescription = NotebookStrings.newNotebook, tint = NotionWhite, modifier = if (isPc) Modifier.size(18.dp) else Modifier)
         }
     }
 
@@ -343,7 +346,7 @@ private fun TreeLine(
             .onRightClick(onLongPress)
             .combinedClickable(onClick = onClick, onLongClick = onLongPress)
             .padding(start = rowStart(depth) - 8.dp, end = 8.dp)
-            .height(40.dp),
+            .height(pcOr(28.dp, 40.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(

@@ -1,5 +1,19 @@
 package com.gabriele.notionlocal.desktop
 
+import com.gabriele.notionlocal.ui.screen.TreeRow
+import com.gabriele.notionlocal.ui.screen.SettingsRow
+import com.gabriele.notionlocal.ui.screen.OptionsGroup
+import com.gabriele.notionlocal.ui.screen.OptionRow
+import com.gabriele.notionlocal.ui.screen.FlatTreeRow
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
@@ -118,6 +132,56 @@ class DesktopNotionSizesTest {
                 val got = found.getOrNull(i) ?: 0
                 assertTrue("\"$text\": larga $got, in Notion ${want.toInt()} (fasce $bands, larghezze $widths)", abs(got - want) / want < 0.04)
             }
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **Le righe sono fitte come in Notion** (fase 2, chiesta dall'utente
+     * l'11/11/2026): nella sua foto le voci della barra laterale di Notion
+     * stanno a 28 l'una dall'altra, le voci dei menu a 26; qui le righe
+     * dell'albero sono alte 28, quelle dei menu e delle impostazioni fra 26
+     * e 30, e fra una voce e l'altra di un menu non c'è nessuna linea.
+     */
+    @Test
+    fun theRowsAreAsTightAsInNotion() {
+        AppSettings.init(context)
+        val heights = HashMap<String, Int>()
+        fun Modifier.measured(name: String) = onSizeChanged { heights[name] = it.height }
+        val node = PageRepository.PageTreeNode(pageId = "p", rowId = null, title = "Main calendar", emoji = "", iconImage = null, isDatabase = false, hasChildren = true)
+        val scene = onWindowThread {
+            ImageComposeScene(width = 400, height = 400, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context) {
+                    NotionLocalTheme {
+                        Column(Modifier.background(Color.Black)) {
+                            Box(Modifier.measured("albero")) { TreeRow(FlatTreeRow(node, 0), isCurrent = false, isExpanded = false, onOpen = {}, onToggle = {}) }
+                            Box(Modifier.measured("menu")) {
+                                OptionsGroup {
+                                    OptionRow(icon = Icons.Filled.Add, label = "Add above", onClick = {})
+                                    HorizontalDivider()
+                                    OptionRow(icon = Icons.Filled.Add, label = "Add below", onClick = {})
+                                }
+                            }
+                            Box(Modifier.measured("impostazioni")) { SettingsRow(icon = Icons.Filled.Add, label = "Layout", value = "Table", onClick = {}) }
+                        }
+                    }
+                }
+            }
+        }
+        try {
+            val picture = onWindowThread { scene.render(0L); Bitmap.makeFromImage(scene.render(100_000_000L)) }
+            val tree = heights.getValue("albero")
+            val menu = heights.getValue("menu")
+            val settings = heights.getValue("impostazioni")
+            assertTrue("riga dell'albero alta $tree", tree == 28)
+            assertTrue("due voci di menu alte $menu", menu in 52..61)
+            assertTrue("riga delle impostazioni alta $settings", settings in 26..30)
+            // Fra le due voci del menu nessuna linea: la riga di mezzo è del colore del fondo.
+            val top = tree
+            val middle = top + menu / 2
+            val lineSeen = (middle - 2..middle + 2).any { y -> (10 until 300).count { x -> picture.getColor(x, y) != picture.getColor(5, y) } > 200 }
+            assertTrue("una linea fra le voci del menu", !lineSeen)
         } finally {
             onWindowThread { scene.close() }
         }

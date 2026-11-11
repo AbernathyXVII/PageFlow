@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.isPc
+import com.gabriele.notionlocal.ui.theme.NoRowLinesOnPc
+import com.gabriele.notionlocal.ui.theme.pcOr
 import androidx.compose.foundation.layout.Box
 import com.gabriele.notionlocal.ui.i18n.EditorStrings
 import androidx.compose.material.icons.filled.Image
@@ -714,9 +717,10 @@ fun OptionsGroup(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(DarkSurface, RoundedCornerShape(12.dp))
+            // Sul PC niente riquadro grigio, come i menu di Notion.
+            .then(if (isPc) Modifier else Modifier.background(DarkSurface, RoundedCornerShape(12.dp)))
     ) {
-        content()
+        NoRowLinesOnPc(content)
     }
 }
 
@@ -741,7 +745,7 @@ fun OptionRow(
         modifier = Modifier
             .fillMaxWidth()
             .let { if (enabled) it.clickable(onClick = onClick) else it }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = pcOr(6.dp, 16.dp), vertical = pcOr(5.dp, 14.dp)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -750,9 +754,9 @@ fun OptionRow(
                 imageVector = icon,
                 contentDescription = null,
                 tint = if (enabled) (iconTint ?: contentColor) else contentColor,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(pcOr(18.dp, 20.dp))
             )
-            Spacer(modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.size(pcOr(10.dp, 16.dp)))
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyLarge,
