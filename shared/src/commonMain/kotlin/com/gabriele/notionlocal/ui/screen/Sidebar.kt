@@ -130,6 +130,11 @@ fun SidebarContent(
 
         // 2. Pagine preferite, subito sotto il menu principale (chiesto dall'utente l'11/11/2026).
         SidebarItem(Icons.Filled.Star, Strings.favoritePages, onClick = actions.onFavorites)
+        // E un divisore prima delle pagine (chiesto dall'utente l'11/11/2026).
+        HorizontalDivider(
+            color = NotionGray900,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+        )
 
         // 3. L'albero delle pagine, a partire da quella principale.
         SidebarSectionTitle(Strings.pages)

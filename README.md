@@ -1151,6 +1151,13 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.41 — 11/11/2026 · 09:06 — Un divider fra "Favorite pages" e le pagine
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1161 test passati)*
+
+- **[Progetto]** **[📱 Mobile]** **[💻 PC]** **Nella barra laterale un
+  divider separa "Favorite pages" da "Pages"**, l'albero delle pagine,
+  come quello sotto "Main menu". Non ancora provato dall'utente
+
 ### ✏️ v0.153.40 — 11/11/2026 · 08:55 — Preferiti e pagine subito sotto "Main menu"
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1161 test passati)*
 
