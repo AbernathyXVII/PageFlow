@@ -1,5 +1,9 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
 import com.gabriele.notionlocal.ui.theme.pcOr
 import androidx.compose.runtime.produceState
 import com.gabriele.notionlocal.ui.theme.chosenSizeSp
@@ -2396,7 +2400,10 @@ private fun PageEditorContent(
                                 titleText = singleLine
                                 viewModel.updateTitle(singleLine)
                             },
-                            singleLine = true,
+                            // **Sul PC un titolo lungo va a capo** (dal 11/11/2026, chiesto
+                            // dall'utente: con lo zoom si tagliava), come in Notion; gli a capo
+                            // restano fuori dal testo, e Invio esce dal titolo come "fine".
+                            singleLine = !isPc,
                             visualTransformation = if (titleProofing == null) {
                                 VisualTransformation.None
                             } else {
@@ -2444,6 +2451,10 @@ private fun PageEditorContent(
                                 }
                             },
                             modifier = modifier
+                                .onPreviewKeyEvent { event ->
+                                    val enter = event.key == Key.Enter || event.key == Key.NumPadEnter
+                                    (isPc && enter && event.type == KeyEventType.KeyDown).also { if (it) focusManager.clearFocus() }
+                                }
                                 .drawBehind { drawMisspellings(titleLayout) }
                                 .proofingTaps(enabled = titleProofing != null && !readOnlyPage, layout = { titleLayout }) { word, at ->
                                     titleMenu = word to at

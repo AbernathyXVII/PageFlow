@@ -1151,6 +1151,19 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.56 — 11/11/2026 · 17:05 — Sul PC un titolo lungo va a capo
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1178 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Il titolo di una pagina va a capo** quando
+  è più lungo della riga, come in Notion: prima stava su una riga sola e si
+  tagliava al margine (e con lo zoom succedeva prima). Gli a capo restano
+  fuori dal nome, e Invio esce dal titolo come prima. Sul telefono non
+  cambia niente. Non ancora provato dall'utente
+- **[Progetto]** `TitleField` in `PageEditorScreen.kt`: `singleLine` solo sul
+  telefono, Invio preso a mano sul PC. Test: in `DesktopNotionSizesTest` un
+  titolo lungo sta su più righe in una finestra stretta, e Invio non lo
+  cambia
+
 ### ✏️ v0.153.55 — 11/11/2026 · 16:53 — Sul PC lo zoom come in un browser: Ctrl +, Ctrl − e Ctrl con la rotella
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1177 test passati)*
 

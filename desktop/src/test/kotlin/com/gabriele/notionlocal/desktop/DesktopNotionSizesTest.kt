@@ -64,7 +64,7 @@ import kotlin.math.abs
  * stesse scritte di PageFlow devono essere larghe quanto quelle divise per
  * 0,78, con un margine del 4% (la foto è piccola).
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, androidx.compose.ui.InternalComposeUiApi::class)
 class DesktopNotionSizesTest {
     private val dir: File = Files.createTempDirectory("pageflow-sizes").toFile()
     private val context = DesktopContext(dir)
@@ -375,6 +375,76 @@ class DesktopNotionSizesTest {
                 picture()
             }
             assertTrue("il \"+\" mette una pagina dentro ($added) e i \"⋯\" aprono il menu ($more)", added == 1 && more == 1)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **Sul PC un titolo lungo va a capo** (chiesto dall'utente l'11/11/2026:
+     * con lo zoom si tagliava al margine): in una finestra stretta il titolo
+     * sta su più righe, e Invio esce dal titolo senza andare a capo.
+     */
+    @Test
+    fun aLongTitleWrapsAndEnterLeavesIt() {
+        AppSettings.init(context)
+        val title = "Un titolo molto lungo che sul PC non sta in una riga sola"
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "lunga", title = title))
+            repo.saveBlock(BlockEntity(id = "riga", pageId = "lunga", textJson = """[{"text":"Sotto"}]""", orderIndex = 0))
+        }
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 500, height = 500, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        PageEditorScreen(
+                            pageId = "lunga", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                            onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                        )
+                    }
+                }
+            }
+        }
+        try {
+            var time = 0L
+            fun frames(count: Int) = repeat(count) {
+                onWindowThread { scene.render(time) }
+                time += 100_000_000L
+                Thread.sleep(30)
+            }
+            frames(40)
+            val page = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+            File("build/desktop-screenshots", "long_title.png").writeBytes(Image.makeFromBitmap(page).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
+            val rows = (60 until page.height).filter { y -> (80 until 480).any { x -> bright(page.getColor(x, y)) } }
+            val bands = ArrayList<IntRange>()
+            for (y in rows) {
+                val last = bands.lastOrNull()
+                if (last != null && y <= last.last + 1) bands[bands.lastIndex] = last.first..y else bands += y..y
+            }
+            // Dopo l'icona, le righe alte del titolo (le lettere del titolo sono alte più di 16).
+            val titleLines = bands.drop(1).takeWhile { it.last - it.first >= 16 }
+            assertTrue("il titolo va a capo: righe $titleLines (fasce $bands)", titleLines.size >= 2)
+            // Invio nel titolo: niente a capo nel nome della pagina.
+            val line = titleLines.first()
+            onWindowThread {
+                val at = androidx.compose.ui.geometry.Offset(120f, (line.first + line.last) / 2f)
+                scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse)
+                scene.sendPointerEvent(PointerEventType.Press, at, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
+                scene.sendPointerEvent(PointerEventType.Release, at, type = PointerType.Mouse, buttons = PointerButtons(), button = PointerButton.Primary)
+            }
+            frames(5)
+            onWindowThread {
+                scene.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(androidx.compose.ui.input.key.Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyDown))
+                scene.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(androidx.compose.ui.input.key.Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyUp))
+            }
+            frames(10)
+            val saved = runBlocking { AppDatabase.getInstance(context).pageDao().getById("lunga")?.title }
+            assertTrue("Invio non va a capo nel titolo: \"$saved\"", saved == title)
         } finally {
             onWindowThread { scene.close() }
         }
