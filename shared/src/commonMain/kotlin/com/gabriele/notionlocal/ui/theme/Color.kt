@@ -48,6 +48,8 @@ val DarkSurfaceVariant: Color get() = themed(0xFF2F2F2F, 0xFFE9E9E7)
 // quanto basta a dire "questo è un altro piano" senza diventare una
 // macchia. In chiaro è il grigio caldo della barra di Notion.
 val SidebarBackground: Color get() = themed(0xFF131313, 0xFFF3F3F1)
+/** Il pallino del pulsante che fissa la barra laterale sul PC: appena diverso dal fondo. */
+val SidebarPinCircle: Color get() = themed(0xFF2A2A2A, 0xFFE2E2DF)
 
 // La fascia del Quaderno nella barra laterale: un colore suo, diverso
 // dal resto della barra, perché sia chiaro che è una cosa a parte.

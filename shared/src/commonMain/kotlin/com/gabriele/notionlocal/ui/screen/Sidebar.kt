@@ -85,9 +85,10 @@ class SidebarActions(
 )
 
 /**
- * La barra laterale, nell'ordine chiesto: i quaderni in cima (dal
- * 28/09/2026, prima stavano sotto i widget), i widget, il menu principale,
- * i preferiti, l'albero delle pagine e poi le voci di servizio. Scorre tutta insieme: con l'albero aperto le voci sotto
+ * La barra laterale, nell'ordine chiesto: il menu principale in cima (dal
+ * 11/11/2026, chiesto dall'utente; prima stava sotto i widget), i quaderni
+ * (dal 28/09/2026 sopra i widget), i widget, i preferiti, l'albero delle
+ * pagine e poi le voci di servizio. Scorre tutta insieme: con l'albero aperto le voci sotto
  * scendono, come nella barra di Notion.
  *
  * Le voci ancora da costruire ci sono già, grigie e ferme: dicono cosa
@@ -104,8 +105,14 @@ fun SidebarContent(
     widgetsActive: Boolean = true,
     /** La voce "Notebooks" coi quaderni: vedi `NotebooksSidebarSection`. */
     notebooks: @Composable () -> Unit = {},
-    /** In cima, sopra i quaderni: sul PC il pulsante per fissarla o richiuderla (vedi `AppNavHost`). */
-    header: @Composable () -> Unit = {}
+    /** A destra di "Main menu": sul PC il pulsante per fissarla o richiuderla (vedi `AppNavHost`). */
+    header: @Composable () -> Unit = {},
+    /**
+     * Il fondo grigio della pagina aperta anche sulla pagina principale, in
+     * cima all'albero. Sul telefono no (dal 11/11/2026, chiesto dall'utente:
+     * dietro "My Personal Workspace" non lo vuole); sul PC sì.
+     */
+    rootBackground: Boolean = true
 ) {
     Column(
         modifier = Modifier
@@ -116,13 +123,21 @@ fun SidebarContent(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 16.dp)
     ) {
-        // 1. I quaderni (dal 26/09/2026, prima era una fascia grigia ferma):
+        // 1. Il menu principale, **in cima a tutto** (chiesto dall'utente
+        // l'11/11/2026), e sul PC accanto il pulsante per fissare la barra.
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+            SidebarItem(Icons.Filled.Home, Strings.mainMenu, onClick = actions.onMainMenu, modifier = Modifier.weight(1f))
+            header()
+        }
+        HorizontalDivider(
+            color = NotionGray900,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+        )
+
+        // 2. I quaderni (dal 26/09/2026, prima era una fascia grigia ferma):
         // la stessa fascia di un altro colore, staccata dal resto, e sotto
         // i quaderni come in OneNote. Un mondo a parte dal menu principale.
-        // **In cima a tutto**, sopra i widget: chiesto dall'utente il
-        // 28/09/2026.
-        header()
-        Spacer(modifier = Modifier.height(8.dp))
+        // Sopra i widget: chiesto dall'utente il 28/09/2026.
         notebooks()
         // Un divisore sotto i quaderni (chiesto dall'utente il 26/09/2026):
         // senza, l'ultima riga dei quaderni e quello che segue sembravano
@@ -132,21 +147,13 @@ fun SidebarContent(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // 2. Widget: fusi orari, avanzamento, contatore, pomodoro, con la
+        // 3. Widget: fusi orari, avanzamento, contatore, pomodoro, con la
         // freccetta per nasconderli tutti. Vedi `WidgetsSection`.
         WidgetsSection(active = widgetsActive)
-        // Lo stesso divisore sotto i widget: prima lo spazio fra loro e
-        // "Main menu" lo facevano i quaderni, che adesso stanno sopra.
+        // Lo stesso divisore sotto i widget, prima dei preferiti.
         HorizontalDivider(
             color = NotionGray900,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-
-        // 3. Menu principale, e sotto un divisore semplice.
-        SidebarItem(Icons.Filled.Home, Strings.mainMenu, onClick = actions.onMainMenu)
-        HorizontalDivider(
-            color = NotionGray900,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
         )
 
         // 4. Pagine preferite.
@@ -159,6 +166,7 @@ fun SidebarContent(
                 TreeRow(
                     row = row,
                     isCurrent = row.node.pageId != null && row.node.pageId == currentPageId,
+                    currentBackground = rootBackground || row.depth > 0,
                     isExpanded = row.node.pageId in expanded,
                     onOpen = { actions.onOpenNode(row.node) },
                     onToggle = { actions.onToggleNode(row.node) }
@@ -228,11 +236,12 @@ private fun SidebarItem(
     icon: ImageVector,
     label: String,
     enabled: Boolean = true,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     val tint = if (enabled) NotionWhite else DisabledTint
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 11.dp),
@@ -294,7 +303,9 @@ fun TreeRow(
      * — ritrovarla aiuta a orientarsi — ma non può essere la destinazione,
      * e nemmeno quello che ha dentro.
      */
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    /** Il fondo grigio della pagina aperta: vedi `rootBackground` in `SidebarContent`. */
+    currentBackground: Boolean = true
 ) {
     val node = row.node
     val canExpand = enabled && node.hasChildren
@@ -303,7 +314,7 @@ fun TreeRow(
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isCurrent) DarkSurfaceVariant else Color.Transparent)
+            .background(if (isCurrent && currentBackground) DarkSurfaceVariant else Color.Transparent)
             .clickable(enabled = enabled, onClick = onOpen)
             .padding(start = TREE_START - 8.dp + TREE_INDENT * row.depth, end = 8.dp)
             .height(36.dp)

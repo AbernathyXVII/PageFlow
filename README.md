@@ -1151,6 +1151,22 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.39 — 11/11/2026 · 08:41 — "Main menu" in cima alla barra laterale, la puntina del PC in un pallino
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1161 test passati)*
+
+- **[Progetto]** **[📱 Mobile]** **[💻 PC]** **"Main menu" è la prima voce
+  della barra laterale**, sopra "Notebooks"; prima stava sotto i widget
+- **[Progetto]** **[💻 PC]** **Il pulsante per fissare o nascondere la
+  barra sta a destra di "Main menu", in un pallino**, così non si confonde
+  con le icone delle voci; prima era da solo, in cima a destra
+- **[Progetto]** **[📱 Mobile]** **Nell'albero delle pagine, niente più
+  fondo grigio dietro la pagina principale** (la prima in cima, "My
+  Personal Workspace") quando è quella aperta; le altre pagine aperte lo
+  tengono, e sul PC resta anche lì. Non ancora provato dall'utente
+- **[Progetto]** `SidebarContent` con `rootBackground`; il colore del
+  pallino è `SidebarPinCircle` (anche col tema chiaro). Le foto della barra
+  sul PC (`app_pinned.png`) lo mostrano
+
 ### ✏️ v0.153.38 — 11/11/2026 · 08:25 — Sul PC Ctrl+Z e Ctrl+Y sono l'Annulla e il Ripristina della pagina
 *(Claude Code sul PC; non ancora provata dall'utente; non installata sul telefono (non collegato); 1161 test passati)*
 

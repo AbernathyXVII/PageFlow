@@ -1,5 +1,10 @@
 package com.gabriele.notionlocal.ui.navigation
 
+import com.gabriele.notionlocal.ui.theme.SidebarPinCircle
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 import com.gabriele.notionlocal.platform.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -433,6 +438,8 @@ fun AppNavHost(
                     actions = actions,
                     widgetsActive = widgetsActive,
                     header = pinButton,
+                    // Il fondo grigio sulla pagina principale: sul PC sì, sul telefono no.
+                    rootBackground = canPinSidebar,
                     notebooks = {
                         NotebooksSidebarSection(
                             viewModel = notebooks,
@@ -513,14 +520,22 @@ private const val PINNED_REFRESH_DELAY_MS = 300L
 /** In cima alla barra, sul PC: la puntina per fissarla accanto alla pagina; fissata, le due frecce per richiuderla. */
 @Composable
 private fun SidebarPinButton(pinned: Boolean, onClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 4.dp), horizontalArrangement = Arrangement.End) {
-        IconButton(onClick = onClick) {
-            Icon(
-                if (pinned) Icons.Filled.KeyboardDoubleArrowLeft else Icons.Filled.PushPin,
-                contentDescription = if (pinned) Strings.closeSidebar else Strings.keepSidebarOpen,
-                tint = NotionGray400
-            )
-        }
+    // **In un pallino, a destra di "Main menu"** (dal 11/11/2026, chiesto
+    // dall'utente: "così non si confonde" con le icone delle voci).
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .padding(end = 10.dp)
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(SidebarPinCircle)
+    ) {
+        Icon(
+            if (pinned) Icons.Filled.KeyboardDoubleArrowLeft else Icons.Filled.PushPin,
+            contentDescription = if (pinned) Strings.closeSidebar else Strings.keepSidebarOpen,
+            tint = NotionGray400,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 
