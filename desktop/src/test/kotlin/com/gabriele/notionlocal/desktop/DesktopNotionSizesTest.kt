@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.desktop
 
+import com.gabriele.notionlocal.ui.screen.DatabaseViewScreen
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -243,6 +244,69 @@ class DesktopNotionSizesTest {
                 if (last != null && x <= last.last + 6) groups[groups.lastIndex] = last.first..x else groups += x..x
             }
             assertTrue("nel percorso ci sono \"Madre\", \"/\" e \"Figlia\": $groups", groups.size >= 3)
+            val first = groups.first()
+            onWindowThread {
+                val at = androidx.compose.ui.geometry.Offset((first.first + first.last) / 2f, 20f)
+                scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse)
+                scene.sendPointerEvent(PointerEventType.Press, at, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
+                scene.sendPointerEvent(PointerEventType.Release, at, type = PointerType.Mouse, buttons = PointerButtons(), button = PointerButton.Primary)
+            }
+            frames(5)
+            assertTrue("il clic sul percorso apre \"madre\", aperta: $opened", opened == "madre")
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **La stessa barra sul database aperto a tutta pagina** (trovato
+     * dall'utente l'11/11/2026: lì c'erano ancora i pulsanti di prima): un
+     * database collegato dentro "Madre" ha in alto "Madre / Registro", e il
+     * clic su "Madre" la apre.
+     */
+    @Test
+    fun theFullPageDatabaseHasTheTopBarToo() {
+        AppSettings.init(context)
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "madre", title = "Madre"))
+            repo.createPage(PageEntity(id = "registro", title = "Registro", isDatabase = true))
+            repo.saveBlock(BlockEntity(id = "link", pageId = "madre", type = BlockType.DATABASE_LINK, linkedPageId = "registro", orderIndex = 0))
+        }
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        var opened: String? = null
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 400, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        DatabaseViewScreen(
+                            pageId = "registro", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
+                            onOpenUpdates = {}, onOpenPage = { opened = it }, onOpenDatabase = {}
+                        )
+                    }
+                }
+            }
+        }
+        try {
+            var time = 0L
+            fun frames(count: Int) = repeat(count) {
+                onWindowThread { scene.render(time) }
+                time += 100_000_000L
+                Thread.sleep(30)
+            }
+            frames(40)
+            val page = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+            File("build/desktop-screenshots", "database_top_bar.png").writeBytes(Image.makeFromBitmap(page).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
+            // Nella barra (alta 40), dopo indietro e la barra laterale (fino a x 76): le scritte del percorso.
+            val columns = (76 until 600).filter { x -> (8 until 32).any { y -> bright(page.getColor(x, y)) } }
+            val groups = ArrayList<IntRange>()
+            for (x in columns) {
+                val last = groups.lastOrNull()
+                if (last != null && x <= last.last + 6) groups[groups.lastIndex] = last.first..x else groups += x..x
+            }
+            assertTrue("nel percorso ci sono \"Madre\", \"/\" e \"Registro\": $groups", groups.size >= 3)
             val first = groups.first()
             onWindowThread {
                 val at = androidx.compose.ui.geometry.Offset((first.first + first.last) / 2f, 20f)

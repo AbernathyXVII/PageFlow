@@ -1,5 +1,14 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -76,3 +85,43 @@ private fun Separator(text: String) {
 
 /** Quante pagine del percorso si vedono al massimo, prima di accorciarlo con "…". */
 private const val MAX_SHOWN = 3
+
+/**
+ * **La barra in alto del PC** fuori dall'editor (dal 11/11/2026: il database
+ * aperto a tutta pagina, trovato dall'utente senza barra): alta 40, coi
+ * pulsanti di [start] (indietro, la barra laterale, il percorso) a sinistra
+ * e quelli di [end] a destra, come nelle pagine.
+ */
+@Composable
+fun PcTopBar(start: @Composable RowScope.() -> Unit, end: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .height(40.dp)
+            .padding(horizontal = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = start
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, content = end)
+    }
+}
+
+/** Un pulsante della barra in alto del PC: piatto, piccolo, grigio, col grigio di fondo solo col mouse sopra. */
+@Composable
+fun PcBarButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = contentDescription, tint = NotionGray400, modifier = Modifier.size(18.dp))
+    }
+}

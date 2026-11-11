@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.runtime.produceState
 import com.gabriele.notionlocal.ui.theme.pcOr
 import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.material.icons.filled.BorderTop
@@ -585,6 +586,10 @@ fun DatabaseViewScreen(
     val trashed = menuPage?.trashedAt != null
     var confirmDeleteForever by remember { mutableStateOf(false) }
     val trashContext = LocalPlatformContext.current
+    // Sul PC le pagine che contengono il database, per il percorso in alto (`PageBreadcrumb`).
+    val ancestors by produceState(emptyList<PageEntity>(), pageId) {
+        if (isPc) value = factory.pageRepository.ancestorsOf(pageId)
+    }
 
     Scaffold(
         topBar = {
@@ -599,6 +604,34 @@ fun DatabaseViewScreen(
                         onDeleteForever = { confirmDeleteForever = true }
                     )
                 }
+            } else if (isPc) {
+                // **Sul PC la barra in alto di Notion**, come nelle pagine (dal
+                // 11/11/2026, trovato dall'utente: aperto a tutta pagina il
+                // database aveva ancora i pulsanti di prima). Vedi `PcTopBar`.
+                PcTopBar(
+                    start = {
+                        PcBarButton(Icons.Filled.ArrowBack, Strings.back, onBack)
+                        if (!LocalSidebarPinned.current) {
+                            PcBarButton(Icons.Filled.Menu, Strings.openSidebar) {
+                                focusManager.clearFocus()
+                                onOpenSidebar()
+                            }
+                        }
+                        PageBreadcrumb(
+                            ancestors = ancestors,
+                            current = menuPage,
+                            onOpen = { crumb -> if (crumb.isDatabase) onOpenDatabase(crumb.id) else onOpenPage(crumb.id) }
+                        )
+                    },
+                    end = {
+                        if (menuPage?.isProtected == true) {
+                            PcBarButton(Icons.Filled.Lock, LockStrings.protectedByPassword) {
+                                showMessage(trashContext, LockStrings.protectedByPassword)
+                            }
+                        }
+                        PcBarButton(Icons.Filled.MoreHoriz, Strings.pageOptions) { showPageOptions = true }
+                    }
+                )
             } else {
                 TopAppBar(
                     title = {},

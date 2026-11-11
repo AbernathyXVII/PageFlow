@@ -1151,6 +1151,20 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.50 — 11/11/2026 · 15:13 — Sul PC la barra in alto anche sui database aperti a tutta pagina
+*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1171 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Il database aperto a tutta pagina ha la
+  stessa barra in alto delle pagine** (trovato dall'utente: aveva ancora
+  i pulsanti di prima): indietro e la barra laterale piatti e grigi, il
+  percorso (per esempio "My Personal Workspace / Notebook", un clic apre la
+  pagina) e a destra i tre puntini e il lucchetto dei database protetti.
+  Sul telefono non cambia niente. Non ancora provato dall'utente
+- **[Progetto]** `PcTopBar` e `PcBarButton` (in `PageBreadcrumb.kt`) al
+  posto della `TopAppBar` sul PC. Test: in `DesktopNotionSizesTest` un
+  database collegato dentro "Madre" ha in alto "Madre / Registro" e il clic
+  su "Madre" la apre
+
 ### ✏️ v0.153.49 — 11/11/2026 · 14:58 — Sul PC la barra in alto col percorso della pagina, e i margini di Notion
 *(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1170 test passati)*
 
