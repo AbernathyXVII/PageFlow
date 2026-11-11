@@ -27,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.ColumnType
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
+import com.gabriele.notionlocal.data.entity.DatabaseCellEntity
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.repository.PageRepository
@@ -211,6 +212,93 @@ class DesktopDatabaseTableTest {
         } finally {
             onWindowThread { scene.close() }
         }
+    }
+
+    /**
+     * **Un gruppo chiuso resta chiuso** (chiesto dall'utente l'11/11/2026): la
+     * tabella raggruppata per "Day", chiuso il primo gruppo con un clic sulla
+     * sua intestazione, uscendo e riaprendo il database è ancora chiuso.
+     */
+    @Test
+    fun aClosedGroupStaysClosedAfterLeaving() {
+        runBlocking {
+            val db = AppDatabase.getInstance(context)
+            db.databaseDao().insertColumn(
+                DatabaseColumnEntity(
+                    id = "giorno", pageId = "giochi", name = "Day", type = ColumnType.SELECT, orderIndex = 1,
+                    optionsJson = """[{"label":"Monday"},{"label":"Tuesday"}]"""
+                )
+            )
+            db.databaseDao().insertCell(DatabaseCellEntity(rowId = "r1", columnId = "giorno", value = "Monday"))
+            db.databaseDao().insertCell(DatabaseCellEntity(rowId = "r2", columnId = "giorno", value = "Tuesday"))
+            val repo = PageRepository(db)
+            repo.updatePage(db.pageDao().getById("giochi")!!.copy(tableGroupRulesJson = """[{"column":"giorno"}]"""))
+        }
+
+        fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
+        /** Le fasce con lettere chiare nella colonna del nome, sotto la barra delle viste. */
+        fun bands(page: Bitmap): List<IntRange> {
+            val rows = (120 until page.height).filter { y -> (70 until 250).any { x -> bright(page.getColor(x, y)) } }
+            val bands = ArrayList<IntRange>()
+            for (y in rows) {
+                val last = bands.lastOrNull()
+                if (last != null && y <= last.last + 1) bands[bands.lastIndex] = last.first..y else bands += y..y
+            }
+            return bands
+        }
+
+        /** Apre il database, fa [act] e lo chiude come uscendo (il ViewModel se ne va). */
+        fun openDatabase(name: String, act: (ImageComposeScene, Bitmap, () -> Bitmap) -> Unit = { _, _, _ -> }): Bitmap {
+            val factory = ViewModelFactory(context)
+            val owner = ScreenOwner()
+            val scene = onWindowThread {
+                ImageComposeScene(width = 1200, height = 600, density = Density(1f)) {
+                    CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                        NotionLocalTheme {
+                            Box(Modifier.fillMaxSize().notePresses()) {
+                                DatabaseViewScreen(
+                                    pageId = "giochi", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
+                                    onOpenUpdates = {}, onOpenPage = {}, onOpenDatabase = {}
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            var time = 0L
+            fun frames(count: Int) = repeat(count) {
+                onWindowThread { scene.render(time) }
+                time += 100_000_000L
+                Thread.sleep(30)
+            }
+            fun picture(): Bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+            try {
+                frames(40)
+                act(scene, picture()) { frames(15); picture() }
+                frames(10)
+                return picture().also {
+                    File("build/desktop-screenshots", name).writeBytes(Image.makeFromBitmap(it).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+                }
+            } finally {
+                onWindowThread { scene.close() }
+                owner.viewModelStore.clear()
+                Thread.sleep(500)
+            }
+        }
+
+        var openBands = emptyList<IntRange>()
+        val closed = openDatabase("group_closed.png") { scene, page, after ->
+            openBands = bands(page)
+            // La prima fascia è l'intestazione del gruppo "Monday": un clic la chiude.
+            click(scene, Offset(80f, (openBands[0].first + openBands[0].last) / 2f))
+            val shut = bands(after())
+            assertTrue("chiuso il gruppo, meno righe: $openBands -> $shut", shut.size < openBands.size)
+        }
+        val saved = runBlocking { AppDatabase.getInstance(context).pageDao().getById("giochi")?.tableGroupRulesJson }
+        assertTrue("il gruppo chiuso è salvato nella vista: $saved", saved?.contains("\"collapsed\":[\"Monday\"]") == true)
+        val again = openDatabase("group_reopened.png")
+        assertEquals("riaperto il database il gruppo è ancora chiuso", bands(closed).size, bands(again).size)
+        assertTrue("e ha meno righe di quando era aperto", bands(again).size < openBands.size)
     }
 
     private fun click(scene: ImageComposeScene, at: Offset) = onWindowThread {

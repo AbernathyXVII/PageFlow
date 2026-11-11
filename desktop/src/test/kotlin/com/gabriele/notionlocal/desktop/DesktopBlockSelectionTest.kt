@@ -370,10 +370,11 @@ class DesktopBlockSelectionTest {
             val shown = picture()
             File("build/desktop-screenshots", "dots_database_title.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(shown).encodeToData(EncodedImageFormat.PNG)!!.bytes)
             assertTrue("puntini $onTitle, titolo $title", onTitle.isNotEmpty() && abs(onTitle.average() - title.center()) <= 1.5)
-            // Subito a sinistra del titolo, senza toccarlo.
+            // Subito a sinistra del titolo, senza toccarlo: dal 11/11/2026 un poco più staccati
+            // (chiesto dall'utente), 11 fra l'ultimo puntino e il titolo invece di 8.
             val dotsRight = DOTS_X.last { x -> (title.first..title.last).any { y -> shown.getColor(x, y) != clean.getColor(x, y) } }
             val titleLeft = (0 until 300).first { x -> (title.first..title.last).any { y -> bright(clean.getColor(x, y)) } }
-            assertTrue("puntini fino a $dotsRight, titolo da $titleLeft", dotsRight < titleLeft - 2)
+            assertTrue("puntini fino a $dotsRight, titolo da $titleLeft", dotsRight < titleLeft - 9)
         }
     }
 

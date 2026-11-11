@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
@@ -87,10 +89,16 @@ class BoardLayoutTest {
         val levels = listOf(GroupLevel(group, hideEmptyGroups)) +
             listOfNotNull(sub?.let { GroupLevel(it, hideEmptySubGroups) }) + more
         compose.setContent {
+            // Le fasce chiuse, come le tiene la vista dal 11/11/2026 (`GroupRuleSpec.collapsed`).
+            var shut by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(emptyMap<String, Set<String>>()) }
             NotionLocalTheme {
                 BoardLayout(
                     state = state,
-                    levels = levels,
+                    levels = levels.map { it.copy(collapsed = shut[it.column.id].orEmpty()) },
+                    onCollapseGroup = { column, key, closed ->
+                        val keys = shut[column].orEmpty()
+                        shut = shut + (column to if (closed) keys + key else keys - key)
+                    },
                     colorCards = colorCards,
                     hideNew = hideNew,
                     newRowTick = 0,
@@ -266,6 +274,7 @@ class BoardLayoutTest {
                     BoardLayout(
                         state = DatabaseTableState(columns = listOf(day), rows = rows, cellValues = cells),
                         levels = listOf(GroupLevel(day, hideEmpty = false)),
+                        onCollapseGroup = { _, _, _ -> },
                         newRowTick = 0,
                         onOpenRow = {},
                         onRowLongPress = {},

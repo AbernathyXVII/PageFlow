@@ -1705,6 +1705,7 @@ private fun DatabaseViewBody(
                         viewModel.setSelectOptionSecondColor(columnId, label, hex, line)
                     },
                     groupLevels = viewModel.tableGroupLevels(),
+                    onCollapseGroup = { column, key, shut -> viewModel.setGroupCollapsed(false, column, key, shut) },
                     onAddRowInGroups = { keys ->
                         viewModel.addRowInGroups(viewModel.tableGroupLevels().zip(keys) { level, key -> level.column.id to key })
                         newRowTick++
@@ -1715,6 +1716,7 @@ private fun DatabaseViewBody(
                 DatabaseLayout.BOARD -> BoardLayout(
                     state = state,
                     levels = viewModel.boardGroupLevels(),
+                    onCollapseGroup = { column, key, shut -> viewModel.setGroupCollapsed(true, column, key, shut) },
                     colorCards = page?.colorBoardCards == true,
                     hideNew = page?.boardHideNew == true,
                     newRowTick = newRowTick,
@@ -2201,6 +2203,8 @@ private fun TableLayout(
      * la tabella piatta di sempre.
      */
     groupLevels: List<GroupLevel>,
+    /** La freccia di un gruppo: (proprietà del livello, chiave del gruppo, chiuso). */
+    onCollapseGroup: (String, String, Boolean) -> Unit,
     /** "Lock view": le colonne non si spostano, e le due voci restano grigie. */
     viewLocked: Boolean,
     onMoveProperty: (DatabaseColumnEntity, Int) -> Unit,
@@ -2310,10 +2314,8 @@ private fun TableLayout(
     val measureAvailable = Modifier.onSizeChanged { size -> available = with(density) { size.width.toDp() } }
     val tableWidth = maxOf(columnsWidth, available)
 
-    // Quali gruppi sono chiusi. Sta qui e non nel database perché è
-    // come si sta guardando la tabella adesso, non una proprietà del
-    // database: riaprendo la pagina si riparte con tutto aperto.
-    val collapsed = remember(groupLevels.map { it.column.id }) { mutableStateMapOf<String, Boolean>() }
+    // Quali gruppi sono chiusi: nella regola del loro livello (`GroupRuleSpec.collapsed`),
+    // così restano chiusi riaprendo la pagina (dal 11/11/2026, chiesto dall'utente).
 
     // Intestazione e righe scorrono insieme in orizzontale, così le
     // colonne restano allineate.
@@ -2419,14 +2421,14 @@ private fun TableLayout(
             buildLevelGroups(state, level, rows).forEach { group ->
                 val keys = path + group.key
                 val key = keys.joinToString(SUB_GROUP_KEY_SEPARATOR)
-                val isCollapsed = collapsed[key] == true
+                val isCollapsed = key in level.collapsed
                 item(key = "group:$key") {
                     GroupHeaderRow(
                         group = group,
                         collapsed = isCollapsed,
                         width = tableWidth,
                         indent = SUB_GROUP_INDENT * depth,
-                        onToggle = { collapsed[key] = !isCollapsed }
+                        onToggle = { onCollapseGroup(level.column.id, key, !isCollapsed) }
                     )
                 }
                 if (!isCollapsed) {
@@ -2655,13 +2657,13 @@ private fun TableLayout(
             shownGroups.items.forEach { group ->
                 val keys = path + group.key
                 val key = keys.joinToString(SUB_GROUP_KEY_SEPARATOR)
-                val isCollapsed = collapsed[key] == true
+                val isCollapsed = key in level.collapsed
                 GroupHeaderRow(
                     group = group,
                     collapsed = isCollapsed,
                     width = tableWidth,
                     indent = SUB_GROUP_INDENT * depth,
-                    onToggle = { collapsed[key] = !isCollapsed }
+                    onToggle = { onCollapseGroup(level.column.id, key, !isCollapsed) }
                 )
                 if (!isCollapsed) {
                     if (depth == groupLevels.lastIndex) {
@@ -3430,6 +3432,8 @@ fun BoardLayout(
      * primo, niente colonne senza schede, nemmeno quella senza valore.
      */
     levels: List<GroupLevel>,
+    /** La freccia di una fascia: (proprietà del livello, chiave della fascia, chiusa). */
+    onCollapseGroup: (String, String, Boolean) -> Unit,
     /** "Color columns": ogni colonna, con le sue schede, del colore del suo tag. */
     colorCards: Boolean = false,
     /** "Hide New" (dal 26/10/2026): niente "+ New" sotto le schede. */
@@ -3525,9 +3529,7 @@ fun BoardLayout(
         return
     }
 
-    // Quali fasce sono chiuse: come per i gruppi della tabella, è come si
-    // sta guardando adesso, e riaprendo la pagina si riparte con tutto aperto.
-    val collapsed = remember(levels.map { it.column.id }) { mutableStateMapOf<String, Boolean>() }
+    // Quali fasce sono chiuse: come per i gruppi della tabella, nella regola del loro livello.
 
     /**
      * **Le fasce a ogni livello** (dal 28/10/2026): dentro ogni fascia, quelle
@@ -3545,7 +3547,7 @@ fun BoardLayout(
         shownBands.items.forEach { band ->
             val keys = path + band.key
             val key = keys.joinToString(SUB_GROUP_KEY_SEPARATOR)
-            val isCollapsed = collapsed[key] == true
+            val isCollapsed = key in level.collapsed
             // Spostato quanto le colonne sono scorse, così il nome resta
             // sempre sul bordo sinistro dello schermo (come la prima
             // colonna ferma della tabella, `frozenFirstCell`).
@@ -3555,7 +3557,7 @@ fun BoardLayout(
                     collapsed = isCollapsed,
                     width = BOARD_COLUMN_WIDTH,
                     indent = 6.dp + SUB_GROUP_INDENT * depth,
-                    onToggle = { collapsed[key] = !isCollapsed }
+                    onToggle = { onCollapseGroup(level.column.id, key, !isCollapsed) }
                 )
             }
             if (!isCollapsed) {

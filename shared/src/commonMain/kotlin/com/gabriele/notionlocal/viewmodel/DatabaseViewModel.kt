@@ -1501,8 +1501,8 @@ class DatabaseViewModel(
         rules.map { rule ->
             when {
                 // Un'altra proprietà ha altri gruppi: "Date by" e l'ordine ripartono da capo.
-                rule.column == columnId -> rule.copy(column = newColumnId, dateBy = DateGroupBy(), order = GroupOrder.MANUAL, manual = emptyList())
-                other >= 0 && rule.column == newColumnId -> rule.copy(column = columnId, dateBy = DateGroupBy(), order = GroupOrder.MANUAL, manual = emptyList())
+                rule.column == columnId -> rule.copy(column = newColumnId, dateBy = DateGroupBy(), order = GroupOrder.MANUAL, manual = emptyList(), collapsed = emptyList())
+                other >= 0 && rule.column == newColumnId -> rule.copy(column = columnId, dateBy = DateGroupBy(), order = GroupOrder.MANUAL, manual = emptyList(), collapsed = emptyList())
                 else -> rule
             }
         }
@@ -1541,6 +1541,14 @@ class DatabaseViewModel(
     /** I gruppi di un livello nell'ordine in cui li si è trascinati (le loro chiavi). */
     fun setGroupRuleManual(board: Boolean, columnId: String, keys: List<String>) = updateGroupRules(board) { rules ->
         rules.map { if (it.column == columnId) it.copy(order = GroupOrder.MANUAL, manual = keys.distinct()) else it }
+    }
+
+    /** Un gruppo chiuso o riaperto con la sua freccia: resta così (vedi `GroupRuleSpec.collapsed`). */
+    fun setGroupCollapsed(board: Boolean, columnId: String, key: String, collapsed: Boolean) = updateGroupRules(board) { rules ->
+        rules.map { rule ->
+            if (rule.column != columnId) rule
+            else rule.copy(collapsed = if (collapsed) (rule.collapsed + key).distinct() else rule.collapsed - key)
+        }
     }
 
     /** "Hide New" della bacheca (dal 26/10/2026): niente "+ New" sotto le schede. */

@@ -1151,6 +1151,29 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.58 — 11/11/2026 · 18:07 — I gruppi chiusi restano chiusi, e sul PC i sei puntini un poco più staccati
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1181 test passati)*
+
+- **[Modifica]** **[📱 Mobile]** **[💻 PC]** **Un gruppo chiuso in un
+  database resta chiuso**: nella tabella e nelle fasce della bacheca, chiuso
+  o aperto con la freccia, resta così cambiando pagina e chiudendo l'app.
+  Prima si ricordava solo finché la pagina restava aperta. Ogni vista ha i
+  suoi gruppi chiusi, e vanno anche nei backup. **I toggle dei blocchi** si
+  ricordavano già: un test lo conferma (chiuso, uscito dalla pagina e
+  rientrato, è ancora chiuso). Non ancora provato dall'utente
+- **[Modifica]** **[💻 PC]** **I sei puntini dei blocchi un poco più a
+  sinistra**: fra i puntini e il testo ci sono 3 punti in più, così non
+  sono più attaccati. Non ancora provato dall'utente
+- **[Progetto]** `GroupRuleSpec.collapsed` (le chiavi dei gruppi chiusi,
+  nel JSON delle regole: niente migrazione) e `GroupLevel.collapsed`;
+  `DatabaseViewModel.setGroupCollapsed`; tabella e bacheca non tengono più
+  i gruppi chiusi solo in memoria. `HANDLE_GAP` da 2 a 5 in
+  `BlockHandle.kt`. Test: `DesktopDatabaseTableTest` (un gruppo chiuso,
+  uscito e rientrato, è ancora chiuso; salvato nella vista),
+  `DesktopToggleMemoryTest` (lo stesso per un toggle),
+  `DesktopBlockSelectionTest` (i puntini più staccati dal titolo);
+  `BoardLayoutTest` tiene da sé le fasce chiuse, come la vista
+
 ### 🔧 v0.153.57.1 — 11/11/2026 · 17:38 — Un tag in una cella select vuota
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1179 test passati)*
 

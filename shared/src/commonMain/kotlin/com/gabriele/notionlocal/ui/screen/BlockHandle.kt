@@ -154,6 +154,7 @@ fun Modifier.reportsFirstLine(start: Dp = 0.dp): Modifier {
 
 private val HANDLE_HEIGHT = 24.dp
 private val HANDLE_WIDTH = 20.dp
-private val HANDLE_GAP = 2.dp
+// Da 2 a 5 il 11/11/2026, chiesto dall'utente: i puntini erano troppo attaccati al testo.
+private val HANDLE_GAP = 5.dp
 private val DOT_SIZE = 3.dp
 private val DOT_STEP = 5.dp

@@ -28,7 +28,13 @@ data class GroupRuleSpec(
     /** "Sort groups" (dal 28/10/2026): a mano, o in ordine crescente o decrescente. */
     val order: GroupOrder = GroupOrder.MANUAL,
     /** Con [GroupOrder.MANUAL], le chiavi dei gruppi nell'ordine scelto; vuoto = quello di sempre. */
-    val manual: List<String> = emptyList()
+    val manual: List<String> = emptyList(),
+    /**
+     * **I gruppi chiusi con la freccia** (dal 11/11/2026, chiesto dall'utente:
+     * restano chiusi riaprendo la pagina e l'app): le loro chiavi, coi gruppi
+     * dei livelli sopra davanti (`SUB_GROUP_KEY_SEPARATOR`).
+     */
+    val collapsed: List<String> = emptyList()
 )
 
 /**
@@ -52,7 +58,8 @@ data class GroupLevel(
     val hideEmpty: Boolean = true,
     val dateBy: DateGroupBy = DateGroupBy(),
     val order: GroupOrder = GroupOrder.MANUAL,
-    val manual: List<String> = emptyList()
+    val manual: List<String> = emptyList(),
+    val collapsed: Set<String> = emptySet()
 )
 
 /** "Hide empty groups" delle colonne della bacheca: di suo spento, la bacheca le mostra tutte. */
@@ -92,7 +99,7 @@ fun PageEntity.withGroupRules(board: Boolean, rules: List<GroupRuleSpec>): PageE
 fun List<GroupRuleSpec>.levelsIn(columns: List<DatabaseColumnEntity>): List<GroupLevel> =
     mapNotNull { rule ->
         columns.find { it.id == rule.column }?.takeIf { it.type.canGroup }?.let {
-            GroupLevel(it, rule.hideEmpty, rule.dateBy, rule.order, rule.manual)
+            GroupLevel(it, rule.hideEmpty, rule.dateBy, rule.order, rule.manual, rule.collapsed.toSet())
         }
     }
 
