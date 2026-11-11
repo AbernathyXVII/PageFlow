@@ -185,6 +185,16 @@ class DesktopSportsWidgetTest {
             save(standings, "sports_widget_standings.png")
             val changedRows = (0 until standings.height step 4).count { y -> (0 until 300 step 4).any { x -> standings.getColor(x, y) != start.getColor(x, y) } }
             assertTrue("si apre la classifica ($changedRows righe cambiate)", changedRows > 60)
+            // Solo la classifica, senza le schede "Matches" e "Players" (la scheda scelta era azzurra, con la sua linea).
+            val blue = (0 until standings.height).sumOf { y ->
+                (0 until standings.width).count { x ->
+                    val c = standings.getColor(x, y)
+                    val r = (c shr 16) and 0xFF
+                    val b = c and 0xFF
+                    b > 150 && b - r > 60
+                }
+            }
+            assertTrue("niente schede nel riquadro della classifica ($blue punti azzurri)", blue < 20)
             assertTrue(background != 0)
         } finally {
             onWindowThread { scene.close() }

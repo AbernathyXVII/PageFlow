@@ -135,6 +135,7 @@ object WidgetStrings {
     val players get() = t("Players", "Giocatori", "Spieler", "Joueurs", "Jugadores", "球员", "선수", "選手")
     val previousRound get() = t("Previous matchday", "Giornata precedente", "Vorheriger Spieltag", "Journée précédente", "Jornada anterior", "上一轮", "이전 라운드", "前の節")
     val nextRound get() = t("Next matchday", "Giornata successiva", "Nächster Spieltag", "Journée suivante", "Jornada siguiente", "下一轮", "다음 라운드", "次の節")
+    val showLess get() = t("Show less", "Mostra meno", "Weniger anzeigen", "Afficher moins", "Mostrar menos", "收起", "간략히 보기", "表示を減らす")
     fun showAllPlayers(count: Int) = t("Show all ($count)", "Mostra tutti ($count)", "Alle anzeigen ($count)", "Tout afficher ($count)", "Mostrar todos ($count)", "全部显示 ($count)", "모두 표시 ($count)", "すべて表示 ($count)")
     val goalsLabel get() = t("Goals", "Gol", "Tore", "Buts", "Goles", "进球", "골", "ゴール")
 

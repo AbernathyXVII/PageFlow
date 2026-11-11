@@ -1151,6 +1151,22 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.53 — 11/11/2026 · 16:27 — Sul PC "Players" coi cartellini, da solo, e "Show less"
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1174 test passati)*
+
+- **[Progetto]** **[💻 PC]** **"Players" del widget sport**: oltre a gol e
+  assist ci sono di nuovo le ammonizioni e le espulsioni, come sul
+  telefono, complete anche loro (i primi dieci e poi tutti). Il riquadro
+  aperto da "Players" mostra solo i giocatori, e quello aperto da
+  "Standings" solo la classifica: niente più schede "Matches",
+  "Standings" e "Players" in alto. "Mostra tutti" sta nella riga del
+  titolo di ogni classifica e, aperta, diventa "Mostra meno". Sul telefono
+  non cambia niente. Non ancora provato dall'utente
+- **[Progetto]** `CompetitionSheet` con `single`; sul PC `SportsApi.leaders`
+  chiede tutte e quattro le classifiche complete; `WidgetStrings.showLess`.
+  Test: in `DesktopSportsWidgetTest` il riquadro della classifica non ha le
+  schede
+
 ### ✏️ v0.153.52 — 11/11/2026 · 16:12 — Sul PC il widget sport con "Today", le frecce, "Standings" e "Players" sotto il nome
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1174 test passati)*
 

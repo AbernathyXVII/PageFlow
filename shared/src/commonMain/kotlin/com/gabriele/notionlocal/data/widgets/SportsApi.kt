@@ -109,12 +109,12 @@ object SportsApi {
      */
     suspend fun leaders(competition: SportCompetition, season: Int): List<LeaderCategory>? = withContext(Dispatchers.IO) {
         val base = "https://sports.core.api.espn.com/v2/sports/soccer/leagues/${competition.league}/seasons/$season/types/1/leaders"
-        // **Sul PC le classifiche complete di gol e assist** (dal 11/11/2026, chiesto
-        // dall'utente): ESPN ne dà 25 per volta, con `limit` tutte (anche chi è a
-        // zero, che si lascia fuori). La risposta è grande: un limite più alto.
+        // **Sul PC le classifiche complete** di gol e assist, e dei cartellini gialli e
+        // rossi (dal 11/11/2026, chiesto dall'utente): ESPN ne dà 25 per volta, con
+        // `limit` tutte (anche chi è a zero, che si lascia fuori). La risposta è grande: un limite più alto.
         val refs = if (isPc) {
             WidgetHttp.get("$base?limit=$FULL_LEADERS", maxBytes = 8 * 1024 * 1024)
-                ?.let { parseLeaderRefs(it, limit = FULL_LEADERS, keys = FULL_LEADER_KEYS, scoredOnly = true) }
+                ?.let { parseLeaderRefs(it, limit = FULL_LEADERS, scoredOnly = true) }
         } else {
             WidgetHttp.get(base)?.let { parseLeaderRefs(it) }
         } ?: return@withContext null
@@ -128,7 +128,7 @@ object SportsApi {
                 })
             }
         }.awaitAll().toMap()
-        (if (isPc) FULL_LEADER_KEYS else LEADER_KEYS).mapNotNull { key ->
+        LEADER_KEYS.mapNotNull { key ->
             refs[key]?.let { list ->
                 LeaderCategory(key, list.map { Leader(names[it.athleteUrl] ?: "—", it.teamLogo, it.value) })
             }
@@ -138,8 +138,7 @@ object SportsApi {
     /** I nomi dei giocatori già chiesti, per indirizzo della loro scheda. */
     private val athleteNames = java.util.concurrent.ConcurrentHashMap<String, String>()
 
-    /** Sul PC: le classifiche complete, di gol e assist, fino a quanti giocatori. */
-    private val FULL_LEADER_KEYS = listOf("goals", "assists")
+    /** Sul PC: le classifiche complete (gol, assist e cartellini), fino a quanti giocatori. */
     private const val FULL_LEADERS = 500
 
     private fun scoreboardUrl(competition: SportCompetition): String =

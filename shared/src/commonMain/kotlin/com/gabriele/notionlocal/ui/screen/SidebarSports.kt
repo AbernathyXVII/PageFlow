@@ -608,7 +608,10 @@ private fun CompetitionRounds(
             } else {
                 CompetitionSheet(
                     competition = competition,
-                    title = listOfNotNull(seasonName, roundTitle(round, page, numbered)).joinToString(" · "),
+                    title = listOfNotNull(
+                        seasonName,
+                        if (tab == 2) WidgetStrings.players else if (sport == Sport.TENNIS) WidgetStrings.ranking else WidgetStrings.standings
+                    ).joinToString(" · "),
                     content = roundContent(view, competition.id, page, round),
                     standings = view.standings,
                     seasonYear = view.seasonYear,
@@ -619,7 +622,9 @@ private fun CompetitionRounds(
                         openMatch = page to match.id
                     },
                     onDismiss = { table = null },
-                    initialTab = tab
+                    initialTab = tab,
+                    // Da "Players" i giocatori e basta, da "Standings" la classifica (chiesto dall'utente l'11/11/2026).
+                    single = true
                 )
             }
         }
@@ -868,7 +873,9 @@ private fun CompetitionSheet(
     onMatchClick: (SportMatch) -> Unit,
     onDismiss: () -> Unit,
     /** La scheda da cui si parte: 0 le partite, 1 la classifica, 2 i giocatori. */
-    initialTab: Int = 0
+    initialTab: Int = 0,
+    /** Solo la scheda [initialTab], senza le altre in alto (sul PC, da "Standings" e "Players"). */
+    single: Boolean = false
 ) {
     val sport = Sport.of(competition.sport)
     var tab by remember { mutableIntStateOf(initialTab) }
@@ -888,7 +895,7 @@ private fun CompetitionSheet(
             }
             Text(title, color = NotionGray400, style = MaterialTheme.typography.bodySmall)
             Spacer(modifier = Modifier.height(8.dp))
-            TabRow(selectedTabIndex = tab, containerColor = DarkSheet) {
+            if (!single) TabRow(selectedTabIndex = tab, containerColor = DarkSheet) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(WidgetStrings.matches) }, unselectedContentColor = NotionGray400)
                 Tab(
                     selected = tab == 1,
@@ -959,13 +966,27 @@ private fun PlayersTable(competition: SportCompetition, seasonYear: Int, current
             val all = !isPc || category.key in expanded
             val shown = if (all) category.leaders else category.leaders.take(PC_PLAYERS_SHOWN)
             item(key = "head-${category.key}") {
-                Text(
-                    leaderTitle(category.key),
-                    color = NotionWhite,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-                )
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        leaderTitle(category.key),
+                        color = NotionWhite,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    // Sul PC, oltre i primi dieci: "Mostra tutti" e, aperta, "Mostra meno" (chiesto dall'utente l'11/11/2026).
+                    if (isPc && category.leaders.size > PC_PLAYERS_SHOWN) {
+                        Text(
+                            if (all) WidgetStrings.showLess else WidgetStrings.showAllPlayers(category.leaders.size),
+                            color = NotionGray400,
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { expanded = if (all) expanded - category.key else expanded + category.key }
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        )
+                    }
+                }
                 HorizontalDivider()
             }
             items(shown.withIndex().toList(), key = { "${category.key}-${it.index}" }) { (i, leader) ->
@@ -975,20 +996,6 @@ private fun PlayersTable(competition: SportCompetition, seasonYear: Int, current
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(leader.name, color = NotionWhite, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Text(leader.value, color = NotionWhite, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-            if (!all && category.leaders.size > PC_PLAYERS_SHOWN) {
-                item(key = "more-${category.key}") {
-                    Text(
-                        WidgetStrings.showAllPlayers(category.leaders.size),
-                        color = NotionGray400,
-                        fontSize = 13.sp,
-                        modifier = Modifier
-                            .padding(top = 2.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable { expanded = expanded + category.key }
-                            .padding(horizontal = 6.dp, vertical = 5.dp)
-                    )
                 }
             }
         }
