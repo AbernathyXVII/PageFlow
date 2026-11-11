@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.navigation
 
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.gabriele.notionlocal.ui.theme.SidebarPinCircle
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Color
@@ -519,14 +522,19 @@ private const val PINNED_REFRESH_DELAY_MS = 300L
 @Composable
 private fun SidebarPinButton(pinned: Boolean, onClick: () -> Unit) {
     // **In un pallino, a destra di "Main menu"** (dal 11/11/2026, chiesto
-    // dall'utente: "così non si confonde" con le icone delle voci).
+    // dall'utente: "così non si confonde" con le icone delle voci), che si
+    // vede solo col mouse sopra (chiesto dall'utente lo stesso giorno).
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
     IconButton(
         onClick = onClick,
+        interactionSource = interaction,
         modifier = Modifier
             .padding(end = 10.dp)
             .size(36.dp)
             .clip(CircleShape)
-            .background(SidebarPinCircle)
+            .background(if (hovered) SidebarPinCircle else Color.Transparent)
+            .hoverable(interaction)
     ) {
         Icon(
             if (pinned) Icons.Filled.KeyboardDoubleArrowLeft else Icons.Filled.PushPin,

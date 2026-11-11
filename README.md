@@ -1151,6 +1151,17 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.42 — 11/11/2026 · 09:20 — Sul PC il pallino della puntina si vede solo col mouse sopra
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1162 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Il pallino grigio dietro il pulsante per
+  fissare o nascondere la barra laterale compare solo col mouse sopra**;
+  senza, si vede solo l'icona. Non ancora provato dall'utente
+- **[Progetto]** `SidebarPinButton` guarda il mouse (`hoverable`). Test: in
+  `DesktopEditorTest`, dietro la puntina c'è il colore della barra, col
+  mouse sopra il pallino, e dopo di nuovo la barra (col pallino sempre
+  acceso fallisce)
+
 ### ✏️ v0.153.41 — 11/11/2026 · 09:06 — Un divider fra "Favorite pages" e le pagine
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1161 test passati)*
 

@@ -289,6 +289,54 @@ class DesktopEditorTest {
         }
     }
 
+    /**
+     * **Il pallino dietro la puntina si vede solo col mouse sopra** (chiesto
+     * dall'utente l'11/11/2026): un punto del pallino, fuori dall'icona, è del
+     * colore della barra finché il mouse non ci passa, e torna così dopo.
+     */
+    @Test
+    fun thePinCircleShowsOnlyUnderTheMouse() {
+        AppSettings.sidebarPinned = true
+        AppSettings.sidebarWidth = 260
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 800, density = Density(1f)) {
+                CompositionLocalProvider(
+                    LocalPlatformContext provides context,
+                    LocalLifecycleOwner provides owner,
+                    LocalViewModelStoreOwner provides owner
+                ) {
+                    NotionLocalTheme { Surface(modifier = Modifier.fillMaxSize()) { AppNavHost(factory = factory) } }
+                }
+            }
+        }
+        var time = 0L
+        fun colorAt(x: Int, y: Int): Int {
+            var color = 0
+            repeat(15) {
+                color = onWindowThread { Bitmap.makeFromImage(scene.render(time)).getColor(x, y) }
+                time += 100_000_000L
+                Thread.sleep(30)
+            }
+            return color
+        }
+        fun mouseTo(x: Float, y: Float) = onWindowThread { scene.sendPointerEvent(PointerEventType.Move, Offset(x, y)) }
+        try {
+            val away = colorAt(217, 26)
+            assertEquals("senza mouse, dietro la puntina c'è la barra", colorAt(180, 26), away)
+            mouseTo(232f, 26f)
+            assertNotEquals("col mouse sopra si vede il pallino", away, colorAt(217, 26))
+            mouseTo(700f, 400f)
+            assertEquals("col mouse altrove il pallino non c'è", away, colorAt(217, 26))
+        } finally {
+            onWindowThread { scene.close() }
+            AppSettings.sidebarPinned = false
+            AppSettings.sidebarWidth = AppSettings.SIDEBAR_DEFAULT_WIDTH
+        }
+    }
+
     @Test
     fun theEditorDrawsAPageOnThePc() {
         val factory = ViewModelFactory(context)
