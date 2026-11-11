@@ -85,10 +85,10 @@ class SidebarActions(
 )
 
 /**
- * La barra laterale, nell'ordine chiesto: il menu principale in cima (dal
- * 11/11/2026, chiesto dall'utente; prima stava sotto i widget), i quaderni
- * (dal 28/09/2026 sopra i widget), i widget, i preferiti, l'albero delle
- * pagine e poi le voci di servizio. Scorre tutta insieme: con l'albero aperto le voci sotto
+ * La barra laterale, nell'ordine chiesto: il menu principale in cima, e
+ * subito sotto i preferiti e l'albero delle pagine (dal 11/11/2026, chiesto
+ * dall'utente; prima stavano sotto i widget), poi i quaderni, i widget e le
+ * voci di servizio. Scorre tutta insieme: con l'albero aperto le voci sotto
  * scendono, come nella barra di Notion.
  *
  * Le voci ancora da costruire ci sono già, grigie e ferme: dicono cosa
@@ -106,13 +106,7 @@ fun SidebarContent(
     /** La voce "Notebooks" coi quaderni: vedi `NotebooksSidebarSection`. */
     notebooks: @Composable () -> Unit = {},
     /** A destra di "Main menu": sul PC il pulsante per fissarla o richiuderla (vedi `AppNavHost`). */
-    header: @Composable () -> Unit = {},
-    /**
-     * Il fondo grigio della pagina aperta anche sulla pagina principale, in
-     * cima all'albero. Sul telefono no (dal 11/11/2026, chiesto dall'utente:
-     * dietro "My Personal Workspace" non lo vuole); sul PC sì.
-     */
-    rootBackground: Boolean = true
+    header: @Composable () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -134,39 +128,18 @@ fun SidebarContent(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
         )
 
-        // 2. I quaderni (dal 26/09/2026, prima era una fascia grigia ferma):
-        // la stessa fascia di un altro colore, staccata dal resto, e sotto
-        // i quaderni come in OneNote. Un mondo a parte dal menu principale.
-        // Sopra i widget: chiesto dall'utente il 28/09/2026.
-        notebooks()
-        // Un divisore sotto i quaderni (chiesto dall'utente il 26/09/2026):
-        // senza, l'ultima riga dei quaderni e quello che segue sembravano
-        // la stessa lista.
-        HorizontalDivider(
-            color = NotionGray900,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-
-        // 3. Widget: fusi orari, avanzamento, contatore, pomodoro, con la
-        // freccetta per nasconderli tutti. Vedi `WidgetsSection`.
-        WidgetsSection(active = widgetsActive)
-        // Lo stesso divisore sotto i widget, prima dei preferiti.
-        HorizontalDivider(
-            color = NotionGray900,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-
-        // 4. Pagine preferite.
+        // 2. Pagine preferite, subito sotto il menu principale (chiesto dall'utente l'11/11/2026).
         SidebarItem(Icons.Filled.Star, Strings.favoritePages, onClick = actions.onFavorites)
 
-        // 5. L'albero delle pagine, a partire da quella principale.
+        // 3. L'albero delle pagine, a partire da quella principale.
         SidebarSectionTitle(Strings.pages)
         if (root != null) {
             flattenTree(root, children, expanded).forEach { row ->
                 TreeRow(
                     row = row,
                     isCurrent = row.node.pageId != null && row.node.pageId == currentPageId,
-                    currentBackground = rootBackground || row.depth > 0,
+                    // Sulla pagina principale niente fondo grigio (chiesto dall'utente l'11/11/2026).
+                    currentBackground = row.depth > 0,
                     isExpanded = row.node.pageId in expanded,
                     onOpen = { actions.onOpenNode(row.node) },
                     onToggle = { actions.onToggleNode(row.node) }
@@ -186,15 +159,36 @@ fun SidebarContent(
                 }
             }
         }
-        // Un divisore sotto l'albero, come quello sotto il menu principale:
-        // senza, l'ultima pagina e "Search" sembravano la stessa lista
-        // (richiesta dell'utente del 25/09/2026).
+        // Un divisore sotto l'albero: senza, l'ultima pagina e quello che segue
+        // sembravano la stessa lista (richiesta dell'utente del 25/09/2026).
         HorizontalDivider(
             color = NotionGray900,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // 6–14. Le voci di servizio.
+        // 4. I quaderni (dal 26/09/2026, prima era una fascia grigia ferma):
+        // la stessa fascia di un altro colore, staccata dal resto, e sotto
+        // i quaderni come in OneNote. Un mondo a parte dal menu principale.
+        // Sopra i widget: chiesto dall'utente il 28/09/2026.
+        notebooks()
+        // Un divisore sotto i quaderni (chiesto dall'utente il 26/09/2026):
+        // senza, l'ultima riga dei quaderni e quello che segue sembravano
+        // la stessa lista.
+        HorizontalDivider(
+            color = NotionGray900,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+
+        // 5. Widget: fusi orari, avanzamento, contatore, pomodoro, con la
+        // freccetta per nasconderli tutti. Vedi `WidgetsSection`.
+        WidgetsSection(active = widgetsActive)
+        // Lo stesso divisore sotto i widget, prima delle voci di servizio.
+        HorizontalDivider(
+            color = NotionGray900,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+
+        // 6. Le voci di servizio.
         SidebarItem(Icons.Filled.Search, Strings.search, onClick = actions.onSearch)
         // "Startup window" sta in Settings, sopra "Title position" (dal
         // 03/11/2026, chiesto dall'utente).
@@ -304,7 +298,7 @@ fun TreeRow(
      * e nemmeno quello che ha dentro.
      */
     enabled: Boolean = true,
-    /** Il fondo grigio della pagina aperta: vedi `rootBackground` in `SidebarContent`. */
+    /** Il fondo grigio della pagina aperta (sulla pagina principale no, vedi `SidebarContent`). */
     currentBackground: Boolean = true
 ) {
     val node = row.node

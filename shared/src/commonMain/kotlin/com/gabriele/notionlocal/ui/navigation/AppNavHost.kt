@@ -438,8 +438,6 @@ fun AppNavHost(
                     actions = actions,
                     widgetsActive = widgetsActive,
                     header = pinButton,
-                    // Il fondo grigio sulla pagina principale: sul PC sì, sul telefono no.
-                    rootBackground = canPinSidebar,
                     notebooks = {
                         NotebooksSidebarSection(
                             viewModel = notebooks,

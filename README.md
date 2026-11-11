@@ -1151,6 +1151,19 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.40 — 11/11/2026 · 08:55 — Preferiti e pagine subito sotto "Main menu"
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1161 test passati)*
+
+- **[Progetto]** **[📱 Mobile]** **[💻 PC]** **La barra laterale ora è:
+  "Main menu", "Favorite pages", l'albero delle pagine, poi "Notebooks", i
+  widget e le altre voci** (Search, Templates, Backup, Trash, Connections,
+  Settings). Prima preferiti e pagine stavano sotto i widget
+- **[Progetto]** **[💻 PC]** **Niente fondo grigio dietro la pagina
+  principale nell'albero anche sul PC**, come sul telefono dalla
+  0.153.39. Non ancora provato dall'utente
+- **[Progetto]** `SidebarContent` nel nuovo ordine, senza più
+  `rootBackground`. La foto della barra sul PC (`app_pinned.png`) lo mostra
+
 ### ✏️ v0.153.39 — 11/11/2026 · 08:41 — "Main menu" in cima alla barra laterale, la puntina del PC in un pallino
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1161 test passati)*
 
