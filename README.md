@@ -1152,7 +1152,7 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 gg/mm/aaaa)" accanto al titolo.
 
 ### ✏️ v0.153.46 — 11/11/2026 · 13:12 — Sul PC i sei puntini dritti, a metà delle lettere e del titolo dei database
-*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1167 test passati)*
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1167 test passati)*
 
 - **[Progetto]** **[💻 PC]** **I sei puntini sono dritti**: si mettono a
   metà delle lettere della prima riga, non della riga intera (che
@@ -1175,7 +1175,7 @@ gg/mm/aaaa)" accanto al titolo.
   sinistra del titolo senza toccarlo
 
 ### ✏️ v0.153.45 — 11/11/2026 · 10:38 — Sul PC la pagina sta un po' più a destra, coi sei puntini nel margine
-*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1166 test passati)*
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1166 test passati)*
 
 - **[Progetto]** **[💻 PC]** **Tutta la pagina si sposta di 30 punti verso
   destra**: testo, titolo, icona, database incorporati, tabelle, immagini e
@@ -1193,7 +1193,7 @@ gg/mm/aaaa)" accanto al titolo.
   fallisce)
 
 ### ✏️ v0.153.44 — 11/11/2026 · 10:17 — Sul PC le finestrelle si aprono accanto al clic, e i blocchi hanno i sei puntini
-*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1165 test passati)*
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1165 test passati)*
 
 - **[Progetto]** **[💻 PC]** **Le finestrelle non salgono più dal basso**:
   impostazioni di un database, "Property visibility", filtri, ordinamenti,
