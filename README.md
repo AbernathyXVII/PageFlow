@@ -1152,7 +1152,7 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 gg/mm/aaaa)" accanto al titolo.
 
 ### ✏️ v0.153.50 — 11/11/2026 · 15:13 — Sul PC la barra in alto anche sui database aperti a tutta pagina
-*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1171 test passati)*
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1171 test passati)*
 
 - **[Progetto]** **[💻 PC]** **Il database aperto a tutta pagina ha la
   stessa barra in alto delle pagine** (trovato dall'utente: aveva ancora
@@ -1166,7 +1166,7 @@ gg/mm/aaaa)" accanto al titolo.
   su "Madre" la apre
 
 ### ✏️ v0.153.49 — 11/11/2026 · 14:58 — Sul PC la barra in alto col percorso della pagina, e i margini di Notion
-*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1170 test passati)*
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1170 test passati)*
 
 - **[Progetto]** **[💻 PC]** **Terza fase dell'aspetto da Notion: la
   cornice della pagina.** Al posto dei pulsanti tondi sospesi sulla pagina
@@ -1189,7 +1189,7 @@ gg/mm/aaaa)" accanto al titolo.
   nel margine
 
 ### ✏️ v0.153.48 — 11/11/2026 · 14:38 — Sul PC righe, menu e barra laterale fitti come in Notion
-*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1169 test passati)*
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1169 test passati)*
 
 - **[Progetto]** **[💻 PC]** **Seconda fase dell'aspetto da Notion: le
   misure**, prese dalle foto di Notion dell'utente. Le voci della barra
@@ -1212,7 +1212,7 @@ gg/mm/aaaa)" accanto al titolo.
   l'una dall'altra (32 più la linea)
 
 ### ✏️ v0.153.47 — 11/11/2026 · 14:19 — Sul PC il testo è grande come in Notion
-*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1168 test passati)*
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1168 test passati)*
 
 - **[Progetto]** **[💻 PC]** **Prima fase dell'aspetto da Notion: le
   grandezze del testo**, misurate nella foto dell'utente (Notion con

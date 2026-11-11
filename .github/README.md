@@ -2,8 +2,8 @@
 
 # PageFlow
 
-**Le tue note sul telefono, come Notion — ma tutto resta sul telefono.**
-Niente account, niente cloud: pagine, database e file sono salvati solo sul tuo dispositivo.
+**Le tue note sul telefono e sul PC, come Notion — ma tutto resta sui tuoi dispositivi.**
+Niente account, niente cloud: pagine, database e file sono salvati solo sul telefono e sul PC.
 
 ## Cosa puoi fare
 
@@ -19,15 +19,19 @@ Niente account, niente cloud: pagine, database e file sono salvati solo sul tuo 
 - **Widget** nella barra laterale: meteo, risultati sportivi, borsa, orologi del mondo, conto alla rovescia, timer e pomodoro
 - **Esportare** in PDF e Markdown, **backup** e cestino; **cronologia** di ogni pagina; pagine **bloccate** con password o impronta
 - **Correttore ortografico** in 5 lingue; l'app è in 8 lingue (italiano, inglese, tedesco, francese, spagnolo, cinese, coreano, giapponese)
+- **Anche sul PC (Windows)**, con l'aspetto di Notion, e **sincronizzazione via Wi‑Fi** fra telefono e PC sulla rete di casa, senza cloud
 
 ## Installazione
 
-Scarica l'APK dall'ultima [Release](https://github.com/AbernathyXVII/PageFlow/releases) e aprilo sul telefono (Android 8.0 o più recente).
-Al primo avvio l'app è vuota: trovi una sola pagina, "My Space", da cui cominciare.
+Tutto è nell'ultima [Release](https://github.com/AbernathyXVII/PageFlow/releases):
+- **Telefono**: scarica l'APK e aprilo sul telefono (Android 8.0 o più recente).
+- **PC**: scarica l'installatore per Windows (`.exe`, Windows 10 o 11 a 64 bit) e aprilo; se Windows avvisa che il PC è protetto, scegli "Ulteriori informazioni" e "Esegui comunque".
+
+Al primo avvio l'app è vuota: trovi una sola pagina, "My Space", da cui cominciare. Per avere le stesse pagine su tutti e due: "Connections" nella barra laterale.
 
 ## Privacy
 
-I tuoi dati restano sul telefono, a meno che tu non li esporti o ne faccia un backup altrove. Internet serve solo alle funzioni che ne hanno bisogno, come i widget (meteo, sport, borsa), le anteprime dei link, i video di YouTube, il web clipper e i modelli di Google Play Services per lo scanner e per leggere il testo delle foto, che poi lavorano sul telefono.
+I tuoi dati restano sul telefono e sul PC, a meno che tu non li esporti o ne faccia un backup altrove; la sincronizzazione fra i due passa solo dalla rete di casa, cifrata. Internet serve solo alle funzioni che ne hanno bisogno, come i widget (meteo, sport, borsa), le anteprime dei link, i video di YouTube, il web clipper e i modelli di Google Play Services per lo scanner e per leggere il testo delle foto, che poi lavorano sul telefono.
 
 ## Tutte le novità
 
