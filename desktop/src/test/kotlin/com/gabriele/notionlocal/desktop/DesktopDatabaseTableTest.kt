@@ -156,6 +156,63 @@ class DesktopDatabaseTableTest {
         }
     }
 
+    /**
+     * **Un tag nuovo in una cella select vuota** (bug trovato dall'utente
+     * l'11/11/2026 nel suo Habit tracker): la parte cliccabile era alta quanto
+     * i tag, quindi da vuota era alta zero e il clic non apriva niente. Il clic
+     * sulla cella vuota deve aprire la scelta dei tag.
+     */
+    @Test
+    fun anEmptySelectCellOpensTheTagPicker() {
+        runBlocking {
+            AppDatabase.getInstance(context).databaseDao().insertColumn(
+                DatabaseColumnEntity(
+                    id = "giorno", pageId = "giochi", name = "Day", type = ColumnType.SELECT, orderIndex = -1,
+                    optionsJson = """[{"label":"Monday"},{"label":"Tuesday"}]"""
+                )
+            )
+        }
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            DatabaseViewScreen(
+                                pageId = "giochi", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
+                                onOpenUpdates = {}, onOpenPage = {}, onOpenDatabase = {}
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun picture(): Bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+        try {
+            frames(40)
+            val before = picture()
+            val background = before.getColor(1100, before.height - 5)
+            val lines = (60 until before.height - 20).filter { y -> (1000..1100).all { x -> before.getColor(x, y) != background } }
+            // "Day" è la prima colonna dopo il nome (da 266): il clic a metà della prima riga, vuota.
+            val cell = Offset(330f, (lines[0] + lines[1]) / 2f)
+            click(scene, cell)
+            frames(15)
+            val after = picture()
+            File("build/desktop-screenshots", "empty_select_picker.png").writeBytes(Image.makeFromBitmap(after).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val changed = (0 until 200 step 4).count { dy -> after.getColor(cell.x.toInt() + 100, cell.y.toInt() + 20 + dy) != before.getColor(cell.x.toInt() + 100, cell.y.toInt() + 20 + dy) }
+            assertTrue("il clic sulla cella vuota apre la scelta dei tag ($changed punti cambiati)", changed > 10)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
     private fun click(scene: ImageComposeScene, at: Offset) = onWindowThread {
         scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse)
         scene.sendPointerEvent(PointerEventType.Press, at, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)

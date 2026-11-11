@@ -1151,6 +1151,20 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### 🔧 v0.153.57.1 — 11/11/2026 · 17:38 — Un tag in una cella select vuota
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1179 test passati)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **In una cella select o multi-select vuota non si poteva
+  mettere un tag**: il clic non apriva niente, mentre su una cella con un
+  tag la scelta si apriva. La parte cliccabile era alta quanto i tag, e
+  da vuota era alta zero. Ora si clicca tutta la cella, come la data. Vale
+  per il telefono e per il PC. Nella finestra di una riga la proprietà
+  vuota ha ora una striscia da cliccare (non provata). Trovato dall'utente
+  nel suo Habit tracker; non ancora provato dall'utente
+- **[Progetto]** `TagCell` in `DatabaseViewScreen.kt`: `fillMaxHeight` e
+  un minimo di 18. Test: in `DesktopDatabaseTableTest` il clic su una
+  cella "Day" vuota apre la scelta dei tag; prima della correzione falliva
+
 ### ✏️ v0.153.57 — 11/11/2026 · 17:21 — Sul PC il database a tutta pagina coi margini di Notion
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1178 test passati)*
 

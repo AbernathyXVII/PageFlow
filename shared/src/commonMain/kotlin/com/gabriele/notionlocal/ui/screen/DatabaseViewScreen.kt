@@ -7581,6 +7581,11 @@ fun TagCell(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // **Tutta la cella si tocca, anche vuota** (dal 11/11/2026, bug trovato
+                // dall'utente): alta quanto i tag, da vuota era alta zero e il clic non
+                // apriva niente. Come la data; il minimo vale dove l'altezza non è fissata.
+                .fillMaxHeight()
+                .heightIn(min = 18.dp)
                 .clickable { showSheet = true },
             horizontalArrangement = LocalCellAlignment.current.arrangement,
             verticalAlignment = Alignment.CenterVertically
