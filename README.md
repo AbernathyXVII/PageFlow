@@ -1151,6 +1151,24 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.43 — 11/11/2026 · 09:36 — Tabelle dei database come Notion: righe fino in fondo, e i tre puntini accanto al "+"
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1163 test passati)*
+
+- **[Progetto]** **[📱 Mobile]** **[💻 PC]** **Le linee fra le righe di una
+  tabella arrivano fino in fondo**: in una finestra (o una pagina) più larga
+  delle colonne, prima si fermavano dopo l'ultima colonna; ora vanno fino al
+  bordo, come su Notion. Vale per i database aperti e per quelli dentro una
+  pagina
+- **[Progetto]** **[📱 Mobile]** **[💻 PC]** **I tre puntini a destra del
+  "+" delle colonne**, nell'intestazione della tabella: aprono "Property
+  visibility", dove si mostrano e si nascondono le colonne (prima ci si
+  arrivava solo dalle impostazioni della vista). Su PageFlow è il pannello
+  che sale dal basso. Non ancora provato dall'utente
+- **[Progetto]** La tabella misura lo spazio che ha (`onSizeChanged`) e le
+  linee sono larghe almeno quanto lui; `AddPropertyCell` coi puntini.
+  Test: `DesktopDatabaseTableTest` (in una finestra larga le linee arrivano
+  al bordo destro, e i tre puntini aprono il pannello)
+
 ### ✏️ v0.153.42 — 11/11/2026 · 09:20 — Sul PC il pallino della puntina si vede solo col mouse sopra
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1162 test passati)*
 

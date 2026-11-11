@@ -394,7 +394,8 @@ private val LocalTitleEditRequest = compositionLocalOf { TitleEditRequest(null) 
 
 private val RESIZE_HANDLE_WIDTH = 24.dp
 private val RESIZE_HANDLE_HEIGHT = 40.dp
-private val ADD_PROPERTY_WIDTH = 52.dp
+// Il "+" per una colonna nuova e, accanto, i tre puntini per mostrarle o nasconderle (dal 11/11/2026).
+private val ADD_PROPERTY_WIDTH = 88.dp
 private val BOARD_COLUMN_WIDTH = 260.dp
 
 /**
@@ -1598,6 +1599,11 @@ private fun DatabaseViewBody(
                     onMoveName = { delta -> viewModel.moveColumn(NAME_COLUMN_KEY, delta) },
                     onRenameName = viewModel::renameNameColumn,
                     onHideProperty = { viewModel.setColumnHidden(it.id, true) },
+                    // I tre puntini accanto al "+": dritti a "Property visibility".
+                    onShowProperties = {
+                        settingsInitialPage = SettingsPage.PROPERTY_VISIBILITY
+                        showSettings = true
+                    },
                     onToggleCenterProperty = { column, alignment ->
                         viewModel.setColumnAlignment(column.id, alignment)
                     },
@@ -2199,7 +2205,9 @@ private fun TableLayout(
     /** "Freeze first row": la riga dei titoli resta in cima scorrendo in giù. */
     freezeFirstRow: Boolean = false,
     /** A pagina intera: una lista che disegna solo le righe sullo schermo (vedi `LazyBody`). */
-    lazy: LazyBody? = null
+    lazy: LazyBody? = null,
+    /** I tre puntini accanto al "+": "Property visibility" (vedi `AddPropertyCell`). */
+    onShowProperties: (() -> Unit)? = null
 ) {
     val grouped = groupLevels.isNotEmpty()
     // Dentro un contenitore che scorre in orizzontale la larghezza
@@ -2244,9 +2252,16 @@ private fun TableLayout(
         name = widthOf(NAME_COLUMN_KEY, NAME_COLUMN_WIDTH, fitMinColumnWidth(NAME_COLUMN_KEY)),
         byKey = shownColumns.associate { it.id to widthOf(it.id, defaultColumnWidth(it.id, it.type).dp, fitMinColumnWidth(it.id, it.type)) }
     )
-    val tableWidth = widths.name + SEPARATOR_WIDTH +
+    val columnsWidth = widths.name + SEPARATOR_WIDTH +
         shownColumns.fold(0.dp) { sum, column -> sum + widths.of(column) + SEPARATOR_WIDTH } +
         ADD_PROPERTY_WIDTH
+    // **Le linee delle righe vanno fino in fondo** (dal 11/11/2026, chiesto
+    // dall'utente, come su Notion): almeno larghe quanto lo spazio che ha la
+    // tabella, misurato dal suo contenitore (0 finché non si sa).
+    val density = LocalDensity.current
+    var available by remember { mutableStateOf(0.dp) }
+    val measureAvailable = Modifier.onSizeChanged { size -> available = with(density) { size.width.toDp() } }
+    val tableWidth = maxOf(columnsWidth, available)
 
     // Quali gruppi sono chiusi. Sta qui e non nel database perché è
     // come si sta guardando la tabella adesso, non una proprietà del
@@ -2295,6 +2310,7 @@ private fun TableLayout(
                 onHideProperty = onHideProperty,
                 onToggleCenterProperty = onToggleCenterProperty,
                 onAddProperty = onAddProperty,
+                onShowProperties = onShowProperties,
                 onCalculate = onCalculate,
                 onSetAllChecked = onSetAllChecked,
                 fitColumns = fitColumns,
@@ -2377,7 +2393,7 @@ private fun TableLayout(
             }
         }
 
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().then(measureAvailable)) {
             val viewport = maxWidth
             Box(
                 modifier = Modifier
@@ -2417,6 +2433,9 @@ private fun TableLayout(
     }
     Column(
         modifier = Modifier
+            // Tutto lo spazio che c'è, per sapere fin dove arrivano le linee.
+            .fillMaxWidth()
+            .then(measureAvailable)
             // Toccando la tabella fuori dal segnalino, il segnalino se ne va.
             // Guarda soltanto: il tocco arriva comunque a chi lo aspetta.
             .pointerInput(resize) {
@@ -2444,6 +2463,7 @@ private fun TableLayout(
                 onHideProperty = onHideProperty,
                 onToggleCenterProperty = onToggleCenterProperty,
                 onAddProperty = onAddProperty,
+                onShowProperties = onShowProperties,
                 onCalculate = onCalculate,
                 onSetAllChecked = onSetAllChecked,
                 fitColumns = fitColumns,
@@ -2508,6 +2528,7 @@ private fun TableLayout(
                 onHideProperty = onHideProperty,
                 onToggleCenterProperty = onToggleCenterProperty,
                 onAddProperty = onAddProperty,
+                onShowProperties = onShowProperties,
                 onCalculate = onCalculate,
                 onSetAllChecked = onSetAllChecked,
                 fitColumns = fitColumns,
@@ -2904,7 +2925,9 @@ private fun TableHeaderRow(
     onSetAllChecked: (DatabaseColumnEntity, Boolean) -> Unit = { _, _ -> },
     fitColumns: Set<String> = emptySet(),
     onSetColumnWidth: (String, Int) -> Unit = { _, _ -> },
-    onSetFitToContent: (String, Boolean) -> Unit = { _, _ -> }
+    onSetFitToContent: (String, Boolean) -> Unit = { _, _ -> },
+    /** I tre puntini accanto al "+": vedi `AddPropertyCell`. */
+    onShowProperties: (() -> Unit)? = null
 ) {
     val resize = LocalColumnResize.current
     val widths = LocalTableWidths.current
@@ -2951,7 +2974,7 @@ private fun TableHeaderRow(
             )
             CellSeparator(column.id, stretch = wrap)
         }
-        AddPropertyCell(onClick = onAddProperty)
+        AddPropertyCell(onClick = onAddProperty, onShowProperties = onShowProperties)
     }
     // Il segnalino, sopra il bordo destro della colonna che si allarga:
     // dopo tutte quelle alla sua sinistra, Name compresa, e lei.
@@ -6862,20 +6885,48 @@ private fun PropertyHeaderCell(
 }
 
 @Composable
-private fun AddPropertyCell(onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .width(ADD_PROPERTY_WIDTH)
-            .height(ROW_HEIGHT)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            Icons.Filled.Add,
-            contentDescription = DbStrings.addProperty,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+private fun AddPropertyCell(
+    onClick: () -> Unit,
+    /**
+     * **I tre puntini a destra del "+"** (dal 11/11/2026, chiesto dall'utente,
+     * come su Notion): aprono "Property visibility", dove si mostrano e si
+     * nascondono le colonne. Null: niente puntini.
+     */
+    onShowProperties: (() -> Unit)? = null
+) {
+    Row(modifier = Modifier.width(ADD_PROPERTY_WIDTH).height(ROW_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = DbStrings.addProperty,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (onShowProperties != null) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable { onShowProperties() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.MoreHoriz,
+                    contentDescription = DbStrings.propertyVisibility,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.weight(1f))
+        }
     }
 }
 
