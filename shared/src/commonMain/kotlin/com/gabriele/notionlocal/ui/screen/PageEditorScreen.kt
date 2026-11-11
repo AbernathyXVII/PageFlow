@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.theme.pcOr
+import androidx.compose.runtime.produceState
 import com.gabriele.notionlocal.ui.theme.chosenSizeSp
 import androidx.compose.foundation.layout.PaddingValues
 import com.gabriele.notionlocal.platform.isPc
@@ -385,18 +387,21 @@ private val PAGE_SIDE_PADDING = 20.dp
  * dall'utente): nel margine a sinistra ci stanno i sei puntini dei blocchi
  * (`BlockHandle.kt`) senza toccare il testo né l'icona di un database. Si
  * spostano anche i database incorporati e i disegni; la copertina resta a
- * tutta larghezza (`bleedStart`). Sul telefono niente.
+ * tutta larghezza (`bleedSides`). Sul telefono niente. Dalla terza fase
+ * dell'aspetto da Notion (11/11/2026) è il margine di Notion a tutta
+ * larghezza, da tutti e due i lati: il testo comincia a 86 come nella foto
+ * di Notion dell'utente.
  */
-private val PAGE_INSET = if (isPc) 30.dp else 0.dp
+private val PAGE_INSET = if (isPc) 66.dp else 0.dp
 
-/** Allarga a sinistra di [inset] chi sta nella pagina spostata (`PAGE_INSET`): la copertina arriva al bordo. */
-private fun Modifier.bleedStart(inset: Dp): Modifier = layout { measurable, constraints ->
+/** Allarga di [inset] per lato chi sta nella pagina coi margini (`PAGE_INSET`): la copertina arriva ai bordi. */
+private fun Modifier.bleedSides(inset: Dp): Modifier = layout { measurable, constraints ->
     val extra = inset.roundToPx()
     if (extra == 0 || !constraints.hasBoundedWidth) {
         val placeable = measurable.measure(constraints)
         return@layout layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
-    val width = constraints.maxWidth + extra
+    val width = constraints.maxWidth + 2 * extra
     val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
     layout(constraints.maxWidth, placeable.height) { placeable.place(-extra, 0) }
 }
@@ -456,9 +461,22 @@ private val BAR_BUTTON_SIZE = 40.dp
  * I pulsanti sospesi sopra la pagina (indietro e tre puntini): il
  * cerchio, l'icona dentro, lo stacco dai bordi.
  */
-private val FLOATING_BUTTON_SIZE = 36.dp
-private val FLOATING_ICON_SIZE = 22.dp
-private val FLOATING_BUTTON_MARGIN = 10.dp
+private val FLOATING_BUTTON_SIZE: Dp get() = pcOr(28.dp, 36.dp)
+private val FLOATING_ICON_SIZE: Dp get() = pcOr(18.dp, 22.dp)
+// Sul PC i pulsanti stanno a metà della barra in alto (`PC_TOP_BAR`).
+private val FLOATING_BUTTON_MARGIN: Dp get() = pcOr((PC_TOP_BAR - 28.dp) / 2, 10.dp)
+
+/**
+ * **Sul PC la barra in alto di Notion** (dal 11/11/2026, terza fase
+ * dell'aspetto da Notion, chiesta dall'utente): al posto dei pulsanti tondi
+ * sospesi sulla pagina, una fascia alta 40 col fondo della pagina, con
+ * indietro, la barra laterale e il percorso (`PageBreadcrumb`) a sinistra, e
+ * i tre puntini a destra; i pulsanti sono piatti e grigi. La pagina comincia sotto.
+ */
+private val PC_TOP_BAR = 40.dp
+
+/** Il colore delle icone dei pulsanti in alto: grigie sul PC, come in Notion. */
+private val FloatingTint: Color get() = if (isPc) NotionGray400 else NotionWhite
 /** Lo stacco fra indietro e barra laterale, quando ci sono tutti e due. */
 private val FLOATING_BUTTON_GAP = 8.dp
 
@@ -470,7 +488,7 @@ private val FLOATING_BUTTON_GAP = 8.dp
  * cover", e il pulsante indietro ci finirebbe sopra: si lascia la fascia
  * che occupano, e non di più.
  */
-private val FLOATING_BAR_CLEARANCE = FLOATING_BUTTON_SIZE + FLOATING_BUTTON_MARGIN * 2
+private val FLOATING_BAR_CLEARANCE: Dp get() = FLOATING_BUTTON_SIZE + FLOATING_BUTTON_MARGIN * 2
 
 /** Lo spazio fra il cursore e la barra sopra la tastiera, quando la pagina lo porta in vista. */
 private val CARET_KEYBOARD_MARGIN = 12.dp
@@ -491,8 +509,9 @@ private fun FloatingPageButton(
     Box(
         modifier = modifier
             .size(FLOATING_BUTTON_SIZE)
-            .clip(CircleShape)
-            .background(FloatingButtonBackground)
+            // Sul PC piatto, come i pulsanti della barra di Notion: il grigio solo col mouse sopra.
+            .clip(if (isPc) RoundedCornerShape(6.dp) else CircleShape)
+            .then(if (isPc) Modifier else Modifier.background(FloatingButtonBackground))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -1604,6 +1623,10 @@ private fun PageEditorContent(
         (((focusedBlockId != null || barHeld) && imeVisible) || showTypeMenu)
 
     val isRootPage = pageId == PageEntity.ROOT_PAGE_ID
+    // Sul PC le pagine che contengono questa, per il percorso in alto (`PageBreadcrumb`).
+    val breadcrumb by produceState(emptyList<PageEntity>(), pageId) {
+        if (isPc) value = factory.pageRepository.ancestorsOf(pageId)
+    }
     var confirmDeleteForever by remember { mutableStateOf(false) }
     var confirmNotebookDelete by remember { mutableStateOf(false) }
 
@@ -2235,7 +2258,8 @@ private fun PageEditorContent(
                 // Nel cestino i pulsanti sospesi non ci sono (c'è la barra
                 // del cestino), e la fascia resterebbe vuota.
                 if (coverImage == null && !isTrashed) {
-                    Spacer(modifier = Modifier.height(FLOATING_BAR_CLEARANCE))
+                    // Sul PC la pagina comincia già sotto la barra in alto.
+                    Spacer(modifier = Modifier.height(if (isPc) 24.dp else FLOATING_BAR_CLEARANCE))
                 }
                 if (coverImage != null) {
                     // Mentre si sposta comanda l'inquadratura di prova:
@@ -2251,7 +2275,7 @@ private fun PageEditorContent(
 
                     Box(
                         modifier = Modifier
-                            .bleedStart(PAGE_INSET)
+                            .bleedSides(PAGE_INSET)
                             .fillMaxWidth()
                             .height(COVER_HEIGHT)
                             .onSizeChanged { coverBox = it }
@@ -2679,7 +2703,7 @@ private fun PageEditorContent(
             LazyColumn(
                 state = listState,
                 // Sul PC il margine in più a sinistra (vedi `PAGE_INSET`).
-                contentPadding = PaddingValues(start = PAGE_INSET),
+                contentPadding = PaddingValues(start = PAGE_INSET, end = PAGE_INSET, top = if (isPc) PC_TOP_BAR else 0.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     // Il verso del dito, per "Back" quando si è scesi molto (`BackToTop.kt`).
@@ -3176,18 +3200,29 @@ private fun PageEditorContent(
         // cestino non ci sono: al loro posto c'è la barra del cestino, che
         // ha il suo indietro.
         if (!isTrashed) {
+            if (isPc) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(top = padding.calculateTopPadding())
+                        .fillMaxWidth()
+                        .height(PC_TOP_BAR)
+                        .background(DarkBackground)
+                )
+            }
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(top = padding.calculateTopPadding() + FLOATING_BUTTON_MARGIN, start = FLOATING_BUTTON_MARGIN),
-                horizontalArrangement = Arrangement.spacedBy(FLOATING_BUTTON_GAP)
+                horizontalArrangement = Arrangement.spacedBy(FLOATING_BUTTON_GAP),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 if (!isRootPage) {
                     FloatingPageButton(onClick = onBack) {
                         Icon(
                             Icons.Filled.ArrowBack,
                             contentDescription = Strings.back,
-                            tint = NotionWhite,
+                            tint = FloatingTint,
                             modifier = Modifier.size(FLOATING_ICON_SIZE)
                         )
                     }
@@ -3203,10 +3238,18 @@ private fun PageEditorContent(
                         Icon(
                             Icons.Filled.Menu,
                             contentDescription = Strings.openSidebar,
-                            tint = NotionWhite,
+                            tint = FloatingTint,
                             modifier = Modifier.size(FLOATING_ICON_SIZE)
                         )
                     }
+                }
+                // Sul PC il percorso della pagina, come in Notion (`PageBreadcrumb`).
+                if (isPc) {
+                    PageBreadcrumb(
+                        ancestors = breadcrumb,
+                        current = page,
+                        onOpen = { crumb -> if (crumb.isDatabase) onNavigateToDatabase(crumb.id) else onNavigateToPage(crumb.id) }
+                    )
                 }
             }
             Row(
@@ -3224,8 +3267,8 @@ private fun PageEditorContent(
                         factory = factory,
                         buttonSize = FLOATING_BUTTON_SIZE,
                         iconSize = FLOATING_ICON_SIZE,
-                        background = FloatingButtonBackground,
-                        tint = NotionWhite,
+                        background = if (isPc) Color.Transparent else FloatingButtonBackground,
+                        tint = FloatingTint,
                         onOpenRow = { rowId ->
                             focusManager.clearFocus()
                             onOpenSiblingRow(rowId)
@@ -3243,7 +3286,7 @@ private fun PageEditorContent(
                         Icon(
                             Icons.Filled.Lock,
                             contentDescription = LockStrings.protectedByPassword,
-                            tint = NotionWhite,
+                            tint = FloatingTint,
                             modifier = Modifier.size(FLOATING_ICON_SIZE)
                         )
                     }
@@ -3252,7 +3295,7 @@ private fun PageEditorContent(
                     Icon(
                         Icons.Filled.MoreHoriz,
                         contentDescription = Strings.pageOptions,
-                        tint = NotionWhite,
+                        tint = FloatingTint,
                         modifier = Modifier.size(FLOATING_ICON_SIZE)
                     )
                 }

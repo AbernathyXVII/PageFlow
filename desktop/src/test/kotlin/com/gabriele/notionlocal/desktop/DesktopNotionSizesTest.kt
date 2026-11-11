@@ -1,5 +1,10 @@
 package com.gabriele.notionlocal.desktop
 
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerButtons
+import androidx.compose.ui.input.pointer.PointerButton
 import com.gabriele.notionlocal.ui.screen.TreeRow
 import com.gabriele.notionlocal.ui.screen.SettingsRow
 import com.gabriele.notionlocal.ui.screen.OptionsGroup
@@ -58,6 +63,7 @@ import kotlin.math.abs
  * stesse scritte di PageFlow devono essere larghe quanto quelle divise per
  * 0,78, con un margine del 4% (la foto è piccola).
  */
+@OptIn(ExperimentalComposeUiApi::class)
 class DesktopNotionSizesTest {
     private val dir: File = Files.createTempDirectory("pageflow-sizes").toFile()
     private val context = DesktopContext(dir)
@@ -182,6 +188,70 @@ class DesktopNotionSizesTest {
             val middle = top + menu / 2
             val lineSeen = (middle - 2..middle + 2).any { y -> (10 until 300).count { x -> picture.getColor(x, y) != picture.getColor(5, y) } > 200 }
             assertTrue("una linea fra le voci del menu", !lineSeen)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **La barra in alto del PC col percorso della pagina** (fase 3, chiesta
+     * dall'utente l'11/11/2026, come in Notion): una pagina collegata dentro
+     * un'altra ha in alto "Madre / Figlia"; un clic su "Madre" la apre.
+     */
+    @Test
+    fun theTopBarShowsThePathOfThePage() {
+        AppSettings.init(context)
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "madre", title = "Madre"))
+            repo.createPage(PageEntity(id = "figlia", title = "Figlia"))
+            repo.saveBlock(BlockEntity(id = "link", pageId = "madre", type = BlockType.PAGE_LINK, linkedPageId = "figlia", orderIndex = 0))
+            repo.saveBlock(BlockEntity(id = "riga", pageId = "figlia", textJson = """[{"text":"Dentro"}]""", orderIndex = 0))
+        }
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        var opened: String? = null
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 400, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        PageEditorScreen(
+                            pageId = "figlia", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                            onNavigateToPage = { opened = it }, onNavigateToDatabase = {}, viewModel = viewModel
+                        )
+                    }
+                }
+            }
+        }
+        try {
+            var time = 0L
+            fun frames(count: Int) = repeat(count) {
+                onWindowThread { scene.render(time) }
+                time += 100_000_000L
+                Thread.sleep(30)
+            }
+            frames(40)
+            val page = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+            File("build/desktop-screenshots", "top_bar.png").writeBytes(Image.makeFromBitmap(page).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
+            // Nella barra (alta 40), dopo indietro e la barra laterale (fino a x 70): le scritte del percorso, divise da spazi vuoti.
+            val columns = (76 until 600).filter { x -> (8 until 32).any { y -> bright(page.getColor(x, y)) } }
+            val groups = ArrayList<IntRange>()
+            for (x in columns) {
+                val last = groups.lastOrNull()
+                if (last != null && x <= last.last + 6) groups[groups.lastIndex] = last.first..x else groups += x..x
+            }
+            assertTrue("nel percorso ci sono \"Madre\", \"/\" e \"Figlia\": $groups", groups.size >= 3)
+            val first = groups.first()
+            onWindowThread {
+                val at = androidx.compose.ui.geometry.Offset((first.first + first.last) / 2f, 20f)
+                scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse)
+                scene.sendPointerEvent(PointerEventType.Press, at, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
+                scene.sendPointerEvent(PointerEventType.Release, at, type = PointerType.Mouse, buttons = PointerButtons(), button = PointerButton.Primary)
+            }
+            frames(5)
+            assertTrue("il clic sul percorso apre \"madre\", aperta: $opened", opened == "madre")
         } finally {
             onWindowThread { scene.close() }
         }

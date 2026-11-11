@@ -1151,6 +1151,29 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.49 — 11/11/2026 · 14:58 — Sul PC la barra in alto col percorso della pagina, e i margini di Notion
+*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1170 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Terza fase dell'aspetto da Notion: la
+  cornice della pagina.** Al posto dei pulsanti tondi sospesi sulla pagina
+  c'è una barra in alto alta 40, come in Notion: a sinistra indietro e la
+  barra laterale, piccoli, piatti e grigi, e il percorso della pagina
+  (le pagine che la contengono, con icona e nome, divise da "/"; un clic
+  ne apre una); a destra i tre puntini, il lucchetto delle pagine protette
+  e le frecce fra le righe di un database. La pagina comincia sotto la
+  barra, e anche la copertina. Il testo ha i margini di Notion a tutta
+  larghezza: comincia a 86 da sinistra (prima 50), e lo stesso spazio resta
+  a destra; la copertina arriva ancora da un bordo all'altro. Sul telefono
+  non cambia niente. Non ancora provato dall'utente
+- **[Progetto]** `PageRepository.ancestorsOf` risale dai collegamenti come
+  l'albero della barra laterale (la pagina di una riga sta nel suo
+  database); `PageBreadcrumb`; `PC_TOP_BAR`; `PAGE_INSET` a 66 da tutti e
+  due i lati, `bleedSides` per la copertina. Test: in
+  `DesktopNotionSizesTest` una pagina collegata dentro un'altra ha in alto
+  "Madre / Figlia" e il clic su "Madre" la apre; in
+  `DesktopBlockSelectionTest` il testo comincia a 86 e i sei puntini stanno
+  nel margine
+
 ### ✏️ v0.153.48 — 11/11/2026 · 14:38 — Sul PC righe, menu e barra laterale fitti come in Notion
 *(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1169 test passati)*
 

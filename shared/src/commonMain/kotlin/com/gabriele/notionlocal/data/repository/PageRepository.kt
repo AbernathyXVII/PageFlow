@@ -84,6 +84,9 @@ import com.gabriele.notionlocal.data.sync.SyncedLine
  * direttamente con i DAO — così se un domani cambiamo come sono
  * salvati i dati, la UI non deve saperlo.
  */
+/** Quante pagine al massimo risale `PageRepository.ancestorsOf`. */
+private const val MAX_ANCESTORS = 16
+
 class PageRepository(private val db: AppDatabase) {
 
     /** Il database dell'app, per chi lavora fra pagine e righe insieme: i bottoni (`ButtonRunner`). */
@@ -549,6 +552,36 @@ class PageRepository(private val db: AppDatabase) {
             // guardare un database che nell'albero c'è già, dove sta.
             .mapNotNull { id -> pageDao.getById(id)?.takeIf { it.trashedAt == null && it.sourceDatabaseId == null } }
             .map { nodeFor(it) }
+    }
+
+    /**
+     * **Il percorso di una pagina**, per la barra in alto del PC (dal
+     * 11/11/2026, come il percorso in cima alle pagine di Notion): le pagine
+     * che la contengono, dalla più esterna, senza lei. Come l'albero della
+     * barra laterale (`treeChildren`) si risale dai collegamenti: una pagina
+     * sta dentro quella che ha un suo collegamento (il primo, se sono più
+     * d'uno), la pagina di una riga sta dentro il suo database. Si ferma
+     * alla pagina principale, a una pagina nel cestino o a un giro chiuso.
+     */
+    suspend fun ancestorsOf(pageId: String): List<PageEntity> {
+        val path = ArrayList<PageEntity>()
+        val seen = hashSetOf(pageId)
+        var current = pageDao.getById(pageId) ?: return emptyList()
+        while (current.id != PageEntity.ROOT_PAGE_ID && path.size < MAX_ANCESTORS) {
+            val parentId = if (current.isRowPage) {
+                db.databaseDao().getRowsLinkingTo(current.id).firstOrNull()?.pageId
+            } else {
+                blockDao.getBlocksLinkingTo(current.id)
+                    .filter { it.type == BlockType.PAGE_LINK || it.type == BlockType.DATABASE_LINK }
+                    .map { it.pageId }
+                    .firstOrNull { it !in seen }
+            } ?: break
+            if (!seen.add(parentId)) break
+            val parent = pageDao.getById(parentId)?.takeIf { it.trashedAt == null } ?: break
+            path += parent
+            current = parent
+        }
+        return path.reversed()
     }
 
     /** Le pagine fra cui scegliere quella da aprire all'avvio: tutte, tranne il cestino e la principale. */
