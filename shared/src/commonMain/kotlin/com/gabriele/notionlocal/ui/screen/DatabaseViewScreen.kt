@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.material.icons.filled.BorderTop
 import androidx.compose.material.icons.filled.BorderLeft
 import com.gabriele.notionlocal.data.hasChosenIcon
@@ -1349,7 +1350,9 @@ private fun DatabaseViewBody(
         }
         if (showTitle) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            // Dentro una pagina sul PC, i sei puntini del blocco si mettono a metà
+            // di questa riga, subito a sinistra dell'icona o del nome (`BlockHandle.kt`).
+            modifier = Modifier.fillMaxWidth().reportsFirstLine(start = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // **L'icona del database, prima del nome.** Solo se c'è:
@@ -1472,6 +1475,7 @@ private fun DatabaseViewBody(
                 }
             )
         } else ViewToolbar(
+            firstLine = !showTitle,
             layout = layout,
             viewName = page?.viewName,
             sortActive = page?.sortRules().orEmpty().existingIn(state.columns).isNotEmpty(),
@@ -5333,7 +5337,8 @@ private fun LinkedSourceMissing(onOpenBlockMenu: (() -> Unit)?, modifier: Modifi
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (onOpenBlockMenu != null) {
+        // Sul PC i sei puntini compaiono col mouse accanto al blocco (`BlockHandle.kt`).
+        if (onOpenBlockMenu != null && !isPc) {
             ToolbarIconButton(
                 icon = Icons.Filled.DragIndicator,
                 contentDescription = EditorStrings.blockOptions,
@@ -5575,20 +5580,24 @@ private fun ViewToolbar(
     onOpenViews: () -> Unit,
     /** Il "+" accanto al nome: una vista nuova. Null = spento. */
     onAddView: (() -> Unit)?,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    /** Col titolo nascosto è lei la prima riga del database, per i sei puntini del PC (`BlockHandle.kt`). */
+    firstLine: Boolean = false
 ) {
     val lockedTint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            .then(if (firstLine) Modifier.reportsFirstLine() else Modifier),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         // A sinistra lo spazio che resta: un nome di vista lungo si accorcia
         // coi puntini invece di spingere fuori le icone di destra.
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-        if (onOpenBlockMenu != null) {
+        // Sul PC i sei puntini compaiono col mouse accanto al titolo (`BlockHandle.kt`).
+        if (onOpenBlockMenu != null && !isPc) {
             ToolbarIconButton(
                 icon = Icons.Filled.DragIndicator,
                 contentDescription = EditorStrings.blockOptions,

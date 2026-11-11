@@ -336,6 +336,47 @@ class DesktopBlockSelectionTest {
         }
     }
 
+    /**
+     * **I sei puntini a metà delle lettere** (trovato dall'utente l'11/11/2026:
+     * "l'icona dei sei puntini è storta", e sul database stava sopra il
+     * titolo): su una riga in maiuscolo stanno a metà delle lettere; su un
+     * database dentro la pagina a metà del titolo, subito a sinistra.
+     */
+    @Test
+    fun theSixDotsSitOnTheLettersAndOnTheDatabaseTitle() {
+        runBlocking {
+            val db = AppDatabase.getInstance(context)
+            val repo = PageRepository(db)
+            repo.createPage(PageEntity(id = "allineata", title = "Allineata"))
+            repo.createPage(PageEntity(id = "registro", title = "TITOLO", isDatabase = true, parentId = "allineata"))
+            repo.saveBlock(BlockEntity(id = "maiuscole", pageId = "allineata", textJson = """[{"text":"CIAO"}]""", orderIndex = 0))
+            repo.saveBlock(BlockEntity(id = "tabella", pageId = "allineata", type = BlockType.DATABASE_LINK, linkedPageId = "registro", orderIndex = 1))
+        }
+        withPage("allineata") { scene, frames, picture ->
+            frames(20)
+            val clean = picture()
+            val rows = textRows(clean)
+            File("build/desktop-screenshots", "dots_aligned_clean.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(clean).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val ciao = rows[3]
+            val title = rows[4]
+            fun dotsAt(y: Float): List<Int> {
+                onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, y), pressed = false) }
+                frames(5)
+                return dotsRows(picture(), clean)
+            }
+            val onLetters = dotsAt(ciao.center())
+            assertTrue("puntini $onLetters, lettere $ciao", onLetters.isNotEmpty() && abs(onLetters.average() - ciao.center()) <= 1.5)
+            val onTitle = dotsAt(title.center())
+            val shown = picture()
+            File("build/desktop-screenshots", "dots_database_title.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(shown).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            assertTrue("puntini $onTitle, titolo $title", onTitle.isNotEmpty() && abs(onTitle.average() - title.center()) <= 1.5)
+            // Subito a sinistra del titolo, senza toccarlo.
+            val dotsRight = DOTS_X.last { x -> (title.first..title.last).any { y -> shown.getColor(x, y) != clean.getColor(x, y) } }
+            val titleLeft = (0 until 300).first { x -> (title.first..title.last).any { y -> bright(clean.getColor(x, y)) } }
+            assertTrue("puntini fino a $dotsRight, titolo da $titleLeft", dotsRight < titleLeft - 2)
+        }
+    }
+
     /** Scorrendo con la rotella, col mouse fermo, i puntini passano alla riga che ora c'è sotto. */
     @Test
     fun theSixDotsFollowTheWheel() {

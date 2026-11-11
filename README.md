@@ -1151,6 +1151,29 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.46 — 11/11/2026 · 13:12 — Sul PC i sei puntini dritti, a metà delle lettere e del titolo dei database
+*(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1167 test passati)*
+
+- **[Progetto]** **[💻 PC]** **I sei puntini sono dritti**: si mettono a
+  metà delle lettere della prima riga, non della riga intera (che
+  comprende anche lo spazio fra i blocchi: stavano un paio di pixel più su),
+  e sono disegnati sui pixel interi, tutti della stessa grandezza (l'icona
+  rimpicciolita cadeva fra un pixel e l'altro). Non ancora provato
+  dall'utente
+- **[Progetto]** **[💻 PC]** **Database dentro una pagina: i sei puntini
+  accanto al titolo**, a metà della sua riga e subito a sinistra
+  dell'icona (o del nome, se l'icona non c'è); prima stavano più in alto.
+  Con il titolo nascosto si mettono accanto alla riga della vista. I sei
+  puntini che c'erano nella riga della vista, prima di "Table" o "List",
+  sul PC non ci sono più; sul telefono restano. Non ancora provato
+  dall'utente
+- **[Progetto]** `runLineBounds` misura dalla riga di base in su quanto una
+  maiuscola (0,7 del corpo); `FirstLine` / `reportsFirstLine`: il titolo
+  del database dice ai puntini dov'è; `BlockHandle` disegna i sei puntini da
+  sé. Test in `DesktopBlockSelectionTest`: su una riga in maiuscolo e sul
+  titolo di un database i puntini stanno a metà entro un pixel e mezzo, e a
+  sinistra del titolo senza toccarlo
+
 ### ✏️ v0.153.45 — 11/11/2026 · 10:38 — Sul PC la pagina sta un po' più a destra, coi sei puntini nel margine
 *(Claude Code sul PC; non ancora provata dall'utente; da installare sul telefono (non collegato); 1166 test passati)*
 

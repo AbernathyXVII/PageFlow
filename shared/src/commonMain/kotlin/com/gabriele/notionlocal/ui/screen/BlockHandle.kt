@@ -1,17 +1,21 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DragIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -34,8 +38,12 @@ import kotlin.math.roundToInt
 // riga di testo, un database, un divisore, un'immagine…
 // ---------------------------------------------------------------------------
 
-/** Il blocco sotto il mouse e la sua prima riga, dall'alto al basso nella pagina. */
-data class BlockSpot(val blockId: String, val top: Float, val bottom: Float)
+/**
+ * Il blocco sotto il mouse e le lettere della sua prima riga, dall'alto al
+ * basso nella pagina; [start] dove comincia da sinistra (null: dove comincia
+ * il testo).
+ */
+data class BlockSpot(val blockId: String, val top: Float, val bottom: Float, val start: Float? = null)
 
 /**
  * Guarda dove va il mouse sulla pagina e dice ([onSpot]) quale blocco ha
@@ -62,8 +70,8 @@ fun Modifier.blockHover(
                 else -> {
                     val page = coordinates()?.takeIf { it.isAttached } ?: continue
                     val (id, line) = picker.lineAt(page.localToWindow(p), islandLine) ?: continue
-                    val origin = page.localToWindow(Offset.Zero).y
-                    onSpot(BlockSpot(id, line.start - origin, line.endInclusive - origin))
+                    val origin = page.localToWindow(Offset.Zero)
+                    onSpot(BlockSpot(id, line.top - origin.y, line.bottom - origin.y, line.start?.minus(origin.x)))
                 }
             }
         }
@@ -71,36 +79,81 @@ fun Modifier.blockHover(
 }
 
 /**
- * I sei puntini a metà della prima riga di [spotState], che finiscono un
- * poco prima di [endsAt] (dove comincia il testo); il clic li passa a
- * [onClick]. Lo stato si legge qui dentro: muovendo il mouse si ridisegnano
- * solo i puntini, non la pagina.
+ * I sei puntini a metà delle lettere della prima riga di [spotState], che
+ * finiscono un poco prima di dove comincia il blocco (di suo, [endsAt]: dove
+ * comincia il testo); il clic li passa a [onClick]. Lo stato si legge qui
+ * dentro: muovendo il mouse si ridisegnano solo i puntini, non la pagina.
+ *
+ * **Disegnati qui, sui pixel interi** (dal 11/11/2026, trovato dall'utente:
+ * "l'icona dei sei puntini è storta"): l'icona di Material, rimpicciolita,
+ * cadeva fra un pixel e l'altro e i puntini venivano di grandezze diverse.
  */
 @Composable
 fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, onClick: (String) -> Unit) {
     val spot = spotState.value ?: return
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
     Box(
         modifier = Modifier
             .offset {
+                val end = spot.start ?: endsAt.toPx()
                 IntOffset(
-                    (endsAt - HANDLE_GAP - HANDLE_WIDTH).roundToPx(),
+                    (end - (HANDLE_GAP + HANDLE_WIDTH).toPx()).roundToInt(),
                     ((spot.top + spot.bottom) / 2f - HANDLE_HEIGHT.toPx() / 2f).roundToInt()
                 )
             }
             .size(HANDLE_WIDTH, HANDLE_HEIGHT)
             .clip(RoundedCornerShape(4.dp))
-            .clickable { onClick(spot.blockId) },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            Icons.Filled.DragIndicator,
-            contentDescription = EditorStrings.blockOptions,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp)
-        )
+            .semantics { contentDescription = EditorStrings.blockOptions }
+            .clickable { onClick(spot.blockId) }
+            .drawBehind { drawSixDots(color) }
+    )
+}
+
+/** Due colonne di tre puntini tondi, nel mezzo, ognuno sugli stessi pixel degli altri. */
+private fun DrawScope.drawSixDots(color: Color) {
+    val dot = DOT_SIZE.toPx().roundToInt().coerceAtLeast(2)
+    val step = DOT_STEP.toPx().roundToInt().coerceAtLeast(dot + 1)
+    val left = ((size.width - (dot + step)) / 2f).roundToInt()
+    val top = ((size.height - (dot + 2 * step)) / 2f).roundToInt()
+    for (column in 0..1) for (row in 0..2) {
+        drawCircle(color, radius = dot / 2f, center = Offset(left + column * step + dot / 2f, top + row * step + dot / 2f))
     }
+}
+
+/**
+ * **La prima riga di un blocco che non è testo** (dal 11/11/2026): il
+ * titolo di un database dentro la pagina si segna qui, e i sei puntini si
+ * mettono a metà di lui, subito a sinistra dell'icona o del nome.
+ */
+class FirstLine {
+    private var coordinates: LayoutCoordinates? = null
+    private var startPx = 0f
+
+    fun report(coordinates: LayoutCoordinates, startPx: Float) {
+        this.coordinates = coordinates
+        this.startPx = startPx
+    }
+
+    /** Dove sta, rispetto al blocco [block]; null se non si vede (un titolo nascosto). */
+    fun boundsIn(block: LayoutCoordinates): LineBounds? {
+        val line = coordinates?.takeIf { it.isAttached && block.isAttached } ?: return null
+        val box = block.localBoundingBoxOf(line, clipBounds = false)
+        return LineBounds(box.top, box.bottom, box.left + startPx)
+    }
+}
+
+val LocalFirstLine = staticCompositionLocalOf<FirstLine?> { null }
+
+/** Questa è la prima riga del blocco che la contiene ([FirstLine]); il contenuto comincia [start] più a destra. */
+@Composable
+fun Modifier.reportsFirstLine(start: Dp = 0.dp): Modifier {
+    val line = LocalFirstLine.current ?: return this
+    val startPx = with(LocalDensity.current) { start.toPx() }
+    return onGloballyPositioned { line.report(it, startPx) }
 }
 
 private val HANDLE_HEIGHT = 24.dp
 private val HANDLE_WIDTH = 20.dp
 private val HANDLE_GAP = 2.dp
+private val DOT_SIZE = 3.dp
+private val DOT_STEP = 5.dp

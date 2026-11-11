@@ -51,12 +51,12 @@ class BlockPicker {
     private class Entry(
         val coordinates: LayoutCoordinates,
         val blockAt: (Float) -> String?,
-        val lineOf: ((String) -> Pair<Float, Float>?)?
+        val lineOf: ((String, LayoutCoordinates) -> LineBounds?)?
     )
 
     private val entries = HashMap<String, Entry>()
 
-    fun put(key: String, coordinates: LayoutCoordinates, blockAt: (Float) -> String?, lineOf: ((String) -> Pair<Float, Float>?)? = null) {
+    fun put(key: String, coordinates: LayoutCoordinates, blockAt: (Float) -> String?, lineOf: ((String, LayoutCoordinates) -> LineBounds?)? = null) {
         entries[key] = Entry(coordinates, blockAt, lineOf)
     }
 
@@ -79,33 +79,40 @@ class BlockPicker {
     fun at(window: Offset): Pair<String, String>? = find(window)?.let { (key, _, id) -> key to id }
 
     /**
-     * Il blocco sotto il punto e dove sta la sua prima riga, dall'alto al
-     * basso nella finestra, per i sei puntini (`BlockHandle.kt`). Un blocco
-     * che non è testo (un divisore, un database) dice solo dove comincia:
-     * la sua "riga" è alta al massimo [islandLine].
+     * Il blocco sotto il punto e dove sta la sua prima riga nella finestra,
+     * per i sei puntini (`BlockHandle.kt`). Un blocco che non dice di più (un
+     * divisore, un'immagine) dice solo dove comincia: la sua "riga" è alta al
+     * massimo [islandLine].
      */
-    fun lineAt(window: Offset, islandLine: Float): Pair<String, ClosedFloatingPointRange<Float>>? {
+    fun lineAt(window: Offset, islandLine: Float): Pair<String, LineBounds>? {
         val (_, entry, id) = find(window) ?: return null
-        val height = entry.coordinates.size.height.toFloat()
-        val (top, bottom) = entry.lineOf?.invoke(id) ?: (0f to minOf(height, islandLine))
-        val origin = entry.coordinates.localToWindow(Offset.Zero).y
-        return id to (origin + top)..(origin + bottom)
+        val c = entry.coordinates
+        val line = entry.lineOf?.invoke(id, c) ?: LineBounds(0f, minOf(c.size.height.toFloat(), islandLine))
+        val origin = c.localToWindow(Offset.Zero)
+        return id to LineBounds(origin.y + line.top, origin.y + line.bottom, line.start?.let { origin.x + it })
     }
 }
 
 /**
+ * Dove sta la prima riga di un blocco: dall'alto al basso le sue lettere, e
+ * dove comincia da sinistra (null: dove comincia il testo della pagina).
+ */
+class LineBounds(val top: Float, val bottom: Float, val start: Float? = null)
+
+/**
  * Questa voce si segna fra quelle che il mouse può scegliere ([BlockPicker]):
  * [blockAt] dice quale blocco c'è a un'altezza della voce, [lineOf] dove sta
- * la prima riga di un blocco (null: la voce è un blocco solo). Se ne va con lei.
+ * la prima riga di un blocco, rispetto alla voce (null: la voce lo dice da
+ * sé). Se ne va con lei.
  */
 @Composable
-fun Modifier.pickableAs(key: String, lineOf: ((String) -> Pair<Float, Float>?)? = null, blockAt: (Float) -> String?): Modifier {
+fun Modifier.pickableAs(key: String, lineOf: ((String, LayoutCoordinates) -> LineBounds?)? = null, blockAt: (Float) -> String?): Modifier {
     val picker = LocalBlockPicker.current ?: return this
     val latest = rememberUpdatedState(blockAt)
     val latestLine = rememberUpdatedState(lineOf)
     DisposableEffect(picker, key) { onDispose { picker.remove(key) } }
     return onGloballyPositioned { coordinates ->
-        picker.put(key, coordinates, { y -> latest.value(y) }, latestLine.value?.let { { id -> latestLine.value?.invoke(id) } })
+        picker.put(key, coordinates, { y -> latest.value(y) }, latestLine.value?.let { { id, c -> latestLine.value?.invoke(id, c) } })
     }
 }
 

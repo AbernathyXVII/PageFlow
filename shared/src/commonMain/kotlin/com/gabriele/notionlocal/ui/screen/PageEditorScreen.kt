@@ -2629,12 +2629,14 @@ private fun PageEditorContent(
                                 // Lo spazio fra i blocchi ("Paragraph"): metà sopra e
                                 // metà sotto, come fa l'altezza di riga nei campi di testo.
                                 val islandSpacing = paragraphLook.spacingOf(item.block)
+                                // Un database dice qual è la sua prima riga (il titolo), per i sei puntini (`BlockHandle.kt`).
+                                val firstLine = remember(item.block.id) { if (item.block.type == BlockType.DATABASE_LINK) FirstLine() else null }
                                 Column(
                                     (if (sideScroll != null) Modifier.nestedScroll(KeepSidewaysInside) else Modifier)
                                         .padding(vertical = (islandSpacing / 2f).sp.toDpIn(LocalDensity.current))
                                         .anchorDecor(item.block.id, item.block.attrs.linkTarget, movedBlockNow, PAGE_SIDE_PADDING)
                                         .pageVeil(pageSelected || LocalBlockSelection.current?.selected?.value?.contains(item.block.id) == true, veilColor)
-                                        .pickableAs(renderItemKey(item)) { item.block.id }
+                                        .pickableAs(renderItemKey(item), lineOf = firstLine?.let { line -> { _, block -> line.boundsIn(block) } }) { item.block.id }
                                         // Nelle celle di un database Ctrl+A resta della cella; in quelle di una
                                         // tabella Ctrl+Z resta della cella (l'Annulla della pagina non le conosce).
                                         .onPreviewKeyEvent { event ->
@@ -2645,12 +2647,14 @@ private fun PageEditorContent(
                                             }
                                         }
                                 ) {
-                                    IslandItem(
-                                        content = content,
-                                        env = itemEnv,
-                                        focusRequestBlockId = focusRequestBlockId?.takeIf { id -> content.scope.any { it.id == id } },
-                                        formatRequest = formatRequest?.takeIf { r -> content.scope.any { it.id == r.first } }
-                                    )
+                                    CompositionLocalProvider(LocalFirstLine provides firstLine) {
+                                        IslandItem(
+                                            content = content,
+                                            env = itemEnv,
+                                            focusRequestBlockId = focusRequestBlockId?.takeIf { id -> content.scope.any { it.id == id } },
+                                            formatRequest = formatRequest?.takeIf { r -> content.scope.any { it.id == r.first } }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -4764,7 +4768,13 @@ private fun shownLineRanges(
     }
 }
 
-/** Dall'alto al basso, la prima riga del blocco [id] nel campo: per i sei puntini (`BlockHandle.kt`). */
+/**
+ * Le lettere della prima riga del blocco [id] nel campo, per i sei puntini
+ * (`BlockHandle.kt`): dalla riga di base in su quanto è alta una maiuscola.
+ * **Non la riga intera** (dal 11/11/2026, trovato dall'utente: i puntini
+ * "storti"): nella riga c'è anche lo spazio fra i blocchi, e a metà di lei
+ * i puntini stavano un paio di pixel sopra le lettere.
+ */
 private fun runLineBounds(
     layout: TextLayoutResult,
     id: String,
@@ -4772,12 +4782,22 @@ private fun runLineBounds(
     runBlocks: List<BlockEntity>,
     ordinals: Map<String, Int>,
     viewModel: PageEditorViewModel
-): Pair<Float, Float>? {
+): LineBounds? {
     val index = runBlocks.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return null
     val range = shownLineRanges(fieldText, runBlocks, ordinals, viewModel).getOrNull(index) ?: return null
-    val line = layout.getLineForOffset(range.first.coerceIn(0, layout.layoutInput.text.length))
-    return layout.getLineTop(line) to layout.getLineBottom(line)
+    val text = layout.layoutInput.text
+    val line = layout.getLineForOffset(range.first.coerceIn(0, text.length))
+    // Il corpo del testo della riga (l'ultima lettera: il marcatore davanti può essere più grande).
+    val at = (range.last - 1).coerceIn(0, (text.length - 1).coerceAtLeast(0))
+    val size = text.spanStyles.lastOrNull { it.start <= at && at < it.end && it.item.fontSize.isSp }?.item?.fontSize
+        ?: layout.layoutInput.style.fontSize
+    val capHeight = with(layout.layoutInput.density) { if (size.isSp) size.toPx() * CAP_HEIGHT else 0f }
+    val baseline = layout.getLineBaseline(line)
+    return if (capHeight > 0f) LineBounds(baseline - capHeight, baseline) else LineBounds(layout.getLineTop(line), layout.getLineBottom(line))
 }
+
+/** Quanto è alta una maiuscola rispetto al corpo del carattere (circa, per i caratteri della pagina). */
+private const val CAP_HEIGHT = 0.7f
 
 /** Il blocco della riga del campo all'altezza [y], per il mouse. */
 private fun runLineAt(
@@ -5881,7 +5901,7 @@ private fun MergedTextRunField(
                 // Col mouse: quale riga c'è a un'altezza, e il velo sulle righe scelte (vedi `BlockSelection.kt`).
                 .pickableAs(
                     runKey,
-                    lineOf = { id -> textLayout?.let { layout -> runLineBounds(layout, id, fieldValue.text, runBlocks, ordinals, viewModel) } }
+                    lineOf = { id, _ -> textLayout?.let { layout -> runLineBounds(layout, id, fieldValue.text, runBlocks, ordinals, viewModel) } }
                 ) { y -> textLayout?.let { layout -> runLineAt(layout, y, fieldValue.text, runBlocks, ordinals, viewModel) } }
                 .drawWithContent {
                     drawContent()
