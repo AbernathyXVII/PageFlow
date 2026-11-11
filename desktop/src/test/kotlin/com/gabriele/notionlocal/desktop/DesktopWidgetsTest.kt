@@ -9,7 +9,6 @@ import com.gabriele.notionlocal.platform.cacheDirOf
 import com.gabriele.notionlocal.platform.decodeImageBitmap
 import com.gabriele.notionlocal.platform.readAppAsset
 import kotlinx.coroutines.runBlocking
-import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -31,15 +30,9 @@ import javax.imageio.ImageIO
 class DesktopWidgetsTest {
 
     companion object {
-        // `WidgetStore` è uno solo per tutta l'app: una cartella per tutta la classe.
-        private val dir: File = Files.createTempDirectory("pageflow-widgets").toFile()
-        private val context = DesktopContext(dir)
-
-        @JvmStatic
-        @AfterClass
-        fun tearDown() {
-            dir.deleteRecursively()
-        }
+        // `WidgetStore` è uno solo per tutti i test: la cartella è quella di `TestWidgets`.
+        private val dir: File = TestWidgets.dir
+        private val context = TestWidgets.context
     }
 
     @Test

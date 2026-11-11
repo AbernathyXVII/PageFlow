@@ -1151,6 +1151,30 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.52 — 11/11/2026 · 16:12 — Sul PC il widget sport con "Today", le frecce, "Standings" e "Players" sotto il nome
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1174 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Il widget sport come lo vuole l'utente sul
+  PC.** Col mouse sopra si illumina solo la partita, non più il riquadro
+  grande di tutta la giornata, che non si clicca più. L'icona del
+  calendario in alto non c'è più: sotto il nome della competizione c'è
+  "Today" (la stessa cosa) con le frecce a sinistra e a destra per passare
+  da una giornata all'altra (col mouse le giornate non si trascinano), e a
+  destra "Standings" e "Players" (nel tennis "Ranking"), che aprono la
+  classifica e i giocatori in un riquadro più largo, dove i nomi delle
+  squadre ci stanno. In "Players" le classifiche complete di gol e assist:
+  i primi dieci, e "Mostra tutti" li fa vedere tutti (in Serie A, l'11/11,
+  171 marcatori e 150 uomini assist; la prima volta ci vogliono alcuni
+  secondi, poi i nomi restano in memoria). Sul telefono non cambia niente.
+  Non ancora provato dall'utente
+- **[Progetto]** `PcRoundBar` in `SidebarSports.kt`; `CompetitionSheet` con
+  `initialTab`; sul PC `SportsApi.leaders` chiede a ESPN `limit=500` (fino
+  a 8 MB) e `parseLeaderRefs` tiene gol e assist sopra lo zero, coi nomi in
+  memoria. Test: `DesktopSportsWidgetTest` (la riga sotto il nome, col
+  mouse sopra una partita il titolo della giornata non cambia, le frecce
+  cambiano giornata e tornano, "Standings" apre la classifica) e in
+  `SportsTest` la classifica completa senza chi è a zero
+
 ### ✏️ v0.153.51 — 11/11/2026 · 15:37 — Sul PC "OPEN", "⋯" e "+" compaiono col mouse, come in Notion
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1172 test passati)*
 

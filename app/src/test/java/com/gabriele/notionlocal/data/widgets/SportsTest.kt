@@ -266,6 +266,29 @@ class SportsTest {
         assertEquals(emptyMap<String, List<LeaderRef>>(), parseLeaderRefs("non è json"))
     }
 
+    /**
+     * **Sul PC le classifiche complete di gol e assist** (dal 11/11/2026,
+     * chiesto dall'utente): oltre i primi dieci, tutti quelli che hanno
+     * segnato almeno una volta; chi è a zero no, e le altre classifiche
+     * (i cartellini) nemmeno.
+     */
+    @Test
+    fun allTheScorersButNotTheZeros() {
+        val json = """{"categories":[
+            {"name":"goals","leaders":[
+                {"value":3,"displayValue":"3","athlete":{"${'$'}ref":"http://x/athletes/1"},"team":{"${'$'}ref":"http://x/teams/110"}},
+                {"value":1,"displayValue":"1","athlete":{"${'$'}ref":"http://x/athletes/2"}},
+                {"value":0,"displayValue":"0","athlete":{"${'$'}ref":"http://x/athletes/3"}}]},
+            {"name":"yellowCards","leaders":[
+                {"value":2,"displayValue":"2","athlete":{"${'$'}ref":"http://x/athletes/4"}}]}]}"""
+        val refs = parseLeaderRefs(json, limit = 500, keys = listOf("goals", "assists"), scoredOnly = true)
+        assertEquals(setOf("goals"), refs.keys)
+        assertEquals(listOf("3", "1"), refs.getValue("goals").map { it.value })
+        assertTrue(refs.getValue("goals").all { it.athleteUrl.startsWith("https://") })
+        // Sul telefono come prima: i primi dieci, anche a zero.
+        assertEquals(3, parseLeaderRefs(json).getValue("goals").size)
+    }
+
     @Test
     fun flagsOfTheCompetitions() {
         assertEquals("🇮🇹", competitionFlag("ita.1"))

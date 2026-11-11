@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.screen
 
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -184,7 +187,8 @@ fun SportsView(
                 active = active,
                 now = now,
                 todayTick = SportsUpdates.todayRequests[widget.id] ?: 0,
-                onManage = { onManagingChange(true) }
+                onManage = { onManagingChange(true) },
+                onToday = { SportsUpdates.goToToday(widget, AppSettings.zoneId) }
             )
         }
         if (pickingSeason && info != null) {
@@ -206,6 +210,63 @@ fun SportsView(
     if (adding) {
         CompetitionsSheet(widget = widget, startWithCatalog = true, onDismiss = { adding = false })
     }
+}
+
+/** Sul PC, quanti giocatori si vedono per classifica prima di "Mostra tutti". */
+private const val PC_PLAYERS_SHOWN = 10
+
+/**
+ * **Sul PC, sotto il nome della competizione** (dal 11/11/2026, chiesto
+ * dall'utente): le frecce fra le giornate con "Today" in mezzo, e a destra
+ * "Standings" e "Players" (questi solo nel calcio). Scritte piccole e
+ * grigie, come i comandi di Notion.
+ */
+@Composable
+private fun PcRoundBar(
+    canPrevious: Boolean,
+    canNext: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onToday: () -> Unit,
+    standingsLabel: String,
+    onStandings: () -> Unit,
+    onPlayers: (() -> Unit)?
+) {
+    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        RoundArrow(Icons.Filled.KeyboardArrowLeft, WidgetStrings.previousRound, canPrevious, onPrevious)
+        BarWord(WidgetStrings.today, onToday)
+        RoundArrow(Icons.Filled.KeyboardArrowRight, WidgetStrings.nextRound, canNext, onNext)
+        Spacer(modifier = Modifier.weight(1f))
+        BarWord(standingsLabel, onStandings)
+        onPlayers?.let { BarWord(WidgetStrings.players, it) }
+    }
+}
+
+@Composable
+private fun RoundArrow(icon: ImageVector, description: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(22.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = description, tint = if (enabled) NotionGray400 else NotionGray400.copy(alpha = 0.3f), modifier = Modifier.size(16.dp))
+    }
+}
+
+@Composable
+private fun BarWord(text: String, onClick: () -> Unit) {
+    Text(
+        text,
+        color = NotionGray400,
+        fontSize = 12.sp,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 5.dp, vertical = 3.dp)
+    )
 }
 
 /** Il colore della stagione quando non è quella in corso: si vede subito che si guarda il passato. */
@@ -441,7 +502,9 @@ private fun CompetitionRounds(
     now: Long,
     /** I tocchi su "Today" (vedi `SportsUpdates.goToToday`): quando cambia, si va alla giornata di oggi. */
     todayTick: Int,
-    onManage: () -> Unit
+    onManage: () -> Unit,
+    /** "Today" sotto il nome, sul PC (vedi `PcRoundBar`). */
+    onToday: () -> Unit = {}
 ) {
     val sport = Sport.of(competition.sport)
     if (view.message != null) {
@@ -458,6 +521,9 @@ private fun CompetitionRounds(
         return
     }
     var detail by remember(view.key) { mutableStateOf<Int?>(null) }
+    // Sul PC la classifica (1) o i giocatori (2), da "Standings" e "Players" sotto il nome.
+    var table by remember(view.key) { mutableStateOf<Int?>(null) }
+    val pagerScope = rememberCoroutineScope()
     // La partita toccata (la pagina e l'id): vedi `MatchSheet`.
     var openMatch by remember(view.key) { mutableStateOf<Pair<Int, String>?>(null) }
     val numbered = hasMatchdayNumbers(view.rounds, view.standings, sport)
@@ -495,6 +561,22 @@ private fun CompetitionRounds(
                 delay(30_000)
             }
         }
+        // **Sul PC, sotto il nome della competizione** (dal 11/11/2026, chiesto
+        // dall'utente): le frecce fra le giornate (col mouse la pagina non si
+        // trascina) con "Today" in mezzo, al posto dell'icona del calendario, e
+        // "Standings" e "Players", che prima si aprivano toccando la giornata.
+        if (isPc) {
+            PcRoundBar(
+                canPrevious = pagerState.currentPage > 0,
+                canNext = pagerState.currentPage < view.rounds.size - 1,
+                onPrevious = { pagerScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
+                onNext = { pagerScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
+                onToday = onToday,
+                standingsLabel = if (sport == Sport.TENNIS) WidgetStrings.ranking else WidgetStrings.standings,
+                onStandings = { table = 1 },
+                onPlayers = if (sport == Sport.SOCCER && view.seasonYear != null) { { table = 2 } } else null
+            )
+        }
         HorizontalPager(
             state = pagerState,
             key = { page -> view.rounds.getOrNull(page)?.key ?: page },
@@ -513,8 +595,33 @@ private fun CompetitionRounds(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .onRightClick(onManage)
-                    .combinedClickable(onClick = { detail = page }, onLongClick = onManage)
+                    // Sul PC la giornata intera non si tocca: niente riquadro grande col mouse sopra, e
+                    // classifica e giocatori stanno sotto il nome (chiesto dall'utente l'11/11/2026).
+                    .then(if (isPc) Modifier else Modifier.combinedClickable(onClick = { detail = page }, onLongClick = onManage))
             )
+        }
+        table?.let { tab ->
+            val page = pagerState.currentPage
+            val round = view.rounds.getOrNull(page)
+            if (round == null) {
+                table = null
+            } else {
+                CompetitionSheet(
+                    competition = competition,
+                    title = listOfNotNull(seasonName, roundTitle(round, page, numbered)).joinToString(" · "),
+                    content = roundContent(view, competition.id, page, round),
+                    standings = view.standings,
+                    seasonYear = view.seasonYear,
+                    currentSeason = view.current,
+                    now = now,
+                    onMatchClick = { match ->
+                        table = null
+                        openMatch = page to match.id
+                    },
+                    onDismiss = { table = null },
+                    initialTab = tab
+                )
+            }
         }
     }
     detail?.let { page ->
@@ -759,14 +866,18 @@ private fun CompetitionSheet(
     currentSeason: Boolean,
     now: Long,
     onMatchClick: (SportMatch) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** La scheda da cui si parte: 0 le partite, 1 la classifica, 2 i giocatori. */
+    initialTab: Int = 0
 ) {
     val sport = Sport.of(competition.sport)
-    var tab by remember { mutableIntStateOf(0) }
+    var tab by remember { mutableIntStateOf(initialTab) }
     // Marcatori, assist e cartellini: solo nel calcio, e serve sapere la stagione.
     val withPlayers = sport == Sport.SOCCER && seasonYear != null
     NoteBottomSheet(
         onDismissRequest = onDismiss,
+        // Sul PC più largo del solito riquadro: nella classifica i nomi delle squadre stanno accanto a sei numeri.
+        modifier = if (isPc) Modifier.width(460.dp) else Modifier,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = DarkSheet
     ) {
@@ -841,8 +952,12 @@ private fun PlayersTable(competition: SportCompetition, seasonYear: Int, current
         Text(WidgetStrings.noStats, color = NotionGray400, modifier = Modifier.padding(vertical = 24.dp))
         return
     }
+    // Sul PC gol e assist, i primi dieci e poi tutti (vedi `SportsApi.leaders`).
+    var expanded by remember { mutableStateOf(setOf<String>()) }
     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 640.dp)) {
         categories.filter { it.leaders.isNotEmpty() }.forEach { category ->
+            val all = !isPc || category.key in expanded
+            val shown = if (all) category.leaders else category.leaders.take(PC_PLAYERS_SHOWN)
             item(key = "head-${category.key}") {
                 Text(
                     leaderTitle(category.key),
@@ -853,13 +968,27 @@ private fun PlayersTable(competition: SportCompetition, seasonYear: Int, current
                 )
                 HorizontalDivider()
             }
-            items(category.leaders.withIndex().toList(), key = { "${category.key}-${it.index}" }) { (i, leader) ->
+            items(shown.withIndex().toList(), key = { "${category.key}-${it.index}" }) { (i, leader) ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("${i + 1}", color = NotionGray400, fontSize = 13.sp, modifier = Modifier.width(28.dp))
                     TeamLogo(leader.teamLogo, 16.dp)
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(leader.name, color = NotionWhite, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Text(leader.value, color = NotionWhite, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            if (!all && category.leaders.size > PC_PLAYERS_SHOWN) {
+                item(key = "more-${category.key}") {
+                    Text(
+                        WidgetStrings.showAllPlayers(category.leaders.size),
+                        color = NotionGray400,
+                        fontSize = 13.sp,
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { expanded = expanded + category.key }
+                            .padding(horizontal = 6.dp, vertical = 5.dp)
+                    )
                 }
             }
         }

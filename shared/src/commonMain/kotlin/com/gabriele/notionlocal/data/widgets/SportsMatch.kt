@@ -391,12 +391,15 @@ data class LeaderCategory(val key: String, val leaders: List<Leader>)
 data class LeaderRef(val athleteUrl: String, val teamLogo: String, val value: String)
 
 /** Le classifiche dei giocatori di una stagione (i primi [limit] di ognuna), coi giocatori da chiedere a parte. */
-fun parseLeaderRefs(json: String, limit: Int = 10): Map<String, List<LeaderRef>> = runCatching {
+fun parseLeaderRefs(json: String, limit: Int = 10, keys: List<String> = LEADER_KEYS, scoredOnly: Boolean = false): Map<String, List<LeaderRef>> = runCatching {
     val root = lenientJson.parseToJsonElement(json).jsonObject
     root.array("categories").mapNotNull { it as? JsonObject }
-        .filter { it.string("name") in LEADER_KEYS }
+        .filter { it.string("name") in keys }
         .associate { category ->
-            category.string("name").orEmpty() to category.array("leaders").mapNotNull { it as? JsonObject }.take(limit).mapNotNull { leader ->
+            category.string("name").orEmpty() to category.array("leaders").mapNotNull { it as? JsonObject }
+                // La classifica completa (sul PC): chi ha almeno un gol o un assist, non chi è a zero.
+                .filter { !scoredOnly || (it.int("value") ?: 0) > 0 }
+                .take(limit).mapNotNull { leader ->
                 val athlete = leader.obj("athlete")?.string("\$ref")?.replace("http://", "https://") ?: return@mapNotNull null
                 // Lo stemma si ricava dal numero della squadra, senza chiederla.
                 val teamId = leader.obj("team")?.string("\$ref")?.let { Regex("/teams/(\\d+)").find(it)?.groupValues?.get(1) }

@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.isPc
 import com.gabriele.notionlocal.data.notify.NotificationPermission
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -272,7 +273,8 @@ private fun WidgetCard(widget: Widget, index: Int, count: Int, now: Long, active
             // **La freccia che aggiorna lo sport** (dal 17/10/2026), a
             // sinistra dei tre puntini, e "Today" alla sua sinistra.
             if (widget is SportsWidget && widget.competitions.isNotEmpty()) {
-                SportsTodayButton(widget)
+                // Sul PC "Today" sta sotto il nome della competizione, con le frecce (vedi `PcRoundBar`).
+                if (!isPc) SportsTodayButton(widget)
                 SportsRefreshButton(widget)
             }
             Box {

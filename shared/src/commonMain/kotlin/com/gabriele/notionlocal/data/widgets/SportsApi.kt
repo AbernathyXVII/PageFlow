@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.data.widgets
 
+import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.CoroutineScope
@@ -107,18 +108,39 @@ object SportsApi {
      * senza rete.
      */
     suspend fun leaders(competition: SportCompetition, season: Int): List<LeaderCategory>? = withContext(Dispatchers.IO) {
-        val url = "https://sports.core.api.espn.com/v2/sports/soccer/leagues/${competition.league}/seasons/$season/types/1/leaders"
-        val refs = WidgetHttp.get(url)?.let { parseLeaderRefs(it) } ?: return@withContext null
-        val gate = Semaphore(8)
+        val base = "https://sports.core.api.espn.com/v2/sports/soccer/leagues/${competition.league}/seasons/$season/types/1/leaders"
+        // **Sul PC le classifiche complete di gol e assist** (dal 11/11/2026, chiesto
+        // dall'utente): ESPN ne dà 25 per volta, con `limit` tutte (anche chi è a
+        // zero, che si lascia fuori). La risposta è grande: un limite più alto.
+        val refs = if (isPc) {
+            WidgetHttp.get("$base?limit=$FULL_LEADERS", maxBytes = 8 * 1024 * 1024)
+                ?.let { parseLeaderRefs(it, limit = FULL_LEADERS, keys = FULL_LEADER_KEYS, scoredOnly = true) }
+        } else {
+            WidgetHttp.get(base)?.let { parseLeaderRefs(it) }
+        } ?: return@withContext null
+        // Sul PC i nomi sono più di trecento: il doppio delle domande insieme (misurato: 8 secondi con otto).
+        val gate = Semaphore(if (isPc) 16 else 8)
+        // I nomi si chiedono uno per uno: quelli già visti restano in memoria.
         val names = refs.values.flatten().map { it.athleteUrl }.distinct().map { athlete ->
-            async { athlete to gate.withPermit { WidgetHttp.get(athlete, maxBytes = 256 * 1024)?.let { parseAthleteName(it) } } }
+            async {
+                athlete to (athleteNames[athlete] ?: gate.withPermit {
+                    WidgetHttp.get(athlete, maxBytes = 256 * 1024)?.let { parseAthleteName(it) }?.also { athleteNames[athlete] = it }
+                })
+            }
         }.awaitAll().toMap()
-        LEADER_KEYS.mapNotNull { key ->
+        (if (isPc) FULL_LEADER_KEYS else LEADER_KEYS).mapNotNull { key ->
             refs[key]?.let { list ->
                 LeaderCategory(key, list.map { Leader(names[it.athleteUrl] ?: "—", it.teamLogo, it.value) })
             }
         }
     }
+
+    /** I nomi dei giocatori già chiesti, per indirizzo della loro scheda. */
+    private val athleteNames = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** Sul PC: le classifiche complete, di gol e assist, fino a quanti giocatori. */
+    private val FULL_LEADER_KEYS = listOf("goals", "assists")
+    private const val FULL_LEADERS = 500
 
     private fun scoreboardUrl(competition: SportCompetition): String =
         "$BASE/site/v2/sports/${Sport.of(competition.sport).path}/${competition.league}/scoreboard"
