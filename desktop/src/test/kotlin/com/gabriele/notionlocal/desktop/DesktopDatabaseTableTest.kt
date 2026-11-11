@@ -123,6 +123,13 @@ class DesktopDatabaseTableTest {
             assertTrue("le linee delle righe arrivano fino al bordo destro", lines.size >= 3)
             // Sul PC le righe sono alte come in Notion (fase 2, 11/11/2026): 32 più la linea.
             assertTrue("righe a ${lines.zipWithNext { a, b -> b - a }} l'una dall'altra", lines.zipWithNext { a, b -> b - a }.all { it == 33 })
+            // Sul PC OPEN si vede solo col mouse sopra la cella del nome (fase 4, 11/11/2026).
+            val firstRow = (lines[0] + lines[1]) / 2
+            fun openShown(bitmap: Bitmap) = (140 until 196).count { x -> bitmap.getColor(x, firstRow) != background } > 4
+            assertTrue("senza mouse niente OPEN", !openShown(table))
+            onWindowThread { scene.sendPointerEvent(PointerEventType.Move, Offset(60f, firstRow.toFloat()), type = PointerType.Mouse) }
+            frames(5)
+            assertTrue("col mouse sopra il nome c'è OPEN", openShown(picture()))
             // I tre puntini: subito a destra del "+", nell'intestazione (sopra la prima linea).
             val before = picture()
             val dots = Offset(418f, lines.first() - 22f)

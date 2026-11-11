@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.hoverable
 import androidx.compose.runtime.produceState
 import com.gabriele.notionlocal.ui.theme.pcOr
 import com.gabriele.notionlocal.platform.isPc
@@ -7048,11 +7051,16 @@ private fun NameCell(
         if (active) onEditingChange(true)
         onDispose { if (active) onEditingChange(false) }
     }
+    // **Sul PC OPEN si vede solo col mouse sopra la cella**, come in Notion
+    // (dal 11/11/2026, quarta fase dell'aspetto da Notion): il suo posto resta.
+    val nameHover = remember { MutableInteractionSource() }
+    val showOpen = !isPc || nameHover.collectIsHoveredAsState().value
     Row(
         modifier = Modifier
             .width(LocalTableWidths.current.name)
             .clipToBounds()
-            .then(if (wrap) Modifier.heightIn(min = ROW_HEIGHT).fillMaxHeight() else Modifier.height(ROW_HEIGHT)),
+            .then(if (wrap) Modifier.heightIn(min = ROW_HEIGHT).fillMaxHeight() else Modifier.height(ROW_HEIGHT))
+            .hoverable(nameHover),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // L'icona della pagina, se c'è, sta fuori dal campo del nome: resta
@@ -7218,12 +7226,13 @@ private fun NameCell(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .padding(end = 8.dp)
+                    .alpha(if (showOpen) 1f else 0f)
                     .border(
                         1.dp,
                         MaterialTheme.colorScheme.outline,
                         RoundedCornerShape(6.dp)
                     )
-                    .clickable { onOpen() }
+                    .clickable(enabled = showOpen) { onOpen() }
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }

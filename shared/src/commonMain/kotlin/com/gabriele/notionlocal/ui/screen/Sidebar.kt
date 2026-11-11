@@ -1,5 +1,22 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.theme.FavoriteStar
+import com.gabriele.notionlocal.ui.theme.DarkSheet
+import com.gabriele.notionlocal.ui.i18n.EditorStrings
+import com.gabriele.notionlocal.ui.i18n.DbStrings
+import com.gabriele.notionlocal.data.entity.PageEntity
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.hoverable
 import androidx.compose.ui.unit.Dp
 import com.gabriele.notionlocal.ui.theme.pcOr
 import com.gabriele.notionlocal.platform.isPc
@@ -84,7 +101,23 @@ class SidebarActions(
     /** "Backup" (dal 28/10/2026). */
     val onBackup: () -> Unit = {},
     /** "Connections": la sincronizzazione Wi‑Fi (dal 10/11/2026; prima la voce era grigia). */
-    val onConnections: () -> Unit = {}
+    val onConnections: () -> Unit = {},
+    /** Sul PC il "+" e i "⋯" accanto alle pagine dell'albero (vedi [SidebarPageActions]); null sul telefono. */
+    val pageActions: SidebarPageActions? = null
+)
+
+/**
+ * **Sul PC, col mouse sopra una pagina dell'albero, "⋯" e "+"** come nella
+ * barra di Notion (dal 11/11/2026, quarta fase dell'aspetto da Notion,
+ * chiesta dall'utente). "+" mette una pagina nuova dentro quella e la apre
+ * (come Ctrl+N); "⋯" apre un menu con i preferiti, il nome e il cestino.
+ */
+class SidebarPageActions(
+    val addInside: (pageId: String) -> Unit,
+    val isFavorite: suspend (pageId: String) -> Boolean,
+    val setFavorite: (pageId: String, favorite: Boolean) -> Unit,
+    val rename: (pageId: String, title: String) -> Unit,
+    val moveToTrash: (pageId: String) -> Unit
 )
 
 /**
@@ -141,16 +174,22 @@ fun SidebarContent(
 
         // 3. L'albero delle pagine, a partire da quella principale.
         SidebarSectionTitle(Strings.pages)
+        var menuFor by remember { mutableStateOf<PageTreeNode?>(null) }
         if (root != null) {
+            val pageActions = actions.pageActions
             flattenTree(root, children, expanded).forEach { row ->
+                val pageId = row.node.pageId
                 TreeRow(
                     row = row,
-                    isCurrent = row.node.pageId != null && row.node.pageId == currentPageId,
+                    isCurrent = pageId != null && pageId == currentPageId,
                     // Sulla pagina principale niente fondo grigio (chiesto dall'utente l'11/11/2026).
                     currentBackground = row.depth > 0,
-                    isExpanded = row.node.pageId in expanded,
+                    isExpanded = pageId in expanded,
                     onOpen = { actions.onOpenNode(row.node) },
-                    onToggle = { actions.onToggleNode(row.node) }
+                    onToggle = { actions.onToggleNode(row.node) },
+                    // Sul PC "⋯" e "+" col mouse sopra; un database le pagine le ha nelle righe.
+                    onMore = if (pageActions != null && pageId != null) { { menuFor = row.node } } else null,
+                    onAddInside = if (pageActions != null && pageId != null && !row.node.isDatabase) { { pageActions.addInside(pageId) } } else null
                 )
                 val id = row.node.pageId
                 if (id != null && id in expanded && row.node.hasChildren && children[id]?.isEmpty() == true) {
@@ -167,6 +206,9 @@ fun SidebarContent(
                 }
             }
         }
+        val menuNode = menuFor
+        val menuActions = actions.pageActions
+        if (menuNode != null && menuActions != null) SidebarPageMenu(menuNode, menuActions) { menuFor = null }
         // Un divisore sotto l'albero: senza, l'ultima pagina e quello che segue
         // sembravano la stessa lista (richiesta dell'utente del 25/09/2026).
         HorizontalDivider(
@@ -309,14 +351,21 @@ fun TreeRow(
      */
     enabled: Boolean = true,
     /** Il fondo grigio della pagina aperta (sulla pagina principale no, vedi `SidebarContent`). */
-    currentBackground: Boolean = true
+    currentBackground: Boolean = true,
+    /** Sul PC, i "⋯" che col mouse sopra compaiono a destra (vedi [SidebarPageActions]). Null: niente. */
+    onMore: (() -> Unit)? = null,
+    /** Sul PC, il "+" accanto ai "⋯": una pagina nuova dentro questa. Null: niente. */
+    onAddInside: (() -> Unit)? = null
 ) {
     val node = row.node
     val canExpand = enabled && node.hasChildren
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
+            .hoverable(hover)
             .clip(RoundedCornerShape(6.dp))
             .background(if (isCurrent && currentBackground) DarkSurfaceVariant else Color.Transparent)
             .clickable(enabled = enabled, onClick = onOpen)
@@ -349,8 +398,87 @@ fun TreeRow(
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
         )
+        if (hovered && enabled) {
+            onMore?.let { TreeRowAction(Icons.Filled.MoreHoriz, Strings.pageOptions, it) }
+            onAddInside?.let { TreeRowAction(Icons.Filled.Add, DbStrings.newPage, it) }
+        }
+    }
+}
+
+/** Un pulsantino a destra di una riga dell'albero, col mouse sopra: "⋯" o "+". */
+@Composable
+private fun TreeRowAction(icon: ImageVector, description: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(22.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = description, tint = NotionGray400, modifier = Modifier.size(16.dp))
+    }
+}
+
+/**
+ * Il menu dei "⋯" di una pagina dell'albero, sul PC (vedi [SidebarPageActions]):
+ * aggiungerla ai preferiti o toglierla, cambiarle nome, buttarla nel cestino
+ * (dopo la stessa conferma del menu della pagina). La pagina principale nel
+ * cestino non va.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun SidebarPageMenu(node: PageTreeNode, actions: SidebarPageActions, onDismiss: () -> Unit) {
+    val pageId = node.pageId ?: return
+    var favorite by remember(pageId) { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(pageId) { favorite = actions.isFavorite(pageId) }
+    var renaming by remember { mutableStateOf(false) }
+    var trashing by remember { mutableStateOf(false) }
+    when {
+        renaming -> RenamePageDialog(
+            current = node.title,
+            onDismiss = onDismiss,
+            onConfirm = { title ->
+                onDismiss()
+                actions.rename(pageId, title)
+            }
+        )
+        trashing -> MoveToTrashDialog(
+            pageTitle = node.title,
+            onConfirm = {
+                onDismiss()
+                actions.moveToTrash(pageId)
+            },
+            onDismiss = onDismiss
+        )
+        else -> NoteBottomSheet(onDismissRequest = onDismiss, containerColor = DarkSheet) {
+            Column(modifier = Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp)) {
+                OptionsGroup {
+                    val isFavorite = favorite == true
+                    OptionRow(
+                        icon = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        label = if (isFavorite) EditorStrings.removeFromFavorites else EditorStrings.addToFavorites,
+                        iconTint = if (isFavorite) FavoriteStar else null,
+                        enabled = favorite != null,
+                        onClick = {
+                            onDismiss()
+                            actions.setFavorite(pageId, !isFavorite)
+                        }
+                    )
+                    OptionRow(icon = Icons.Filled.Edit, label = EditorStrings.rename, onClick = { renaming = true })
+                    if (pageId != PageEntity.ROOT_PAGE_ID) {
+                        OptionRow(
+                            icon = Icons.Filled.Delete,
+                            label = Strings.moveToTrash,
+                            tint = MaterialTheme.colorScheme.error,
+                            onClick = { trashing = true }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

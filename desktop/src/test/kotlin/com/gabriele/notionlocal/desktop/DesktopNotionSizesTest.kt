@@ -320,4 +320,63 @@ class DesktopNotionSizesTest {
             onWindowThread { scene.close() }
         }
     }
+
+    /**
+     * **Col mouse sopra una pagina dell'albero, "⋯" e "+"** (fase 4, chiesta
+     * dall'utente l'11/11/2026, come nella barra di Notion): senza mouse non
+     * ci sono; col mouse sopra compaiono a destra, e il clic su ognuno fa la
+     * sua cosa.
+     */
+    @Test
+    fun theTreeRowShowsMoreAndPlusUnderTheMouse() {
+        AppSettings.init(context)
+        val node = PageRepository.PageTreeNode(pageId = "p", rowId = null, title = "Main calendar", emoji = "", iconImage = null, isDatabase = false, hasChildren = false)
+        var more = 0
+        var added = 0
+        val scene = onWindowThread {
+            ImageComposeScene(width = 300, height = 40, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context) {
+                    NotionLocalTheme {
+                        Box(Modifier.background(Color.Black)) {
+                            TreeRow(FlatTreeRow(node, 0), isCurrent = false, isExpanded = false, onOpen = {}, onToggle = {}, onMore = { more++ }, onAddInside = { added++ })
+                        }
+                    }
+                }
+            }
+        }
+        try {
+            var time = 0L
+            fun picture(): Bitmap = onWindowThread { scene.render(time); time += 100_000_000L; scene.render(time); Bitmap.makeFromImage(scene.render(time)) }
+            fun mouse(type: PointerEventType, x: Float, pressed: Boolean = false) = onWindowThread {
+                scene.sendPointerEvent(
+                    type, androidx.compose.ui.geometry.Offset(x, 14f), type = PointerType.Mouse,
+                    buttons = if (pressed) PointerButtons(isPrimaryPressed = true) else PointerButtons(),
+                    button = if (type == PointerEventType.Move) null else PointerButton.Primary
+                )
+            }
+            val before = picture()
+            mouse(PointerEventType.Move, 60f)
+            val hovered = picture()
+            File("build/desktop-screenshots", "tree_row_hover.png").writeBytes(Image.makeFromBitmap(hovered).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            // A destra, dopo il nome: le colonne che col mouse sopra sono diverse, in gruppi.
+            val columns = (180 until 300).filter { x -> (0 until 28).any { y -> hovered.getColor(x, y) != before.getColor(x, y) } }
+            val groups = ArrayList<IntRange>()
+            for (x in columns) {
+                val last = groups.lastOrNull()
+                if (last != null && x <= last.last + 3) groups[groups.lastIndex] = last.first..x else groups += x..x
+            }
+            assertTrue("col mouse sopra, a destra \"⋯\" e \"+\": $groups", groups.size >= 2)
+            val plus = groups.last()
+            val dots = groups[groups.size - 2]
+            for (x in listOf((plus.first + plus.last) / 2f, (dots.first + dots.last) / 2f)) {
+                mouse(PointerEventType.Move, x)
+                mouse(PointerEventType.Press, x, pressed = true)
+                mouse(PointerEventType.Release, x)
+                picture()
+            }
+            assertTrue("il \"+\" mette una pagina dentro ($added) e i \"⋯\" aprono il menu ($more)", added == 1 && more == 1)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
 }

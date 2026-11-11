@@ -1287,7 +1287,7 @@ private fun TurnIntoList(
 
 /** Il nuovo nome di una pagina o di un database, da "Rename". */
 @Composable
-private fun RenamePageDialog(
+internal fun RenamePageDialog(
     current: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit

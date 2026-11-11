@@ -1151,6 +1151,27 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.51 — 11/11/2026 · 15:37 — Sul PC "OPEN", "⋯" e "+" compaiono col mouse, come in Notion
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1172 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Quarta fase dell'aspetto da Notion: il
+  mouse.** Nelle tabelle dei database "OPEN" si vede solo col mouse sopra
+  la cella del nome (il suo posto resta, così il nome non si sposta).
+  Nella barra laterale, col mouse sopra una pagina dell'albero compaiono a
+  destra "⋯" e "+": "+" mette una pagina nuova dentro quella e la apre
+  (come Ctrl+N), "⋯" apre un menu per aggiungerla ai preferiti o
+  toglierla, cambiarle nome o buttarla nel cestino (con la stessa
+  conferma del menu della pagina; buttata quella aperta si torna al menu
+  principale). Sui database c'è solo "⋯". Le righe che si possono cliccare
+  si illuminano col mouse sopra, come prima. Sul telefono non cambia
+  niente. Non ancora provato dall'utente
+- **[Progetto]** `NameCell` guarda il mouse (`hoverable`); `TreeRow` ha
+  `onMore` e `onAddInside`; `SidebarPageActions` (in `AppNavHost`,
+  solo sul PC) e `SidebarPageMenu`. Test: in `DesktopDatabaseTableTest`
+  OPEN non c'è senza mouse e c'è col mouse sopra il nome; in
+  `DesktopNotionSizesTest` la riga dell'albero mostra "⋯" e "+" col mouse
+  sopra, e i clic fanno le loro cose
+
 ### ✏️ v0.153.50 — 11/11/2026 · 15:13 — Sul PC la barra in alto anche sui database aperti a tutta pagina
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1171 test passati)*
 

@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.navigation
 
+import com.gabriele.notionlocal.ui.screen.SidebarPageActions
+import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -411,7 +413,28 @@ fun AppNavHost(
         onTrash = { closeSidebar(); navController.navigate(Routes.TRASH) { launchSingleTop = true } },
         onSettings = { closeSidebar(); navController.navigate(Routes.SETTINGS) { launchSingleTop = true } },
         onBackup = { closeSidebar(); navController.navigate(Routes.BACKUP) { launchSingleTop = true } },
-        onConnections = { closeSidebar(); navController.navigate(Routes.CONNECTIONS) { launchSingleTop = true } }
+        onConnections = { closeSidebar(); navController.navigate(Routes.CONNECTIONS) { launchSingleTop = true } },
+        // Sul PC "⋯" e "+" accanto alle pagine dell'albero (vedi `SidebarPageActions`).
+        pageActions = if (isPc) SidebarPageActions(
+            addInside = { parentId ->
+                scope.launch(Dispatchers.Main.immediate) {
+                    val note = withContext(Dispatchers.IO) { factory.pageRepository.createQuickNote(parentId) }
+                    QuickNotes.created(note.first, note.second)
+                    closeSidebar()
+                    navController.navigate(Routes.pageEditor(note.first))
+                }
+            },
+            isFavorite = { id -> withContext(Dispatchers.IO) { factory.pageRepository.getPage(id)?.isFavorite == true } },
+            setFavorite = { id, favorite -> scope.launch(Dispatchers.IO) { factory.pageRepository.setFavorite(id, favorite) } },
+            rename = { id, title -> scope.launch(Dispatchers.IO) { factory.pageRepository.renamePage(id, title) } },
+            moveToTrash = { id ->
+                scope.launch {
+                    withContext(Dispatchers.IO) { factory.pageRepository.moveToTrash(id) }
+                    // Era aperta: si torna al menu principale, come buttandola dal suo menu.
+                    if (id == currentPageId) goHome()
+                }
+            }
+        ) else null
     )
 
     // Il pulsante in cima alla barra, sul PC: fissarla accanto alla pagina, o richiuderla.
