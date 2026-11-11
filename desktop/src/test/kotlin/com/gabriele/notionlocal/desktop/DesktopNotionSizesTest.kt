@@ -307,6 +307,10 @@ class DesktopNotionSizesTest {
                 if (last != null && x <= last.last + 6) groups[groups.lastIndex] = last.first..x else groups += x..x
             }
             assertTrue("nel percorso ci sono \"Madre\", \"/\" e \"Registro\": $groups", groups.size >= 3)
+            // Sotto la barra il database ha i margini delle pagine (dal 11/11/2026): il nome
+            // comincia a 66 + 16, non più a 16 dal bordo.
+            val titleStart = (0 until page.width).first { x -> (50 until 80).any { y -> bright(page.getColor(x, y)) } }
+            assertTrue("il nome del database comincia a $titleStart", titleStart in 80..90)
             val first = groups.first()
             onWindowThread {
                 val at = androidx.compose.ui.geometry.Offset((first.first + first.last) / 2f, 20f)

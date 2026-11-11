@@ -699,6 +699,11 @@ fun DatabaseViewScreen(
             onOpenSource = onOpenDatabase,
             modifier = Modifier
                 .padding(padding)
+                // **Sul PC i margini di Notion**, come nelle pagine (dal 11/11/2026,
+                // chiesto dall'utente): prima il database stava a 16 dal bordo.
+                // shortcut: la rotella sui margini non scorre le righe; se dà fastidio,
+                // i margini vanno dentro ogni riquadro che scorre.
+                .padding(horizontal = PAGE_INSET)
                 // **Le righe si fanno da parte per la tastiera** (dal
                 // 14/10/2026): prima la tastiera ci passava sopra, e le
                 // celle in fondo si scrivevano alla cieca. Così il

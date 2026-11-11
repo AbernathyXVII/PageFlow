@@ -1151,6 +1151,20 @@ vista Gallery" a "Pedice e apice nella barra Aa") portano scritto che
 **vanno ancora verificate sul telefono**: quando lo sono, si aggiunge "(verificato sul telefono il
 gg/mm/aaaa)" accanto al titolo.
 
+### ✏️ v0.153.57 — 11/11/2026 · 17:21 — Sul PC il database a tutta pagina coi margini di Notion
+*(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1178 test passati)*
+
+- **[Progetto]** **[💻 PC]** **Il database aperto a tutta pagina ha i margini
+  delle pagine**, come in Notion: nome, viste e righe partono a 66 dal bordo
+  da tutti e due i lati, allineati a un database dentro una pagina. Prima
+  stavano a 16 dal bordo. Con la rotella sui margini le righe non scorrono:
+  bisogna stare sopra al database. Sul telefono non cambia niente. Non
+  ancora provato dall'utente
+- **[Progetto]** `PAGE_INSET` di `PageEditorScreen.kt` usato anche da
+  `DatabaseViewScreen`. Test: in `DesktopNotionSizesTest` il nome del
+  database comincia dopo il margine; `DesktopDatabaseTableTest` coi clic
+  spostati e il margine destro vuoto
+
 ### ✏️ v0.153.56 — 11/11/2026 · 17:05 — Sul PC un titolo lungo va a capo
 *(Claude Code sul PC; non ancora provata dall'utente; installata sul telefono; 1178 test passati)*
 

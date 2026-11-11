@@ -117,22 +117,24 @@ class DesktopDatabaseTableTest {
             val table = picture()
             save(table, "database_table_wide.png")
             // Una linea orizzontale vicino al bordo destro: una riga di pixel diversa dallo sfondo
-            // per tutta la fascia fra x 1000 e 1150, dove non c'è nessuna colonna.
+            // per tutta la fascia fra x 1000 e 1100, dove non c'è nessuna colonna (dal 11/11/2026
+            // il database a tutta pagina ha i margini di Notion: 66 per lato, la tabella finisce a 1134).
             val background = table.getColor(1100, table.height - 5)
-            val lines = (60 until table.height - 20).filter { y -> (1000..1150).all { x -> table.getColor(x, y) != background } }
+            val lines = (60 until table.height - 20).filter { y -> (1000..1100).all { x -> table.getColor(x, y) != background } }
+            assertTrue("a destra il margine di 66 è vuoto", lines.all { y -> table.getColor(1160, y) == background })
             assertTrue("le linee delle righe arrivano fino al bordo destro", lines.size >= 3)
             // Sul PC le righe sono alte come in Notion (fase 2, 11/11/2026): 32 più la linea.
             assertTrue("righe a ${lines.zipWithNext { a, b -> b - a }} l'una dall'altra", lines.zipWithNext { a, b -> b - a }.all { it == 33 })
             // Sul PC OPEN si vede solo col mouse sopra la cella del nome (fase 4, 11/11/2026).
             val firstRow = (lines[0] + lines[1]) / 2
-            fun openShown(bitmap: Bitmap) = (140 until 196).count { x -> bitmap.getColor(x, firstRow) != background } > 4
+            fun openShown(bitmap: Bitmap) = (206 until 262).count { x -> bitmap.getColor(x, firstRow) != background } > 4
             assertTrue("senza mouse niente OPEN", !openShown(table))
-            onWindowThread { scene.sendPointerEvent(PointerEventType.Move, Offset(60f, firstRow.toFloat()), type = PointerType.Mouse) }
+            onWindowThread { scene.sendPointerEvent(PointerEventType.Move, Offset(126f, firstRow.toFloat()), type = PointerType.Mouse) }
             frames(5)
             assertTrue("col mouse sopra il nome c'è OPEN", openShown(picture()))
             // I tre puntini: subito a destra del "+", nell'intestazione (sopra la prima linea).
             val before = picture()
-            val dots = Offset(418f, lines.first() - 22f)
+            val dots = Offset(484f, lines.first() - 22f)
             click(scene, dots)
             frames(15)
             val after = picture()

@@ -394,9 +394,10 @@ private val PAGE_SIDE_PADDING = 20.dp
  * tutta larghezza (`bleedSides`). Sul telefono niente. Dalla terza fase
  * dell'aspetto da Notion (11/11/2026) è il margine di Notion a tutta
  * larghezza, da tutti e due i lati: il testo comincia a 86 come nella foto
- * di Notion dell'utente.
+ * di Notion dell'utente. Lo stesso margine ha il database aperto a tutta
+ * pagina (`DatabaseViewScreen`).
  */
-private val PAGE_INSET = if (isPc) 66.dp else 0.dp
+internal val PAGE_INSET = if (isPc) 66.dp else 0.dp
 
 /** Allarga di [inset] per lato chi sta nella pagina coi margini (`PAGE_INSET`): la copertina arriva ai bordi. */
 private fun Modifier.bleedSides(inset: Dp): Modifier = layout { measurable, constraints ->
