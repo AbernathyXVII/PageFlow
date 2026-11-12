@@ -44,7 +44,6 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -412,7 +411,7 @@ private fun WidgetCard(widget: Widget, index: Int, count: Int, now: Long, active
     }
 
     if (confirmRemove) {
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { confirmRemove = false },
             title = { Text(WidgetStrings.removeWidgetTitle) },
             text = { Text(WidgetStrings.removeWidgetText) },
@@ -986,7 +985,7 @@ private fun DateBarDialog(
     var pickingEnd by remember { mutableStateOf(false) }
     val valid = name.isNotBlank() && end.isAfter(start)
 
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initial == null) WidgetStrings.addDate else WidgetStrings.editDate) },
         text = {
@@ -1351,7 +1350,7 @@ private fun TimeInputDialog(initialMs: Long, onDismiss: () -> Unit, onConfirm: (
     val m = minutes.toIntOrNull()
     val s = seconds.toIntOrNull()
     val valid = m != null && s != null && m in 0..WidgetStore.MAX_POMODORO_MINUTES && s in 0..59 && (m > 0 || s > 0)
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(WidgetStrings.setTime) },
         text = {
@@ -1402,7 +1401,7 @@ private fun PomodoroSettingsDialog(
     var pause by remember { mutableStateOf(breakMinutes) }
     var study by remember { mutableStateOf(studySound) }
     var rest by remember { mutableStateOf(breakSound) }
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(WidgetStrings.timerSettings) },
         text = {
@@ -1481,7 +1480,7 @@ private fun LengthStepper(label: String, value: Int, onChange: (Int) -> Unit) {
 @Composable
 private fun TextInputDialog(title: String, initial: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var value by remember { mutableStateOf(initial) }
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {

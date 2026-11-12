@@ -1126,6 +1126,30 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.62 — 12/11/2026 · 10:10 — On the PC the windows as large as what they hold
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1188 tests passed)*
+
+- **[Change]** **[💻 PC]** **"Set time" and "Set date" are a small card in
+  the middle** of the window, no longer a strip as wide as it: 260 and 340
+  points, with the corners and margins of the PC's other small windows. Not
+  yet tested by the user
+- **[Change]** **[💻 PC]** **The confirmation and choice windows are as wide
+  as what they hold** ("Repeat", "Custom recurrence", deleting, renaming,
+  passwords, the widgets' settings… 52 in all): Material made them 560
+  points wide as soon as a line inside could stretch, with 24 points of
+  margin around and before the buttons. Now narrower margins, a smaller
+  title, the look of the PC's small windows (corners of 10, thin border,
+  shadow), and in "Repeat" closer lines. Three keep the old width because
+  they hold a scrolling list or tabs: the app's language, the startup page
+  and the link to a page. On the phone nothing changes. Not yet tested by
+  the user
+- **[Project]** `FitAlertDialog` (common): on the phone Material's
+  `AlertDialog`, on the PC a `Dialog` with `width(IntrinsicSize.Max)`
+  (`fitContent = false` where an intrinsic measure would crash: LazyColumn,
+  TabRow); all the shared `AlertDialog`s go through it.
+  `SamsungPickerDialog` has a `pcWidth`. Test: `DesktopDialogSizesTest`
+  ("Repeat", "Custom recurrence" and "Set time" measured in the picture)
+
 ### ✏️ v0.153.61 — 12/11/2026 · 09:53 — On the PC the file windows of Windows 11
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1187 tests passed)*
 

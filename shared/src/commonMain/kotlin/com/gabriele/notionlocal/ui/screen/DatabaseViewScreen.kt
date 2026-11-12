@@ -182,7 +182,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Notifications
@@ -2173,7 +2172,7 @@ private fun DatabaseViewBody(
     }
 
     rowPendingDeletion?.let { row ->
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { rowPendingDeletion = null },
             title = { Text(DbStrings.deletePageTitle) },
             text = {
@@ -6643,7 +6642,7 @@ private fun RenameMainPropertyDialog(current: String, onDismiss: () -> Unit, onS
     var text by remember { mutableStateOf(TextFieldValue(current, TextRange(current.length))) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(DbStrings.renameMainProperty) },
         text = {
@@ -6929,7 +6928,7 @@ private fun PropertyHeaderCell(
 
     // Con la proprietà se ne vanno i suoi valori in tutte le righe: si chiede.
     if (confirmDelete) {
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(DbStrings.deletePropertyTitle(DbStrings.columnName(column.name))) },
             text = { Text(DbStrings.deletePropertyNote) },
@@ -8755,7 +8754,7 @@ private fun DateEditorSheet(
     }
 
     if (showRepeatFrom) {
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { showRepeatFrom = false },
             confirmButton = {},
             dismissButton = { TextButton(onClick = { showRepeatFrom = false }) { Text(Strings.cancel) } },
@@ -8854,7 +8853,7 @@ fun RepeatPresetDialog(
             Recurrence(RecurrenceFreq.WEEKLY, weekdays = weekdaysOnly)
     )
 
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(Strings.cancel) } },
@@ -8875,7 +8874,7 @@ fun RepeatPresetDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onPick(rule) }
-                            .padding(vertical = 12.dp)
+                            .padding(vertical = pcOr(6.dp, 12.dp))
                     )
                 }
                 HorizontalDivider()
@@ -8886,7 +8885,7 @@ fun RepeatPresetDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onCustom() }
-                        .padding(vertical = 12.dp)
+                        .padding(vertical = pcOr(6.dp, 12.dp))
                 )
             }
         }
@@ -8950,7 +8949,7 @@ fun CustomRecurrenceDialog(
     var showEndDatePicker by remember { mutableStateOf(false) }
     var freqMenuOpen by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(DbStrings.customRecurrence) },
         dismissButton = { TextButton(onClick = onDismiss) { Text(Strings.cancel) } },

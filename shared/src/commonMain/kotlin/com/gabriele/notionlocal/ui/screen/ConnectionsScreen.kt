@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -280,7 +279,7 @@ internal fun syncSummary(result: SyncResult): String = WifiSyncStrings.done(
 fun SyncPairingDialog() {
     val request by SyncPrompts.current.collectAsState()
     val asking = request ?: return
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = { asking.answer.complete(false) },
         icon = { Icon(Icons.Filled.Sync, contentDescription = null) },
         title = { Text(WifiSyncStrings.pairTitle(asking.otherName)) },

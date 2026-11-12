@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -255,7 +254,7 @@ private fun ColumnScope.VersionPage(
         Text(HistoryStrings.restoreThisVersion)
     }
     if (confirming) {
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { confirming = false },
             title = { Text(HistoryStrings.restoreTitle) },
             text = { Text(HistoryStrings.restoreText(moment)) },

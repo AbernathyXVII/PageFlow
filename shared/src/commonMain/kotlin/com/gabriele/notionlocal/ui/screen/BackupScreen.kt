@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -235,7 +234,7 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (PlatformContext) -> Unit = ::re
     }
 
     restoreChoice?.let { choice ->
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { restoreChoice = null },
             containerColor = DarkSheet,
             title = { Text(BackupStrings.restoreTitle) },
@@ -269,7 +268,7 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (PlatformContext) -> Unit = ::re
     }
 
     deleting?.let { file ->
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { deleting = null },
             containerColor = DarkSheet,
             title = { Text(BackupStrings.deleteTitle) },
@@ -285,7 +284,7 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (PlatformContext) -> Unit = ::re
     }
 
     if (choosingReminder) {
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { choosingReminder = false },
             containerColor = DarkSheet,
             title = { Text(BackupStrings.reminder) },
@@ -314,7 +313,7 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (PlatformContext) -> Unit = ::re
     }
 
     busy?.let { message ->
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = {},
             properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
             containerColor = DarkSheet,

@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -409,7 +408,7 @@ fun SettingsScreen(
         SettingsDialog.PARAGRAPH -> ParagraphSettingsDialog(onDismiss = { dialog = null })
         SettingsDialog.TIME_ZONE -> TimeZoneDialog(onDismiss = { dialog = null })
         SettingsDialog.LOCK_PASSWORD -> LockPasswordSettings(onDismiss = { dialog = null })
-        SettingsDialog.CLEAR_CACHE -> AlertDialog(
+        SettingsDialog.CLEAR_CACHE -> FitAlertDialog(
             onDismissRequest = { dialog = null },
             title = { Text(Strings.clearCacheTitle) },
             text = { Text(Strings.clearCacheText) },
@@ -451,7 +450,7 @@ private fun DeleteAllDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     var working by remember { mutableStateOf(false) }
     val word = Strings.deleteAllWord
     val armed = typed.trim().equals(word, ignoreCase = true) && !working
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = { if (!working) onDismiss() },
         icon = { Icon(Icons.Filled.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
         title = { Text(Strings.deleteAllTitle) },
@@ -504,7 +503,7 @@ private fun LockPasswordSettings(onDismiss: () -> Unit) {
     // 0 il menu, 1 conferma per cambiarla, 2 password nuova, 3 conferma per toglierla
     var step by remember { mutableStateOf(if (AppLock.hasPassword) 0 else 2) }
     when (step) {
-        0 -> AlertDialog(
+        0 -> FitAlertDialog(
             onDismissRequest = onDismiss,
             icon = { Icon(Icons.Filled.Fingerprint, contentDescription = null) },
             title = { Text(LockStrings.setPasswordTitle) },
@@ -617,7 +616,7 @@ fun <T> ChoiceDialog(
     subtitle: String? = null,
     details: Map<T, String> = emptyMap()
 ) {
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSheet,
         title = { Text(title, color = NotionWhite) },
@@ -672,7 +671,7 @@ fun MuteForDialog(onDismiss: () -> Unit) {
         Strings.forOneDay to 24 * hour,
         Strings.forOneWeek to 7 * 24 * hour
     )
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSheet,
         title = { Text(Strings.turnOffForAWhile, color = NotionWhite) },
@@ -708,7 +707,8 @@ private fun TimeZoneDialog(onDismiss: () -> Unit) {
         val needle = filter.trim().replace(' ', '_')
         if (needle.isEmpty()) all else all.filter { it.contains(needle, ignoreCase = true) }
     }
-    AlertDialog(
+    FitAlertDialog(
+        fitContent = false,
         onDismissRequest = onDismiss,
         containerColor = DarkSheet,
         title = { Text(Strings.timeZone, color = NotionWhite) },

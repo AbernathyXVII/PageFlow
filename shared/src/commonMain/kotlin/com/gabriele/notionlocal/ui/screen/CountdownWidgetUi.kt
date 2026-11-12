@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -329,7 +328,7 @@ fun CountdownEditorDialog(
         LocalDateTime.of(year.toInt().also { require(it in 1..9999) }, month.toInt(), day.toInt(), hour.toInt(), minute.toInt(), second.toInt())
     }.getOrNull()
 
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSheet,
         title = { Text(if (initial == null) WidgetStrings.addCountdown else WidgetStrings.editCountdown, color = NotionWhite) },

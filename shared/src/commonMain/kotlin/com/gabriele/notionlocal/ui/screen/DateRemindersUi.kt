@@ -14,7 +14,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -141,7 +140,7 @@ private fun AddReminderDialog(
     onPick: (Int) -> Unit,
     onCustom: () -> Unit
 ) {
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(Strings.cancel) } },
@@ -184,7 +183,7 @@ private fun CustomReminderDialog(onDismiss: () -> Unit, onDone: (Int) -> Unit) {
     var unit by remember { mutableStateOf(ReminderUnit.HOURS) }
     val number = amount.toIntOrNull() ?: 0
     val valid = isValidReminder(number, unit)
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(ReminderTexts.customTitle) },
         dismissButton = { TextButton(onClick = onDismiss) { Text(Strings.cancel) } },

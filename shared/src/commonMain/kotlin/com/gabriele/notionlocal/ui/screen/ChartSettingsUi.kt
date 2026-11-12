@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Summarize
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -410,7 +409,7 @@ fun ChartSettingsDetail(
  */
 @Composable
 fun ChartTypeDialog(current: ChartType, onPick: (ChartType) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(ChartStrings.chartType) },
         text = {
@@ -450,7 +449,7 @@ fun ChartRangeDialog(settings: ChartSettings, onConfirm: (Double?, Double?) -> U
     val maxValue = max.replace(',', '.').toDoubleOrNull()
     val valid = (min.isBlank() || minValue != null) && (max.isBlank() || maxValue != null) &&
         (minValue == null || maxValue == null || minValue < maxValue)
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(ChartStrings.range) },
         text = {
@@ -473,7 +472,7 @@ private fun ReferenceLineDialog(onConfirm: (ChartReferenceLine) -> Unit, onDismi
     var value by remember { mutableStateOf("") }
     var label by remember { mutableStateOf("") }
     val number = value.replace(',', '.').toDoubleOrNull()
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(ChartStrings.addReferenceLine) },
         text = {

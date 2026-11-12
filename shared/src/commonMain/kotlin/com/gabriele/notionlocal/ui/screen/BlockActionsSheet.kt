@@ -59,7 +59,6 @@ import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.PhotoSizeSelectLarge
 import androidx.compose.material.icons.filled.CropFree
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -803,7 +802,7 @@ fun BlockActionsHost(
             // perdere: l'utente ha detto che ci sta attento lui, ma un
             // numero davanti agli occhi costa un tocco e salva da uno
             // sbaglio che non si può annullare.
-            AlertDialog(
+            FitAlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text(EditorStrings.simpleDatabaseLossTitle) },
                 text = { Text(EditorStrings.simpleDatabaseLossText(rowPagesToLose)) },
@@ -1298,7 +1297,7 @@ internal fun RenamePageDialog(
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     val confirm = { onConfirm(value.text.replace("\n", "")) }
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(EditorStrings.rename) },
         text = {

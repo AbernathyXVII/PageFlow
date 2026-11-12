@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -248,7 +247,7 @@ fun ProofingSettingsDialog(onDismiss: () -> Unit) {
     val dao = remember(context) { AppDatabase.getInstance(context).personalWordDao() }
     val words by remember(dao) { dao.observeAll() }.collectAsState(initial = emptyList())
     var dictionaryOpen by remember { mutableStateOf(false) }
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSheet,
         title = { Text(ProofingStrings.proofing, color = NotionWhite) },

@@ -161,7 +161,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Undo
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -850,7 +849,7 @@ private fun FontSizeDialog(
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
 
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSheet,
         title = { Text(EditorStrings.fontSize, color = NotionWhite) },
@@ -3376,7 +3375,7 @@ private fun PageEditorContent(
     }
 
     if (confirmPageDelete) {
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { confirmPageDelete = false },
             title = { Text(EditorStrings.deletePageContentTitle) },
             text = { Text(EditorStrings.deletePageContentText) },
@@ -6410,7 +6409,7 @@ private fun BlockRow(
         )
 
         if (confirmDatabaseDeletion) {
-            AlertDialog(
+            FitAlertDialog(
                 onDismissRequest = { confirmDatabaseDeletion = false },
                 title = { Text(if (isLinkedView) DbStrings.removeLinkedViewTitle else EditorStrings.deleteDatabaseTitle) },
                 // Togliere una vista collegata cancella solo la vista: le

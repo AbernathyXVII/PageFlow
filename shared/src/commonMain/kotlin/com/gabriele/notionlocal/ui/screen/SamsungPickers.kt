@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.ui.unit.Dp
+import com.gabriele.notionlocal.ui.theme.pcOr
+import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import com.gabriele.notionlocal.data.entity.Recurrence
@@ -548,6 +551,12 @@ private fun SamsungPickerDialog(
     title: String,
     onDismiss: () -> Unit,
     onDone: () -> Unit,
+    /**
+     * Sul PC la scheda è larga così, al centro della finestra (dal
+     * 12/11/2026, chiesto dall'utente: "più piccola e contenuta"): larga
+     * quanto la finestra, com'è sul telefono, era una striscia enorme.
+     */
+    pcWidth: Dp,
     content: @Composable () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -558,25 +567,25 @@ private fun SamsungPickerDialog(
         // telefono). Così a metterla in fondo è Android, e il tocco fuori la
         // chiude da sé.
         PlaceDialogAtBottom()
-        Box(modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 16.dp)) {
+        Box(modifier = if (isPc) Modifier.width(pcWidth) else Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 16.dp)) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(28.dp))
+                    .clip(RoundedCornerShape(pcOr(10.dp, 28.dp)))
                     .background(DarkSurfaceVariant)
-                    .padding(top = 24.dp, bottom = 8.dp)
+                    .padding(top = pcOr(16.dp, 24.dp), bottom = pcOr(4.dp, 8.dp))
             ) {
                 Text(
                     text = title,
                     color = NotionWhite,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 24.dp)
+                    modifier = Modifier.padding(horizontal = pcOr(20.dp, 24.dp))
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(pcOr(8.dp, 16.dp)))
                 content()
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.height(pcOr(4.dp, 8.dp)))
+                Row(modifier = Modifier.fillMaxWidth().height(pcOr(40.dp, 52.dp)), verticalAlignment = Alignment.CenterVertically) {
                     DialogButton(Strings.cancel, onDismiss, Modifier.weight(1f))
                     Box(modifier = Modifier.width(1.dp).height(20.dp).background(NotionGray400.copy(alpha = 0.5f)))
                     DialogButton(Strings.done, onDone, Modifier.weight(1f))
@@ -609,6 +618,7 @@ fun SamsungDateDialog(
     var picked by remember { mutableStateOf(initial) }
     SamsungPickerDialog(
         title = DbStrings.setDate,
+        pcWidth = 340.dp,
         onDismiss = onDismiss,
         onDone = {
             onPick(picked)
@@ -644,6 +654,7 @@ fun SamsungTimeDialog(
     var minute by remember { mutableStateOf(initial.minute) }
     SamsungPickerDialog(
         title = DbStrings.setTime,
+        pcWidth = 260.dp,
         onDismiss = onDismiss,
         onDone = {
             onPick(LocalTime.of(hour, minute))
@@ -651,7 +662,7 @@ fun SamsungTimeDialog(
         }
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 48.dp, vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = pcOr(24.dp, 48.dp), vertical = pcOr(8.dp, 16.dp)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             WheelPicker(range = 24, value = hour, onValueChange = { hour = it }, onLiveValue = { hour = it }, modifier = Modifier.weight(1f), selectedSize = 32.sp, otherSize = 26.sp)

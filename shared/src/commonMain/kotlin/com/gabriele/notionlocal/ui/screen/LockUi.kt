@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -281,7 +280,7 @@ private fun PasswordDialog(
     fun tryUnlock() {
         if (AppLock.checkPassword(password)) onUnlocked() else wrong = true
     }
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.Lock, contentDescription = null) },
         title = { Text(LockStrings.unlock) },
@@ -343,7 +342,7 @@ fun SetPasswordDialog(
     var tried by remember { mutableStateOf(false) }
     val tooShort = first.length < MIN_PASSWORD_LENGTH
     val differ = first != second
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.Lock, contentDescription = null) },
         title = { Text(LockStrings.setPasswordTitle) },
