@@ -9,9 +9,6 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import com.gabriele.notionlocal.data.PageImageStore
 import com.gabriele.notionlocal.ui.i18n.EditorStrings
 import kotlinx.coroutines.launch
-import java.awt.FileDialog
-import java.awt.Frame
-import java.io.File
 import java.net.URI
 
 /** Sul PC: la finestra di Windows o del Mac per scegliere un file. */
@@ -26,17 +23,10 @@ actual fun rememberImagePicker(
     val picked by rememberUpdatedState(onPicked)
     return remember(store) {
         {
-            val dialog = FileDialog(null as Frame?, EditorStrings.upload, FileDialog.LOAD).apply {
-                setFilenameFilter { _, name -> name.substringAfterLast('.', "").lowercase() in IMAGE_EXTENSIONS }
-                isVisible = true
-            }
-            val name = dialog.file
-            if (name != null) {
-                val file = File(dialog.directory, name)
+            scope.launch {
+                val file = SystemFileDialog.open(EditorStrings.upload, IMAGE_EXTENSIONS) ?: return@launch
                 start()
-                scope.launch {
-                    picked(store.saveFromStream({ file.inputStream() }, mustBeImage = true, cannotOpen = EditorStrings.imageReadFailed))
-                }
+                picked(store.saveFromStream({ file.inputStream() }, mustBeImage = true, cannotOpen = EditorStrings.imageReadFailed))
             }
         }
     }

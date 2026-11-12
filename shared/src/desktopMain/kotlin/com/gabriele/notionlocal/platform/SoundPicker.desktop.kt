@@ -2,9 +2,9 @@ package com.gabriele.notionlocal.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import java.awt.FileDialog
-import java.awt.Frame
+import kotlinx.coroutines.launch
 import java.io.File
 import java.net.URI
 
@@ -14,16 +14,14 @@ import java.net.URI
  */
 @Composable
 actual fun rememberSoundPicker(title: String, current: String?, onPicked: (uri: String, name: String?) -> Unit): () -> Unit {
+    val scope = rememberCoroutineScope()
     val picked by rememberUpdatedState(onPicked)
     return {
-        val dialog = FileDialog(null as Frame?, title, FileDialog.LOAD).apply {
-            runCatching { current?.takeIf { it.startsWith("file:") }?.let { File(URI(it)).parent } }.getOrNull()?.let { directory = it }
-            // Su Windows il filtro è il nome proposto; altrove serve il FilenameFilter.
-            file = "*.wav"
-            setFilenameFilter { _, name -> name.substringAfterLast('.', "").lowercase() in SOUND_FILES }
-            isVisible = true
+        scope.launch {
+            val folder = runCatching { current?.takeIf { it.startsWith("file:") }?.let { File(URI(it)).parent } }.getOrNull()
+            val file = SystemFileDialog.open(title, SOUND_FILES, folder) ?: return@launch
+            picked(file.toURI().toString(), file.name.substringBeforeLast('.'))
         }
-        dialog.file?.let { name -> picked(File(dialog.directory, name).toURI().toString(), name.substringBeforeLast('.')) }
     }
 }
 

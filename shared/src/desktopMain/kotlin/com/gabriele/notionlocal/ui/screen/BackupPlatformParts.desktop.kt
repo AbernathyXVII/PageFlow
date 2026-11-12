@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.SystemFileDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -9,9 +10,6 @@ import com.gabriele.notionlocal.data.backup.Backups
 import com.gabriele.notionlocal.platform.PlatformContext
 import com.gabriele.notionlocal.ui.i18n.BackupStrings
 import kotlinx.coroutines.launch
-import java.awt.FileDialog
-import java.awt.Frame
-import java.io.File
 import java.io.InputStream
 
 @Composable
@@ -20,31 +18,22 @@ actual fun rememberBackupUpload(onStart: () -> Unit, onDone: (Boolean) -> Unit):
     val start by rememberUpdatedState(onStart)
     val done by rememberUpdatedState(onDone)
     return { file ->
-        val dialog = FileDialog(null as Frame?, BackupStrings.uploadToProton, FileDialog.SAVE).apply {
-            Backups.lastUploadDir?.let { directory = it }
-            this.file = file.name
-            isVisible = true
-        }
-        dialog.file?.let { name ->
+        scope.launch {
+            val target = SystemFileDialog.save(BackupStrings.uploadToProton, file.name, Backups.lastUploadDir) ?: return@launch
             start()
-            scope.launch { done(Backups.upload(file, File(dialog.directory, name))) }
+            done(Backups.upload(file, target))
         }
     }
 }
 
 @Composable
 actual fun rememberBackupPicker(onPicked: (label: String, open: () -> InputStream) -> Unit): () -> Unit {
+    val scope = rememberCoroutineScope()
     val picked by rememberUpdatedState(onPicked)
     return {
-        val dialog = FileDialog(null as Frame?, BackupStrings.restoreFromFile, FileDialog.LOAD).apply {
-            // Su Windows il filtro è il nome proposto; altrove serve il FilenameFilter.
-            file = "*.zip"
-            setFilenameFilter { _, name -> name.endsWith(".zip", ignoreCase = true) }
-            isVisible = true
-        }
-        dialog.file?.let { name ->
-            val chosen = File(dialog.directory, name)
-            picked(name) { chosen.inputStream() }
+        scope.launch {
+            val chosen = SystemFileDialog.open(BackupStrings.restoreFromFile, setOf("zip")) ?: return@launch
+            picked(chosen.name) { chosen.inputStream() }
         }
     }
 }

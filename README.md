@@ -1126,6 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.61 — 12/11/2026 · 09:53 — On the PC the file windows of Windows 11
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1187 tests passed)*
+
+- **[Change]** **[💻 PC]** **Choosing or saving a file opens Windows' own
+  window**, the one of File Explorer in Windows 10 and 11, instead of the old
+  one Java drew ("Look in", "Object name"): uploading an icon, a cover or an
+  image, adding a file, a video or an audio to a page, downloading a file,
+  saving an export, saving a backup or restoring one from a file, choosing a
+  sound. It stays in front of PageFlow and blocks it while it is open, like
+  Windows' windows. It takes about a second to appear. On the Mac the one of
+  macOS was already used, and stays. Not yet tested by the user
+- **[Project]** `SystemFileDialog` (shared, desktopMain): on Windows a
+  PowerShell script (`WinRtScript`) opens `System.Windows.Forms`'
+  OpenFileDialog/SaveFileDialog, which asks Windows for its own window,
+  owned by PageFlow's (`Biometrics.windowHandle`) and sharp on scaled screens
+  (DPI aware); elsewhere, or if PowerShell doesn't answer, Java's
+  `FileDialog`. The seven places that used `FileDialog` call it from a
+  coroutine, so the window isn't frozen while the dialog is open. The script's
+  arguments start with "=": PowerShell stops on one that begins with "-"
+  (even a file name). Test: `DesktopFileDialogTest` (the filter, the
+  arguments, PowerShell preparing the dialog without opening it)
+
 ### 🔧 v0.153.60.2 — 12/11/2026 · 09:33 — On the PC ☺️ and ♥️ in colour in titles, cells and the sidebar too
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1185 tests passed)*
 

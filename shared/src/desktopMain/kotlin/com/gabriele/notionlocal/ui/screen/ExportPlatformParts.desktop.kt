@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.SystemFileDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -12,9 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Desktop
-import java.awt.FileDialog
-import java.awt.Frame
-import java.io.File
 
 /** "Save" sul PC: la finestra "Salva con nome" di Windows, col nome del file già scritto. */
 @Composable
@@ -22,15 +20,9 @@ actual fun rememberExportSaver(onDone: (Boolean) -> Unit): (ExportedFile) -> Uni
     val scope = rememberCoroutineScope()
     val done by rememberUpdatedState(onDone)
     return { exported ->
-        val dialog = FileDialog(null as Frame?, ExportStrings.save, FileDialog.SAVE).apply {
-            file = exported.name
-            isVisible = true
-        }
-        dialog.file?.let { name ->
-            val target = File(dialog.directory, name)
-            scope.launch {
-                done(withContext(Dispatchers.IO) { runCatching { exported.file.copyTo(target, overwrite = true) }.isSuccess })
-            }
+        scope.launch {
+            val target = SystemFileDialog.save(ExportStrings.save, exported.name) ?: return@launch
+            done(withContext(Dispatchers.IO) { runCatching { exported.file.copyTo(target, overwrite = true) }.isSuccess })
         }
     }
 }
