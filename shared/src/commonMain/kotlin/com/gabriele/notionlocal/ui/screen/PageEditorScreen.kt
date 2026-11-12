@@ -2707,11 +2707,8 @@ private fun PageEditorContent(
                                 // Lo spazio fra i blocchi ("Paragraph"): metà sopra e
                                 // metà sotto, come fa l'altezza di riga nei campi di testo.
                                 val islandSpacing = paragraphLook.spacingOf(item.block)
-                                // Un database dice qual è la sua prima riga (il titolo), per i sei puntini (`BlockHandle.kt`);
-                                // le colonne la prima riga della prima colonna (vedi `ColumnLines`).
-                                val firstLine = remember(item.block.id) {
-                                    if (item.block.type == BlockType.DATABASE_LINK || item.block.type == BlockType.COLUMN_LIST) FirstLine() else null
-                                }
+                                // Un database dice qual è la sua prima riga (il titolo), per i sei puntini (`BlockHandle.kt`).
+                                val firstLine = remember(item.block.id) { if (item.block.type == BlockType.DATABASE_LINK) FirstLine() else null }
                                 Column(
                                     (if (sideScroll != null) Modifier.nestedScroll(KeepSidewaysInside) else Modifier)
                                         .padding(vertical = (islandSpacing / 2f).sp.toDpIn(LocalDensity.current))
@@ -2720,7 +2717,9 @@ private fun PageEditorContent(
                                         .pickableAs(
                                             renderItemKey(item),
                                             lineOf = firstLine?.let { line -> { _, block -> line.boundsIn(block) } },
-                                            textInset = with(LocalDensity.current) { PAGE_SIDE_PADDING.toPx() }
+                                            textInset = with(LocalDensity.current) { PAGE_SIDE_PADDING.toPx() },
+                                            // Le colonne: i puntini li hanno le loro righe (vedi `BlockPicker.lineAt`).
+                                            handle = item.block.type != BlockType.COLUMN_LIST
                                         ) { item.block.id }
                                         // Nelle celle di un database Ctrl+A resta della cella; in quelle di una
                                         // tabella Ctrl+Z resta della cella (l'Annulla della pagina non le conosce).
@@ -4980,10 +4979,8 @@ private val EMPTY_COLUMN_HEIGHT = 32.dp
  * si rifaceva da capo col testo di prima (trovato dall'utente il 12/11/2026:
  * "mi duplica quello che ho scritto rimanendo nello stesso blocco").
  *
- * La prima riga della prima colonna ([firstColumn]) è la "prima riga" del
- * gruppo, dove stanno i sei puntini (`FirstLine`): in cima al gruppo erano
- * più su delle lettere ("i sei puntini diventano storti"). Le righe dentro
- * non la riportano loro (un database in una colonna lo farebbe col titolo).
+ * Ogni riga ha i suoi sei puntini; il gruppo no (dal 13/11/2026, vedi
+ * `BlockPicker.lineAt`).
  */
 @Composable
 private fun ColumnLines(
@@ -4997,12 +4994,10 @@ private fun ColumnLines(
     onFocusChanged: (String, Boolean) -> Unit,
     onNavigateToPage: (String) -> Unit,
     onNavigateToDatabase: (String) -> Unit,
-    onOpenBlockMenu: ((String) -> Unit)?,
-    firstColumn: Boolean = false
+    onOpenBlockMenu: ((String) -> Unit)?
 ) {
     val look = LocalParagraphLook.current
     val density = LocalDensity.current
-    val reportFirst = if (firstColumn) Modifier.reportsFirstLine(PAGE_SIDE_PADDING) else Modifier
     val lines = if (column.type == BlockType.COLUMN) {
         allBlocks.filter { it.parentBlockId == column.id }.sortedBy { it.orderIndex }
     } else {
@@ -5037,7 +5032,6 @@ private fun ColumnLines(
                         nested = true,
                         textInset = sidePaddingPx
                     ) { child.id }
-                    .then(if (index == 0) reportFirst else Modifier)
                     .then(if (emptyColumn && index == 0) Modifier.drawBehind { drawEmptyColumn(emptyLook) } else Modifier)
             ) {
                 CompositionLocalProvider(LocalFirstLine provides lineFirst) {
@@ -6606,12 +6600,12 @@ private fun BlockRow(
         val columns = allBlocks.filter { it.parentBlockId == block.id }.sortedBy { it.orderIndex }
         if (isPc) {
             Row(Modifier.fillMaxWidth()) {
-                columns.forEachIndexed { index, column ->
+                columns.forEach { column ->
                     key(column.id) {
                         Column(Modifier.weight(1f)) {
                             ColumnLines(
                                 column, allBlocks, depth, viewModel, factory, focusRequestBlockId, formatRequest,
-                                onFocusChanged, onNavigateToPage, onNavigateToDatabase, onOpenBlockMenu, firstColumn = index == 0
+                                onFocusChanged, onNavigateToPage, onNavigateToDatabase, onOpenBlockMenu
                             )
                         }
                     }
@@ -6619,11 +6613,11 @@ private fun BlockRow(
             }
         } else {
             Column {
-                columns.forEachIndexed { index, column ->
+                columns.forEach { column ->
                     key(column.id) {
                         ColumnLines(
                             column, allBlocks, depth, viewModel, factory, focusRequestBlockId, formatRequest,
-                            onFocusChanged, onNavigateToPage, onNavigateToDatabase, onOpenBlockMenu, firstColumn = index == 0
+                            onFocusChanged, onNavigateToPage, onNavigateToDatabase, onOpenBlockMenu
                         )
                     }
                 }

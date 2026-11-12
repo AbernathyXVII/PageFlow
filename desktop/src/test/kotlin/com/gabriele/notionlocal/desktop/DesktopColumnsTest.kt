@@ -819,4 +819,25 @@ class DesktopColumnsTest {
             assertTrue("puntini $dots, titolo $title", dots.isNotEmpty() && abs(dots.average() - center) <= 2.0)
         }
     }
+
+    /**
+     * **Il gruppo di colonne non ha puntini suoi** (trovato dall'utente il
+     * 13/11/2026: con "Main calendar" accanto a "Notebook" compariva "un'icona
+     * dei sei puntini a metà del database", quella del gruppo, col menu
+     * "Columns"): col mouse nel margine a sinistra delle colonne, a metà dei
+     * database affiancati, non compare niente.
+     */
+    @Test
+    fun theGroupOfColumnsHasNoDotsOfItsOwn() {
+        twoDatabasesSideBySide()
+        withMouse { mouse, shot ->
+            val clean = shot("columns_group_clean")
+            // A metà dei database, nel margine a sinistra delle colonne (che cominciano a x 66).
+            mouse("move", 40f, 330f)
+            mouse("move", 42f, 331f)
+            val hovered = shot("columns_group_margin")
+            val changed = (0 until hovered.height).filter { y -> (0 until 85).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
+            assertTrue("comparso qualcosa nel margine, alle altezze $changed", changed.isEmpty())
+        }
+    }
 }

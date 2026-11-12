@@ -56,7 +56,9 @@ class BlockPicker {
         /** Una riga dentro un'altra voce (una colonna): conta anche da sinistra a destra, e vince sulla voce che la contiene. */
         val nested: Boolean,
         /** Quanto il testo sta più all'interno della voce, a sinistra e a destra (in pixel). */
-        val textInset: Float
+        val textInset: Float,
+        /** Se la voce ha i suoi sei puntini: il gruppo di colonne no (vedi `lineAt`). */
+        val handle: Boolean
     )
 
     private val entries = HashMap<String, Entry>()
@@ -68,9 +70,10 @@ class BlockPicker {
         lineOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
         extentOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
         nested: Boolean = false,
-        textInset: Float = 0f
+        textInset: Float = 0f,
+        handle: Boolean = true
     ) {
-        entries[key] = Entry(coordinates, blockAt, lineOf, extentOf, nested, textInset)
+        entries[key] = Entry(coordinates, blockAt, lineOf, extentOf, nested, textInset, handle)
     }
 
     fun remove(key: String) {
@@ -115,6 +118,10 @@ class BlockPicker {
      */
     fun lineAt(window: Offset, islandLine: Float): Pair<String, LineBounds>? {
         val (_, entry, id) = find(window, inner = true) ?: return null
+        // **Il gruppo di colonne non ha puntini suoi** (dal 13/11/2026, come su Notion;
+        // trovato dall'utente: "un'icona dei sei puntini è sbucata dal nulla" a metà di
+        // un database in colonna): li hanno le sue righe. Fuori da loro restano quelli di prima.
+        if (!entry.handle) return null
         val c = entry.coordinates
         val line = entry.lineOf?.invoke(id, c) ?: LineBounds(0f, minOf(c.size.height.toFloat(), islandLine))
         val origin = c.localToWindow(Offset.Zero)
@@ -159,6 +166,7 @@ fun Modifier.pickableAs(
     extentOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
     nested: Boolean = false,
     textInset: Float = 0f,
+    handle: Boolean = true,
     blockAt: (Float) -> String?
 ): Modifier {
     val picker = LocalBlockPicker.current ?: return this
@@ -172,7 +180,8 @@ fun Modifier.pickableAs(
             latestLine.value?.let { { id, c -> latestLine.value?.invoke(id, c) } },
             latestExtent.value?.let { { id, c -> latestExtent.value?.invoke(id, c) } },
             nested,
-            textInset
+            textInset,
+            handle
         )
     }
 }

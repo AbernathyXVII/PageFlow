@@ -649,6 +649,73 @@ class DesktopBlockSelectionTest {
         }
     }
 
+    /**
+     * **Tanti database di fila, come nella pagina dell'utente** (12/11/2026:
+     * "c'è ancora", i sei puntini a metà dell'elenco del primo database): il
+     * primo in vista elenco con tredici righe, poi tre tabelle. Col mouse sulle
+     * righe del primo, anche dopo essere scesi e risaliti con la rotella, i
+     * puntini stanno sul suo titolo.
+     */
+    @Test
+    fun withManyDatabasesTheDotsStayOnTheFirstTitle() {
+        runBlocking {
+            val db = AppDatabase.getInstance(context)
+            val repo = PageRepository(db)
+            repo.createPage(PageEntity(id = "molti", title = "Molti"))
+            for (d in 0 until 4) {
+                repo.createPage(PageEntity(id = "base$d", title = "BASE $d", isDatabase = true, parentId = "molti", databaseLayout = if (d == 0) DatabaseLayout.LIST else null))
+                for (i in 0 until (if (d == 0) 13 else 3)) db.databaseDao().insertRow(DatabaseRowEntity(id = "b$d-r$i", pageId = "base$d", title = "Riga $d.$i", orderIndex = i))
+                repo.saveBlock(BlockEntity(id = "tab$d", pageId = "molti", type = BlockType.DATABASE_LINK, linkedPageId = "base$d", orderIndex = d))
+            }
+            // Sotto i database, un gruppo di colonne con qualche riga (come nella pagina dell'utente dopo le prove).
+            repo.saveBlock(BlockEntity(id = "gruppo", pageId = "molti", type = BlockType.COLUMN_LIST, orderIndex = 4))
+            for (k in 0 until 3) {
+                repo.saveBlock(BlockEntity(id = "col$k", pageId = "molti", parentBlockId = "gruppo", type = BlockType.COLUMN, orderIndex = k))
+                for (i in 0 until 6) repo.saveBlock(BlockEntity(id = "col$k-$i", pageId = "molti", parentBlockId = "col$k", textJson = """[{"text":"Colonna $k riga $i"}]""", orderIndex = i))
+            }
+        }
+        withPage("molti") { scene, frames, picture ->
+            frames(20)
+            val clean = picture()
+            File("build/desktop-screenshots", "many_databases.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(clean).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val rows = textRows(clean)
+            val pageTitle = rows.filter { it.first > TOP_BAR }.maxBy { it.last - it.first }
+            fun hover(y: Float): List<Int> {
+                onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, y), pressed = false) }
+                frames(5)
+                return dotsRows(picture(), clean)
+            }
+            val firstTitle = rows.first { it.first > pageTitle.last + 40 }
+            val checks = rows.filter { it.first > firstTitle.last + 40 && it.last < 650 }.map { band ->
+                val dots = hover(band.center())
+                band to dots
+            }
+            val wrong = checks.filter { (_, dots) -> dots.isNotEmpty() && abs(dots.average() - firstTitle.center()) > 3 }
+            File("build/desktop-screenshots", "many_databases_hover.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(picture()).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            assertTrue("titolo $firstTitle; puntini fuori posto col mouse su: ${wrong.map { (b, d) -> "$b -> ${d.firstOrNull()}..${d.lastOrNull()}" }}", wrong.isEmpty())
+            // Giù e su con la rotella, poi di nuovo sulle righe del primo database.
+            repeat(12) {
+                onWindowThread { scene.sendPointerEvent(PointerEventType.Scroll, Offset(200f, 400f), scrollDelta = Offset(0f, 3f), type = PointerType.Mouse) }
+                frames(3)
+            }
+            File("build/desktop-screenshots", "many_databases_down.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(picture()).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            for (y in listOf(300f, 350f, 400f, 450f)) {
+                onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, y), pressed = false) }
+                frames(2)
+            }
+            repeat(40) {
+                onWindowThread { scene.sendPointerEvent(PointerEventType.Scroll, Offset(200f, 400f), scrollDelta = Offset(0f, -3f), type = PointerType.Mouse) }
+                frames(3)
+            }
+            frames(10)
+            val back = picture()
+            File("build/desktop-screenshots", "many_databases_back.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(back).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val again = checks.map { (band, _) -> band to hover(band.center()) }
+            val wrongAgain = again.filter { (_, dots) -> dots.isNotEmpty() && abs(dots.average() - firstTitle.center()) > 3 }
+            assertTrue("dopo la rotella, puntini fuori posto col mouse su: ${wrongAgain.map { (b, d) -> "$b -> ${d.firstOrNull()}..${d.lastOrNull()}" }}", wrongAgain.isEmpty())
+        }
+    }
+
     /** Scorrendo con la rotella, col mouse fermo, i puntini passano alla riga che ora c'è sotto. */
     @Test
     fun theSixDotsFollowTheWheel() {

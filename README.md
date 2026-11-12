@@ -1126,8 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.153.74.2 — 13/11/2026 · 00:30 — No six dots of their own for a group of columns
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1231 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **Extra six dots in the middle of a database in
+  columns**: with "Main calendar" next to "Notebook", moving the mouse in the
+  group but not on one of its blocks (the margin on the left, the gap between
+  them) showed the dots of the whole group, with the "Columns" menu, halfway
+  down "Notebook", because the first block of the group was a whole
+  database. As in Notion, a group of columns has no dots of its own any
+  more: the blocks inside it have theirs, and between them the dots stay
+  where they were. Found by the user, who checked it by taking "Main
+  calendar" out of the group and putting it back
+- **[Project]** `BlockPicker.lineAt` skips the entries without dots
+  (`pickableAs(handle = false)` for `COLUMN_LIST`); the group no longer has a
+  `FirstLine` (`ColumnLines` without `firstColumn`). Tests:
+  `DesktopColumnsTest` (two databases side by side, the mouse in the margin
+  halfway down: nothing appears; without the fix the group's dots did),
+  `DesktopBlockSelectionTest` (many databases in a row, with a group of
+  columns below, the wheel down and up: the dots on the first title)
+
 ### 🔧 v0.153.74.1 — 12/11/2026 · 22:51 — The six dots follow the page when it moves under a still mouse
-*(Claude Code on the PC; not yet tested by the user; phone not connected, APK ready to install; 1229 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone with v0.153.74.2; 1229 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **Six dots appeared out of nowhere**, next to a
   line in the middle of a database's list, far from its title: with the mouse
