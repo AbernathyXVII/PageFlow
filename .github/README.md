@@ -2,37 +2,37 @@
 
 # PageFlow
 
-**Le tue note sul telefono e sul PC, come Notion — ma tutto resta sui tuoi dispositivi.**
-Niente account, niente cloud: pagine, database e file sono salvati solo sul telefono e sul PC.
+**Your notes on your phone and PC, like Notion — but everything stays on your devices.**
+No account, no cloud: pages, databases and files are saved only on your phone and PC.
 
-## Cosa puoi fare
+## What you can do
 
-- **Pagine e sottopagine** con testo, titoli, elenchi, caselle da spuntare, toggle, tabelle, citazioni, codice, immagini, video, audio e file
-- **Database come Notion**: tabella, bacheca, calendario, timeline, elenco, galleria e grafici, con filtri, ordinamenti, raggruppamenti, formule e relazioni
-- **Bottoni e automazioni** che fanno il lavoro ripetitivo da soli ("ogni lunedì crea la pagina della settimana")
-- **Menzioni "@" e backlink**, e **blocchi sincronizzati**: lo stesso testo in più pagine, che cambia ovunque insieme
-- **Promemoria e notifiche**, anche ripetuti
-- **Scrivere a mano** e disegnare sopra le pagine, anche con la S Pen
-- **Quaderni** in stile OneNote, con le loro sezioni
-- **Registrare l'audio** e **scansionare documenti** con la fotocamera; la ricerca trova anche il **testo scritto dentro le foto**
-- **Salvare dal web e dalle altre app**: web clipper, "Condividi" verso PageFlow, note al volo dal widget
-- **Widget** nella barra laterale: meteo, risultati sportivi, borsa, orologi del mondo, conto alla rovescia, timer e pomodoro
-- **Esportare** in PDF e Markdown, **backup** e cestino; **cronologia** di ogni pagina; pagine **bloccate** con password o impronta
-- **Correttore ortografico** in 5 lingue; l'app è in 8 lingue (italiano, inglese, tedesco, francese, spagnolo, cinese, coreano, giapponese)
-- **Anche sul PC (Windows)**, con l'aspetto di Notion, e **sincronizzazione via Wi‑Fi** fra telefono e PC sulla rete di casa, senza cloud
+- **Pages and subpages** with text, headings, lists, checkboxes, toggles, tables, quotes, code, images, video, audio and files
+- **Databases like Notion's**: table, board, calendar, timeline, list, gallery and charts, with filters, sorting, grouping, formulas and relations
+- **Buttons and automations** that do the repetitive work by themselves ("every Monday create the week's page")
+- **"@" mentions and backlinks**, and **synced blocks**: the same text in several pages, changing everywhere together
+- **Reminders and notifications**, repeating too
+- **Handwriting** and drawing on top of pages, with the S Pen too
+- **OneNote-style notebooks**, with their sections
+- **Audio recording** and **document scanning** with the camera; search also finds the **text written inside photos**
+- **Saving from the web and from other apps**: web clipper, "Share" to PageFlow, quick notes from the widget
+- **Widgets** in the sidebar: weather, sports scores, stocks, world clocks, countdown, timer and pomodoro
+- **Export** to PDF and Markdown, **backup** and trash; **history** of every page; pages **locked** with a password or fingerprint
+- **Spell checker** in 5 languages; the app is in 8 languages (Italian, English, German, French, Spanish, Chinese, Korean, Japanese)
+- **On the PC too (Windows)**, with Notion's look, and **Wi‑Fi sync** between phone and PC on your home network, without cloud
 
-## Installazione
+## Installation
 
-Tutto è nell'ultima [Release](https://github.com/AbernathyXVII/PageFlow/releases):
-- **Telefono**: scarica l'APK e aprilo sul telefono (Android 8.0 o più recente).
-- **PC**: scarica l'installatore per Windows (`.exe`, Windows 10 o 11 a 64 bit) e aprilo; se Windows avvisa che il PC è protetto, scegli "Ulteriori informazioni" e "Esegui comunque".
+Everything is in the latest [Release](https://github.com/AbernathyXVII/PageFlow/releases):
+- **Phone**: download the APK and open it on the phone (Android 8.0 or newer).
+- **PC**: download the Windows installer (`.exe`, 64-bit Windows 10 or 11) and open it; if Windows warns that it protected your PC, choose "More info" and "Run anyway".
 
-Al primo avvio l'app è vuota: trovi una sola pagina, "My Space", da cui cominciare. Per avere le stesse pagine su tutti e due: "Connections" nella barra laterale.
+On first launch the app is empty: you find a single page, "My Space", to start from. To have the same pages on both: "Connections" in the sidebar.
 
 ## Privacy
 
-I tuoi dati restano sul telefono e sul PC, a meno che tu non li esporti o ne faccia un backup altrove; la sincronizzazione fra i due passa solo dalla rete di casa, cifrata. Internet serve solo alle funzioni che ne hanno bisogno, come i widget (meteo, sport, borsa), le anteprime dei link, i video di YouTube, il web clipper e i modelli di Google Play Services per lo scanner e per leggere il testo delle foto, che poi lavorano sul telefono.
+Your data stays on your phone and PC, unless you export it or back it up somewhere else; the sync between the two goes only through your home network, encrypted. Internet is used only by the features that need it, such as the widgets (weather, sports, stocks), link previews, YouTube videos, the web clipper and the Google Play Services models for the scanner and for reading the text in photos, which then work on the phone.
 
-## Tutte le novità
+## All the changes
 
-La storia completa, versione per versione, è nel [README completo](https://github.com/AbernathyXVII/PageFlow/blob/main/README.md).
+The full history, version by version, is in the [full README](https://github.com/AbernathyXVII/PageFlow/blob/main/README.md).

@@ -77,7 +77,7 @@ enum class PatchKind(val emoji: String) {
  * L'ora di una versione di cui non si sa (le prime, fatte in un'altra chat
  * fra l'8 e il 18/09/2026): si dice, invece di inventarla.
  */
-const val UNKNOWN_TIME = "ora non registrata"
+const val UNKNOWN_TIME = "time not recorded"
 
 /** Una versione: "🆕 v0.78 — 30/09/2026 · 15:09 — titolo", e sotto quello che contiene. */
 data class PatchVersion(
@@ -85,7 +85,7 @@ data class PatchVersion(
     val emoji: String,
     /** "0.78", "0.77.1", "0.77.0.1": il numero senza la "v". */
     val version: String,
-    /** "30/09/2026", o un periodo ("fra l'8 e il 18/09/2026") quando l'ora non si sa. */
+    /** "30/09/2026", o un periodo ("between 8 and 18/09/2026") quando l'ora non si sa. */
     val date: String,
     /** "15:09", o `UNKNOWN_TIME`. */
     val time: String,

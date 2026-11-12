@@ -35,7 +35,7 @@ class PatchNotesTest {
     /** La Cronologia presa dal README, come la prende il build. */
     private fun readmeChronology(): String {
         val text = File("../README.md").readText(Charsets.UTF_8).removePrefix("﻿")
-        val start = text.indexOf("## Cronologia degli aggiornamenti")
+        val start = text.indexOf("## Changelog")
         val end = text.indexOf("\n## ", start + 1)
         return text.substring(start, end)
     }
@@ -46,7 +46,7 @@ class PatchNotesTest {
     fun theAppHasTheReadmeChronology() {
         val shipped = context.assets.open(PatchNotesAsset.FILE_NAME).bufferedReader().use { it.readText() }
         assertEquals(readmeChronology(), shipped)
-        assertEquals("Cronologia degli aggiornamenti", notes().title)
+        assertEquals("Changelog", notes().title)
         assertTrue(notes().intro.isNotEmpty())
     }
 
@@ -107,8 +107,8 @@ class PatchNotesTest {
     @Test
     fun everyItemSaysItsPlatformAndFitsItsVersion() {
         // Dal 21/10/2026: accanto all'etichetta di ogni voce la piattaforma
-        // (una o più, o "Tutte"), e le etichette sono quelle di adesso.
-        val platforms = setOf("📱 Mobile", "💻 PC", "🍎 Mac", "🌐 Web App", "🌍 Tutte")
+        // (una o più, o "All"), e le etichette sono quelle di adesso (in inglese dal 12/11/2026).
+        val platforms = setOf("📱 Mobile", "💻 PC", "🍎 Mac", "🌐 Web App", "🌍 All")
         val item = Regex("""^\s*- \*\*\[([^\]]+)\]\*\*(?: \*\*\[([^\]]+)\]\*\*)?""")
         val kindOf = Regex("""^### \S+ v(\S+) — """)
         var kind: PatchKind? = null
@@ -120,13 +120,13 @@ class PatchNotesTest {
             }
             val m = item.find(line) ?: return@forEach
             val tag = m.groupValues[1]
-            if (tag == "Progetto" || tag == "Nota") return@forEach
-            assertTrue("$version: etichetta \"$tag\"", tag in setOf("Nuova funzionalità", "Modifica", "Rimosso", "Bug fix"))
+            if (tag == "Project" || tag == "Note") return@forEach
+            assertTrue("$version: etichetta \"$tag\"", tag in setOf("New feature", "Change", "Removed", "Bug fix"))
             val said = m.groupValues[2].split(" · ").filter { it.isNotEmpty() }
             assertTrue("$version: \"$tag\" senza piattaforma", said.isNotEmpty() && said.all { it in platforms })
             // Una correzione corregge soltanto; una modifica non aggiunge.
             if (kind == PatchKind.FIX) assertEquals("$version: $line", "Bug fix", tag)
-            if (kind == PatchKind.CHANGE) assertTrue("$version: $line", tag != "Nuova funzionalità")
+            if (kind == PatchKind.CHANGE) assertTrue("$version: $line", tag != "New feature")
         }
     }
 
@@ -147,34 +147,34 @@ class PatchNotesTest {
     fun theMarkdownBecomesBlocks() {
         val notes = parsePatchNotes(
             """
-            ## Cronologia degli aggiornamenti
+            ## Changelog
 
-            Una riga
-            spezzata a mano.
+            A line
+            broken by hand.
 
             ### 🆕 v0.2 — 25/09/2026 · 08:25 — Il titolo
-            *(Claude Code sul PC; verificato)*
+            *(Claude Code on the PC; verified)*
 
-            L'utente, parola per parola:
+            The user, word for word:
             > «Prima riga
             > seconda riga»
 
-            - **[Nuova funzionalità]** Una voce
-              che continua sotto
-              - Una voce rientrata
+            - **[New feature]** An item
+              that continues below
+              - An indented item
             1. Numerata
               | a | b |
               |---|---|
               | 1 | 2 |
 
             ### ✏️ v0.1.1 — 24/09/2026 · 23:30 — Una modifica
-            - **[Modifica]** **[📱 Mobile]** Cambiato
+            - **[Change]** **[📱 Mobile]** Changed
 
             ### 🔧 v0.1.0.1 — 24/09/2026 · 23:17 — Una correzione
             - **[Bug fix]** Corretto
             """.trimIndent()
         )
-        assertEquals(listOf(NoteBlock.Paragraph("Una riga spezzata a mano.")), notes.intro)
+        assertEquals(listOf(NoteBlock.Paragraph("A line broken by hand.")), notes.intro)
         val (release, change, fix) = notes.versions
         assertEquals(PatchKind.CHANGE, change.kind)
         assertEquals("0.1.1", change.version)
@@ -187,11 +187,11 @@ class PatchNotesTest {
         assertEquals("Il titolo", release.title)
         assertEquals(
             listOf(
-                NoteBlock.Paragraph("*(Claude Code sul PC; verificato)*"),
-                NoteBlock.Paragraph("L'utente, parola per parola:"),
+                NoteBlock.Paragraph("*(Claude Code on the PC; verified)*"),
+                NoteBlock.Paragraph("The user, word for word:"),
                 NoteBlock.Quote("«Prima riga seconda riga»"),
-                NoteBlock.Bullet(0, "**[Nuova funzionalità]** Una voce che continua sotto"),
-                NoteBlock.Bullet(1, "Una voce rientrata"),
+                NoteBlock.Bullet(0, "**[New feature]** An item that continues below"),
+                NoteBlock.Bullet(1, "An indented item"),
                 NoteBlock.Bullet(0, "Numerata", marker = "1."),
                 NoteBlock.Table(1, listOf(listOf("a", "b"), listOf("1", "2")))
             ),
@@ -221,8 +221,8 @@ class PatchNotesTest {
     @Test
     fun theReviewTagIsRed() {
         // 18/10/2026, chiesto dall'utente: le scelte da rivedere, in rosso e in grassetto.
-        val text = inlineMarkdown("**🔴 [Da rivedere]** Come Notion")
-        val tag = text.text.indexOf("[Da rivedere]")
+        val text = inlineMarkdown("**🔴 [To review]** Come Notion")
+        val tag = text.text.indexOf("[To review]")
         val styles = text.spanStyles.filter { tag in it.start until it.end }.map { it.item }
         assertTrue(styles.any { it.color != Color.Unspecified && it.fontWeight == FontWeight.Bold })
         // Il resto no.

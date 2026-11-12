@@ -408,5 +408,6 @@ private val CODE_BACKGROUND = Color(0x33878787)
  * ritrovare per decidere se tenerla o passare all'altra, scritta accanto. Nel
  * README ha davanti 🔴, perché su GitHub il testo non si colora.
  */
-const val REVIEW_TAG = "[Da rivedere]"
+// In inglese dal 12/11/2026, come tutto il README.
+const val REVIEW_TAG = "[To review]"
 private val ReviewRed = Color(0xFFE5484D)

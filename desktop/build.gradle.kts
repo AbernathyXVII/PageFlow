@@ -45,8 +45,8 @@ val patchNotes = tasks.register("patchNotes") {
     outputs.dir(patchNotesDir)
     doLast {
         val text = readmeFile.asFile.readText(Charsets.UTF_8).removePrefix("﻿")
-        val start = text.indexOf("## Cronologia degli aggiornamenti")
-        check(start >= 0) { "Nel README manca la Cronologia degli aggiornamenti" }
+        val start = text.indexOf("## Changelog")
+        check(start >= 0) { "Nel README manca la sezione \"## Changelog\"" }
         val end = text.indexOf("\n## ", start + 1).let { if (it < 0) text.length else it }
         val out = patchNotesDir.get().file("patch_notes.md").asFile
         out.parentFile.mkdirs()
