@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.withEmojiFont
+import com.gabriele.notionlocal.platform.emojiFontFamily
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.KeyEventType
@@ -2518,7 +2520,7 @@ private fun PageEditorContent(
                     } else {
                         Text(
                             text = page?.icon ?: "📄",
-                            style = TextStyle(fontSize = 40.sp),
+                            style = TextStyle(fontSize = 40.sp, fontFamily = emojiFontFamily),
                             modifier = Modifier.clickable(enabled = !isTrashed) { editingImage = PageImageTarget.ICON }
                         )
                     }
@@ -4730,7 +4732,7 @@ private class MergedRunVisualTransformation(
             if (i < lines.size - 1) builder.append("\n")
         }
         return TransformedText(
-            builder.toAnnotatedString(),
+            builder.toAnnotatedString().withEmojiFont(),
             MergedRunOffsetMapping(lineLengths, prefixLengths, if (hasLead) 1 else 0)
         )
     }
@@ -7485,7 +7487,7 @@ private class RichTextVisualTransformation(
             }
         }
         proof?.let { p -> builder.markMisspellings(0, p(body), 0, effective, typingAt?.takeIf { it in 0..body.length }) }
-        return TransformedText(builder.toAnnotatedString(), mapping)
+        return TransformedText(builder.toAnnotatedString().withEmojiFont(), mapping)
     }
 }
 

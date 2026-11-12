@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.emojiFontFamily
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.shape.CircleShape
@@ -316,7 +317,7 @@ private fun ColumnScope.EmojiTab(
         }
         Box {
             IconButton(onClick = { toneMenu = true }) {
-                Text(withSkinTone("✋", tone), fontSize = 20.sp)
+                Text(withSkinTone("✋", tone), fontSize = 20.sp, fontFamily = emojiFontFamily)
             }
             DropdownMenu(expanded = toneMenu, onDismissRequest = { toneMenu = false }, modifier = Modifier.background(DarkSheet)) {
                 Row(modifier = Modifier.padding(horizontal = 4.dp)) {
@@ -331,7 +332,7 @@ private fun ColumnScope.EmojiTab(
                                     toneMenu = false
                                 },
                             contentAlignment = Alignment.Center
-                        ) { Text(withSkinTone("✋", option), fontSize = 24.sp) }
+                        ) { Text(withSkinTone("✋", option), fontSize = 24.sp, fontFamily = emojiFontFamily) }
                     }
                 }
             }
@@ -375,7 +376,7 @@ private fun ColumnScope.EmojiTab(
                                     .padding(horizontal = 8.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(typedEmoji, fontSize = 26.sp)
+                                Text(typedEmoji, fontSize = 26.sp, fontFamily = emojiFontFamily)
                                 Spacer(modifier = Modifier.size(10.dp))
                                 Text(EmojiStrings.useTyped, style = MaterialTheme.typography.bodyMedium, color = NotionWhite)
                             }
@@ -686,7 +687,7 @@ private fun EmojiCell(emoji: String, enabled: Boolean, onClick: () -> Unit) {
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(emoji, fontSize = 26.sp)
+        Text(emoji, fontSize = 26.sp, fontFamily = emojiFontFamily)
     }
 }
 

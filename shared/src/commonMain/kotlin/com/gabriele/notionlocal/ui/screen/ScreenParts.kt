@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.emojiFontFamily
 import com.gabriele.notionlocal.data.IconSymbol
 import com.gabriele.notionlocal.data.chosenEmoji
 import androidx.compose.foundation.background
@@ -108,7 +109,7 @@ fun PageIconView(
                 tint = NotionGray400,
                 modifier = Modifier.size(size)
             )
-            else -> Text(emoji, fontSize = (size.value * 0.8f).sp)
+            else -> Text(emoji, fontSize = (size.value * 0.8f).sp, fontFamily = emojiFontFamily)
         }
     }
 }

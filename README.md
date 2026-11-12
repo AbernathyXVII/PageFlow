@@ -1126,6 +1126,31 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.153.60.1 — 12/11/2026 · 09:20 — On the PC ☺️, ♥️ and the other emoji Windows also has as letters, in colour
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1184 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **☺️, ♥️ ♠️ ♦️ ♣️, ♀️ ♂️, ‼️, the arrows ↔️ ↕️,
+  ©️ ®️ ™️, the keys 0️⃣–9️⃣ #️⃣, ✔️ ✖️ and the small squares ▪️ ◻️** were
+  white, as letters, in the emoji picker and wherever they were used: Windows
+  also has them among the letters of its own font (Segoe UI), which comes
+  before Google's in the list. About thirty emoji out of 1906. Now they are
+  in colour in the picker, in the icons of pages, databases and callouts, and
+  in the text of the pages. Still as letters, for now, in page titles,
+  database cells and the sidebar's names. Not yet tested by the user
+- **[Note]** The **families and couples** in a white box with grey figures
+  (👨‍👩‍👧, 👪…) aren't a fault: it is how Google draws them in the version
+  of September 2026. Drawn with both versions of the font (the vector one
+  and the one made of Google's own images), they come out the same
+- **[Project]** `emojiFontFamily` (common `expect`: Noto on the PC, `null`
+  on the phone) asked where an emoji is drawn alone (`PageIconView`, the
+  picker's cells and skin tones, the page's and the database's icon,
+  callouts); `withEmojiFont()` gives it to the sequences written with U+FE0F
+  in the two transformations of the page text — the whole sequence, with
+  keycaps, skin tones and the parts joined by U+200D
+  (`emojiPresentationRanges`). `PcEmoji` moved to `shared` (desktopMain).
+  Tests: `DesktopEmojiTest` (the sequences; ☺️ yellow as an icon, ♥️ red in
+  the text, white without the fix)
+
 ### ✏️ v0.153.60 — 12/11/2026 · 09:01 — On the PC Google's emoji, with the flags
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1182 tests passed)*
 

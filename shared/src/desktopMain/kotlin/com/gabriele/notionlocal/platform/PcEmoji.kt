@@ -1,4 +1,4 @@
-package com.gabriele.notionlocal.desktop
+package com.gabriele.notionlocal.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -14,7 +14,9 @@ import androidx.compose.ui.text.platform.Font
  * restano dei caratteri di Windows: Noto sta in coda alla lista di ogni
  * famiglia generica ("Segoe UI", "Arial", Noto), quindi Skia lo usa solo per
  * quello che quelli non sanno disegnare. Sul PC i caratteri delle pagine sono
- * tutti famiglie generiche (`PageFonts.desktop.kt`): vale ovunque.
+ * tutti famiglie generiche (`PageFonts.desktop.kt`): vale ovunque. Dove Windows
+ * ha anche la versione in lettere (☺️, ♥️) serve chiedere Noto: vedi
+ * `emojiFontFamily` (il carattere viene dalle risorse del modulo `desktop`).
  *
  * shortcut: Compose non ha un modo pubblico per scegliere il carattere di
  * riserva sul PC (risponde sempre prima Windows, con Segoe UI Emoji); si tocca
@@ -27,6 +29,9 @@ object PcEmoji {
     val font: Font? by lazy {
         javaClass.getResourceAsStream("/fonts/Noto-COLRv1.ttf")?.use { Font("PageFlowEmoji", it.readBytes()) }
     }
+
+    /** Lo stesso, come famiglia da chiedere a un testo. */
+    val family: FontFamily? by lazy { font?.let { FontFamily(it) } }
 
     /** All'avvio, prima di scrivere qualunque testo. Vero se Noto è nelle liste. */
     fun install(): Boolean = runCatching {
@@ -52,6 +57,6 @@ object PcEmoji {
     @Composable
     fun Load() {
         val resolver = LocalFontFamilyResolver.current
-        remember(resolver) { font?.let { resolver.resolve(FontFamily(it)) } }
+        remember(resolver) { family?.let { resolver.resolve(it) } }
     }
 }

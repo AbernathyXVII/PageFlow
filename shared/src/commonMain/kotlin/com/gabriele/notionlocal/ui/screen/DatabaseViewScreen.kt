@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.emojiFontFamily
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.hoverable
@@ -1437,6 +1438,7 @@ private fun DatabaseViewBody(
                 Text(
                     databaseEmoji,
                     fontSize = if (embedded) 20.sp else 32.sp,
+                    fontFamily = emojiFontFamily,
                     modifier = Modifier
                         .padding(start = 16.dp)
                         .let { base ->
@@ -9373,7 +9375,7 @@ fun RowIconBadge(rowId: String, size: Dp) {
         // calcolati dalla misura, così non esce dal posto con i caratteri grandi.
         val fontSize = with(LocalDensity.current) { (size * 0.82f).toSp() }
         Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
-            Text(emoji, fontSize = fontSize, maxLines = 1)
+            Text(emoji, fontSize = fontSize, maxLines = 1, fontFamily = emojiFontFamily)
         }
     } else {
         return

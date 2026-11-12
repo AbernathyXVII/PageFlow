@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.emojiFontFamily
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -72,7 +73,7 @@ fun CalloutIcon(
         } else if (symbol != null) {
             SymbolIcon(symbol, 20.dp)
         } else {
-            Text(attrs.icon ?: DEFAULT_CALLOUT_ICON, fontSize = 17.sp)
+            Text(attrs.icon ?: DEFAULT_CALLOUT_ICON, fontSize = 17.sp, fontFamily = emojiFontFamily)
         }
     }
 }
