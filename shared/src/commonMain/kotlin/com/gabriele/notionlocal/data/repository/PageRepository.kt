@@ -1916,27 +1916,131 @@ class PageRepository(private val db: AppDatabase) {
      * quelli dopo. Falso se il blocco o la riga non ci sono più, o se la riga
      * sta dentro il blocco stesso.
      */
-    suspend fun moveBlockAfter(blockId: String, afterId: String?): Boolean = db.withTransaction {
+    suspend fun moveBlockAfter(blockId: String, afterId: String?): Boolean = moveBlockNextTo(blockId, afterId, after = true)
+
+    /**
+     * **Il blocco subito prima o subito dopo [targetId]** ([after]), fra i
+     * fratelli di quella riga: dentro lo stesso toggle o la stessa colonna,
+     * se ci sta (dal 12/11/2026, per trascinare dentro e fuori dalle colonne).
+     * Con [targetId] null va in cima alla pagina. Le righe che ha dentro
+     * vengono con lui; la colonna che lascia, se resta vuota, si sistema
+     * (`tidyColumn`). Falso se il blocco o la riga non ci sono più, se la riga
+     * sta dentro il blocco stesso, o se un gruppo di colonne finirebbe dentro
+     * una colonna.
+     */
+    suspend fun moveBlockNextTo(blockId: String, targetId: String?, after: Boolean): Boolean = db.withTransaction {
         val block = blockDao.getById(blockId) ?: return@withTransaction false
-        if (afterId == blockId) return@withTransaction false
+        if (targetId == blockId) return@withTransaction false
         val all = blockDao.getBlocksForPageOnce(block.pageId)
         val byId = all.associateBy { it.id }
-        if (afterId != null) {
-            val target = byId[afterId] ?: return@withTransaction false
-            // Dentro se stesso no: si risale dalla riga scelta.
-            var parent = target.parentBlockId
-            while (parent != null) {
-                if (parent == blockId) return@withTransaction false
-                parent = byId[parent]?.parentBlockId
-            }
+        if (targetId != null) {
+            val target = byId[targetId] ?: return@withTransaction false
+            if (isInside(target, blockId, byId)) return@withTransaction false
+            if (block.type == BlockType.COLUMN_LIST && byId[target.parentBlockId]?.type == BlockType.COLUMN) return@withTransaction false
         }
+        val oldParent = block.parentBlockId
         blockDao.shiftOrderIndexes(block.pageId, block.parentBlockId, block.orderIndex + 1, -1)
-        val target = afterId?.let { blockDao.getById(it) }
+        // La riga si rilegge: chiuso il buco, il suo posto può essere cambiato.
+        val target = targetId?.let { blockDao.getById(it) }
         val parent = target?.parentBlockId
-        val at = target?.let { it.orderIndex + 1 } ?: 0
+        val at = when {
+            target == null -> 0
+            after -> target.orderIndex + 1
+            else -> target.orderIndex
+        }
         blockDao.shiftOrderIndexes(block.pageId, parent, at, 1)
         blockDao.setParentAndOrder(blockId, parent, at)
+        if (oldParent != parent) tidyColumn(oldParent)
         true
+    }
+
+    /**
+     * **Il blocco accanto a [targetId], a destra o a sinistra ([right])**,
+     * come su Notion (dal 12/11/2026, chiesto dall'utente con le foto):
+     * - accanto a una riga qualsiasi della pagina, lei e il blocco diventano
+     *   un gruppo di due colonne, al posto della riga;
+     * - accanto a una riga dentro una colonna (o alla colonna), il blocco
+     *   diventa una colonna in più, subito a destra o a sinistra di quella;
+     * - accanto a un gruppo di colonne, una colonna in più in fondo o in cima.
+     * La colonna che il blocco lascia si sistema (`tidyColumn`). Falso se non
+     * si può: il blocco su se stesso o dentro di sé, o un gruppo di colonne
+     * (niente colonne dentro le colonne).
+     */
+    suspend fun moveBlockBeside(blockId: String, targetId: String, right: Boolean): Boolean = db.withTransaction {
+        val block = blockDao.getById(blockId) ?: return@withTransaction false
+        if (targetId == blockId || block.type == BlockType.COLUMN_LIST || block.type == BlockType.COLUMN) return@withTransaction false
+        val all = blockDao.getBlocksForPageOnce(block.pageId)
+        val byId = all.associateBy { it.id }
+        val first = byId[targetId] ?: return@withTransaction false
+        if (isInside(first, blockId, byId)) return@withTransaction false
+        val oldParent = block.parentBlockId
+        blockDao.shiftOrderIndexes(block.pageId, block.parentBlockId, block.orderIndex + 1, -1)
+        val target = blockDao.getById(targetId) ?: return@withTransaction false
+        val holder = target.parentBlockId?.let { blockDao.getById(it) }
+        suspend fun newColumn(listId: String, at: Int): String {
+            blockDao.shiftOrderIndexes(block.pageId, listId, at, 1)
+            return BlockEntity(pageId = block.pageId, parentBlockId = listId, type = BlockType.COLUMN, orderIndex = at)
+                .also { blockDao.insert(it) }.id
+        }
+        when {
+            target.type == BlockType.COLUMN_LIST -> {
+                val at = if (right) (blockDao.getChildren(target.id).maxOfOrNull { it.orderIndex } ?: -1) + 1 else 0
+                blockDao.setParentAndOrder(blockId, newColumn(target.id, at), 0)
+            }
+            target.type == BlockType.COLUMN || holder?.type == BlockType.COLUMN -> {
+                val column = if (target.type == BlockType.COLUMN) target else holder!!
+                val listId = column.parentBlockId ?: return@withTransaction false
+                blockDao.setParentAndOrder(blockId, newColumn(listId, column.orderIndex + if (right) 1 else 0), 0)
+            }
+            else -> {
+                // Il gruppo prende il posto della riga, che va in una delle due colonne.
+                val list = BlockEntity(pageId = block.pageId, parentBlockId = target.parentBlockId, type = BlockType.COLUMN_LIST, orderIndex = target.orderIndex)
+                blockDao.insert(list)
+                val left = BlockEntity(pageId = block.pageId, parentBlockId = list.id, type = BlockType.COLUMN, orderIndex = 0).also { blockDao.insert(it) }
+                val rightColumn = BlockEntity(pageId = block.pageId, parentBlockId = list.id, type = BlockType.COLUMN, orderIndex = 1).also { blockDao.insert(it) }
+                blockDao.setParentAndOrder(if (right) target.id else blockId, left.id, 0)
+                blockDao.setParentAndOrder(if (right) blockId else target.id, rightColumn.id, 0)
+            }
+        }
+        tidyColumn(oldParent)
+        true
+    }
+
+    /** Vero se [block] sta dentro [ancestorId] (o è lui), risalendo i genitori. */
+    private fun isInside(block: BlockEntity, ancestorId: String, byId: Map<String, BlockEntity>): Boolean {
+        var current: BlockEntity? = block
+        val seen = HashSet<String>()
+        while (current != null && seen.add(current.id)) {
+            if (current.id == ancestorId) return true
+            current = current.parentBlockId?.let { byId[it] }
+        }
+        return false
+    }
+
+    /**
+     * **Una colonna rimasta vuota se ne va, e un gruppo con una colonna sola
+     * torna righe normali** (dal 12/11/2026, come su Notion): le righe di
+     * quell'ultima colonna prendono il posto del gruppo, nell'ordine. Niente
+     * se [columnId] non è una colonna.
+     */
+    private suspend fun tidyColumn(columnId: String?) {
+        val column = columnId?.let { blockDao.getById(it) }?.takeIf { it.type == BlockType.COLUMN } ?: return
+        val listId = column.parentBlockId ?: return
+        if (blockDao.getChildren(column.id).isEmpty()) {
+            blockDao.delete(column)
+            blockDao.shiftOrderIndexes(column.pageId, listId, column.orderIndex + 1, -1)
+        }
+        val list = blockDao.getById(listId)?.takeIf { it.type == BlockType.COLUMN_LIST } ?: return
+        val columns = blockDao.getChildren(list.id)
+        if (columns.size > 1) return
+        val last = columns.singleOrNull()
+        if (last != null && last.type != BlockType.COLUMN) return
+        val lines = last?.let { blockDao.getChildren(it.id) }.orEmpty()
+        // Il gruppo ha un posto solo: le righe ne prendono tante quante sono.
+        blockDao.shiftOrderIndexes(list.pageId, list.parentBlockId, list.orderIndex + 1, lines.size - 1)
+        lines.forEachIndexed { i, line -> blockDao.setParentAndOrder(line.id, list.parentBlockId, list.orderIndex + i) }
+        columns.forEach { blockDao.delete(it) }
+        blockDao.delete(list)
     }
 
     /**

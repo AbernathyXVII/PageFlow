@@ -40,7 +40,8 @@ import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
 import com.gabriele.notionlocal.ui.screen.BlockDrop
-import com.gabriele.notionlocal.ui.screen.LineBounds
+import com.gabriele.notionlocal.ui.screen.BlockBox
+import com.gabriele.notionlocal.ui.screen.DropPlace
 import com.gabriele.notionlocal.ui.screen.dropFor
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
@@ -314,19 +315,34 @@ class DesktopBlockSelectionTest {
         waitForBlocks(listOf("uno", "titolo", "due", "tre"))
     }
 
-    /** Dove cade un blocco trascinato: sopra o sotto quello sotto il mouse, e niente se resterebbe dov'è. */
+    /**
+     * Dove cade un blocco trascinato: sopra o sotto quello sotto il mouse, e
+     * niente se resterebbe dov'è; col mouse sopra l'inizio o la fine del testo,
+     * accanto (le colonne), ma non dal margine dei puntini né per un gruppo di colonne.
+     */
     @Test
-    fun aDraggedBlockLandsAboveOrBelowTheOneUnderTheMouse() {
-        val order = listOf("a", "b", "c", "d")
-        val box = LineBounds(100f, 120f)
-        assertEquals(BlockDrop("d", 120f), dropFor("b", "d", below = true, box = box, order = order))
-        assertEquals(BlockDrop("c", 100f), dropFor("b", "d", below = false, box = box, order = order))
-        assertEquals(BlockDrop(null, 100f), dropFor("c", "a", below = false, box = box, order = order))
+    fun aDraggedBlockLandsAboveOrBelowOrBesideTheOneUnderTheMouse() {
+        val blocks = listOf("a", "b", "c", "d").mapIndexed { i, id -> BlockEntity(id = id, pageId = "p", orderIndex = i) } +
+            BlockEntity(id = "g", pageId = "p", type = BlockType.COLUMN_LIST, orderIndex = 4) +
+            BlockEntity(id = "k", pageId = "p", parentBlockId = "g", type = BlockType.COLUMN, orderIndex = 0) +
+            BlockEntity(id = "x", pageId = "p", parentBlockId = "k", orderIndex = 0)
+        val box = BlockBox(100f, 120f, 20f, 480f)
+        fun drop(dragged: String, target: String, x: Float, y: Float) = dropFor(dragged, target, Offset(x, y), box, 60f, blocks)
+        assertEquals(BlockDrop("d", DropPlace.AFTER, 20f, 120f, 460f, vertical = false), drop("b", "d", 200f, 115f))
+        assertEquals(BlockDrop("d", DropPlace.BEFORE, 20f, 100f, 460f, vertical = false), drop("b", "d", 200f, 105f))
+        assertEquals(DropPlace.BEFORE, drop("c", "a", 200f, 105f)?.place)
         // Su se stesso, o subito sopra o sotto: resta dov'è.
-        assertEquals(null, dropFor("b", "b", below = true, box = box, order = order))
-        assertEquals(null, dropFor("b", "a", below = true, box = box, order = order))
-        assertEquals(null, dropFor("b", "c", below = false, box = box, order = order))
-        assertEquals(null, dropFor("a", "a", below = false, box = box, order = order))
+        assertEquals(null, drop("b", "b", 200f, 115f))
+        assertEquals(null, drop("b", "a", 200f, 115f))
+        assertEquals(null, drop("b", "c", 200f, 105f))
+        // Sopra l'inizio o la fine del testo: accanto, con la linea verticale.
+        assertEquals(BlockDrop("d", DropPlace.LEFT, 14f, 100f, 20f, vertical = true), drop("b", "d", 30f, 110f))
+        assertEquals(BlockDrop("d", DropPlace.RIGHT, 486f, 100f, 20f, vertical = true), drop("b", "d", 470f, 110f))
+        // Dal margine dei puntini (prima del testo) resta sopra o sotto.
+        assertEquals(DropPlace.BEFORE, drop("b", "d", 10f, 105f)?.place)
+        // Un gruppo di colonne non va accanto, né dentro se stesso.
+        assertEquals(DropPlace.BEFORE, drop("g", "a", 30f, 105f)?.place)
+        assertEquals(null, drop("g", "x", 200f, 105f))
     }
 
     /** Tiene premuti i puntini ad [from] (col mouse prima sulla riga, perché compaiano) e trascina fino a [to], a piccoli passi. */

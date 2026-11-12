@@ -58,9 +58,12 @@ data class BlockSpot(val blockId: String, val top: Float, val bottom: Float, val
 fun Modifier.blockHover(
     picker: BlockPicker,
     coordinates: () -> LayoutCoordinates?,
+    current: () -> BlockSpot? = { null },
     onSpot: (BlockSpot?) -> Unit
 ): Modifier = pointerInput(picker) {
     val islandLine = HANDLE_HEIGHT.toPx()
+    val approach = (HANDLE_GAP + HANDLE_WIDTH + 8.dp).toPx()
+    val slack = 8.dp.toPx()
     awaitPointerEventScope {
         while (true) {
             val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -72,6 +75,11 @@ fun Modifier.blockHover(
                 // Uscendo verso i puntini, che stanno sopra la pagina, il punto è ancora dentro.
                 event.type == PointerEventType.Exit -> if (p.x < 0f || p.y < 0f || p.x > size.width || p.y > size.height) onSpot(null)
                 else -> {
+                    // **Andando verso i puntini di una riga in una colonna** (dal 12/11/2026)
+                    // si passa sopra il bordo della colonna accanto: restano quelli di prima.
+                    val spot = current()
+                    val start = spot?.start
+                    if (start != null && p.x in start - approach..start && p.y in spot.top - slack..spot.bottom + slack) continue
                     val page = coordinates()?.takeIf { it.isAttached } ?: continue
                     val (id, line) = picker.lineAt(page.localToWindow(p), islandLine) ?: continue
                     val origin = page.localToWindow(Offset.Zero)

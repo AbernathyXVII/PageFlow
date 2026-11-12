@@ -1126,6 +1126,38 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.72 — 12/11/2026 · 19:49 — Columns by dragging, as in Notion
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1224 tests passed)*
+
+- **[Change]** **[💻 PC]** **Columns by dragging**, as in Notion: dragging a
+  block by its six dots **over the start or the end of another block's
+  text**, the blue line becomes **vertical**, on the left or on the right,
+  and letting go the block goes beside it. Two blocks of the page become two
+  columns; next to a line inside a column the block becomes **one more
+  column** right there; next to a whole group of columns, a new column at
+  its edge. From the margin of the dots, that is dragging straight down, the
+  line stays horizontal as before
+- **[Change]** **[💻 PC]** **The lines inside the columns have their own six
+  dots**, next to their text: they move between the lines of the same
+  column, to another column, or out to the page; blocks of the page go into
+  a column the same way. A column left empty goes away, and a group left
+  with a single column becomes normal lines again, in its place. Ctrl+Z
+  puts everything back. A group of columns doesn't go inside a column
+- **[Project]** `PageRepository.moveBlockNextTo` (before or after a line,
+  also inside a column; `moveBlockAfter` uses it), `moveBlockBeside` (the
+  columns) and `tidyColumn`; `BlockPicker` knows the lines of the columns
+  (`pickableAs(nested)`, also from left to right, with where their text
+  starts, `BlockBox`); `dropFor` decides between above/below and
+  left/right (`DropPlace`), `BlockDragLayer` draws the line horizontal or
+  vertical; on the way to the dots of a line in a column they stay put
+  (`blockHover`). Tests: `DesktopColumnsTest` (the data: beside a line,
+  beside a line in a column, beside the group, into a column above its first
+  line, the last line out, no columns in columns, the order of the siblings
+  always tidy; with the mouse on the drawn page: "DOPO" onto the right edge
+  of "PRIMA" with the vertical blue line, the line of a column dragged out;
+  the dots next to "DESTRA"), `DesktopBlockSelectionTest` (where a dragged
+  block lands)
+
 ### ✏️ v0.153.71 — 12/11/2026 · 19:23 — New columns are blocks you can see
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1216 tests passed)*
 

@@ -2715,7 +2715,11 @@ private fun PageEditorContent(
                                         .padding(vertical = (islandSpacing / 2f).sp.toDpIn(LocalDensity.current))
                                         .anchorDecor(item.block.id, item.block.attrs.linkTarget, movedBlockNow, PAGE_SIDE_PADDING)
                                         .pageVeil(pageSelected || LocalBlockSelection.current?.selected?.value?.contains(item.block.id) == true, veilColor)
-                                        .pickableAs(renderItemKey(item), lineOf = firstLine?.let { line -> { _, block -> line.boundsIn(block) } }) { item.block.id }
+                                        .pickableAs(
+                                            renderItemKey(item),
+                                            lineOf = firstLine?.let { line -> { _, block -> line.boundsIn(block) } },
+                                            textInset = with(LocalDensity.current) { PAGE_SIDE_PADDING.toPx() }
+                                        ) { item.block.id }
                                         // Nelle celle di un database Ctrl+A resta della cella; in quelle di una
                                         // tabella Ctrl+Z resta della cella (l'Annulla della pagina non le conosce).
                                         .onPreviewKeyEvent { event ->
@@ -2780,7 +2784,7 @@ private fun PageEditorContent(
                         }
                     )
                     // Sul PC i sei puntini accanto al blocco sotto il mouse (vedi `BlockHandle.kt`).
-                    .then(if (isPc) Modifier.blockHover(blockPicker, { pageListCoordinates.get() }) { blockSpot.value = it } else Modifier)
+                    .then(if (isPc) Modifier.blockHover(blockPicker, { pageListCoordinates.get() }, { blockSpot.value }) { blockSpot.value = it } else Modifier)
                     .stickyViewport(stickyViewport)
                     // Di lato, con "Full line view": il primo verso in cui si
                     // muove il dito decide per tutto il gesto.
@@ -2818,15 +2822,24 @@ private fun PageEditorContent(
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
             // Nel margine a sinistra: un clic apre il menu del blocco, trascinandoli si sposta (vedi `BlockDrag.kt`).
-            val blockDrag = remember(blockPicker, viewModel) {
-                BlockDrag(blockPicker, { latestRenderItems.value.flatMap { renderItemBlockIds(it) } }) { id, afterId ->
+            val dragDensity = LocalDensity.current
+            val blockDrag = remember(blockPicker, viewModel, dragDensity) {
+                BlockDrag(
+                    picker = blockPicker,
+                    blocks = { viewModel.blocks.value },
+                    side = { with(dragDensity) { DROP_SIDE_ZONE.toPx() } }
+                ) { id, drop ->
                     blockSpot.value = null
-                    viewModel.blocks.value.firstOrNull { it.id == id }?.let { viewModel.moveBlockAfter(it, afterId) }
+                    val moving = viewModel.blocks.value.firstOrNull { it.id == id } ?: return@BlockDrag
+                    when (drop.place) {
+                        DropPlace.BEFORE, DropPlace.AFTER -> viewModel.moveBlockNextTo(moving, drop.targetId, after = drop.place == DropPlace.AFTER)
+                        DropPlace.LEFT, DropPlace.RIGHT -> viewModel.moveBlockBeside(moving, drop.targetId, right = drop.place == DropPlace.RIGHT)
+                    }
                 }
             }
             if (isPc && !readOnlyPage && !drawingMode) {
                 BlockHandle(blockSpot, endsAt = pageInset + PAGE_SIDE_PADDING, drag = blockDrag) { id -> blockMenuFor = id }
-                BlockDragLayer(blockDrag, { pageListCoordinates.get() }, inset = pageInset + PAGE_SIDE_PADDING) { listState.scrollBy(it) }
+                BlockDragLayer(blockDrag, { pageListCoordinates.get() }) { listState.scrollBy(it) }
             }
             // Tutta la pagina, o i blocchi scelti col mouse (null): Copy, Cut, Delete per tutti e due.
             val chosenBlocks = selectedBlocks.value.takeIf { it.isNotEmpty() }
@@ -4942,6 +4955,9 @@ private fun DrawScope.drawEmptyColumn(color: Color) {
     )
 }
 
+/** Quanto è largo, dall'inizio o dalla fine del testo, il bordo che mette un blocco trascinato accanto a un altro (vedi `BlockDrag.kt`). */
+private val DROP_SIDE_ZONE = 60.dp
+
 /** Quanto è alta una colonna senza righe, da toccare per scriverci (vedi `BlockRow`). */
 private val EMPTY_COLUMN_HEIGHT = 32.dp
 
@@ -4989,12 +5005,21 @@ private fun ColumnLines(
     val emptyColumn = isPc && column.type == BlockType.COLUMN && lines.isNotEmpty() &&
         lines.all { it.type == BlockType.PARAGRAPH && viewModel.plainTextOf(it).isEmpty() }
     val emptyLook = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+    val sidePaddingPx = with(density) { PAGE_SIDE_PADDING.toPx() }
+    val lineHandleSpan = with(density) { 26.dp.toPx() }
     CompositionLocalProvider(LocalFirstLine provides null) {
     lines.forEachIndexed { index, child ->
         key(child.id) {
             Box(
                 modifier = Modifier
                     .padding(vertical = (look.spacingOf(child) / 2f).sp.toDpIn(density))
+                    // Col mouse la riga ha i suoi sei puntini, accanto al suo testo (dal 12/11/2026).
+                    .pickableAs(
+                        "line:" + child.id,
+                        lineOf = { _, c -> LineBounds(0f, minOf(c.size.height.toFloat(), lineHandleSpan), sidePaddingPx) },
+                        nested = true,
+                        textInset = sidePaddingPx
+                    ) { child.id }
                     .then(if (index == 0) reportFirst else Modifier)
                     .then(if (emptyColumn && index == 0) Modifier.drawBehind { drawEmptyColumn(emptyLook) } else Modifier)
             ) {

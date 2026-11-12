@@ -52,7 +52,11 @@ class BlockPicker {
         val coordinates: LayoutCoordinates,
         val blockAt: (Float) -> String?,
         val lineOf: ((String, LayoutCoordinates) -> LineBounds?)?,
-        val extentOf: ((String, LayoutCoordinates) -> LineBounds?)?
+        val extentOf: ((String, LayoutCoordinates) -> LineBounds?)?,
+        /** Una riga dentro un'altra voce (una colonna): conta anche da sinistra a destra, e vince sulla voce che la contiene. */
+        val nested: Boolean,
+        /** Quanto il testo sta più all'interno della voce, a sinistra e a destra (in pixel). */
+        val textInset: Float
     )
 
     private val entries = HashMap<String, Entry>()
@@ -62,18 +66,36 @@ class BlockPicker {
         coordinates: LayoutCoordinates,
         blockAt: (Float) -> String?,
         lineOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
-        extentOf: ((String, LayoutCoordinates) -> LineBounds?)? = null
+        extentOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
+        nested: Boolean = false,
+        textInset: Float = 0f
     ) {
-        entries[key] = Entry(coordinates, blockAt, lineOf, extentOf)
+        entries[key] = Entry(coordinates, blockAt, lineOf, extentOf, nested, textInset)
     }
 
     fun remove(key: String) {
         entries.remove(key)
     }
 
-    private fun find(window: Offset): Triple<String, Entry, String>? {
+    /**
+     * La voce sotto il punto: con [inner] prima le righe dentro le colonne
+     * (dal 12/11/2026), che stanno affiancate e quindi contano anche da
+     * sinistra a destra; poi le voci della pagina, che contano solo
+     * dall'alto al basso (il margine dei sei puntini è ancora loro).
+     */
+    private fun find(window: Offset, inner: Boolean): Triple<String, Entry, String>? {
+        if (inner) {
+            for ((key, entry) in entries) {
+                if (!entry.nested || !entry.coordinates.isAttached) continue
+                val local = entry.coordinates.windowToLocal(window)
+                val size = entry.coordinates.size
+                if (local.x < 0f || local.x > size.width || local.y < 0f || local.y > size.height) continue
+                val id = entry.blockAt(local.y) ?: continue
+                return Triple(key, entry, id)
+            }
+        }
         for ((key, entry) in entries) {
-            if (!entry.coordinates.isAttached) continue
+            if (entry.nested || !entry.coordinates.isAttached) continue
             val local = entry.coordinates.windowToLocal(window)
             if (local.y < 0f || local.y > entry.coordinates.size.height) continue
             val id = entry.blockAt(local.y) ?: continue
@@ -82,8 +104,8 @@ class BlockPicker {
         return null
     }
 
-    /** La voce e il blocco sotto il punto [window] della finestra, o null fra due voci. */
-    fun at(window: Offset): Pair<String, String>? = find(window)?.let { (key, _, id) -> key to id }
+    /** La voce e il blocco della pagina sotto il punto [window] della finestra, o null fra due voci (per scegliere più blocchi). */
+    fun at(window: Offset): Pair<String, String>? = find(window, inner = false)?.let { (key, _, id) -> key to id }
 
     /**
      * Il blocco sotto il punto e dove sta la sua prima riga nella finestra,
@@ -92,7 +114,7 @@ class BlockPicker {
      * massimo [islandLine].
      */
     fun lineAt(window: Offset, islandLine: Float): Pair<String, LineBounds>? {
-        val (_, entry, id) = find(window) ?: return null
+        val (_, entry, id) = find(window, inner = true) ?: return null
         val c = entry.coordinates
         val line = entry.lineOf?.invoke(id, c) ?: LineBounds(0f, minOf(c.size.height.toFloat(), islandLine))
         val origin = c.localToWindow(Offset.Zero)
@@ -100,18 +122,23 @@ class BlockPicker {
     }
 
     /**
-     * Il blocco sotto il punto e dove sta **tutto**, dall'alto al basso nella
-     * finestra, per trascinarci sopra un altro blocco (`BlockDrag.kt`). Un
-     * blocco che non dice di più (un divisore, un database) è tutta la sua voce.
+     * Il blocco sotto il punto e dove sta **tutto** nella finestra, per
+     * trascinarci sopra un altro blocco (`BlockDrag.kt`): dall'alto al basso,
+     * e da sinistra a destra dove sta il suo testo (nella pagina, o nella
+     * colonna). Un blocco
+     * che non dice di più (un divisore, un database) è tutta la sua voce.
      */
-    fun blockAt(window: Offset): Pair<String, LineBounds>? {
-        val (_, entry, id) = find(window) ?: return null
+    fun blockAt(window: Offset): Pair<String, BlockBox>? {
+        val (_, entry, id) = find(window, inner = true) ?: return null
         val c = entry.coordinates
         val box = entry.extentOf?.invoke(id, c) ?: LineBounds(0f, c.size.height.toFloat())
         val origin = c.localToWindow(Offset.Zero)
-        return id to LineBounds(origin.y + box.top, origin.y + box.bottom)
+        return id to BlockBox(origin.y + box.top, origin.y + box.bottom, origin.x + entry.textInset, origin.x + c.size.width - entry.textInset)
     }
 }
+
+/** Dove sta un blocco nella finestra, da [top] a [bottom] e da [left] a [right] (vedi `BlockPicker.blockAt`). */
+data class BlockBox(val top: Float, val bottom: Float, val left: Float, val right: Float)
 
 /**
  * Dove sta la prima riga di un blocco: dall'alto al basso le sue lettere, e
@@ -130,6 +157,8 @@ fun Modifier.pickableAs(
     key: String,
     lineOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
     extentOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
+    nested: Boolean = false,
+    textInset: Float = 0f,
     blockAt: (Float) -> String?
 ): Modifier {
     val picker = LocalBlockPicker.current ?: return this
@@ -141,7 +170,9 @@ fun Modifier.pickableAs(
         picker.put(
             key, coordinates, { y -> latest.value(y) },
             latestLine.value?.let { { id, c -> latestLine.value?.invoke(id, c) } },
-            latestExtent.value?.let { { id, c -> latestExtent.value?.invoke(id, c) } }
+            latestExtent.value?.let { { id, c -> latestExtent.value?.invoke(id, c) } },
+            nested,
+            textInset
         )
     }
 }

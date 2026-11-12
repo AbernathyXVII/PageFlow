@@ -3038,10 +3038,21 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
      * `afterId`, o in cima alla pagina con null (vedi
      * `PageRepository.moveBlockAfter`). Si può annullare; arrivato, si illumina.
      */
-    fun moveBlockAfter(block: BlockEntity, afterId: String?) {
+    fun moveBlockAfter(block: BlockEntity, afterId: String?) = moveBlockBy(block) { repository.moveBlockAfter(block.id, afterId) }
+
+    /** Trascinato coi sei puntini (dal 12/11/2026): subito prima o dopo [targetId], anche dentro una colonna (vedi `PageRepository.moveBlockNextTo`). */
+    fun moveBlockNextTo(block: BlockEntity, targetId: String, after: Boolean) =
+        moveBlockBy(block) { repository.moveBlockNextTo(block.id, targetId, after) }
+
+    /** Trascinato coi sei puntini sul bordo di [targetId]: le colonne (vedi `PageRepository.moveBlockBeside`). */
+    fun moveBlockBeside(block: BlockEntity, targetId: String, right: Boolean) =
+        moveBlockBy(block) { repository.moveBlockBeside(block.id, targetId, right) }
+
+    /** Uno spostamento ([move]) che si può annullare: arrivato, il blocco si illumina. */
+    private fun moveBlockBy(block: BlockEntity, move: suspend () -> Boolean) {
         snapshotForStructuralChange()
         viewModelScope.launch {
-            val moved = structuralEdits.withLock { repository.moveBlockAfter(block.id, afterId) }
+            val moved = structuralEdits.withLock { move() }
             if (!moved) return@launch
             _externalChangeTick.value += 1
             withTimeoutOrNull(FOCUS_HANDOFF_TIMEOUT_MS) {

@@ -172,6 +172,104 @@ class DesktopColumnsTest {
         viewModel.viewModelScope.cancel()
     }
 
+    /** La riga della colonna [index] del gruppo [listId] (la prima, se ce n'è più d'una). */
+    private fun lineOf(listId: String, index: Int) = childrenOf(childrenOf(listId)[index].id).first()
+
+    /** Gli ordini dei fratelli sono 0, 1, 2… senza buchi né doppioni, a ogni livello. */
+    private fun assertTidy() {
+        blocks().groupBy { it.parentBlockId }.forEach { (parent, list) ->
+            assertEquals("ordine sotto $parent", list.indices.toList(), list.map { it.orderIndex }.sorted())
+        }
+    }
+
+    /**
+     * **Un blocco portato sul bordo destro di un altro fa le colonne** (chiesto
+     * dall'utente il 12/11/2026, come su Notion): "DOPO" accanto a "PRIMA", e
+     * il gruppo prende il posto di "PRIMA".
+     */
+    @Test
+    fun besideALineMakesTwoColumns() = runBlocking {
+        assertTrue(repo.moveBlockBeside("dopo", "prima", right = true))
+        val top = childrenOf(null)
+        assertEquals(listOf(BlockType.COLUMN_LIST, BlockType.PARAGRAPH), top.map { it.type })
+        assertEquals("vuota", top[1].id)
+        val columns = childrenOf(top[0].id)
+        assertEquals(listOf("prima", "dopo"), columns.map { childrenOf(it.id).single().id })
+        assertTidy()
+        // A sinistra: lui prima.
+        assertTrue(repo.moveBlockBeside("vuota", "prima", right = false))
+        assertEquals(listOf("vuota", "prima", "dopo"), childrenOf(top[0].id).map { childrenOf(it.id).single().id })
+        assertTidy()
+    }
+
+    /** Accanto a una riga dentro una colonna: una colonna in più, proprio lì. */
+    @Test
+    fun besideALineInAColumnAddsAColumn() = runBlocking {
+        repo.makeColumns("vuota", 2)
+        write("vuota", 0, "SINISTRA")
+        write("vuota", 1, "DESTRA")
+        assertTrue(repo.moveBlockBeside("prima", lineOf("vuota", 0).id, right = true))
+        assertEquals(listOf("vuota", "dopo"), childrenOf(null).map { it.id })
+        val texts = childrenOf("vuota").map { column -> childrenOf(column.id).single().id }
+        assertEquals(3, texts.size)
+        assertEquals("prima", texts[1])
+        assertTidy()
+    }
+
+    /** Accanto al gruppo intero: una colonna in più in cima o in fondo. */
+    @Test
+    fun besideTheGroupAddsAColumnAtItsEdge() = runBlocking {
+        repo.makeColumns("vuota", 2)
+        assertTrue(repo.moveBlockBeside("prima", "vuota", right = false))
+        assertEquals("prima", childrenOf(childrenOf("vuota").first().id).single().id)
+        assertTrue(repo.moveBlockBeside("dopo", "vuota", right = true))
+        assertEquals("dopo", childrenOf(childrenOf("vuota").last().id).single().id)
+        assertEquals(4, childrenOf("vuota").size)
+        assertEquals(listOf("vuota"), childrenOf(null).map { it.id })
+        assertTidy()
+    }
+
+    /** Dentro una colonna, sopra la sua prima riga. */
+    @Test
+    fun intoAColumnAboveItsFirstLine() = runBlocking {
+        repo.makeColumns("vuota", 2)
+        write("vuota", 0, "SINISTRA")
+        val sinistra = lineOf("vuota", 0).id
+        assertTrue(repo.moveBlockNextTo("prima", sinistra, after = false))
+        assertEquals(listOf("prima", sinistra), childrenOf(childrenOf("vuota")[0].id).map { it.id })
+        assertEquals(listOf("vuota", "dopo"), childrenOf(null).map { it.id })
+        assertTidy()
+    }
+
+    /**
+     * **L'ultima riga che esce da una colonna**: la colonna se ne va, e il
+     * gruppo rimasto con una colonna sola torna righe normali, al suo posto.
+     */
+    @Test
+    fun theLastLineOutRemovesTheColumnAndUngroups() = runBlocking {
+        repo.makeColumns("vuota", 2)
+        write("vuota", 0, "SINISTRA")
+        write("vuota", 1, "DESTRA")
+        val sinistra = lineOf("vuota", 0).id
+        val destra = lineOf("vuota", 1).id
+        assertTrue(repo.moveBlockNextTo(destra, "dopo", after = true))
+        assertEquals(listOf("prima", sinistra, "dopo", destra), childrenOf(null).map { it.id })
+        assertTrue(blocks().none { it.type == BlockType.COLUMN || it.type == BlockType.COLUMN_LIST })
+        assertTidy()
+    }
+
+    /** Niente colonne dentro le colonne, e niente blocco dentro se stesso. */
+    @Test
+    fun columnsDontGoIntoColumns() = runBlocking {
+        repo.makeColumns("vuota", 2)
+        val line = lineOf("vuota", 0).id
+        assertEquals(false, repo.moveBlockNextTo("vuota", line, after = true))
+        assertEquals(false, repo.moveBlockBeside("vuota", "prima", right = true))
+        assertEquals(false, repo.moveBlockBeside("prima", "prima", right = true))
+        assertEquals(listOf("prima", "vuota", "dopo"), childrenOf(null).map { it.id })
+        assertTidy()
+    }
+
     /** "Create two/three/four columns" ci sono, nei menu "/" e "+" del PC. */
     @Test
     fun theMenusHaveTheThreeEntries() {
@@ -253,7 +351,10 @@ class DesktopColumnsTest {
                 }
                 val hovered = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
                 File("build/desktop-screenshots", "columns_dots.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(hovered).encodeToData(EncodedImageFormat.PNG)!!.bytes)
-                val dots = (0 until hovered.height).filter { y -> (60 until 85).any { dx -> hovered.getColor(dx, y) != shot.getColor(dx, y) } }
+                // I puntini della riga sotto il mouse, subito prima del suo testo (dal 12/11/2026 anche
+                // nella colonna di destra: prima c'erano solo quelli del gruppo, nel margine).
+                val textStart = (if (x < mid) 0 until mid else mid until shot.width).first { cx -> (letters.first..letters.last).any { cy -> bright(cx, cy) } }
+                val dots = (0 until hovered.height).filter { y -> (textStart - 28 until textStart - 3).any { dx -> hovered.getColor(dx, y) != shot.getColor(dx, y) } }
                 val center = (letters.first + letters.last) / 2f
                 assertTrue("puntini $dots, lettere $letters (mouse a x $x)", dots.isNotEmpty() && abs(dots.average() - center) <= 1.5)
             }
@@ -499,5 +600,124 @@ class DesktopColumnsTest {
             if (last != null && x <= last.last + 1) stillBoxes[stillBoxes.lastIndex] = last.first..x else stillBoxes += x..x
         }
         assertEquals("con la colonna di mezzo scritta restano due riquadri: $stillBoxes", 2, stillBoxes.count { it.last - it.first > 100 })
+    }
+
+    /** La pagina "colonne" disegnata e da usare col mouse: [act] riceve chi muove il mouse e chi fa le foto. */
+    private fun withMouse(act: (mouse: (String, Float, Float) -> Unit, shot: (String) -> Bitmap) -> Unit) {
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            PageEditorScreen(
+                                pageId = "colonne", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                                onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        val mouse: (String, Float, Float) -> Unit = { what, x, y ->
+            val at = androidx.compose.ui.geometry.Offset(x, y)
+            val type = androidx.compose.ui.input.pointer.PointerType.Mouse
+            onWindowThread {
+                when (what) {
+                    "move" -> scene.sendPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Move, at, type = type)
+                    "drag" -> scene.sendPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Move, at, type = type,
+                        buttons = androidx.compose.ui.input.pointer.PointerButtons(isPrimaryPressed = true))
+                    "press" -> scene.sendPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Press, at, type = type,
+                        buttons = androidx.compose.ui.input.pointer.PointerButtons(isPrimaryPressed = true), button = androidx.compose.ui.input.pointer.PointerButton.Primary)
+                    else -> scene.sendPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Release, at, type = type,
+                        buttons = androidx.compose.ui.input.pointer.PointerButtons(), button = androidx.compose.ui.input.pointer.PointerButton.Primary)
+                }
+            }
+            frames(1)
+        }
+        val shot: (String) -> Bitmap = { name ->
+            onWindowThread { Bitmap.makeFromImage(scene.render(time)) }.also {
+                File("build/desktop-screenshots").mkdirs()
+                File("build/desktop-screenshots", "$name.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(it).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            }
+        }
+        try {
+            frames(40)
+            act(mouse, shot)
+            frames(10)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /** Trascina coi puntini (che stanno a [dotsX]) la riga all'altezza [fromY] fino a ([toX], [toY]), a piccoli passi; la foto prima di lasciare. */
+    private fun dragLine(mouse: (String, Float, Float) -> Unit, shot: (String) -> Bitmap, textX: Float, dotsX: Float, fromY: Float, toX: Float, toY: Float, name: String): Bitmap {
+        mouse("move", textX, fromY)
+        mouse("move", dotsX, fromY)
+        mouse("press", dotsX, fromY)
+        val steps = 30
+        for (i in 1..steps) mouse("drag", dotsX + (toX - dotsX) * i / steps, fromY + (toY - fromY) * i / steps)
+        val before = shot(name)
+        mouse("release", toX, toY)
+        return before
+    }
+
+    /** I punti blu della linea di dove cadrà il blocco: quanti sono, e da sinistra a destra dove. */
+    private fun blueOf(bitmap: Bitmap): List<Int> = (0 until bitmap.height).flatMap { y ->
+        (0 until bitmap.width).filter { x -> bitmap.getColor(x, y).let { c -> ((c shr 16) and 0xFF) < 80 && (c and 0xFF) > 180 && ((c shr 8) and 0xFF) in 100..160 } }
+    }
+
+    /**
+     * **Trascinando "DOPO" sul bordo destro di "PRIMA" nascono le colonne**
+     * (chiesto dall'utente il 12/11/2026, come nelle foto di Notion): mentre
+     * si trascina c'è una linea blu verticale a destra, e lasciando "PRIMA" e
+     * "DOPO" stanno una accanto all'altra.
+     */
+    @Test
+    fun draggingOntoTheRightEdgeMakesColumns() {
+        runBlocking { repo.saveBlock(childrenOf(null).single { it.id == "vuota" }.copy(textJson = """[{"text":"MEZZO"}]""")) }
+        withMouse { mouse, shot ->
+            // Le righe: PRIMA a y ~190, MEZZO ~213, DOPO ~236 (il testo comincia a x 86).
+            val during = dragLine(mouse, shot, textX = 120f, dotsX = 74f, fromY = 236f, toX = 800f, toY = 190f, name = "columns_drag_right")
+            val blue = blueOf(during)
+            assertTrue("la linea blu verticale a destra: ${blue.size} punti", blue.size > 20 && blue.average() > 700)
+        }
+        val top = childrenOf(null)
+        assertEquals(listOf(BlockType.COLUMN_LIST, BlockType.PARAGRAPH), top.map { it.type })
+        assertEquals(listOf("prima", "dopo"), childrenOf(top[0].id).map { childrenOf(it.id).single().id })
+        assertTidy()
+    }
+
+    /**
+     * **La riga di una colonna trascinata fuori, sotto "DOPO"**: coi suoi
+     * puntini, accanto al suo testo; la colonna rimasta vuota se ne va e il
+     * gruppo, con una colonna sola, torna righe normali.
+     */
+    @Test
+    fun draggingTheLastLineOfAColumnOutUngroups() {
+        runBlocking {
+            repo.makeColumns("vuota", 2)
+            write("vuota", 0, "SINISTRA")
+            write("vuota", 1, "DESTRA")
+        }
+        val sinistra = lineOf("vuota", 0).id
+        val destra = lineOf("vuota", 1).id
+        withMouse { mouse, shot ->
+            // "DESTRA" comincia a x 470 (metà della pagina più il margine): i suoi puntini poco prima.
+            dragLine(mouse, shot, textX = 500f, dotsX = 456f, fromY = 213f, toX = 200f, toY = 242f, name = "columns_drag_out")
+        }
+        val top = childrenOf(null)
+        assertEquals(listOf("prima", sinistra, "dopo", destra), top.map { it.id })
+        assertTrue(blocks().none { it.type == BlockType.COLUMN || it.type == BlockType.COLUMN_LIST })
+        assertTidy()
     }
 }
