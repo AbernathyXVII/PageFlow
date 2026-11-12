@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.153.59 — 12/11/2026 · 08:07 — The README and the Patch Notes in English, without personal data
-*(Claude Code on the PC; not yet tested by the user; phone not connected, APK ready to install; 1181 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1181 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **The Patch Notes in English**:
   Settings → Patch Notes shows the whole changelog in English, whatever
