@@ -457,6 +457,7 @@ object Strings {
         "長い行を折り返しません。横にスワイプすると最後まで読めます"
     )
     // "Full or page line" di una pagina (dal 27/10/2026): vedi `FullLineChoice.kt`.
+    val fullWidth get() = t("Full width", "Larghezza piena", "Volle Breite", "Pleine largeur", "Ancho completo", "全宽", "전체 너비", "全幅")
     val fullOrPageLine get() = t("Full or page line", "Righe intere o a capo", "Ganze oder umbrochene Zeilen", "Lignes entières ou coupées", "Líneas completas o partidas", "整行或换行", "전체 줄 또는 줄바꿈", "行全体か折り返しか")
     val fullLine get() = t("Full line", "Righe intere", "Ganze Zeilen", "Lignes entières", "Líneas completas", "整行", "전체 줄", "行全体")
     val pageLine get() = t("Page line", "Righe a capo", "Umbrochene Zeilen", "Lignes coupées", "Líneas partidas", "换行", "줄바꿈", "折り返し")

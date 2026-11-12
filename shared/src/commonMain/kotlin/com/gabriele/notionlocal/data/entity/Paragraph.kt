@@ -82,7 +82,14 @@ data class ListGaps(
 @Serializable
 data class PageParagraph(
     val blockSpacing: Int? = null,
-    val gaps: ListGaps? = null
+    val gaps: ListGaps? = null,
+    /**
+     * **"Full width"** (dal 12/11/2026, solo sul PC, chiesto dall'utente come
+     * in Notion): `false` = il testo in una colonna al centro, null = largo
+     * quanto lo spazio, com'era. Sta qui, con le altre misure della pagina,
+     * per non cambiare il database.
+     */
+    val fullWidth: Boolean? = null
 ) {
     companion object {
         private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
@@ -130,7 +137,8 @@ data class ParagraphLook(
 
     /** Vero se nessun livello cambia niente: la pagina si disegna come prima. */
     val isPlain: Boolean
-        get() = page == PageParagraph() && appSpacing == 0 && appGaps.of(BlockType.NUMBERED_LIST_ITEM) == null &&
+        // La larghezza della pagina non cambia gli spazi fra i blocchi.
+        get() = page.copy(fullWidth = null) == PageParagraph() && appSpacing == 0 && appGaps.of(BlockType.NUMBERED_LIST_ITEM) == null &&
             appGaps.of(BlockType.BULLET_LIST_ITEM) == null && appGaps.of(BlockType.CHECKBOX) == null
 }
 

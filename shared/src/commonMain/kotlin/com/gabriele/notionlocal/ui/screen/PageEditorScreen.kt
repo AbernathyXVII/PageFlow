@@ -401,6 +401,26 @@ private val PAGE_SIDE_PADDING = 20.dp
  */
 internal val PAGE_INSET = if (isPc) 66.dp else 0.dp
 
+/**
+ * **Il testo in una colonna al centro** (dal 12/11/2026, solo sul PC,
+ * chiesto dall'utente come in Notion, togliendo "Full width" dai tre
+ * puntini): largo 637 punti, quanto in Notion coi caratteri del PC (708 al
+ * 90%), al centro dello spazio della pagina — quello accanto alla barra
+ * laterale se è fissata, se no tutta la finestra. In una finestra stretta i
+ * margini restano quelli di sempre ([PAGE_INSET]).
+ */
+internal val PC_CENTERED_TEXT_WIDTH = 637.dp
+
+/** Il margine di ogni lato della pagina, larga [areaWidth]. */
+fun pageInsetFor(fullWidth: Boolean, areaWidth: Dp): Dp =
+    if (!isPc || fullWidth || areaWidth <= 0.dp) PAGE_INSET
+    else maxOf(PAGE_INSET, (areaWidth - PC_CENTERED_TEXT_WIDTH - PAGE_SIDE_PADDING * 2) / 2)
+
+/** L'ultima larghezza misurata della pagina: una pagina appena aperta parte già al centro, senza un salto. */
+private object PageAreaMemory {
+    var width: Dp = 0.dp
+}
+
 /** Allarga di [inset] per lato chi sta nella pagina coi margini (`PAGE_INSET`): la copertina arriva ai bordi. */
 private fun Modifier.bleedSides(inset: Dp): Modifier = layout { measurable, constraints ->
     val extra = inset.roundToPx()
@@ -1580,6 +1600,9 @@ private fun PageEditorContent(
     var choosingTemplate by remember { mutableStateOf(false) }
     var templatePickerBounds by remember { mutableStateOf<Rect?>(null) }
     var pageAreaOrigin by remember { mutableStateOf(Offset.Zero) }
+    // Sul PC "Full width" o al centro (vedi `pageInsetFor`): dalla larghezza del riquadro della pagina.
+    var pageAreaWidth by remember { mutableStateOf(PageAreaMemory.width) }
+    val pageInset = pageInsetFor(page?.paragraph?.fullWidth != false, pageAreaWidth)
     val showTemplatePicker = page?.isRowPage == true && !readOnlyPage && !templatePickerDismissed &&
         blocks.isNotEmpty() && blocks.all { block ->
             block.type == BlockType.PARAGRAPH && block.parentBlockId == null && viewModel.plainTextOf(block).isEmpty()
@@ -2180,6 +2203,11 @@ private fun PageEditorContent(
                     .fillMaxWidth()
                     .weight(1f)
                     .onGloballyPositioned { pageAreaOrigin = it.positionInWindow() }
+                    .onSizeChanged { size ->
+                        val width = with(inkDensity) { size.width.toDp() }
+                        pageAreaWidth = width
+                        PageAreaMemory.width = width
+                    }
                     // Le dita sulla pagina, solo guardate: vedi `LocalPageFingerDown`.
                     .watchPageFingers(pageFinger)
                     // Un tocco fuori dalle voci dei template le manda via.
@@ -2196,12 +2224,12 @@ private fun PageEditorContent(
                             }
                         }
                     }
-                    .inkLayer(inkState, inkStrokes, inkCache, NotionWhite, originX = PAGE_INSET)
+                    .inkLayer(inkState, inkStrokes, inkCache, NotionWhite, originX = pageInset)
                     .then(
                         if (drawingMode) {
                             Modifier.inkInput(
                                 state = inkState,
-                                originX = PAGE_INSET,
+                                originX = pageInset,
                                 onStroke = { anchor, pen, points ->
                                     inkViewModel.addStroke(anchor, pen.tool, pen.color, pen.width, points)
                                 },
@@ -2282,7 +2310,7 @@ private fun PageEditorContent(
 
                     Box(
                         modifier = Modifier
-                            .bleedSides(PAGE_INSET)
+                            .bleedSides(pageInset)
                             .fillMaxWidth()
                             .height(COVER_HEIGHT)
                             .onSizeChanged { coverBox = it }
@@ -2717,7 +2745,7 @@ private fun PageEditorContent(
             LazyColumn(
                 state = listState,
                 // Sul PC il margine in più a sinistra (vedi `PAGE_INSET`).
-                contentPadding = PaddingValues(start = PAGE_INSET, end = PAGE_INSET, top = if (isPc) PC_TOP_BAR else 0.dp),
+                contentPadding = PaddingValues(start = pageInset, end = pageInset, top = if (isPc) PC_TOP_BAR else 0.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     // Il verso del dito, per "Back" quando si è scesi molto (`BackToTop.kt`).
@@ -2778,7 +2806,7 @@ private fun PageEditorContent(
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
             // Nel margine a sinistra: un clic apre il menu del blocco.
-            if (isPc && !readOnlyPage && !drawingMode) BlockHandle(blockSpot, endsAt = PAGE_INSET + PAGE_SIDE_PADDING) { id -> blockMenuFor = id }
+            if (isPc && !readOnlyPage && !drawingMode) BlockHandle(blockSpot, endsAt = pageInset + PAGE_SIDE_PADDING) { id -> blockMenuFor = id }
             // Tutta la pagina, o i blocchi scelti col mouse (null): Copy, Cut, Delete per tutti e due.
             val chosenBlocks = selectedBlocks.value.takeIf { it.isNotEmpty() }
             val anySelection = pageSelected || chosenBlocks != null
@@ -3660,6 +3688,13 @@ private fun PageEditorContent(
                 onFullLine = {
                     showPageOptions = false
                     showFullLine = true
+                },
+                // Solo sul PC (dal 12/11/2026): il menu resta aperto, la pagina cambia dietro.
+                fullWidth = current.paragraph.fullWidth != false,
+                onToggleFullWidth = if (isPc) {
+                    { viewModel.setPageParagraph(current.paragraph.copy(fullWidth = if (current.paragraph.fullWidth == false) null else false)) }
+                } else {
+                    null
                 },
                 onWebClipper = if (isTrashed) null else {
                     {

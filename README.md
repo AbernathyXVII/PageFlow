@@ -1126,6 +1126,27 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.63 — 12/11/2026 · 10:37 — On the PC "Full width" or the page in the middle, as in Notion
+*(Claude Code on the PC; not yet tested by the user; phone not connected, APK ready to install; 1190 tests passed)*
+
+- **[Change]** **[💻 PC]** **"Full width"** in a page's three dots, as in
+  Notion: on, the text is as wide as the space, as before; off, it sits in a
+  column 637 points wide (Notion's, with the PC's fonts) **in the middle of
+  the space next to the sidebar**: pinning or closing the sidebar, or
+  resizing the window, the column moves to stay in the middle. The cover
+  stays as wide as the space; handwriting follows the text. Every page
+  remembers its choice; a page starts in full width, as until now. In a
+  narrow window the margins are the usual ones. Databases opened full page
+  don't have it yet. On the phone nothing changes. Not yet tested by the
+  user
+- **[Project]** `PageParagraph.fullWidth` (in the page's `paragraphJson`:
+  no migration; `ParagraphLook.isPlain` ignores it), `pageInsetFor` and
+  `PC_CENTERED_TEXT_WIDTH` next to `PAGE_INSET`, measured on the page's area
+  (`PageAreaMemory` keeps the last width, so a page opens already in the
+  middle); the switch in `PageOptionsSheet` (`onToggleFullWidth`, null on the
+  phone). Test: `DesktopPageWidthTest` (the margin for each width; a centred
+  page starting at 381 in a 1400 window, back at 86 in full width)
+
 ### ✏️ v0.153.62 — 12/11/2026 · 10:10 — On the PC the windows as large as what they hold
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1188 tests passed)*
 

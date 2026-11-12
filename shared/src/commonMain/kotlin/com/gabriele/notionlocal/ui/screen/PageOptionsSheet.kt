@@ -8,6 +8,7 @@ import com.gabriele.notionlocal.ui.i18n.EditorStrings
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Spellcheck
 import androidx.compose.material.icons.filled.FormatLineSpacing
+import androidx.compose.material.icons.filled.WidthFull
 import com.gabriele.notionlocal.ui.i18n.ParagraphStrings
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -192,6 +193,13 @@ fun PageOptionsSheet(
      */
     fullLineValue: String? = null,
     onFullLine: (() -> Unit)? = null,
+    /**
+     * **"Full width"** (dal 12/11/2026, solo sul PC, come in Notion): il testo
+     * largo quanto lo spazio ([fullWidth]) o in una colonna al centro. Null
+     * sul telefono e per i database: allora la voce non c'è.
+     */
+    fullWidth: Boolean = true,
+    onToggleFullWidth: (() -> Unit)? = null,
     /**
      * **"Web Clipper"** (dal 20/10/2026, chiesto dall'utente): la foto di un
      * sito nella pagina, come OneNote Web Clipper. Null per i database e le
@@ -403,6 +411,15 @@ fun PageOptionsSheet(
                                 )
                             },
                             onClick = onFullLine
+                        )
+                    }
+                    if (onToggleFullWidth != null) {
+                        HorizontalDivider()
+                        OptionRow(
+                            icon = Icons.Filled.WidthFull,
+                            label = Strings.fullWidth,
+                            trailing = { Switch(checked = fullWidth, onCheckedChange = { onToggleFullWidth() }) },
+                            onClick = onToggleFullWidth
                         )
                     }
                 }
