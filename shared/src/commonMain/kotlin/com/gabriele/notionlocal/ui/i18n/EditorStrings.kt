@@ -94,6 +94,10 @@ object EditorStrings {
         "Button" -> t("Button", "Pulsante", "Schaltfläche", "Bouton", "Botón", "按钮", "버튼", "ボタン")
         "Link to button" -> t("Link to button", "Collegamento a pulsante", "Link zu Schaltfläche", "Lien vers un bouton", "Enlace a botón", "链接到按钮", "버튼 링크", "ボタンへのリンク")
         "Synced block" -> SyncStrings.syncedBlock
+        "Create two columns" -> t("Create two columns", "Crea due colonne", "Zwei Spalten erstellen", "Créer deux colonnes", "Crear dos columnas", "创建两栏", "2단 만들기", "2列を作成")
+        "Create three columns" -> t("Create three columns", "Crea tre colonne", "Drei Spalten erstellen", "Créer trois colonnes", "Crear tres columnas", "创建三栏", "3단 만들기", "3列を作成")
+        "Create four columns" -> t("Create four columns", "Crea quattro colonne", "Vier Spalten erstellen", "Créer quatre colonnes", "Crear cuatro columnas", "创建四栏", "4단 만들기", "4列を作成")
+        "Columns" -> t("Columns", "Colonne", "Spalten", "Colonnes", "Columnas", "分栏", "단", "列")
         "Record audio" -> CaptureStrings.recordAudio
         "Scan document" -> CaptureStrings.scanDocument
         "Image" -> t("Image", "Immagine", "Bild", "Image", "Imagen", "图片", "이미지", "画像")

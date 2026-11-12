@@ -2086,6 +2086,12 @@ private fun PageEditorContent(
                     }
                     // Il cursore va sulla prima riga dentro il blocco.
                     SlashAction.Synced -> viewModel.makeSyncedBlock(block)
+                    // La riga esce dal testo condiviso, come il toggle: il fuoco
+                    // si posa prima, poi va nella prima colonna.
+                    is SlashAction.Columns -> {
+                        focusPark.requestFocus()
+                        viewModel.makeColumns(block, action.count)
+                    }
                     // Un blocco audio che registra subito (vedi `AudioRecorder`).
                     SlashAction.Record -> viewModel.convertToRecording(block)
                     // Lo scanner di Google: le pagine diventano foto qui.
@@ -3516,7 +3522,7 @@ private fun PageEditorContent(
             // Il testo della riga diventa la prima riga del blocco.
             SlashAction.Synced -> viewModel.makeSyncedBlock(block)
             // Non sono in "Turn into" (vedi `TurnIntoList`): il testo andrebbe perso.
-            is SlashAction.Media, SlashAction.LinkToPage, SlashAction.LinkButton, SlashAction.Record, SlashAction.Scan,
+            is SlashAction.Media, SlashAction.LinkToPage, SlashAction.LinkButton, SlashAction.Record, SlashAction.Scan, is SlashAction.Columns,
             SlashAction.NotYet -> Unit
         }
     }
@@ -4909,6 +4915,9 @@ private fun runLineBounds(
 
 /** Quanto è alta una maiuscola rispetto al corpo del carattere (circa, per i caratteri della pagina). */
 private const val CAP_HEIGHT = 0.7f
+
+/** Quanto è alta una colonna senza righe, da toccare per scriverci (vedi `BlockRow`). */
+private val EMPTY_COLUMN_HEIGHT = 32.dp
 
 /** Tutte le righe del blocco [id] nel campo, dall'alto al basso: per trascinarci sopra un blocco (`BlockDrag.kt`). */
 private fun runLineExtent(
@@ -6406,6 +6415,57 @@ private fun BlockRow(
                     }
                 }
             }
+        }
+        return
+    }
+
+    // **Le colonne affiancate** (dal 12/11/2026, chieste dall'utente): sul PC
+    // una accanto all'altra, larghe uguali; sul telefono una sotto l'altra,
+    // prima tutta la prima, poi la seconda… Le righe di ogni colonna come
+    // quelle di un blocco sincronizzato, allo stesso livello e ognuna col suo
+    // margine: fra due colonne i due margini fanno lo spazio. Una colonna
+    // rimasta senza righe si tocca per ricominciare a scrivere.
+    if (block.type == BlockType.COLUMN_LIST) {
+        val columnLook = LocalParagraphLook.current
+        val columnDensity = LocalDensity.current
+        val columnLocked = LocalPageLocked.current
+        val line: @Composable (BlockEntity) -> Unit = { child ->
+            key(child.id) {
+                Box(modifier = Modifier.padding(vertical = (columnLook.spacingOf(child) / 2f).sp.toDpIn(columnDensity))) {
+                    BlockRow(
+                        block = child,
+                        allBlocks = allBlocks,
+                        depth = depth,
+                        viewModel = viewModel,
+                        factory = factory,
+                        focusRequestBlockId = focusRequestBlockId,
+                        formatRequest = formatRequest,
+                        onFocusChanged = onFocusChanged,
+                        onNavigateToPage = onNavigateToPage,
+                        onNavigateToDatabase = onNavigateToDatabase,
+                        onOpenBlockMenu = onOpenBlockMenu
+                    )
+                }
+            }
+        }
+        val columnContent: @Composable (BlockEntity) -> Unit = { column ->
+            if (column.type != BlockType.COLUMN) {
+                line(column)
+            } else {
+                val lines = allBlocks.filter { it.parentBlockId == column.id }.sortedBy { it.orderIndex }
+                lines.forEach { line(it) }
+                if (lines.isEmpty() && !columnLocked) {
+                    Box(Modifier.fillMaxWidth().height(EMPTY_COLUMN_HEIGHT).clickable { viewModel.addFirstChild(column) })
+                }
+            }
+        }
+        val columns = allBlocks.filter { it.parentBlockId == block.id }.sortedBy { it.orderIndex }
+        if (isPc) {
+            Row(Modifier.fillMaxWidth()) {
+                columns.forEach { column -> key(column.id) { Column(Modifier.weight(1f)) { columnContent(column) } } }
+            }
+        } else {
+            Column { columns.forEach { column -> key(column.id) { columnContent(column) } } }
         }
         return
     }

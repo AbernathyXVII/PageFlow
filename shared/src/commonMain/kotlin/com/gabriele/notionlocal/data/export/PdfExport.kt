@@ -336,7 +336,7 @@ class PdfExport(
                 paragraph(sheets, text, bodyPaint, left, width, fixed = fixed)
             }
             BlockType.BUTTON -> page.buttons[block.id]?.let { button(sheets, it, left, width) }
-            BlockType.SYNCED -> Unit
+            BlockType.SYNCED, BlockType.COLUMN_LIST, BlockType.COLUMN -> Unit
             BlockType.DIVIDER -> {
                 sheets.ensure(dividerHeight)
                 val y = sheets.y + dividerHeight / 2

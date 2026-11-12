@@ -79,7 +79,17 @@ enum class BlockType {
      * in tutte le sue copie (quelle con lo stesso `BlockAttrs.syncId`).
      * Cambiate in una, si riscrivono nelle altre: vedi `data/sync/SyncedBlocks.kt`.
      */
-    SYNCED
+    SYNCED,
+    /**
+     * **Le colonne affiancate** (dal 12/11/2026, chieste dall'utente, come
+     * su Notion): un contenitore le cui righe sono le colonne (`COLUMN`), e
+     * ogni colonna un contenitore con le sue righe. Sul PC stanno una accanto
+     * all'altra, larghe uguali; sul telefono una sotto l'altra, prima tutta
+     * la prima, poi la seconda… Si creano solo sul PC. Vedi `BlockRow`.
+     */
+    COLUMN_LIST,
+    /** Una colonna di `COLUMN_LIST`: le sue righe sono i suoi figli. */
+    COLUMN
 }
 
 /**

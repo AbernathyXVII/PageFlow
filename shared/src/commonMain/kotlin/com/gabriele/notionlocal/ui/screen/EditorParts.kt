@@ -84,6 +84,7 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Mic
 import com.gabriele.notionlocal.platform.rememberImagePicker
+import com.gabriele.notionlocal.platform.isPc
 import com.gabriele.notionlocal.data.toImageBitmap
 
 /** Quale delle due immagini di una pagina si sta cambiando. */
@@ -398,6 +399,8 @@ sealed class SlashAction {
     object LinkButton : SlashAction()
     /** "Synced block": righe uguali in più pagine (dal 03/11/2026, vedi `data/sync/SyncedBlocks.kt`). */
     object Synced : SlashAction()
+    /** "Create two/three/four columns": [count] colonne affiancate, solo sul PC (dal 12/11/2026, vedi `PageRepository.makeColumns`). */
+    data class Columns(val count: Int) : SlashAction()
     /** "Record audio": un blocco audio che registra subito (dal 03/11/2026, vedi `AudioRecorder`). */
     object Record : SlashAction()
     /** "Scan document": lo scanner di Google, e le pagine diventano foto (dal 03/11/2026). */
@@ -458,6 +461,10 @@ val SLASH_ENTRIES: List<SlashEntry> = listOf(
     SlashEntry("Button", SlashCategory.BASIC, SlashAction.Button, Icons.Filled.TouchApp),
     SlashEntry("Link to button", SlashCategory.BASIC, SlashAction.LinkButton, Icons.Filled.Link),
     SlashEntry("Synced block", SlashCategory.BASIC, SlashAction.Synced, Icons.Filled.Sync),
+    // Le colonne affiancate (dal 12/11/2026, chieste dall'utente): solo sul PC, vedi `slashEntries`.
+    SlashEntry("Create two columns", SlashCategory.BASIC, SlashAction.Columns(2), Icons.Filled.ViewColumn),
+    SlashEntry("Create three columns", SlashCategory.BASIC, SlashAction.Columns(3), Icons.Filled.ViewColumn),
+    SlashEntry("Create four columns", SlashCategory.BASIC, SlashAction.Columns(4), Icons.Filled.ViewColumn),
 
     SlashEntry("Image", SlashCategory.MEDIA, SlashAction.Media(BlockType.IMAGE), Icons.Filled.Image),
     SlashEntry("Scan document", SlashCategory.MEDIA, SlashAction.Scan, Icons.Filled.DocumentScanner),
@@ -544,7 +551,11 @@ val LocalInNotebook = compositionLocalOf { false }
  * qua né di là.
  */
 @Composable
-fun slashEntries(): List<SlashEntry> = if (LocalInNotebook.current) NOTEBOOK_SLASH_ENTRIES else SLASH_ENTRIES
+fun slashEntries(): List<SlashEntry> {
+    val entries = if (LocalInNotebook.current) NOTEBOOK_SLASH_ENTRIES else SLASH_ENTRIES
+    // Le colonne si creano solo sul PC (chiesto dall'utente): sul telefono si vedono una sotto l'altra.
+    return if (isPc) entries else entries.filter { it.action !is SlashAction.Columns }
+}
 
 internal val NOTEBOOK_SLASH_ENTRIES: List<SlashEntry> by lazy {
     SLASH_ENTRIES.filter { entry ->

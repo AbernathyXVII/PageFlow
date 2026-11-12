@@ -73,7 +73,7 @@ class DesktopRepositoryTest {
     fun anUnknownBlockTypeReadsAsText() = runBlocking {
         val before = blocksOf(parent.id).first()
         db.useWriterConnection { transactor ->
-            transactor.immediateTransaction { execSQL("UPDATE blocks SET type = 'COLUMN_LIST' WHERE id = '${before.id}'") }
+            transactor.immediateTransaction { execSQL("UPDATE blocks SET type = 'FROM_A_NEWER_VERSION' WHERE id = '${before.id}'") }
         }
         val read = blocksOf(parent.id)
         assertEquals(3, read.size)
@@ -82,7 +82,7 @@ class DesktopRepositoryTest {
         val raw = db.useReaderConnection { connection ->
             connection.usePrepared("SELECT type FROM blocks WHERE id = '${before.id}'") { it.step(); it.getText(0) }
         }
-        assertEquals("COLUMN_LIST", raw)
+        assertEquals("FROM_A_NEWER_VERSION", raw)
     }
 
     @Test

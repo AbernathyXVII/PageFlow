@@ -2109,6 +2109,51 @@ class PageRepository(private val db: AppDatabase) {
         blockDao.getSyncedBlocks(SyncedBlocks.patternOf(syncId)).filter { it.attrs.syncId == syncId }
 
     /**
+     * **"Create two/three/four columns"** (dal 12/11/2026, chieste
+     * dall'utente, solo sul PC, come su Notion): [count] colonne affiancate,
+     * ognuna con una riga vuota. Una riga di testo vuota e senza righe dentro
+     * diventa lei il gruppo di colonne; una con del testo resta com'è, e le
+     * colonne vanno subito sotto, allo stesso livello. Restituisce l'id della
+     * riga della prima colonna, per il cursore, o null se il blocco non c'è più.
+     */
+    suspend fun makeColumns(blockId: String, count: Int): String? = db.withTransaction {
+        val block = blockDao.getById(blockId) ?: return@withTransaction null
+        val text = runCatching { json.decodeFromString<List<RichTextSpan>>(block.textJson) }.getOrNull().orEmpty().joinToString("") { it.text }
+        val inPlace = text.isBlank() && block.type in COLUMN_SPOT_TYPES && blockDao.getChildren(block.id).isEmpty()
+        val listId = if (inPlace) {
+            blockDao.update(
+                block.copy(
+                    type = BlockType.COLUMN_LIST,
+                    textJson = "[]",
+                    isChecked = false,
+                    numberStartsAt = null,
+                    notifyAt = null,
+                    linkedPageId = null,
+                    indentLevel = 0,
+                    attrsJson = "{}"
+                )
+            )
+            block.id
+        } else {
+            blockDao.shiftOrderIndexes(block.pageId, block.parentBlockId, block.orderIndex + 1, 1)
+            BlockEntity(pageId = block.pageId, parentBlockId = block.parentBlockId, type = BlockType.COLUMN_LIST, orderIndex = block.orderIndex + 1)
+                .also { blockDao.insert(it) }.id
+        }
+        val empty = json.encodeToString(listOf(RichTextSpan(text = "")))
+        (0 until count).map { i ->
+            val column = BlockEntity(pageId = block.pageId, parentBlockId = listId, type = BlockType.COLUMN, orderIndex = i)
+            blockDao.insert(column)
+            BlockEntity(pageId = block.pageId, parentBlockId = column.id, textJson = empty, orderIndex = 0).also { blockDao.insert(it) }.id
+        }.first()
+    }
+
+    /** Le righe che, vuote, diventano loro stesse le colonne (vedi `makeColumns`): quelle di testo. */
+    private val COLUMN_SPOT_TYPES = setOf(
+        BlockType.PARAGRAPH, BlockType.BULLET_LIST_ITEM, BlockType.NUMBERED_LIST_ITEM,
+        BlockType.CHECKBOX, BlockType.TOGGLE, BlockType.CALLOUT, BlockType.QUOTE
+    )
+
+    /**
      * **"Synced block" dei menu "/" e "Turn into"**: la riga diventa un
      * blocco sincronizzato, per ora solo qui, e quello che c'era scritto la
      * sua prima riga (i figli di un toggle dopo di lei). Restituisce l'id di

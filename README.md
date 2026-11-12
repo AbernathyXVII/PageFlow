@@ -1126,6 +1126,44 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.69 — 12/11/2026 · 17:57 — Side-by-side columns: created on the PC, one below the other on the phone
+*(Claude Code on the PC; phone not connected, APK ready to install; 1209 tests passed)*
+
+- **[Change]** **[💻 PC]** **Side-by-side columns**, as in Notion: in the "/"
+  and "+" menus there are **Create two columns**, **Create three columns**
+  and **Create four columns**. An empty line becomes the columns; from a
+  line with text they go just below it. Each column starts with an empty
+  line and the cursor goes into the first; inside you write as in the page
+  (text, lists, toggles, databases…). The columns are equally wide, and the
+  page goes on below the longest one. With the six dots next to them the
+  whole group moves, is duplicated or deleted (Ctrl+Z brings it back). Not
+  yet tested by the user
+- **[Change]** **[📱 Mobile]** **On the phone there are no columns**, as in
+  Notion's mobile app: the content reads from top to bottom, first all of
+  the first column, then the second, the third, the fourth, and after them
+  the rest of the page. The lines can be edited as usual; the menus of the
+  phone don't create columns
+- **[Change]** **[📱 Mobile]** **[💻 PC]** The **PDF and Markdown export**,
+  copying the columns chosen with the mouse (Ctrl+C, Ctrl+X) and the
+  **page history** take the lines of the columns one column after the
+  other, like the phone
+- **[Note]** Still to come: dragging blocks into and out of the columns and
+  between them (phase 3), adjustable widths and columns in the PDF (phase 4).
+  For now the six dots move the whole group, and the lines inside it have no
+  dots of their own
+- **[Project]** `BlockType.COLUMN_LIST` (the group) and `COLUMN` (each
+  column; the lines are their children), drawn in `BlockRow` (a `Row` of
+  equal `weight` on the PC, one under the other on the phone); created by
+  `PageRepository.makeColumns` (`SlashAction.Columns`, PC only in
+  `slashEntries`). Like the synced block, they are frames: `exportLines`,
+  `pageCopyLines` and the history visit their lines in their place. The
+  first line of a column doesn't go away with Backspace, and the outdent
+  doesn't take a line out of its column. Tests: `DesktopColumnsTest` (an
+  empty line becomes the columns, one with text keeps them below, export and
+  duplicate, copy, the menu entry with the cursor in the first column, the
+  three entries, side by side on the drawn page), `ColumnsPhoneTest` (one
+  below the other in reading order; no entries in the phone's menus)
+
 ### ✏️ v0.153.68 — 12/11/2026 · 15:25 — A kind of block the app doesn't know becomes a line of text
 *(Claude Code on the PC; phone not connected, APK ready to install; 1200 tests passed)*
 

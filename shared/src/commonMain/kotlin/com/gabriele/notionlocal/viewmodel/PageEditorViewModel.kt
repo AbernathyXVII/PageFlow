@@ -370,6 +370,10 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         suspend fun makeSynced(blockId: String): String? {
             saved(blockId); return repository.makeSynced(blockId)
         }
+
+        suspend fun makeColumns(blockId: String, count: Int): String? {
+            saved(blockId); return repository.makeColumns(blockId, count)
+        }
     }
 
     /** Mostra subito una riga nuova che il database deve ancora scrivere. */
@@ -2835,6 +2839,8 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
 
         val currentParentId = block.parentBlockId ?: return
         val currentParent = _blocks.value.find { it.id == currentParentId } ?: return
+        // Da una colonna non si esce col rientro: finirebbe fra le colonne, dove non si vede.
+        if (currentParent.type == BlockType.COLUMN) return
         val newParentId = currentParent.parentBlockId
         val insertAtIndex = currentParent.orderIndex + 1
 
@@ -3111,6 +3117,11 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                     }
                     BlockType.DIVIDER -> lines += PageCopyLine(listOf(RichTextSpan(text = "---")), null)
                     BlockType.PAGE_LINK, BlockType.DATABASE_LINK -> Unit
+                    // Le colonne (dal 12/11/2026) sono cornici: le loro righe, una colonna dopo l'altra, senza rientro.
+                    BlockType.COLUMN_LIST, BlockType.COLUMN -> {
+                        visit(block.id, depth)
+                        continue
+                    }
                     in MEDIA_TYPES -> {
                         val media = BlockAttrs.parse(block.attrsJson)
                         (media.url ?: media.name)?.let { text -> lines += PageCopyLine(listOf(RichTextSpan(text = text)), null) }
@@ -3306,6 +3317,8 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
     private fun isFocusableBlockType(type: BlockType): Boolean =
         type != BlockType.DIVIDER &&
             type != BlockType.SYNCED &&
+            type != BlockType.COLUMN_LIST &&
+            type != BlockType.COLUMN &&
             type != BlockType.TABLE &&
             type != BlockType.PAGE_LINK &&
             type != BlockType.DATABASE_LINK &&
@@ -3798,9 +3811,10 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
             .filter { it.parentBlockId == parentId && it.orderIndex < current.orderIndex }
             .filter { isFocusableBlockType(it.type) }
             .maxByOrNull { it.orderIndex }
-        // La prima riga di un blocco sincronizzato: sopra non c'è un campo
-        // dove andare, il blocco si toglie dal suo menu.
-        if (previousSibling == null && _blocks.value.find { it.id == parentId }?.type == BlockType.SYNCED) return false
+        // La prima riga di un blocco sincronizzato o di una colonna: sopra non
+        // c'è un campo dove andare, il blocco si toglie dal suo menu.
+        val parentType = _blocks.value.find { it.id == parentId }?.type
+        if (previousSibling == null && (parentType == BlockType.SYNCED || parentType == BlockType.COLUMN)) return false
         val focusTarget = previousSibling?.id ?: parentId
         // La tastiera a volte manda lo stesso backspace due volte, a due
         // millisecondi di distanza (si vede nel registro): la seconda
@@ -4521,6 +4535,16 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         snapshotForStructuralChange()
         viewModelScope.launch {
             val firstLine = structuralEdits.withLock { blocksDb.makeSynced(block.id) } ?: return@launch
+            delay(IME_SETTLE_DELAY_MS)
+            _focusRequestBlockId.value = firstLine
+        }
+    }
+
+    /** **"Create two/three/four columns"** (dal 12/11/2026, solo sul PC): vedi `PageRepository.makeColumns`. Il cursore va nella prima colonna. */
+    fun makeColumns(block: BlockEntity, count: Int) {
+        snapshotForStructuralChange()
+        viewModelScope.launch {
+            val firstLine = structuralEdits.withLock { blocksDb.makeColumns(block.id, count) } ?: return@launch
             delay(IME_SETTLE_DELAY_MS)
             _focusRequestBlockId.value = firstLine
         }

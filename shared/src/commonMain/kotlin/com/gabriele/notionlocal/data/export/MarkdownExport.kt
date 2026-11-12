@@ -109,7 +109,8 @@ private fun blockMarkdown(
             "🔔 " + listOfNotNull(text.ifBlank { null }, at).joinToString(" · ")
         }
         BlockType.BUTTON -> page.buttons[block.id]?.let(::buttonMarkdown)
-        BlockType.SYNCED -> null
+        // Cornici: le loro righe si esportano al loro posto (vedi `exportLines`).
+        BlockType.SYNCED, BlockType.COLUMN_LIST, BlockType.COLUMN -> null
         BlockType.DIVIDER -> "---"
         BlockType.PAGE_LINK, BlockType.PAGE_MENTION -> {
             val id = if (block.type == BlockType.PAGE_MENTION) block.attrs.pageId ?: block.linkedPageId else block.linkedPageId

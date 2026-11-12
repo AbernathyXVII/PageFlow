@@ -109,8 +109,9 @@ fun exportLines(page: ExportPage): List<ExportLine> {
             if (block.id in seen) continue
             val indent = block.indentLevel
             // Un blocco sincronizzato è solo una cornice (dal 03/11/2026): le
-            // sue righe si esportano al suo posto, come le altre.
-            if (block.type == BlockType.SYNCED) {
+            // sue righe si esportano al suo posto, come le altre. Così anche le
+            // colonne (dal 12/11/2026): una dopo l'altra, come sul telefono.
+            if (block.type == BlockType.SYNCED || block.type == BlockType.COLUMN_LIST || block.type == BlockType.COLUMN) {
                 visit(block.id, depth + indent, seen + block.id)
                 continue
             }

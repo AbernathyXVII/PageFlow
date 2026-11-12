@@ -332,6 +332,27 @@ fun BlockActionsHost(
                         },
                         onMoveToLine = onMoveToLine
                     )
+                } else if (block.type == BlockType.COLUMN_LIST) {
+                    // **Le colonne affiancate** (dal 12/11/2026): il gruppo intero, con le righe che ha dentro.
+                    ObjectBlockMenu(
+                        title = EditorStrings.blockType("Columns"),
+                        onMoveUp = onMoveUp,
+                        onMoveDown = onMoveDown,
+                        onAddLine = { below ->
+                            onDismiss()
+                            viewModel.addLineNextTo(block, below)
+                        },
+                        actions = emptyList(),
+                        onDuplicate = {
+                            onDismiss()
+                            viewModel.duplicateBlock(block.id, imageStore)
+                        },
+                        onDelete = {
+                            onDismiss()
+                            viewModel.deleteBlock(block)
+                        },
+                        onMoveToLine = onMoveToLine
+                    )
                 } else if (block.type == BlockType.SYNCED) {
                     // **Un blocco sincronizzato** (dal 03/11/2026): metterne una
                     // copia in un'altra pagina, o farne di nuovo righe normali.
@@ -1279,7 +1300,7 @@ private fun TurnIntoList(
     // della riga andrebbe perso (dal 06/10/2026).
     val entries = slashEntries().filter {
         it.action != SlashAction.LinkToPage && it.action !is SlashAction.Media && it.action != SlashAction.LinkButton &&
-            it.action != SlashAction.Record && it.action != SlashAction.Scan
+            it.action != SlashAction.Record && it.action != SlashAction.Scan && it.action !is SlashAction.Columns
     }
     OptionsGroup {
         entries.forEachIndexed { index, entry ->

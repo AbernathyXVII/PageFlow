@@ -347,8 +347,8 @@ fun versionOutline(content: VersionContent, linkedTitles: Map<String, String>): 
                 0
             }
             result += linesOf(block, depth + indent, number, cellsByBlock[block.id].orEmpty(), linkedTitles)
-            // Le righe di un blocco sincronizzato stanno al suo posto, senza rientro.
-            visit(block.id, depth + indent + if (block.type == BlockType.SYNCED) 0 else 1)
+            // Le righe di un blocco sincronizzato e delle colonne stanno al loro posto, senza rientro.
+            visit(block.id, depth + indent + if (block.type == BlockType.SYNCED || block.type == BlockType.COLUMN_LIST || block.type == BlockType.COLUMN) 0 else 1)
         }
     }
     visit(null, 0)
@@ -379,7 +379,7 @@ private fun linesOf(
         BlockType.CODE -> one("", kind = OutlineKind.CODE)
         BlockType.NOTIFICATION -> one("🔔")
         BlockType.BUTTON -> one("▢")
-        BlockType.SYNCED -> emptyList()
+        BlockType.SYNCED, BlockType.COLUMN_LIST, BlockType.COLUMN -> emptyList()
         BlockType.PAGE_MENTION -> one("@")
         BlockType.DIVIDER -> one("", "", OutlineKind.DIVIDER)
         BlockType.PAGE_LINK -> one("📄", block.linkedPageId?.let { linkedTitles[it] }?.ifBlank { Strings.untitled } ?: text.ifBlank { Strings.untitled })
