@@ -193,6 +193,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -4929,6 +4930,18 @@ private fun runLineBounds(
 /** Quanto è alta una maiuscola rispetto al corpo del carattere (circa, per i caratteri della pagina). */
 private const val CAP_HEIGHT = 0.7f
 
+/** Il riquadro di una colonna vuota (vedi `ColumnLines`): attorno al campo, un poco oltre le lettere. */
+private fun DrawScope.drawEmptyColumn(color: Color) {
+    val side = (PAGE_SIDE_PADDING - 6.dp).toPx()
+    val extra = 2.dp.toPx()
+    drawRoundRect(
+        color = color,
+        topLeft = Offset(side, -extra),
+        size = Size(size.width - 2 * side, size.height + 2 * extra),
+        cornerRadius = CornerRadius(4.dp.toPx())
+    )
+}
+
 /** Quanto è alta una colonna senza righe, da toccare per scriverci (vedi `BlockRow`). */
 private val EMPTY_COLUMN_HEIGHT = 32.dp
 
@@ -4968,6 +4981,14 @@ private fun ColumnLines(
     } else {
         listOf(column)
     }
+    // **Una colonna vuota si vede** (dal 12/11/2026, chiesto dall'utente: "su
+    // Notion Create three columns mi crea un blocco a sinistra, uno al centro
+    // e uno a destra"): sul PC un riquadro chiaro dove scrivere, finché la
+    // colonna non ha niente di scritto. Prima le colonne appena nate non si
+    // vedevano, e la seconda bisognava indovinarla.
+    val emptyColumn = isPc && column.type == BlockType.COLUMN && lines.isNotEmpty() &&
+        lines.all { it.type == BlockType.PARAGRAPH && viewModel.plainTextOf(it).isEmpty() }
+    val emptyLook = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
     CompositionLocalProvider(LocalFirstLine provides null) {
     lines.forEachIndexed { index, child ->
         key(child.id) {
@@ -4975,6 +4996,7 @@ private fun ColumnLines(
                 modifier = Modifier
                     .padding(vertical = (look.spacingOf(child) / 2f).sp.toDpIn(density))
                     .then(if (index == 0) reportFirst else Modifier)
+                    .then(if (emptyColumn && index == 0) Modifier.drawBehind { drawEmptyColumn(emptyLook) } else Modifier)
             ) {
                 BlockRow(
                     block = child,

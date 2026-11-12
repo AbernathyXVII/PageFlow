@@ -418,8 +418,86 @@ class DesktopColumnsTest {
                 if (last != null && y <= last.last + 1) bands[bands.lastIndex] = last.first..y else bands += y..y
             }
             assertEquals("righe di testo sullo schermo: $bands", 4, bands.size)
+            // **Un clic nella seconda colonna**, all'altezza della prima riga, e si scrive lì.
+            val abc = bands[1]
+            click(screen.width / 2f + 100f, (abc.first + abc.last) / 2f)
+            frames(10)
+            type("xyz")
+            frames(10)
+            shot("columns_second")
+            assertEquals(listOf("""[{"text":"xyz"}]"""), childrenOf(columns[1].id).map { it.textJson })
         } finally {
             onWindowThread { scene.close() }
         }
+    }
+
+    /** La pagina "colonne" disegnata sul PC, larga [width]: la sua foto. */
+    private fun render(width: Int = 900): Bitmap {
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+        val scene = onWindowThread {
+            ImageComposeScene(width = width, height = 500, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        PageEditorScreen(
+                            pageId = "colonne", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                            onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                        )
+                    }
+                }
+            }
+        }
+        try {
+            var time = 0L
+            repeat(40) {
+                onWindowThread { scene.render(time) }
+                time += 100_000_000L
+                Thread.sleep(30)
+            }
+            return onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **"Create three columns" fa tre blocchi che si vedono** (chiesto
+     * dall'utente il 12/11/2026, come su Notion: "un blocco a sinistra, uno al
+     * centro e uno a destra"): tre riquadri chiari sulla stessa riga, e
+     * scritto qualcosa in una colonna il suo riquadro se ne va.
+     */
+    @Test
+    fun threeNewColumnsAreThreeVisibleBlocks() {
+        runBlocking { repo.makeColumns("vuota", 3) }
+        val shot = render(1200)
+        File("build/desktop-screenshots").mkdirs()
+        File("build/desktop-screenshots", "columns_three.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(shot).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        val background = shot.getColor(shot.width - 5, shot.height - 5)
+        // La riga a metà dei riquadri: dove, fra "PRIMA" e "DOPO", il fondo cambia di più.
+        val rows = (150 until 300).filter { y -> (0 until shot.width).count { x -> shot.getColor(x, y) != background } > shot.width / 2 }
+        assertTrue("nessuna riga coi riquadri", rows.isNotEmpty())
+        val y = rows[rows.size / 2]
+        val runs = ArrayList<IntRange>()
+        for (x in 0 until shot.width) {
+            if (shot.getColor(x, y) == background) continue
+            val last = runs.lastOrNull()
+            if (last != null && x <= last.last + 1) runs[runs.lastIndex] = last.first..x else runs += x..x
+        }
+        val boxes = runs.filter { it.last - it.first > 100 }
+        assertEquals("riquadri a y $y: $runs", 3, boxes.size)
+        val centers = boxes.map { (it.first + it.last) / 2 }
+        assertTrue("uno a sinistra, uno al centro, uno a destra: $boxes", centers[0] < shot.width / 3 && centers[1] in shot.width / 3..shot.width * 2 / 3 && centers[2] > shot.width * 2 / 3)
+
+        write("vuota", 1, "CENTRO")
+        val after = render(1200)
+        val stillBoxes = ArrayList<IntRange>()
+        for (x in 0 until after.width) {
+            if (after.getColor(x, y) == background) continue
+            val last = stillBoxes.lastOrNull()
+            if (last != null && x <= last.last + 1) stillBoxes[stillBoxes.lastIndex] = last.first..x else stillBoxes += x..x
+        }
+        assertEquals("con la colonna di mezzo scritta restano due riquadri: $stillBoxes", 2, stillBoxes.count { it.last - it.first > 100 })
     }
 }

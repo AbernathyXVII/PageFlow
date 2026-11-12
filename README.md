@@ -1126,6 +1126,22 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.71 — 12/11/2026 · 19:23 — New columns are blocks you can see
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1216 tests passed)*
+
+- **[Change]** **[💻 PC]** **"Create two/three/four columns" makes blocks you
+  can see**, as in Notion: one on the left, one in the middle, one on the
+  right (two, three or four), each a light box on the same line where you
+  click and write. Before, new columns were empty lines with nothing to show
+  them, and the second one had to be guessed. A column's box goes away as
+  soon as something is written in it
+- **[Project]** `ColumnLines` draws the box (`drawEmptyColumn`) on the first
+  line of a column whose lines are all empty (PC only). Tests:
+  `DesktopColumnsTest` (three new columns are three boxes on the same line,
+  left, middle and right, and two when the middle one has text; a click in
+  the second column, at the height of the first line, and the letters go
+  there)
+
 ### ✏️ v0.153.70 — 12/11/2026 · 19:00 — Enter chooses the entry of the "/" menu
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1215 tests passed)*
 
