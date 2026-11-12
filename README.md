@@ -1126,6 +1126,19 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.66 — 12/11/2026 · 14:01 — On the PC no tab bar with a single tab
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1194 tests passed)*
+
+- **[Change]** **[💻 PC]** **With a single tab open the tab bar isn't
+  there**, and the page goes back up to the top of the window, as before the
+  tabs. It appears as soon as there is a second one (Ctrl+T, or "Open as…" →
+  New tab with the right click), and goes away again when only one is left.
+  Not yet tested by the user
+- **[Project]** `AppNavHost` draws `PcTabBar` only with more than one tab;
+  the tests drawing the whole app with one tab are back to their old
+  coordinates. Test: `DesktopPeekTest` (one tab: no bar; Ctrl+T: the bar with
+  two; Ctrl+W: gone again)
+
 ### ✏️ v0.153.65 — 12/11/2026 · 13:46 — On the PC Ctrl+T and Ctrl+W for the tabs
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1194 tests passed)*
 

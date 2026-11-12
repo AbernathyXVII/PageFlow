@@ -273,15 +273,14 @@ class DesktopEditorTest {
         }
         try {
             val clear = pageColor()
-            // Dal 12/11/2026 sopra c'è la barra delle schede (34): tutto più in basso.
-            click(28f, 28f + TAB_BAR)
+            click(28f, 28f)
             assertNotEquals("la barra aperta mette il velo sulla pagina", clear, pageColor())
-            click(268f, 28f + TAB_BAR)
+            click(268f, 28f)
             val after = pageColor()
             assertTrue(AppSettings.sidebarPinned)
             assertEquals("fissata la barra, sulla pagina non resta il velo", clear, after)
             // Un clic solo sulle frecce, nello stesso punto della puntina: la barra si richiude.
-            click(268f, 28f + TAB_BAR)
+            click(268f, 28f)
             pageColor()
             assertFalse("il primo clic dopo averla fissata non deve andare a vuoto", AppSettings.sidebarPinned)
         } finally {
@@ -325,8 +324,7 @@ class DesktopEditorTest {
         }
         fun mouseTo(x: Float, y: Float) = onWindowThread { scene.sendPointerEvent(PointerEventType.Move, Offset(x, y)) }
         try {
-            // Dal 12/11/2026 sopra c'è la barra delle schede (34): tutto più in basso.
-            val y = 26 + TAB_BAR.toInt()
+            val y = 26
             val away = colorAt(217, y)
             assertEquals("senza mouse, dietro la puntina c'è la barra", colorAt(180, y), away)
             mouseTo(232f, y.toFloat())
@@ -361,8 +359,4 @@ class DesktopEditorTest {
         assertEquals(2, viewModel.blocks.value.size)
     }
 
-    private companion object {
-        /** L'altezza della barra delle schede, sopra l'app sul PC. */
-        const val TAB_BAR = 34f
-    }
 }

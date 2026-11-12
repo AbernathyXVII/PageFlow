@@ -116,7 +116,7 @@ class DesktopPeekTest {
             fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
             fun textIn(picture: Bitmap, xs: IntRange, ys: IntRange) = ys.sumOf { y -> xs.count { x -> bright(picture.getColor(x, y)) } }
             assertNotEquals("in Center peek il resto è scurito", home.getColor(1190, 690), center.getColor(1190, 690))
-            assertTrue("la pagina nel peek, al centro", textIn(center, 200..1000, 130..280) > 200)
+            assertTrue("la pagina nel peek, al centro", textIn(center, 200..1000, 90..300) > 200)
             // Un clic fuori la chiude.
             click(60f, 400f)
             val closed = shot("peek_closed")
@@ -127,7 +127,7 @@ class DesktopPeekTest {
             val side = shot("peek_side")
             assertEquals("in Side peek la pagina a sinistra resta com'è", home.getColor(300, 600), side.getColor(300, 600))
             assertTrue("il bordo a metà", (590..612).any { x -> side.getColor(x, 600) != home.getColor(x, 600) })
-            assertTrue("la pagina nel peek, a destra", textIn(side, 640..1150, 90..250) > 200)
+            assertTrue("la pagina nel peek, a destra", textIn(side, 640..1150, 60..260) > 200)
             // New tab: una scheda nuova con la pagina; la prima resta sul menu principale.
             click(60f, 400f)
             AppSettings.openPagesAs = OpenMode.NEW_TAB
@@ -238,6 +238,7 @@ class DesktopPeekTest {
         }
         try {
             val one = tabText("tabs_one")
+            assertEquals("con una scheda sola la barra non c'è", 0, one)
             onWindowThread { AppShortcuts.newTab!!.invoke() }
             val two = tabText("tabs_ctrl_t")
             assertTrue("Ctrl+T: una scheda in più ($one → $two)", two > one + 60)
@@ -251,7 +252,7 @@ class DesktopPeekTest {
     }
 
     private companion object {
-        /** Il collegamento "Target", sotto la barra delle schede. */
-        const val LINK_Y = 223f
+        /** Il collegamento "Target" (con una scheda sola la barra delle schede non c'è). */
+        const val LINK_Y = 189f
     }
 }

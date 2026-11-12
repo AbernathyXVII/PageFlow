@@ -160,7 +160,9 @@ fun AppNavHost(
     }
     val holder = rememberSaveableStateHolder()
     Column(modifier = Modifier.fillMaxSize()) {
-        PcTabBar(tabs, factory.pageRepository)
+        // Con una scheda sola la barra non c'è (chiesto dall'utente il 12/11/2026): se ne apre
+        // un'altra con Ctrl+T o con "Open as…" → New tab, e allora compare.
+        if (tabs.tabs.size > 1) PcTabBar(tabs, factory.pageRepository)
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             val tab = tabs.active
             key(tab.id) {
