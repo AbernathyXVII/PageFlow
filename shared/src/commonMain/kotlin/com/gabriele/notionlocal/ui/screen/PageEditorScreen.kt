@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
+import com.gabriele.notionlocal.ui.navigation.LocalPageOpener
 import com.gabriele.notionlocal.platform.emojiTransformation
 import com.gabriele.notionlocal.platform.withEmojiFont
 import com.gabriele.notionlocal.platform.emojiFontFamily
@@ -3259,6 +3261,11 @@ private fun PageEditorContent(
                 horizontalArrangement = Arrangement.spacedBy(FLOATING_BUTTON_GAP),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Dentro un peek (sul PC, dal 12/11/2026) i suoi comandi al posto di indietro, ☰ e percorso.
+                val peekControls = LocalPeekControls.current
+                if (isPc && peekControls != null) {
+                    peekControls()
+                } else {
                 if (!isRootPage) {
                     FloatingPageButton(onClick = onBack) {
                         Icon(
@@ -3292,6 +3299,7 @@ private fun PageEditorContent(
                         current = page,
                         onOpen = { crumb -> if (crumb.isDatabase) onNavigateToDatabase(crumb.id) else onNavigateToPage(crumb.id) }
                     )
+                }
                 }
             }
             Row(
@@ -7568,6 +7576,8 @@ private fun PageLinkBlockContent(
     val nameColor = hexToColor(linkSpan?.color) ?: NotionWhite
     val nameBackground = hexToColor(linkSpan?.background)
 
+    // Sul PC nel modo scelto in Settings (vedi `PageOpener`); altrove a pagina intera.
+    val opener = LocalPageOpener.current
     val open: () -> Unit = {
         linkedPageId?.let { id ->
             // Un collegamento può puntare anche a un **database**: è
@@ -7575,10 +7585,11 @@ private fun PageLinkBlockContent(
             // di testo mostrerebbe un foglio vuoto al posto delle
             // righe, quindi conta cosa c'è dall'altra parte, non solo
             // il tipo del blocco.
-            if (block.type == BlockType.DATABASE_LINK || linkedPage?.isDatabase == true) {
-                onNavigateToDatabase(id)
-            } else {
-                onNavigateToPage(id)
+            val isDatabase = block.type == BlockType.DATABASE_LINK || linkedPage?.isDatabase == true
+            when {
+                opener != null -> opener.open(id, isDatabase, null)
+                isDatabase -> onNavigateToDatabase(id)
+                else -> onNavigateToPage(id)
             }
         }
     }

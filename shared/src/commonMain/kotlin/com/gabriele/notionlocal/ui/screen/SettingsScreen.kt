@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.isPc
+import com.gabriele.notionlocal.data.settings.OpenMode
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Spellcheck
 import com.gabriele.notionlocal.ui.i18n.ProofingStrings
@@ -92,7 +94,7 @@ import com.gabriele.notionlocal.platform.showMessage
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 
 /** Quale finestra di scelta è aperta. */
-private enum class SettingsDialog { THEME, TITLE_POSITION, ANIMATIONS, NUMBER, DATE, TIME, LANGUAGE, PROOFING, PARAGRAPH, TIME_ZONE, LOCK_PASSWORD, CLEAR_CACHE, DELETE_ALL }
+private enum class SettingsDialog { THEME, TITLE_POSITION, ANIMATIONS, NUMBER, DATE, TIME, LANGUAGE, PROOFING, PARAGRAPH, OPEN_PAGES, TIME_ZONE, LOCK_PASSWORD, CLEAR_CACHE, DELETE_ALL }
 
 /**
  * Le impostazioni. Ogni scelta si salva appena la si fa e vale subito: il
@@ -204,6 +206,17 @@ fun SettingsScreen(
                 value = paragraphSettingsSummary(),
                 onClick = { dialog = SettingsDialog.PARAGRAPH }
             )
+            // **"Open pages"** (dal 12/11/2026, solo sul PC, chiesto dall'utente
+            // come in Notion): come si apre una pagina toccata in un collegamento
+            // o in un database. Di partenza Center peek. Vedi `PageOpener`.
+            if (isPc) {
+                SettingsItem(
+                    Strings.openPages,
+                    icon = openModeIcon(AppSettings.openPagesAs),
+                    value = Strings.openModeName(AppSettings.openPagesAs),
+                    onClick = { dialog = SettingsDialog.OPEN_PAGES }
+                )
+            }
             SettingsItem(
                 Strings.animations,
                 icon = Icons.Filled.Animation,
@@ -355,6 +368,13 @@ fun SettingsScreen(
             options = TitlePosition.entries.map { it to titlePositionLabel(it) },
             selected = AppSettings.titlePosition,
             onSelect = { AppSettings.titlePosition = it },
+            onDismiss = { dialog = null }
+        )
+        SettingsDialog.OPEN_PAGES -> ChoiceDialog(
+            title = Strings.openPages,
+            options = OpenMode.entries.map { it to Strings.openModeName(it) },
+            selected = AppSettings.openPagesAs,
+            onSelect = { AppSettings.openPagesAs = it },
             onDismiss = { dialog = null }
         )
         SettingsDialog.ANIMATIONS -> ChoiceDialog(

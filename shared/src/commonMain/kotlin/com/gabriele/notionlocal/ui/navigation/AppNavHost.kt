@@ -1,5 +1,9 @@
 package com.gabriele.notionlocal.ui.navigation
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.key
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import com.gabriele.notionlocal.data.settings.OpenMode
 import com.gabriele.notionlocal.ui.screen.SidebarPageActions
 import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.foundation.hoverable
@@ -137,7 +141,53 @@ fun AppNavHost(
     /** Una nota al volo chiesta a questa finestra (vedi `QuickNotes`); di suo quella dei test. */
     quickNoteRequest: MutableState<Boolean> = QuickNotes.requested
 ) {
-    val navController = rememberNavController()
+    if (!isPc) {
+        AppTab(factory, quickNoteRequest, rememberNavController())
+        return
+    }
+    // **Le schede del PC** (dal 12/11/2026, vedi `PcTabs`): la barra in cima,
+    // e sotto la scheda attiva con la sua cronologia. Le altre tengono la loro
+    // finché non le si riapre (`SaveableStateProvider`).
+    val tabs = remember { PcTabs.load() }
+    val holder = rememberSaveableStateHolder()
+    Column(modifier = Modifier.fillMaxSize()) {
+        PcTabBar(tabs, factory.pageRepository)
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            val tab = tabs.active
+            key(tab.id) {
+                holder.SaveableStateProvider(tab.id) {
+                    AppTab(
+                        factory = factory,
+                        quickNoteRequest = quickNoteRequest,
+                        navController = rememberNavController(),
+                        runStartup = tab.id == tabs.launchId,
+                        startRoute = tab.route,
+                        onRoute = { route -> tabs.updateRoute(tab.id, route) },
+                        onOpenNewTab = { route -> tabs.open(route) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * **Una scheda**: la barra laterale e le pagine, con la sua cronologia. Sul
+ * telefono ce n'è una sola. [runStartup]: solo la prima scheda della finestra
+ * fa le cose dell'avvio (cestino, pagina d'avvio); le altre si aprono su
+ * [startRoute]. [onRoute] dice dove è arrivata, [onOpenNewTab] apre una pagina
+ * in una scheda nuova (null = non ci sono schede).
+ */
+@Composable
+private fun AppTab(
+    factory: ViewModelFactory,
+    quickNoteRequest: MutableState<Boolean>,
+    navController: NavHostController,
+    runStartup: Boolean = true,
+    startRoute: String? = null,
+    onRoute: ((String) -> Unit)? = null,
+    onOpenNewTab: ((String) -> Unit)? = null
+) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val sidebar: SidebarViewModel = viewModel(factory = factory)
@@ -207,6 +257,47 @@ fun AppNavHost(
         navController.popBackStack(Routes.HOME, inclusive = false)
     }
 
+    // --- Come si apre una pagina toccata (sul PC, dal 12/11/2026, vedi `PageOpener`) ---
+    //
+    // Un collegamento o una riga di un database: nel modo di Settings (di
+    // partenza Center peek) o in quello scelto da "Open as…". Il peek è di
+    // questa finestra: si chiude cambiando pagina.
+    var peek by remember { mutableStateOf<PagePeek?>(null) }
+    fun openWith(pageId: String, isDatabase: Boolean, mode: OpenMode) {
+        when (mode) {
+            OpenMode.SIDE_PEEK, OpenMode.CENTER_PEEK -> peek = PagePeek(pageId, isDatabase, mode)
+            OpenMode.NEW_TAB -> {
+                peek = null
+                onOpenNewTab?.invoke(Routes.forPage(pageId, isDatabase)) ?: navController.navigate(Routes.forPage(pageId, isDatabase))
+            }
+            OpenMode.FULL_PAGE -> {
+                peek = null
+                navController.navigate(Routes.forPage(pageId, isDatabase))
+            }
+        }
+    }
+    val pageOpener: PageOpener? = if (isPc) {
+        remember(navController) { PageOpener { id, isDatabase, mode -> openWith(id, isDatabase, mode ?: AppSettings.openPagesAs) } }
+    } else {
+        null
+    }
+    val peekActions = PeekActions(
+        close = { peek = null },
+        changeMode = { mode -> peek?.let { open -> openWith(open.pageId, open.isDatabase, mode) } },
+        replace = { id, isDatabase -> peek = peek?.copy(pageId = id, isDatabase = isDatabase) },
+        openSearch = {
+            peek = null
+            navController.navigate(Routes.SEARCH)
+        },
+        openUpdates = { id ->
+            peek = null
+            navController.navigate(Routes.updates(id))
+        },
+        openOutside = { id, isDatabase, mode -> openWith(id, isDatabase, mode) }
+    )
+    // Cambiata la pagina sotto, il peek se ne va.
+    LaunchedEffect(backStackEntry?.id) { peek = null }
+
     // --- All'avvio: pulizia del cestino e pagina da cui partire ---
     //
     // Una volta sola per avvio vero: il flag sopravvive a una rotazione o a
@@ -224,6 +315,15 @@ fun AppNavHost(
         if (startupHandled) return@LaunchedEffect
         startupHandled = true
         val repository = factory.pageRepository
+        // Una scheda che non è la prima: la sua pagina, se c'è ancora, e niente avvio.
+        if (!runStartup) {
+            val route = startRoute?.takeIf { it != Routes.HOME } ?: return@LaunchedEffect
+            val pageId = Routes.pageIdOf(route)
+            val alive = pageId == null || repository.getPage(pageId)?.takeIf { it.trashedAt == null } != null
+            // Dal thread dello schermo: dopo il database non ci si torna per forza (vedi la nota al volo).
+            if (alive) withContext(Dispatchers.Main.immediate) { navController.navigate(route) }
+            return@LaunchedEffect
+        }
         repository.purgeTrash(
             emptyAll = AppSettings.trashPolicy == TrashPolicy.EMPTY_AUTOMATICALLY,
             retentionDays = AppSettings.TRASH_RETENTION_DAYS
@@ -342,6 +442,14 @@ fun AppNavHost(
                 Routes.PAGE_EDITOR -> id?.let { AppSettings.lastVisitedRoute = Routes.pageEditor(it) }
                 Routes.DATABASE_VIEW -> id?.let { AppSettings.lastVisitedRoute = Routes.databaseView(it) }
             }
+            // La scheda (sul PC) ricorda dove è arrivata: pagine e schermate senza argomenti.
+            val route = when (val template = entry.destination.route) {
+                Routes.PAGE_EDITOR -> id?.let(Routes::pageEditor)
+                Routes.DATABASE_VIEW -> id?.let(Routes::databaseView)
+                null -> null
+                else -> template.takeIf { '{' !in it }
+            }
+            if (route != null) onRoute?.invoke(route)
         }
     }
 
@@ -508,7 +616,8 @@ fun AppNavHost(
             }
         }
     ) {
-        CompositionLocalProvider(LocalSidebarPinned provides pinned) {
+        CompositionLocalProvider(LocalSidebarPinned provides pinned, LocalPageOpener provides pageOpener) {
+            Box(modifier = Modifier.fillMaxSize()) {
             Row(modifier = Modifier.fillMaxSize()) {
                 // Fissata: la barra accanto alla pagina, col bordo che la allarga e la stringe.
                 if (pinned) {
@@ -531,7 +640,12 @@ fun AppNavHost(
                             scope.launch { factory.pageRepository.ensureRowPage(rowId)?.let(then) }
                         }
                     )
+                    // Side peek: sopra la pagina, a destra; la barra laterale resta libera.
+                    peek?.takeIf { it.mode == OpenMode.SIDE_PEEK }?.let { SidePeekLayer(it, factory, peekActions) }
                 }
+            }
+            // Center peek: sopra tutta la finestra, barra laterale compresa.
+            peek?.takeIf { it.mode == OpenMode.CENTER_PEEK }?.let { CenterPeekLayer(it, factory, peekActions) }
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.navigation.LocalPageOpener
+import com.gabriele.notionlocal.data.settings.OpenMode
 import com.gabriele.notionlocal.platform.isPc
 import com.gabriele.notionlocal.ui.theme.pcOr
 import com.gabriele.notionlocal.data.replacedImage
@@ -182,6 +184,8 @@ fun BlockActionsHost(
         return
     }
     val context = LocalPlatformContext.current
+    // Sul PC "Open as…" per la pagina collegata (vedi `PageOpener`).
+    val opener = LocalPageOpener.current
 
     val linkedId = block.linkedPageId?.takeIf {
         block.type == BlockType.PAGE_LINK || block.type == BlockType.DATABASE_LINK
@@ -535,6 +539,12 @@ fun BlockActionsHost(
                         },
                         onColor = { step = BlockMenuStep.COLOR },
                         onEditIcon = { step = BlockMenuStep.EDIT_ICON },
+                        onOpenAs = opener?.let { pageOpener ->
+                            { mode ->
+                                onDismiss()
+                                pageOpener.open(page.id, page.isDatabase, mode)
+                            }
+                        },
                         onToggleFavorite = {
                             onDismiss()
                             viewModel.setFavoriteFor(page.id, !page.isFavorite)
@@ -1119,7 +1129,9 @@ private fun PageBlockMenu(
     onMoveTo: () -> Unit,
     onMoveToDatabase: () -> Unit,
     onMoveToTrash: () -> Unit,
-    onMoveToLine: (() -> Unit)? = null
+    onMoveToLine: (() -> Unit)? = null,
+    /** "Open as…" (dal 12/11/2026, solo sul PC): null sul telefono, e la voce non c'è. */
+    onOpenAs: ((OpenMode) -> Unit)? = null
 ) {
     val linked = page.sourceDatabaseId != null
     // Una vista collegata si presenta come "↗ Nome del database", come nel
@@ -1210,6 +1222,10 @@ private fun PageBlockMenu(
         Spacer(modifier = Modifier.size(12.dp))
     }
     OptionsGroup {
+        if (onOpenAs != null) {
+            OpenAsMenu(onOpenAs) { open -> OptionRow(icon = Icons.Filled.OpenInNew, label = Strings.openAs, trailing = { Chevron() }, onClick = open) }
+            HorizontalDivider()
+        }
         OptionRow(icon = Icons.Filled.EmojiEmotions, label = EditorStrings.editIcon, onClick = onEditIcon)
         HorizontalDivider()
         OptionRow(

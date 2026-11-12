@@ -2,6 +2,7 @@ package com.gabriele.notionlocal.ui.i18n
 
 import com.gabriele.notionlocal.data.settings.AppLanguage
 import com.gabriele.notionlocal.data.settings.AppSettings
+import com.gabriele.notionlocal.data.settings.OpenMode
 import com.gabriele.notionlocal.ui.format.Formats
 
 /**
@@ -458,6 +459,25 @@ object Strings {
     )
     // "Full or page line" di una pagina (dal 27/10/2026): vedi `FullLineChoice.kt`.
     val fullWidth get() = t("Full width", "Larghezza piena", "Volle Breite", "Pleine largeur", "Ancho completo", "全宽", "전체 너비", "全幅")
+
+    // "Open as…" (dal 12/11/2026, solo sul PC, come in Notion): come si apre una pagina.
+    val openAs get() = t("Open as…", "Apri come…", "Öffnen als…", "Ouvrir en…", "Abrir como…", "打开方式…", "다음으로 열기…", "開き方…")
+    val openPages get() = t("Open pages", "Apri le pagine", "Seiten öffnen", "Ouvrir les pages", "Abrir páginas", "打开页面", "페이지 열기", "ページを開く")
+    val sidePeek get() = t("Side peek", "Anteprima laterale", "Seitenvorschau", "Aperçu latéral", "Vista lateral", "侧边预览", "사이드 보기", "サイドピーク")
+    val centerPeek get() = t("Center peek", "Anteprima centrale", "Mittige Vorschau", "Aperçu centré", "Vista central", "居中预览", "중앙 보기", "センターピーク")
+    val fullPage get() = t("Full page", "Pagina intera", "Ganze Seite", "Pleine page", "Página completa", "整页", "전체 페이지", "フルページ")
+    val newTab get() = t("New tab", "Nuova scheda", "Neuer Tab", "Nouvel onglet", "Nueva pestaña", "新标签页", "새 탭", "新しいタブ")
+    val openAsFullPage get() = t("Open as full page", "Apri a pagina intera", "Als ganze Seite öffnen", "Ouvrir en pleine page", "Abrir como página completa", "以整页打开", "전체 페이지로 열기", "フルページで開く")
+    val pinTab get() = t("Pin tab", "Fissa la scheda", "Tab anheften", "Épingler l'onglet", "Fijar pestaña", "固定标签页", "탭 고정", "タブを固定")
+    val unpinTab get() = t("Unpin tab", "Sblocca la scheda", "Tab lösen", "Désépingler l'onglet", "Desfijar pestaña", "取消固定标签页", "탭 고정 해제", "タブの固定を解除")
+    val closeTab get() = t("Close tab", "Chiudi la scheda", "Tab schließen", "Fermer l'onglet", "Cerrar pestaña", "关闭标签页", "탭 닫기", "タブを閉じる")
+
+    fun openModeName(mode: OpenMode) = when (mode) {
+        OpenMode.SIDE_PEEK -> sidePeek
+        OpenMode.CENTER_PEEK -> centerPeek
+        OpenMode.FULL_PAGE -> fullPage
+        OpenMode.NEW_TAB -> newTab
+    }
     val fullOrPageLine get() = t("Full or page line", "Righe intere o a capo", "Ganze oder umbrochene Zeilen", "Lignes entières ou coupées", "Líneas completas o partidas", "整行或换行", "전체 줄 또는 줄바꿈", "行全体か折り返しか")
     val fullLine get() = t("Full line", "Righe intere", "Ganze Zeilen", "Lignes entières", "Líneas completas", "整行", "전체 줄", "行全体")
     val pageLine get() = t("Page line", "Righe a capo", "Umbrochene Zeilen", "Lignes coupées", "Líneas partidas", "换行", "줄바꿈", "折り返し")

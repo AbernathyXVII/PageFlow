@@ -83,6 +83,13 @@ enum class AppLanguage(val locale: Locale) {
 /** Da dove parte l'app quando la si apre. */
 enum class StartupMode { LAST_VISITED, HOME, SPECIFIC_PAGE }
 
+/**
+ * **Come si apre una pagina toccata nel contenuto** (dal 12/11/2026, solo sul
+ * PC, chiesto dall'utente come in Notion): un collegamento a una pagina, una
+ * riga di un database. Vedi `AppSettings.openPagesAs` e `PageOpener`.
+ */
+enum class OpenMode { SIDE_PEEK, CENTER_PEEK, FULL_PAGE, NEW_TAB }
+
 /** Cosa succede alle pagine nel cestino. */
 enum class TrashPolicy { KEEP_30_DAYS, EMPTY_AUTOMATICALLY }
 
@@ -173,6 +180,8 @@ object AppSettings {
         sidebarPinnedState.value = prefs.getBoolean(KEY_SIDEBAR_PINNED, false)
         sidebarWidthState.value = prefs.getInt(KEY_SIDEBAR_WIDTH, SIDEBAR_DEFAULT_WIDTH).coerceIn(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
         zoomState.value = prefs.getInt(KEY_ZOOM, 100).coerceIn(ZOOM_MIN, ZOOM_MAX)
+        openPagesAsState.value = enumOr(KEY_OPEN_PAGES_AS, OpenMode.CENTER_PEEK)
+        sidePeekPercentState.value = prefs.getInt(KEY_SIDE_PEEK_PERCENT, SIDE_PEEK_DEFAULT_PERCENT).coerceIn(SIDE_PEEK_MIN_PERCENT, SIDE_PEEK_MAX_PERCENT)
     }
 
     // --- Aspetto ---
@@ -262,6 +271,41 @@ object AppSettings {
 
     const val ZOOM_MIN = 50
     const val ZOOM_MAX = 300
+
+    private val openPagesAsState = mutableStateOf(OpenMode.CENTER_PEEK)
+
+    /**
+     * **Come si apre una pagina toccata** (sul PC, dal 12/11/2026, chiesto
+     * dall'utente): in Settings sotto "Paragraph", di partenza Center peek.
+     * Col destro su una pagina, "Open as…" sceglie per quella volta.
+     */
+    var openPagesAs: OpenMode
+        get() = openPagesAsState.value
+        set(value) { openPagesAsState.value = value; putEnum(KEY_OPEN_PAGES_AS, value) }
+
+    private val sidePeekPercentState = mutableStateOf(SIDE_PEEK_DEFAULT_PERCENT)
+
+    /** Quanto è largo il Side peek, in percento dello spazio della pagina: si cambia trascinandone il bordo. */
+    var sidePeekPercent: Int
+        get() = sidePeekPercentState.value
+        set(value) {
+            sidePeekPercentState.value = value.coerceIn(SIDE_PEEK_MIN_PERCENT, SIDE_PEEK_MAX_PERCENT)
+            if (::prefs.isInitialized) prefs.edit().putInt(KEY_SIDE_PEEK_PERCENT, sidePeekPercentState.value).apply()
+        }
+
+    /**
+     * **Le schede aperte sul PC** (dal 12/11/2026, chiesto dall'utente come nei
+     * browser): il JSON di `PcTabs`, che si riaprono alla volta dopo. Null = una sola.
+     */
+    var pcTabs: String?
+        get() = if (::prefs.isInitialized) prefs.getString(KEY_PC_TABS, null) else null
+        set(value) {
+            if (::prefs.isInitialized) prefs.edit().putString(KEY_PC_TABS, value).apply()
+        }
+
+    const val SIDE_PEEK_DEFAULT_PERCENT = 50
+    const val SIDE_PEEK_MIN_PERCENT = 25
+    const val SIDE_PEEK_MAX_PERCENT = 85
 
     const val SIDEBAR_DEFAULT_WIDTH = 300
     const val SIDEBAR_MIN_WIDTH = 220
@@ -626,6 +670,9 @@ object AppSettings {
     private const val KEY_SIDEBAR_PINNED = "sidebar_pinned"
     private const val KEY_SIDEBAR_WIDTH = "sidebar_width"
     private const val KEY_ZOOM = "zoom"
+    private const val KEY_OPEN_PAGES_AS = "open_pages_as"
+    private const val KEY_SIDE_PEEK_PERCENT = "side_peek_percent"
+    private const val KEY_PC_TABS = "pc_tabs"
     private const val KEY_NUMBER_STYLE = "number_style"
     private const val KEY_DATE_STYLE = "date_style"
     private const val KEY_TIME_FORMAT = "time_format"

@@ -1126,6 +1126,50 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.64 — 12/11/2026 · 13:24 — On the PC pages in Center peek, Side peek, Full page or a new tab
+*(Claude Code on the PC; not yet tested by the user; phone not connected, APK ready to install; 1193 tests passed)*
+
+- **[Change]** **[💻 PC]** **Pages and databases open in four ways**, as in
+  Notion, clicking a page in a block (a page link) or a database row:
+  **Center peek**, a fixed window in the middle with the rest darkened (a
+  click outside or Esc closes it); **Side peek**, a panel on the right, half
+  of the page's space, that gets wider or narrower dragging its left edge
+  (and remembers it); **Full page**, as until now; **New tab**. Which one is
+  chosen in **Settings → "Open pages"**, right under "Paragraph": at the
+  start **Center peek**. The sidebar, the path at the top, the search and
+  the favorites keep opening full page, as in Notion. Not yet tested by the
+  user
+- **[Change]** **[💻 PC]** **"Open as…"** with the right click on a page in a
+  block or on a database row, right above "Edit icon" / "Icon": the four ways
+  for that time
+- **[Change]** **[💻 PC]** **At the top left of a peek** (as in the user's
+  photo): close (× or »), "Open as full page" (⤢) and **the button of the
+  way**, with the four choices and the tick on the current one. A page
+  clicked inside a peek takes its place
+- **[Change]** **[💻 PC]** **Tabs, like a browser's**: a bar at the top of
+  the window, each tab with its page and its own history (back). + opens a
+  new one on the main menu, × closes it (it shows on the active tab or with
+  the mouse over); right click: "Pin tab" puts it on the left, reduced to
+  the page's icon, like Firefox, and "Unpin tab" brings it back. Tabs come
+  back the next time the app opens, each on its page; only the first one
+  does the start-up things (trash, start-up page). Ctrl+T and Ctrl+W aren't
+  there yet. Not yet tested by the user
+- **[Project]** `OpenMode` and `AppSettings.openPagesAs` (default
+  CENTER_PEEK), `sidePeekPercent`, `pcTabs`; `PageOpener`/`LocalPageOpener`
+  (null on the phone) used only by the page link block and the database rows
+  (`openRow`), `LocalPeekControls` that the page and the database put in
+  place of back, ☰ and path; `PagePeek.kt` (`CenterPeekLayer`,
+  `SidePeekLayer`, the peek's own `ViewModelStoreOwner` and `LockGate` for
+  protected pages); `OpenAsMenu.kt`; `PcTabs.kt` (`PcTabs`, `PcTabBar`).
+  `AppNavHost` is now a tab (`AppTab`) and, on the PC, the bar with the
+  active tab inside `rememberSaveableStateHolder`. A tab opened later
+  navigates from the screen's thread (`withContext(Dispatchers.Main)`): from
+  a database thread it locked the window in the tests. Tests:
+  `DesktopPeekTest` (a link in Center peek, closed with a click outside, in
+  Side peek, in a new tab; the tabs' order, pinning and closing, and coming
+  back; a pinned tab just the icon); the tests drawing the whole app moved
+  down by the tab bar
+
 ### ✏️ v0.153.63 — 12/11/2026 · 10:37 — On the PC "Full width" or the page in the middle, as in Notion
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1190 tests passed)*
 

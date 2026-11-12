@@ -1,5 +1,9 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
+import androidx.compose.material.icons.filled.OpenInNew
+import com.gabriele.notionlocal.data.settings.OpenMode
+import com.gabriele.notionlocal.ui.navigation.LocalPageOpener
 import com.gabriele.notionlocal.platform.emojiTransformation
 import com.gabriele.notionlocal.platform.withEmojiFont
 import com.gabriele.notionlocal.platform.emojiFontFamily
@@ -613,8 +617,14 @@ fun DatabaseViewScreen(
                 // **Sul PC la barra in alto di Notion**, come nelle pagine (dal
                 // 11/11/2026, trovato dall'utente: aperto a tutta pagina il
                 // database aveva ancora i pulsanti di prima). Vedi `PcTopBar`.
+                val peekControls = LocalPeekControls.current
                 PcTopBar(
                     start = {
+                        // Dentro un peek (dal 12/11/2026) i suoi comandi al posto di indietro, ☰ e percorso.
+                        if (peekControls != null) {
+                            peekControls()
+                            return@PcTopBar
+                        }
                         PcBarButton(Icons.Filled.ArrowBack, Strings.back, onBack)
                         if (!LocalSidebarPinned.current) {
                             PcBarButton(Icons.Filled.Menu, Strings.openSidebar) {
@@ -1212,6 +1222,8 @@ private fun DatabaseViewBody(
     // Una vista in più ha i dati del database su cui è nata, ma non è una
     // vista collegata: il titolo è quello del database, da scrivere qui.
     val linkedSourceId = hostPage?.sourceDatabaseId
+    // Sul PC la pagina di una riga si apre nel modo di Settings (vedi `PageOpener`).
+    val opener = LocalPageOpener.current
     val openRow: (DatabaseRowEntity) -> Unit = if (simple) {
         { row ->
             focusManager.clearFocus()
@@ -1235,7 +1247,7 @@ private fun DatabaseViewBody(
                     )
                 )
             )
-            viewModel.openRow(row) { onOpenRowPage(it) }
+            viewModel.openRow(row) { id -> if (opener != null) opener.open(id, false, null) else onOpenRowPage(id) }
         }
     }
 
@@ -2108,6 +2120,12 @@ private fun DatabaseViewBody(
             iconEditable = !contentLocked,
             simple = simple,
             onTitleChange = { title -> viewModel.updateRowTitle(live, title) },
+            onOpenAs = opener?.takeIf { !simple }?.let { pageOpener ->
+                { mode ->
+                    rowActionsFor = null
+                    viewModel.openRow(live) { id -> pageOpener.open(id, false, mode) }
+                }
+            },
             onEditIcon = {
                 rowActionsFor = null
                 iconForRow = live
@@ -9470,6 +9488,12 @@ private fun RowActionsSheet(
      */
     simple: Boolean = false,
     onTitleChange: (String) -> Unit = {},
+    /**
+     * **"Open as…"** (dal 12/11/2026, solo sul PC, come in Notion): la pagina
+     * della riga in Side peek, Center peek, pagina intera o una scheda nuova.
+     * Null sul telefono e per i database semplici: la voce non c'è.
+     */
+    onOpenAs: ((OpenMode) -> Unit)? = null,
     onEditIcon: () -> Unit,
     /**
      * "Reposition cover": l'inquadratura della copertina nella scheda della
@@ -9563,6 +9587,10 @@ private fun RowActionsSheet(
                     SheetGroup {
                         if (onEditEvent != null) {
                             SheetAction(Icons.Filled.Event, DbStrings.editEvent) { onEditEvent() }
+                            HorizontalDivider()
+                        }
+                        if (onOpenAs != null) {
+                            OpenAsMenu(onOpenAs) { open -> SheetAction(Icons.Filled.OpenInNew, Strings.openAs, onClick = open) }
                             HorizontalDivider()
                         }
                         // Come l'"Edit icon" delle azioni di una riga su
