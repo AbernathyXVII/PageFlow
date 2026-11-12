@@ -1126,6 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.70 — 12/11/2026 · 19:00 — Enter chooses the entry of the "/" menu
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1215 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **In the "/" menu Enter went to
+  a new line instead of choosing the entry**: "/two" and Enter left "/two"
+  in the line and the cursor below it, and the columns weren't made (the
+  menu could only be used with the mouse or a tap). Now, as in Notion,
+  **Enter chooses the highlighted entry** (the first one, slightly lighter),
+  the **↑ ↓ arrows** move to the others and **Esc** closes the menu
+- **[Change]** **[📱 Mobile]** **[💻 PC]** The menu **stays open with
+  spaces** as long as some entry matches: "/create two columns" written in
+  full and Enter makes the columns
+- **[Change]** **[📱 Mobile]** **[💻 PC]** The menu opens **only with the
+  "/" at the start of a line or after a space**, as in Notion and like the
+  "@": a "/" inside a word ("and/or", "km/h") is just text, and Enter at the
+  end of the line doesn't turn it into another block
+- **[Project]** `slashShown` (the entries in the order they are shown, the
+  same for the menu and the keys), `slashKey` in `MergedTextRunField`
+  (`onPreviewKeyEvent`), `SlashMenuRow(highlighted)`. Tests:
+  `DesktopColumnsTest` ("/two" and Enter, "/create two columns" and Enter,
+  "/", ↓, ↓ and Enter makes a numbered list, "e/o" and Enter stays text)
+
 ### 🔧 v0.153.69.1 — 12/11/2026 · 18:29 — The columns: the lines around them, Enter inside them and the six dots
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1211 tests passed)*
 

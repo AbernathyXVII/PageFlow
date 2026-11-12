@@ -4006,6 +4006,8 @@ private fun BlockTypeMenu(
 @Composable
 private fun SlashMenu(
     query: String,
+    /** La voce che Invio sceglierebbe (vedi `slashKey`), evidenziata. */
+    highlighted: SlashEntry?,
     onDismiss: () -> Unit,
     onSelect: (SlashEntry) -> Unit
 ) {
@@ -4029,24 +4031,7 @@ private fun SlashMenu(
     // continuare a scrivere "/divider".
     val language = AppSettings.language
     val entries = slashEntries()
-    val matching = remember(query, language, entries) {
-        val q = query.trim()
-        if (q.isEmpty()) {
-            null
-        } else {
-            entries
-                .mapNotNull { entry ->
-                    listOfNotNull(
-                        slashMatchRank(EditorStrings.blockType(entry.label), q),
-                        slashMatchRank(entry.label, q)
-                    ).minOrNull()?.let { entry to it }
-                }
-                // A parità di somiglianza, quelle che funzionano davanti
-                // a quelle ancora spente.
-                .sortedWith(compareBy({ it.second }, { !it.first.enabled }))
-                .map { it.first }
-        }
-    }
+    val matching = remember(query, language, entries) { if (query.isBlank()) null else slashShown(entries, query) }
 
     // A ogni lettera la lista ricomincia dall'alto: la voce migliore è
     // la prima, e una lista rimasta scorsa dal filtro di prima la
@@ -4087,7 +4072,7 @@ private fun SlashMenu(
                     )
                     entries
                         .filter { it.category == category }
-                        .forEach { entry -> SlashMenuRow(entry, onSelect) }
+                        .forEach { entry -> SlashMenuRow(entry, entry == highlighted, onSelect) }
                 }
             } else if (matching.isEmpty()) {
                 Text(
@@ -4097,17 +4082,22 @@ private fun SlashMenu(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                 )
             } else {
-                matching.forEach { entry -> SlashMenuRow(entry, onSelect) }
+                matching.forEach { entry -> SlashMenuRow(entry, entry == highlighted, onSelect) }
             }
         }
     }
 }
 
 @Composable
-private fun SlashMenuRow(entry: SlashEntry, onSelect: (SlashEntry) -> Unit) {
+private fun SlashMenuRow(entry: SlashEntry, highlighted: Boolean, onSelect: (SlashEntry) -> Unit) {
+    // La voce scelta con le frecce resta in vista anche in fondo alla lista.
+    val intoView = remember { BringIntoViewRequester() }
+    LaunchedEffect(highlighted) { if (highlighted) intoView.bringIntoView() }
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .bringIntoViewRequester(intoView)
+            .background(if (highlighted) NotionWhite.copy(alpha = 0.08f) else Color.Transparent)
             .clickable(enabled = entry.enabled) { onSelect(entry) }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -4125,6 +4115,26 @@ private fun SlashMenuRow(entry: SlashEntry, onSelect: (SlashEntry) -> Unit) {
             style = MaterialTheme.typography.bodyLarge
         )
     }
+}
+
+/**
+ * **Le voci del menu "/" nell'ordine in cui si vedono**: con [query] vuota
+ * tutte, famiglia per famiglia; se no quelle che le somigliano, prima chi
+ * comincia così (vedi `SlashMenu`), e a parità quelle che funzionano davanti
+ * a quelle ancora spente. Lo stesso ordine per il menu e per i tasti.
+ */
+fun slashShown(entries: List<SlashEntry>, query: String): List<SlashEntry> {
+    val q = query.trim()
+    if (q.isEmpty()) return SlashCategory.entries.flatMap { category -> entries.filter { it.category == category } }
+    return entries
+        .mapNotNull { entry ->
+            listOfNotNull(
+                slashMatchRank(EditorStrings.blockType(entry.label), q),
+                slashMatchRank(entry.label, q)
+            ).minOrNull()?.let { entry to it }
+        }
+        .sortedWith(compareBy({ it.second }, { !it.first.enabled }))
+        .map { it.first }
 }
 
 /**
@@ -5439,6 +5449,16 @@ private fun MergedTextRunField(
     // sta più scegliendo un blocco, si sta scrivendo.
     var slashAnchor by remember(runKey) { mutableStateOf<Int?>(null) }
     var slashQuery by remember(runKey) { mutableStateOf("") }
+    // **Il menu "/" con la tastiera** (dal 12/11/2026, trovato dall'utente sul
+    // PC: "/two" e Invio andava a capo invece di fare le colonne): come su
+    // Notion, Invio sceglie la voce evidenziata, le frecce la cambiano, Esc
+    // chiude. Si riparte dalla prima a ogni lettera.
+    var slashHighlight by remember(runKey) { mutableStateOf(0) }
+    LaunchedEffect(slashQuery, slashAnchor) { slashHighlight = 0 }
+    val slashCatalog = slashEntries()
+    val slashChoosable = remember(slashQuery, slashCatalog, AppSettings.language) {
+        slashShown(slashCatalog, slashQuery).filter { it.enabled }
+    }
 
     // Il menu "@" (dal 03/11/2026, vedi `Mentions.kt`): come quello "/",
     // `mentionAnchor` è dove sta la chiocciola e quello che segue cerca le
@@ -5659,6 +5679,18 @@ private fun MergedTextRunField(
         if (block != null) onSlashAction(block, entry.action)
     }
 
+    /** I tasti del menu "/" aperto: vero se il tasto era suo (vedi `slashHighlight`). */
+    fun slashKey(event: KeyEvent): Boolean {
+        if (slashAnchor == null || event.type != KeyEventType.KeyDown) return false
+        return when (event.key) {
+            Key.Enter, Key.NumPadEnter -> slashChoosable.getOrNull(slashHighlight)?.let { applySlashEntry(it); true } ?: false
+            Key.DirectionDown -> true.also { slashHighlight = (slashHighlight + 1).coerceAtMost((slashChoosable.size - 1).coerceAtLeast(0)) }
+            Key.DirectionUp -> true.also { slashHighlight = (slashHighlight - 1).coerceAtLeast(0) }
+            Key.Escape -> true.also { slashAnchor = null }
+            else -> false
+        }
+    }
+
     // Il corpo più grande scelto con la barra Aa in queste righe: tutte le
     // righe del gruppo si allungano quanto basta per lui (vedi `lineScaleFor`).
     val lineScale = remember(runBlocks) { lineScaleFor(runBlocks.flatMap { viewModel.spansOf(it) }) }
@@ -5821,8 +5853,12 @@ private fun MergedTextRunField(
                     // il cursore torna prima di lei o quando arriva uno
                     // spazio: a quel punto non si sta più scegliendo un
                     // blocco, si sta scrivendo una frase che contiene "/".
+                    // Solo a inizio riga o dopo uno spazio (dal 12/11/2026, come su
+                    // Notion e come la "@"): da quando Invio sceglie la voce, "e/o" o
+                    // "km/h" con Invio in fondo avrebbero cambiato la riga.
                     val justTypedSlash = newBody.length == oldBody.length + 1 &&
-                        caret >= 1 && caret <= newBody.length && newBody[caret - 1] == '/'
+                        caret >= 1 && caret <= newBody.length && newBody[caret - 1] == '/' &&
+                        (caret == 1 || newBody[caret - 2].isWhitespace())
                     if (justTypedSlash) {
                         slashAnchor = caret - 1
                         slashQuery = ""
@@ -5837,7 +5873,11 @@ private fun MergedTextRunField(
                             } else {
                                 ""
                             }
-                            if (!stillOpen || typed.any { it == ' ' || it == '\n' }) {
+                            // Uno spazio chiude il menu solo se non c'è più una voce che
+                            // gli somiglia (dal 12/11/2026): "/create two columns" e
+                            // Invio, come su Notion, fa le colonne.
+                            val spaceEnds = ' ' in typed && slashShown(slashCatalog, typed).none { it.enabled }
+                            if (!stillOpen || '\n' in typed || typed.startsWith(' ') || spaceEnds) {
                                 slashAnchor = null
                                 slashQuery = ""
                             } else {
@@ -6144,6 +6184,7 @@ private fun MergedTextRunField(
                 // `TextLinks.kt`): prima del correttore, che così non apre
                 // il suo menu sopra il link.
                 .linkTaps(layout = { textLayout }, onLink = openLink)
+                .onPreviewKeyEvent { slashKey(it) }
                 .proofingTaps(enabled = proofing != null && !pageLocked, layout = { textLayout }) { word, at ->
                     proofMenu = word to at
                 }
@@ -6214,6 +6255,7 @@ private fun MergedTextRunField(
     if (slashAnchor != null) {
         SlashMenu(
             query = slashQuery,
+            highlighted = slashChoosable.getOrNull(slashHighlight),
             onDismiss = { slashAnchor = null },
             onSelect = { entry -> applySlashEntry(entry) }
         )

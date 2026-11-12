@@ -274,7 +274,29 @@ class DesktopColumnsTest {
      * voce; poi si scrive nella prima colonna, Invio, Invio.
      */
     @Test
-    fun fromTheSlashMenuToTwoEntersInAColumn() {
+    fun fromTheSlashMenuToTwoEntersInAColumn() = slashRound("click")
+
+    /**
+     * **Invio sceglie la voce del menu "/"** (l'utente il 12/11/2026, dopo la
+     * v0.153.69.1: "continua a non creare le colonne"): come su Notion,
+     * "/two" e Invio fanno le colonne, invece di andare a capo nel testo.
+     */
+    @Test
+    fun enterChoosesTheSlashEntry() = slashRound("enter")
+
+    /** Le frecce cambiano la voce evidenziata del menu "/": "/", giù, giù e Invio fa un elenco numerato. */
+    @Test
+    fun theArrowsMoveThroughTheSlashMenu() = slashRound("arrows")
+
+    /** Il nome scritto per intero, con gli spazi: il menu resta aperto e Invio fa le colonne. */
+    @Test
+    fun theWholeNameWithSpacesAndEnterMakesTheColumns() = slashRound("spaces")
+
+    /** Una barra in mezzo a una parola ("e/o") non apre il menu: Invio va solo a capo. */
+    @Test
+    fun aSlashInsideAWordIsJustText() = slashRound("inword")
+
+    private fun slashRound(mode: String) {
         val factory = ViewModelFactory(context)
         val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
         val owner = ScreenOwner()
@@ -315,18 +337,52 @@ class DesktopColumnsTest {
         fun type(text: String) {
             text.forEach { c -> onWindowThread { typed(scene, c) }; frames(1) }
         }
+        fun key(key: androidx.compose.ui.input.key.Key) {
+            onWindowThread {
+                scene.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(key, androidx.compose.ui.input.key.KeyEventType.KeyDown))
+                scene.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(key, androidx.compose.ui.input.key.KeyEventType.KeyUp))
+            }
+            frames(3)
+        }
         try {
             frames(40)
             // La riga vuota sta fra "PRIMA" (y ~190) e "DOPO" (y ~236).
             click(100f, 213f)
             frames(5)
-            type("/two")
+            if (mode == "arrows") {
+                type("/")
+                key(androidx.compose.ui.input.key.Key.DirectionDown)
+                key(androidx.compose.ui.input.key.Key.DirectionDown)
+                key(androidx.compose.ui.input.key.Key.Enter)
+                frames(10)
+                assertEquals(BlockType.NUMBERED_LIST_ITEM, childrenOf(null).single { it.id == "vuota" }.type)
+                assertEquals(listOf("prima", "vuota", "dopo"), childrenOf(null).map { it.id })
+                return
+            }
+            if (mode == "inword") {
+                type("e/o")
+                key(androidx.compose.ui.input.key.Key.Enter)
+                frames(10)
+                val top = childrenOf(null)
+                assertTrue(top.none { it.type == BlockType.COLUMN_LIST })
+                assertEquals(4, top.size)
+                assertEquals("""[{"text":"e/o"}]""", top.single { it.id == "vuota" }.textJson)
+                return
+            }
+            type(if (mode == "spaces") "/create two columns" else "/two")
             frames(5)
             // Nel menu c'è solo "Create two columns": la sua riga sta sotto la pagina, a sinistra.
             val menu = shot("columns_slash")
             fun bright(x: Int, y: Int) = menu.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140 }
             val entry = (245 until 400).first { y -> (130 until 300).any { x -> bright(x, y) } }
-            click(200f, entry + 6f)
+            if (mode == "enter" || mode == "spaces") {
+                onWindowThread {
+                    scene.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(androidx.compose.ui.input.key.Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyDown))
+                    scene.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(androidx.compose.ui.input.key.Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyUp))
+                }
+            } else {
+                click(200f, entry + 6f)
+            }
             frames(20)
             shot("columns_made")
             val group = childrenOf(null).single { it.type == BlockType.COLUMN_LIST }
