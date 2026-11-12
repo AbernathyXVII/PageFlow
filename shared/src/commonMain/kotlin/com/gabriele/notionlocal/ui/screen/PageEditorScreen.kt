@@ -1533,6 +1533,8 @@ private fun PageEditorContent(
     var blockMenuFor by remember { mutableStateOf<String?>(null) }
     // Sul PC: il blocco sotto il mouse, coi sei puntini accanto (vedi `BlockHandle.kt`).
     val blockSpot = remember(pageId) { mutableStateOf<BlockSpot?>(null) }
+    // L'ultimo punto del mouse sulla pagina, nella finestra (vedi `FollowPageLayout`).
+    val lastPagePointer = remember(pageId) { arrayOfNulls<Offset>(1) }
 
     // "Linked view of data source": su quale riga si sta scegliendo il
     // database da mostrare, e l'elenco fra cui sceglierlo.
@@ -2784,7 +2786,7 @@ private fun PageEditorContent(
                         }
                     )
                     // Sul PC i sei puntini accanto al blocco sotto il mouse (vedi `BlockHandle.kt`).
-                    .then(if (isPc) Modifier.blockHover(blockPicker, { pageListCoordinates.get() }, { blockSpot.value }) { blockSpot.value = it } else Modifier)
+                    .then(if (isPc) Modifier.blockHover(blockPicker, { pageListCoordinates.get() }, { blockSpot.value }, { lastPagePointer[0] = it }) { blockSpot.value = it } else Modifier)
                     .stickyViewport(stickyViewport)
                     // Di lato, con "Full line view": il primo verso in cui si
                     // muove il dito decide per tutto il gesto.
@@ -2838,6 +2840,15 @@ private fun PageEditorContent(
                 }
             }
             if (isPc && !readOnlyPage && !drawingMode) {
+                // Le voci si spostano sotto il mouse fermo: i puntini con loro (vedi `FollowPageLayout`).
+                FollowPageLayout(
+                    picker = blockPicker,
+                    page = { pageListCoordinates.get() },
+                    pointer = { lastPagePointer[0] },
+                    dragging = { blockDrag.dragged != null },
+                    layout = { listState.layoutInfo.visibleItemsInfo.map { Triple(it.key, it.offset, it.size) } },
+                    spot = blockSpot
+                )
                 BlockHandle(blockSpot, endsAt = pageInset + PAGE_SIDE_PADDING, drag = blockDrag) { id -> blockMenuFor = id }
                 BlockDragLayer(blockDrag, { pageListCoordinates.get() }) { listState.scrollBy(it) }
             }

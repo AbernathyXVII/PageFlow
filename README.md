@@ -1126,6 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.153.74.1 — 12/11/2026 · 22:51 — The six dots follow the page when it moves under a still mouse
+*(Claude Code on the PC; not yet tested by the user; phone not connected, APK ready to install; 1229 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **Six dots appeared out of nowhere**, next to a
+  line in the middle of a database's list, far from its title: with the mouse
+  resting on the dots, when the page moved under it (a line added or loaded
+  above, an automatic scroll) the dots stayed where they were while the
+  database went elsewhere. Normally the movement Windows reports when the
+  page scrolls makes them follow, but with the mouse on the dots that report
+  went to them and not to the page. Now, whenever the lines of the page move
+  or change height, the dots are worked out again from where the mouse last
+  was on the page
+- **[Project]** `FollowPageLayout` (`BlockHandle.kt`), fed by the visible
+  items of the page's list, and `spotAt`, shared with `blockHover`. Test:
+  `DesktopBlockSelectionTest` (a database in list view: with the mouse on a
+  line of the list the dots stand on its title; with the mouse on the dots,
+  five new lines above it move it down and the dots go with it; without the
+  fix they stayed in the air)
+
 ### ✏️ v0.153.74 — 12/11/2026 · 20:35 — Every block can be deleted; databases in columns
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1228 tests passed)*
 

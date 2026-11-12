@@ -11,6 +11,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
@@ -59,6 +60,8 @@ fun Modifier.blockHover(
     picker: BlockPicker,
     coordinates: () -> LayoutCoordinates?,
     current: () -> BlockSpot? = { null },
+    /** Dov'è il mouse nella finestra, o null fuori dalla pagina (vedi `spotAt`). */
+    onPointer: (Offset?) -> Unit = {},
     onSpot: (BlockSpot?) -> Unit
 ): Modifier = pointerInput(picker) {
     val islandLine = HANDLE_HEIGHT.toPx()
@@ -73,19 +76,57 @@ fun Modifier.blockHover(
             when {
                 change.pressed -> onSpot(null)
                 // Uscendo verso i puntini, che stanno sopra la pagina, il punto è ancora dentro.
-                event.type == PointerEventType.Exit -> if (p.x < 0f || p.y < 0f || p.x > size.width || p.y > size.height) onSpot(null)
+                event.type == PointerEventType.Exit -> if (p.x < 0f || p.y < 0f || p.x > size.width || p.y > size.height) {
+                    onPointer(null)
+                    onSpot(null)
+                }
                 else -> {
+                    coordinates()?.takeIf { it.isAttached }?.let { onPointer(it.localToWindow(p)) }
                     // **Andando verso i puntini di una riga in una colonna** (dal 12/11/2026)
                     // si passa sopra il bordo della colonna accanto: restano quelli di prima.
                     val spot = current()
                     val start = spot?.start
                     if (start != null && p.x in start - approach..start && p.y in spot.top - slack..spot.bottom + slack) continue
                     val page = coordinates()?.takeIf { it.isAttached } ?: continue
-                    val (id, line) = picker.lineAt(page.localToWindow(p), islandLine) ?: continue
-                    val origin = page.localToWindow(Offset.Zero)
-                    onSpot(BlockSpot(id, line.top - origin.y, line.bottom - origin.y, line.start?.minus(origin.x)))
+                    onSpot(spotAt(picker, page, page.localToWindow(p), islandLine) ?: continue)
                 }
             }
+        }
+    }
+}
+
+/** I puntini per il blocco sotto il punto [window] della finestra, rispetto alla pagina [page]; null fra due blocchi. */
+fun spotAt(picker: BlockPicker, page: LayoutCoordinates, window: Offset, islandLine: Float): BlockSpot? {
+    val (id, line) = picker.lineAt(window, islandLine) ?: return null
+    val origin = page.localToWindow(Offset.Zero)
+    return BlockSpot(id, line.top - origin.y, line.bottom - origin.y, line.start?.minus(origin.x))
+}
+
+/**
+ * **I puntini seguono la pagina che si sposta sotto il mouse fermo** (dal
+ * 12/11/2026, trovato dall'utente: "un'icona dei sei puntini è sbucata dal
+ * nulla a sinistra del primo database"). Di solito ci pensa il movimento che
+ * Windows segnala quando la pagina scorre; ma col mouse sopra i puntini quel
+ * segnale arriva a loro, non alla pagina, e restavano dov'erano mentre le righe
+ * andavano altrove. Così, a ogni spostamento o cambio d'altezza delle voci
+ * ([layout]), si ricalcolano dall'ultimo punto del mouse sulla pagina
+ * ([pointer]); non mentre si trascina un blocco ([dragging]).
+ */
+@Composable
+fun FollowPageLayout(
+    picker: BlockPicker,
+    page: () -> LayoutCoordinates?,
+    pointer: () -> Offset?,
+    dragging: () -> Boolean,
+    layout: () -> Any,
+    spot: androidx.compose.runtime.MutableState<BlockSpot?>
+) {
+    val islandLine = with(LocalDensity.current) { HANDLE_HEIGHT.toPx() }
+    LaunchedEffect(picker) {
+        androidx.compose.runtime.snapshotFlow { layout() }.collect {
+            if (dragging() || spot.value == null) return@collect
+            val list = page()?.takeIf { it.isAttached } ?: return@collect
+            spot.value = pointer()?.let { spotAt(picker, list, it, islandLine) }
         }
     }
 }

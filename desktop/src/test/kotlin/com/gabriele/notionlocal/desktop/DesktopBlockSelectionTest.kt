@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
+import com.gabriele.notionlocal.data.entity.DatabaseLayout
 import com.gabriele.notionlocal.data.entity.ColumnType
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
@@ -596,6 +597,55 @@ class DesktopBlockSelectionTest {
             val dotsRight = DOTS_X.last { x -> (title.first..title.last).any { y -> shown.getColor(x, y) != clean.getColor(x, y) } }
             val titleLeft = (0 until 300).first { x -> (title.first..title.last).any { y -> bright(clean.getColor(x, y)) } }
             assertTrue("puntini fino a $dotsRight, titolo da $titleLeft", dotsRight < titleLeft - 9)
+        }
+    }
+
+    /**
+     * **I puntini seguono il database che si sposta sotto il mouse fermo**
+     * (trovato dall'utente il 12/11/2026: "un'icona dei sei puntini è sbucata
+     * dal nulla a sinistra del primo database", a metà del suo elenco). Col
+     * mouse a sinistra di una riga dell'elenco i puntini stanno sul titolo del
+     * database; col mouse sopra di loro, cinque righe nuove sopra il database
+     * lo spostano in giù, e i puntini vanno con lui invece di restare lì.
+     */
+    @Test
+    fun theDotsOfAListDatabaseFollowItWhenItMoves() {
+        runBlocking {
+            val db = AppDatabase.getInstance(context)
+            val repo = PageRepository(db)
+            repo.createPage(PageEntity(id = "conelenco", title = "Con elenco"))
+            repo.createPage(PageEntity(id = "quaderno", title = "QUADERNO", isDatabase = true, parentId = "conelenco", databaseLayout = DatabaseLayout.LIST))
+            for (i in 0 until 8) db.databaseDao().insertRow(DatabaseRowEntity(id = "riga$i", pageId = "quaderno", title = "Voce numero $i", orderIndex = i))
+            repo.saveBlock(BlockEntity(id = "elenco", pageId = "conelenco", type = BlockType.DATABASE_LINK, linkedPageId = "quaderno", orderIndex = 0))
+        }
+        withPage("conelenco") { scene, frames, picture ->
+            frames(20)
+            val clean = picture()
+            val rows = textRows(clean)
+            val middle = rows[rows.size - 4]
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, middle.center()), pressed = false) }
+            frames(5)
+            val fromRow = dotsRows(picture(), clean)
+            // A metà di una riga vera, sopra l'elenco (il titolo del database), non accanto alla riga del mouse.
+            val title = rows.firstOrNull { abs(fromRow.average() - it.center()) <= 2 }
+            assertTrue("puntini $fromRow, righe $rows (mouse sulla riga $middle)", fromRow.isNotEmpty() && title != null && title.last < middle.first - 100)
+            // Il mouse va sopra i puntini e resta lì.
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(74f, fromRow.average().toFloat()), pressed = false) }
+            frames(5)
+            runBlocking {
+                val repo = PageRepository(AppDatabase.getInstance(context))
+                AppDatabase.getInstance(context).blockDao().shiftOrderIndexes("conelenco", null, 0, 5)
+                for (i in 0 until 5) repo.saveBlock(BlockEntity(id = "nuova$i", pageId = "conelenco", textJson = """[{"text":"Riga nuova $i"}]""", orderIndex = i))
+            }
+            frames(20)
+            val moved = picture()
+            File("build/desktop-screenshots", "list_database_moved.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(moved).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val after = textRows(moved)
+            // I puntini: nel margine prima del testo (x 58–77, prima del titolo del database che comincia a 82).
+            val background = moved.getColor(5, moved.height - 5)
+            val dots = (TOP_BAR until moved.height).filter { y -> (58 until 78).any { x -> moved.getColor(x, y) != background } }
+            val near = after.any { band -> abs(dots.average() - band.center()) <= 3 }
+            assertTrue("i puntini $dots non stanno a metà di una riga (righe $after)", dots.isEmpty() || near)
         }
     }
 
