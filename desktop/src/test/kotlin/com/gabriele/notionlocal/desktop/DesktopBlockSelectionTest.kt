@@ -30,6 +30,9 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
+import com.gabriele.notionlocal.data.entity.ColumnType
+import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
+import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.repository.PageRepository
 import com.gabriele.notionlocal.data.settings.AppSettings
@@ -343,6 +346,7 @@ class DesktopBlockSelectionTest {
         }
         // La linea blu di dove cadrà, prima di lasciare.
         val shot = picture()
+        File("build/desktop-screenshots", "block_drag.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(shot).encodeToData(EncodedImageFormat.PNG)!!.bytes)
         val blue = (0 until shot.height).sumOf { y ->
             (86 until 400).count { x -> shot.getColor(x, y).let { c -> ((c shr 16) and 0xFF) < 80 && (c and 0xFF) > 180 && ((c shr 8) and 0xFF) in 100..160 } }
         }
@@ -372,26 +376,93 @@ class DesktopBlockSelectionTest {
         waitForBlocks(listOf("divisore", "uno", "titolo", "due", "tre"))
     }
 
-    /** **Un database si sposta tenendo i puntini del suo titolo** (chiesto dall'utente il 12/11/2026): portato sotto l'ultima riga, va in fondo. */
+    /**
+     * **La rotella mentre si trascina fa scorrere la pagina** (trovato
+     * dall'utente il 12/11/2026: "non posso scrollare con il mouse"): la
+     * prima riga, presa per i puntini, scende con la rotella e va a finire
+     * fra righe che prima non si vedevano.
+     */
+    @Test
+    fun theWheelScrollsWhileDraggingABlock() {
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "rotella", title = "Rotella"))
+            for (i in 0 until 60) repo.saveBlock(BlockEntity(id = "rotella-$i", pageId = "rotella", textJson = """[{"text":"Riga numero $i"}]""", orderIndex = i))
+        }
+        withPage("rotella") { scene, frames, picture ->
+            val rows = textRows(picture())
+            val shown = rows.size
+            val lineY = rows[3].center()
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, lineY), pressed = false) }
+            frames(3)
+            val dots = Offset(74f, lineY)
+            val at = Offset(200f, lineY + 40f)
+            onWindowThread {
+                mouse(scene, PointerEventType.Move, dots, pressed = false)
+                mouse(scene, PointerEventType.Press, dots, pressed = true)
+            }
+            frames(2)
+            for (step in 1..10) {
+                onWindowThread { mouse(scene, PointerEventType.Move, Offset(dots.x + (at.x - dots.x) * step / 10f, dots.y + (at.y - dots.y) * step / 10f), pressed = true) }
+                frames(1)
+            }
+            onWindowThread {
+                scene.sendPointerEvent(
+                    PointerEventType.Scroll, at, scrollDelta = Offset(0f, 30f), type = PointerType.Mouse,
+                    buttons = PointerButtons(isPrimaryPressed = true)
+                )
+            }
+            frames(10)
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(at.x, at.y + 2f), pressed = true) }
+            frames(2)
+            onWindowThread { mouse(scene, PointerEventType.Release, Offset(at.x, at.y + 2f), pressed = false) }
+            frames(5)
+            val end = System.currentTimeMillis() + 5_000
+            fun place() = runBlocking {
+                AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce("rotella").sortedBy { it.orderIndex }.indexOfFirst { it.id == "rotella-0" }
+            }
+            while (System.currentTimeMillis() < end && place() < shown) Thread.sleep(50)
+            assertTrue("la prima riga è finita al posto ${place()}, sullo schermo ce n'erano $shown", place() >= shown)
+        }
+    }
+
+    /**
+     * **Un database si sposta tenendo i puntini del suo titolo** (chiesto
+     * dall'utente il 12/11/2026): uno vero, con una proprietà e delle righe,
+     * portato sopra la prima riga va in cima, e poi sotto l'ultima in fondo.
+     */
     @Test
     fun draggingTheSixDotsOfADatabaseMovesIt() {
         runBlocking {
-            val repo = PageRepository(AppDatabase.getInstance(context))
+            val db = AppDatabase.getInstance(context)
+            val repo = PageRepository(db)
             repo.createPage(PageEntity(id = "spostadb", title = "Sposta"))
             repo.createPage(PageEntity(id = "elenco", title = "TITOLO", isDatabase = true, parentId = "spostadb"))
-            repo.saveBlock(BlockEntity(id = "tabella", pageId = "spostadb", type = BlockType.DATABASE_LINK, linkedPageId = "elenco", orderIndex = 0))
-            repo.saveBlock(BlockEntity(id = "sotto", pageId = "spostadb", textJson = """[{"text":"SOTTO"}]""", orderIndex = 1))
-            repo.saveBlock(BlockEntity(id = "ultima", pageId = "spostadb", textJson = """[{"text":"ULTIMA"}]""", orderIndex = 2))
+            db.databaseDao().insertColumn(DatabaseColumnEntity(id = "voto", pageId = "elenco", name = "Voto", type = ColumnType.NUMBER, orderIndex = 0))
+            db.databaseDao().insertRow(DatabaseRowEntity(id = "r1", pageId = "elenco", title = "Persona 5", orderIndex = 0))
+            db.databaseDao().insertRow(DatabaseRowEntity(id = "r2", pageId = "elenco", title = "Zelda", orderIndex = 1))
+            repo.saveBlock(BlockEntity(id = "sopra", pageId = "spostadb", textJson = """[{"text":"SOPRA"}]""", orderIndex = 0))
+            repo.saveBlock(BlockEntity(id = "tabella", pageId = "spostadb", type = BlockType.DATABASE_LINK, linkedPageId = "elenco", orderIndex = 1))
+            repo.saveBlock(BlockEntity(id = "sotto", pageId = "spostadb", textJson = """[{"text":"SOTTO"}]""", orderIndex = 2))
+        }
+        fun order() = runBlocking { AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce("spostadb").sortedBy { it.orderIndex }.map { it.id } }
+        fun waitFor(expected: List<String>) {
+            val end = System.currentTimeMillis() + 5_000
+            while (System.currentTimeMillis() < end && order() != expected) Thread.sleep(50)
+            assertEquals(expected, order())
         }
         withPage("spostadb") { scene, frames, picture ->
             frames(20)
-            val rows = textRows(picture())
-            val blue = dragDots(scene, frames, picture, rows[3].center(), rows.last().last + 3f)
+            val clean = picture()
+            val rows = textRows(clean)
+            val title = rows[4]
+            val blue = dragDots(scene, frames, picture, title.center(), rows[3].first - 1f)
             assertTrue("la linea blu mentre si trascina: $blue punti", blue > 100)
-            val end = System.currentTimeMillis() + 5_000
-            fun order() = runBlocking { AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce("spostadb").sortedBy { it.orderIndex }.map { it.id } }
-            while (System.currentTimeMillis() < end && order() != listOf("sotto", "ultima", "tabella")) Thread.sleep(50)
-            assertEquals(listOf("sotto", "ultima", "tabella"), order())
+            waitFor(listOf("tabella", "sopra", "sotto"))
+            frames(10)
+            val now = textRows(picture())
+            dragDots(scene, frames, picture, now[3].center(), now.last().last + 3f)
+            waitFor(listOf("sopra", "sotto", "tabella"))
         }
     }
 

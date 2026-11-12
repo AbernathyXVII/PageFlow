@@ -1126,6 +1126,26 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.153.67.1 — 12/11/2026 · 15:04 — On the PC the wheel scrolls the page while dragging a block
+*(Claude Code on the PC; installed on the phone; 1199 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **While dragging a block by its six dots the
+  mouse wheel didn't scroll the page**: as long as the button is held, the
+  mouse belongs to the dots, and the wheel reached them instead of the page.
+  Now they hand it on: the page scrolls as with the wheel on a normal page
+  (one notch, a twentieth of the page), and the blue line follows the block
+  now under the mouse. Not yet tested by the user
+- **[Bug fix]** **[💻 PC]** **Databases**: the six dots next to their title are
+  already the new ones (the old ones are only on the phone), and in the tests
+  a real database, with a property and rows, moves both up and down. The
+  likely cause: a database taller than the window covers the screen, and
+  without the wheel there was no way to reach the blocks above or below it
+  (only the slower scrolling at the edges). Not yet tested by the user
+- **[Project]** `BlockDrag.wheel`/`takeWheel`, `BlockDragLayer` scrolls by
+  them (`height / 20`, as `WindowsWinUIConfig` in Compose); `BlockHandle`
+  passes on the scroll events. Tests: `DesktopBlockSelectionTest` (the wheel
+  while dragging; a database with rows moved up and down)
+
 ### ✏️ v0.153.67 — 12/11/2026 · 14:43 — On the PC blocks move by dragging the six dots
 *(Claude Code on the PC; installed on the phone; 1198 tests passed)*
 

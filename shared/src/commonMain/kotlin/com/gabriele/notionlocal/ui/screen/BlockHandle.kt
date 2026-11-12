@@ -114,6 +114,14 @@ fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, drag: BlockDrag? = nul
             .onGloballyPositioned { place[0] = it }
             .then(
                 if (drag == null) Modifier else Modifier.pointerInput(drag) {
+                    // Finché si tiene premuto la rotella arriva qui, non alla pagina: gliela si passa.
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.type == PointerEventType.Scroll) drag.wheel(event.changes.sumOf { it.scrollDelta.y.toDouble() }.toFloat())
+                        }
+                    }
+                }.pointerInput(drag) {
                     // Il blocco di quando si comincia: lo stato, perché il gesto dura più di un giro.
                     detectDragGestures(
                         onDragStart = { at ->

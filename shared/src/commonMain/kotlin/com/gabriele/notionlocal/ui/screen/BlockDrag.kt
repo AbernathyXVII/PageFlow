@@ -28,7 +28,10 @@ import kotlin.math.roundToInt
 // dall'utente, solo sul PC, come su Notion): tenendo premuti i sei puntini
 // accanto a un blocco (`BlockHandle.kt`) e trascinando, una linea blu dice
 // dove andrà, sopra o sotto il blocco sotto il mouse secondo la metà; vicino
-// al bordo in alto o in basso la pagina scorre da sola. Lasciando, il blocco
+// al bordo in alto o in basso la pagina scorre da sola, e scorre anche con
+// la rotella (dal 12/11/2026, trovato dall'utente: "non posso scrollare con
+// il mouse"; il mouse è dei puntini finché si tiene premuto, e la rotella
+// arrivava a loro invece che alla pagina). Lasciando, il blocco
 // va lì con "Move to line…" (`PageEditorViewModel.moveBlockAfter`): si può
 // annullare, e arrivato si illumina. Righe di testo, pagine, database,
 // divisori: tutti i blocchi di primo livello della pagina.
@@ -70,12 +73,23 @@ class BlockDrag(
     /** Il puntatore, nella finestra. */
     var pointer = Offset.Zero
         private set
+    /** Gli scatti della rotella arrivati ai puntini mentre si trascina, che la pagina deve ancora scorrere. */
+    private var wheel = 0f
 
     fun start(blockId: String, window: Offset) {
         dragged = blockId
         drop = null
         pointer = window
+        wheel = 0f
     }
+
+    /** La rotella mentre si trascina: [notches] scatti, in giù se più di zero. */
+    fun wheel(notches: Float) {
+        if (dragged != null) wheel += notches
+    }
+
+    /** Gli scatti ancora da scorrere, che da qui in poi sono della pagina. */
+    fun takeWheel(): Float = wheel.also { wheel = 0f }
 
     fun moveTo(window: Offset) {
         pointer = window
@@ -95,14 +109,17 @@ class BlockDrag(
         val at = drop
         dragged = null
         drop = null
+        wheel = 0f
         if (place && id != null && at != null) onDrop(id, at.afterId)
     }
 }
 
 /**
  * Mentre si trascina un blocco: la linea blu dove cadrà, larga quanto il
- * testo (a [inset] dai bordi), e la pagina che scorre da sola ([scrollBy])
- * col puntatore vicino al bordo in alto o in basso di [page].
+ * testo (a [inset] dai bordi), e la pagina che scorre ([scrollBy]) col
+ * puntatore vicino al bordo in alto o in basso di [page] e con la rotella:
+ * uno scatto, un ventesimo della pagina, come la rotella di Windows su una
+ * lista di Compose (`WindowsWinUIConfig`).
  */
 @Composable
 fun BlockDragLayer(drag: BlockDrag, page: () -> LayoutCoordinates?, inset: Dp, scrollBy: suspend (Float) -> Unit) {
@@ -112,7 +129,9 @@ fun BlockDragLayer(drag: BlockDrag, page: () -> LayoutCoordinates?, inset: Dp, s
         while (true) {
             val list = page()?.takeIf { it.isAttached }
             if (list != null) {
-                val step = edgeScrollStep(drag.pointer.y - list.localToWindow(Offset.Zero).y, list.size.height.toFloat(), zone)
+                val height = list.size.height.toFloat()
+                val step = edgeScrollStep(drag.pointer.y - list.localToWindow(Offset.Zero).y, height, zone) +
+                    drag.takeWheel() * height / 20f
                 if (step != 0f) {
                     scrollBy(step)
                     drag.follow()
