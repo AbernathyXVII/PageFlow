@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.153.64 — 12/11/2026 · 13:24 — On the PC pages in Center peek, Side peek, Full page or a new tab
-*(Claude Code on the PC; not yet tested by the user; phone not connected, APK ready to install; 1193 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1193 tests passed)*
 
 - **[Change]** **[💻 PC]** **Pages and databases open in four ways**, as in
   Notion, clicking a page in a block (a page link) or a database row:
