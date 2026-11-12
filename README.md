@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.153.63 — 12/11/2026 · 10:37 — On the PC "Full width" or the page in the middle, as in Notion
-*(Claude Code on the PC; not yet tested by the user; phone not connected, APK ready to install; 1190 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1190 tests passed)*
 
 - **[Change]** **[💻 PC]** **"Full width"** in a page's three dots, as in
   Notion: on, the text is as wide as the space, as before; off, it sits in a
