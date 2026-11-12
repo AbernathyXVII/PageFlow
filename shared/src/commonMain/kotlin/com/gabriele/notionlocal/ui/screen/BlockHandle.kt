@@ -9,6 +9,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -36,6 +39,7 @@ import kotlin.math.roundToInt
 // a sinistra della sua prima riga compaiono i sei puntini; un clic apre il
 // menu di quel blocco (`BlockActionsHost`), con le voci del suo tipo: una
 // riga di testo, un database, un divisore, un'immagine…
+// Tenendoli premuti e trascinando si sposta il blocco (`BlockDrag.kt`).
 // ---------------------------------------------------------------------------
 
 /**
@@ -81,7 +85,8 @@ fun Modifier.blockHover(
 /**
  * I sei puntini a metà delle lettere della prima riga di [spotState], che
  * finiscono un poco prima di dove comincia il blocco (di suo, [endsAt]: dove
- * comincia il testo); il clic li passa a [onClick]. Lo stato si legge qui
+ * comincia il testo); il clic li passa a [onClick], il trascinamento a
+ * [drag] (null: non si trascinano). Lo stato si legge qui
  * dentro: muovendo il mouse si ridisegnano solo i puntini, non la pagina.
  *
  * **Disegnati qui, sui pixel interi** (dal 11/11/2026, trovato dall'utente:
@@ -89,9 +94,12 @@ fun Modifier.blockHover(
  * cadeva fra un pixel e l'altro e i puntini venivano di grandezze diverse.
  */
 @Composable
-fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, onClick: (String) -> Unit) {
+fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, drag: BlockDrag? = null, onClick: (String) -> Unit) {
     val spot = spotState.value ?: return
     val color = MaterialTheme.colorScheme.onSurfaceVariant
+    val place = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    // Se i puntini se ne vanno mentre si trascina, il blocco resta dov'era.
+    DisposableEffect(drag) { onDispose { drag?.end(place = false) } }
     Box(
         modifier = Modifier
             .offset {
@@ -103,6 +111,25 @@ fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, onClick: (String) -> U
             }
             .size(HANDLE_WIDTH, HANDLE_HEIGHT)
             .clip(RoundedCornerShape(4.dp))
+            .onGloballyPositioned { place[0] = it }
+            .then(
+                if (drag == null) Modifier else Modifier.pointerInput(drag) {
+                    // Il blocco di quando si comincia: lo stato, perché il gesto dura più di un giro.
+                    detectDragGestures(
+                        onDragStart = { at ->
+                            val id = spotState.value?.blockId
+                            val c = place[0]?.takeIf { it.isAttached }
+                            if (id != null && c != null) drag.start(id, c.localToWindow(at))
+                        },
+                        onDragEnd = { drag.end(place = true) },
+                        onDragCancel = { drag.end(place = false) },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            place[0]?.takeIf { it.isAttached }?.let { drag.moveTo(it.localToWindow(change.position)) }
+                        }
+                    )
+                }
+            )
             .semantics { contentDescription = EditorStrings.blockOptions }
             .clickable { onClick(spot.blockId) }
             .drawBehind { drawSixDots(color) }

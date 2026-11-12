@@ -2807,8 +2807,17 @@ private fun PageEditorContent(
             )
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
-            // Nel margine a sinistra: un clic apre il menu del blocco.
-            if (isPc && !readOnlyPage && !drawingMode) BlockHandle(blockSpot, endsAt = pageInset + PAGE_SIDE_PADDING) { id -> blockMenuFor = id }
+            // Nel margine a sinistra: un clic apre il menu del blocco, trascinandoli si sposta (vedi `BlockDrag.kt`).
+            val blockDrag = remember(blockPicker, viewModel) {
+                BlockDrag(blockPicker, { latestRenderItems.value.flatMap { renderItemBlockIds(it) } }) { id, afterId ->
+                    blockSpot.value = null
+                    viewModel.blocks.value.firstOrNull { it.id == id }?.let { viewModel.moveBlockAfter(it, afterId) }
+                }
+            }
+            if (isPc && !readOnlyPage && !drawingMode) {
+                BlockHandle(blockSpot, endsAt = pageInset + PAGE_SIDE_PADDING, drag = blockDrag) { id -> blockMenuFor = id }
+                BlockDragLayer(blockDrag, { pageListCoordinates.get() }, inset = pageInset + PAGE_SIDE_PADDING) { listState.scrollBy(it) }
+            }
             // Tutta la pagina, o i blocchi scelti col mouse (null): Copy, Cut, Delete per tutti e due.
             val chosenBlocks = selectedBlocks.value.takeIf { it.isNotEmpty() }
             val anySelection = pageSelected || chosenBlocks != null
@@ -4901,6 +4910,24 @@ private fun runLineBounds(
 /** Quanto è alta una maiuscola rispetto al corpo del carattere (circa, per i caratteri della pagina). */
 private const val CAP_HEIGHT = 0.7f
 
+/** Tutte le righe del blocco [id] nel campo, dall'alto al basso: per trascinarci sopra un blocco (`BlockDrag.kt`). */
+private fun runLineExtent(
+    layout: TextLayoutResult,
+    id: String,
+    fieldText: String,
+    runBlocks: List<BlockEntity>,
+    ordinals: Map<String, Int>,
+    viewModel: PageEditorViewModel
+): LineBounds? {
+    val index = runBlocks.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return null
+    val range = shownLineRanges(fieldText, runBlocks, ordinals, viewModel).getOrNull(index) ?: return null
+    val last = layout.layoutInput.text.length
+    return LineBounds(
+        layout.getLineTop(layout.getLineForOffset(range.first.coerceIn(0, last))),
+        layout.getLineBottom(layout.getLineForOffset(range.last.coerceIn(0, last)))
+    )
+}
+
 /** Il blocco della riga del campo all'altezza [y], per il mouse. */
 private fun runLineAt(
     layout: TextLayoutResult,
@@ -6005,7 +6032,8 @@ private fun MergedTextRunField(
                 // Col mouse: quale riga c'è a un'altezza, e il velo sulle righe scelte (vedi `BlockSelection.kt`).
                 .pickableAs(
                     runKey,
-                    lineOf = { id, _ -> textLayout?.let { layout -> runLineBounds(layout, id, fieldValue.text, runBlocks, ordinals, viewModel) } }
+                    lineOf = { id, _ -> textLayout?.let { layout -> runLineBounds(layout, id, fieldValue.text, runBlocks, ordinals, viewModel) } },
+                    extentOf = { id, _ -> textLayout?.let { layout -> runLineExtent(layout, id, fieldValue.text, runBlocks, ordinals, viewModel) } }
                 ) { y -> textLayout?.let { layout -> runLineAt(layout, y, fieldValue.text, runBlocks, ordinals, viewModel) } }
                 .drawWithContent {
                     drawContent()

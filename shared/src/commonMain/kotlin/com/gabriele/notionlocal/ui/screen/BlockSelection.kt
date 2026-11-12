@@ -51,13 +51,20 @@ class BlockPicker {
     private class Entry(
         val coordinates: LayoutCoordinates,
         val blockAt: (Float) -> String?,
-        val lineOf: ((String, LayoutCoordinates) -> LineBounds?)?
+        val lineOf: ((String, LayoutCoordinates) -> LineBounds?)?,
+        val extentOf: ((String, LayoutCoordinates) -> LineBounds?)?
     )
 
     private val entries = HashMap<String, Entry>()
 
-    fun put(key: String, coordinates: LayoutCoordinates, blockAt: (Float) -> String?, lineOf: ((String, LayoutCoordinates) -> LineBounds?)? = null) {
-        entries[key] = Entry(coordinates, blockAt, lineOf)
+    fun put(
+        key: String,
+        coordinates: LayoutCoordinates,
+        blockAt: (Float) -> String?,
+        lineOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
+        extentOf: ((String, LayoutCoordinates) -> LineBounds?)? = null
+    ) {
+        entries[key] = Entry(coordinates, blockAt, lineOf, extentOf)
     }
 
     fun remove(key: String) {
@@ -91,6 +98,19 @@ class BlockPicker {
         val origin = c.localToWindow(Offset.Zero)
         return id to LineBounds(origin.y + line.top, origin.y + line.bottom, line.start?.let { origin.x + it })
     }
+
+    /**
+     * Il blocco sotto il punto e dove sta **tutto**, dall'alto al basso nella
+     * finestra, per trascinarci sopra un altro blocco (`BlockDrag.kt`). Un
+     * blocco che non dice di più (un divisore, un database) è tutta la sua voce.
+     */
+    fun blockAt(window: Offset): Pair<String, LineBounds>? {
+        val (_, entry, id) = find(window) ?: return null
+        val c = entry.coordinates
+        val box = entry.extentOf?.invoke(id, c) ?: LineBounds(0f, c.size.height.toFloat())
+        val origin = c.localToWindow(Offset.Zero)
+        return id to LineBounds(origin.y + box.top, origin.y + box.bottom)
+    }
 }
 
 /**
@@ -106,13 +126,23 @@ class LineBounds(val top: Float, val bottom: Float, val start: Float? = null)
  * sé). Se ne va con lei.
  */
 @Composable
-fun Modifier.pickableAs(key: String, lineOf: ((String, LayoutCoordinates) -> LineBounds?)? = null, blockAt: (Float) -> String?): Modifier {
+fun Modifier.pickableAs(
+    key: String,
+    lineOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
+    extentOf: ((String, LayoutCoordinates) -> LineBounds?)? = null,
+    blockAt: (Float) -> String?
+): Modifier {
     val picker = LocalBlockPicker.current ?: return this
     val latest = rememberUpdatedState(blockAt)
     val latestLine = rememberUpdatedState(lineOf)
+    val latestExtent = rememberUpdatedState(extentOf)
     DisposableEffect(picker, key) { onDispose { picker.remove(key) } }
     return onGloballyPositioned { coordinates ->
-        picker.put(key, coordinates, { y -> latest.value(y) }, latestLine.value?.let { { id, c -> latestLine.value?.invoke(id, c) } })
+        picker.put(
+            key, coordinates, { y -> latest.value(y) },
+            latestLine.value?.let { { id, c -> latestLine.value?.invoke(id, c) } },
+            latestExtent.value?.let { { id, c -> latestExtent.value?.invoke(id, c) } }
+        )
     }
 }
 
@@ -176,11 +206,7 @@ fun Modifier.mouseBlockSelection(
             }
 
             val zone = EDGE_ZONE.toPx()
-            fun edgeSpeed(y: Float): Float = when {
-                y < zone -> -EDGE_MAX_STEP * ((zone - y) / zone).coerceAtMost(2f)
-                y > size.height - zone -> EDGE_MAX_STEP * ((y - (size.height - zone)) / zone).coerceAtMost(2f)
-                else -> 0f
-            }
+            fun edgeSpeed(y: Float): Float = edgeScrollStep(y, size.height.toFloat(), zone)
             var edge: Job? = null
             try {
                 while (true) {
@@ -222,10 +248,21 @@ fun Modifier.mouseBlockSelection(
     }
 }
 
+/**
+ * Di quanto scorre da sola la pagina alta [height] a ogni giro, col puntatore
+ * all'altezza [y]: verso l'alto (meno) o il basso entro [zone] dal bordo, più
+ * veloce quanto più ci si avvicina, il doppio oltre. 0 lontano dai bordi.
+ */
+fun edgeScrollStep(y: Float, height: Float, zone: Float): Float = when {
+    y < zone -> -EDGE_MAX_STEP * ((zone - y) / zone).coerceAtMost(2f)
+    y > height - zone -> EDGE_MAX_STEP * ((y - (height - zone)) / zone).coerceAtMost(2f)
+    else -> 0f
+}
+
 /** Quanto vicino al bordo comincia lo scorrimento da soli, e quanto al massimo per giro (raddoppia oltre il bordo). */
-private val EDGE_ZONE = 48.dp
+internal val EDGE_ZONE = 48.dp
 private const val EDGE_MAX_STEP = 18f
-private const val EDGE_FRAME_MS = 16L
+internal const val EDGE_FRAME_MS = 16L
 
 /** I tasti della selezione: cosa fare, o null se il tasto non le serve. */
 enum class SelectionKey { DELETE, COPY, CUT, ALL, CLOSE }

@@ -1126,6 +1126,24 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.67 — 12/11/2026 · 14:43 — On the PC blocks move by dragging the six dots
+*(Claude Code on the PC; phone not connected, APK ready to install; 1198 tests passed)*
+
+- **[Change]** **[💻 PC]** **Holding the six dots next to a block and
+  dragging moves it**, as in Notion: a blue line shows where it will land,
+  above or below the block under the mouse, and near the top or bottom edge
+  the page scrolls by itself. It works for lines of text, pages, databases,
+  dividers, images: every block of the page (not yet the lines inside a
+  toggle). A click on the dots still opens the block menu; Ctrl+Z puts the
+  block back. First step towards the side-by-side columns. Not yet tested by
+  the user
+- **[Project]** `BlockDrag.kt` (`dropFor`, `BlockDrag`, `BlockDragLayer`):
+  the drop uses "Move to line…" (`moveBlockAfter`); `BlockPicker.blockAt`
+  gives the whole height of a block (`runLineExtent` for the lines of
+  text); the edge scrolling of the mouse selection is shared
+  (`edgeScrollStep`). Tests: `DesktopBlockSelectionTest` (where a block
+  lands; a line dragged to the bottom, the divider to the top)
+
 ### ✏️ v0.153.66 — 12/11/2026 · 14:01 — On the PC no tab bar with a single tab
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1194 tests passed)*
 

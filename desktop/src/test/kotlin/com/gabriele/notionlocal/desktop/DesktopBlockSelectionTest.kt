@@ -36,6 +36,9 @@ import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
+import com.gabriele.notionlocal.ui.screen.BlockDrop
+import com.gabriele.notionlocal.ui.screen.LineBounds
+import com.gabriele.notionlocal.ui.screen.dropFor
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
@@ -306,6 +309,90 @@ class DesktopBlockSelectionTest {
         }
         frames(5)
         waitForBlocks(listOf("uno", "titolo", "due", "tre"))
+    }
+
+    /** Dove cade un blocco trascinato: sopra o sotto quello sotto il mouse, e niente se resterebbe dov'è. */
+    @Test
+    fun aDraggedBlockLandsAboveOrBelowTheOneUnderTheMouse() {
+        val order = listOf("a", "b", "c", "d")
+        val box = LineBounds(100f, 120f)
+        assertEquals(BlockDrop("d", 120f), dropFor("b", "d", below = true, box = box, order = order))
+        assertEquals(BlockDrop("c", 100f), dropFor("b", "d", below = false, box = box, order = order))
+        assertEquals(BlockDrop(null, 100f), dropFor("c", "a", below = false, box = box, order = order))
+        // Su se stesso, o subito sopra o sotto: resta dov'è.
+        assertEquals(null, dropFor("b", "b", below = true, box = box, order = order))
+        assertEquals(null, dropFor("b", "a", below = true, box = box, order = order))
+        assertEquals(null, dropFor("b", "c", below = false, box = box, order = order))
+        assertEquals(null, dropFor("a", "a", below = false, box = box, order = order))
+    }
+
+    /** Tiene premuti i puntini ad [from] (col mouse prima sulla riga, perché compaiano) e trascina fino a [to], a piccoli passi. */
+    private fun dragDots(scene: ImageComposeScene, frames: (Int) -> Unit, picture: () -> Bitmap, lineY: Float, to: Float): Int {
+        onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, lineY), pressed = false) }
+        frames(3)
+        val dots = Offset(74f, lineY)
+        onWindowThread {
+            mouse(scene, PointerEventType.Move, dots, pressed = false)
+            mouse(scene, PointerEventType.Press, dots, pressed = true)
+        }
+        frames(2)
+        val steps = (abs(to - lineY) / 4f).toInt().coerceAtLeast(1)
+        for (i in 1..steps) {
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, lineY + (to - lineY) * i / steps), pressed = true) }
+            frames(1)
+        }
+        // La linea blu di dove cadrà, prima di lasciare.
+        val shot = picture()
+        val blue = (0 until shot.height).sumOf { y ->
+            (86 until 400).count { x -> shot.getColor(x, y).let { c -> ((c shr 16) and 0xFF) < 80 && (c and 0xFF) > 180 && ((c shr 8) and 0xFF) in 100..160 } }
+        }
+        onWindowThread { mouse(scene, PointerEventType.Release, Offset(200f, to), pressed = false) }
+        frames(5)
+        return blue
+    }
+
+    /**
+     * **Trascinando i sei puntini il blocco si sposta** (chiesto dall'utente
+     * il 12/11/2026, come su Notion): la prima riga, presa per i puntini e
+     * portata sotto l'ultima, va in fondo; una linea blu mostra dove.
+     */
+    @Test
+    fun draggingTheSixDotsMovesALineToTheBottom() = withPage { scene, frames, picture ->
+        val (prima, _, _, terza) = textRows(picture()).takeLast(4)
+        val blue = dragDots(scene, frames, picture, prima.center(), terza.last + 3f)
+        assertTrue("la linea blu mentre si trascina: $blue punti", blue > 100)
+        waitForBlocks(listOf("titolo", "due", "divisore", "tre", "uno"))
+    }
+
+    /** Il divisore, preso per i puntini e portato sopra la prima riga, va in cima. */
+    @Test
+    fun draggingTheSixDotsMovesTheDividerToTheTop() = withPage { scene, frames, picture ->
+        val (prima, _, seconda, terza) = textRows(picture()).takeLast(4)
+        dragDots(scene, frames, picture, (seconda.last + terza.first) / 2f, prima.first - 1f)
+        waitForBlocks(listOf("divisore", "uno", "titolo", "due", "tre"))
+    }
+
+    /** **Un database si sposta tenendo i puntini del suo titolo** (chiesto dall'utente il 12/11/2026): portato sotto l'ultima riga, va in fondo. */
+    @Test
+    fun draggingTheSixDotsOfADatabaseMovesIt() {
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "spostadb", title = "Sposta"))
+            repo.createPage(PageEntity(id = "elenco", title = "TITOLO", isDatabase = true, parentId = "spostadb"))
+            repo.saveBlock(BlockEntity(id = "tabella", pageId = "spostadb", type = BlockType.DATABASE_LINK, linkedPageId = "elenco", orderIndex = 0))
+            repo.saveBlock(BlockEntity(id = "sotto", pageId = "spostadb", textJson = """[{"text":"SOTTO"}]""", orderIndex = 1))
+            repo.saveBlock(BlockEntity(id = "ultima", pageId = "spostadb", textJson = """[{"text":"ULTIMA"}]""", orderIndex = 2))
+        }
+        withPage("spostadb") { scene, frames, picture ->
+            frames(20)
+            val rows = textRows(picture())
+            val blue = dragDots(scene, frames, picture, rows[3].center(), rows.last().last + 3f)
+            assertTrue("la linea blu mentre si trascina: $blue punti", blue > 100)
+            val end = System.currentTimeMillis() + 5_000
+            fun order() = runBlocking { AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce("spostadb").sortedBy { it.orderIndex }.map { it.id } }
+            while (System.currentTimeMillis() < end && order() != listOf("sotto", "ultima", "tabella")) Thread.sleep(50)
+            assertEquals(listOf("sotto", "ultima", "tabella"), order())
+        }
     }
 
     /**
