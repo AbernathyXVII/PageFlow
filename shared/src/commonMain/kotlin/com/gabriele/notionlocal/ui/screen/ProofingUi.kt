@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.withEmojiFont
 import com.gabriele.notionlocal.platform.BackHandler
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -164,10 +165,10 @@ class ProofingTransformation(
     private val typingEnd: Int?
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
-        if (ranges.isEmpty()) return TransformedText(text, OffsetMapping.Identity)
+        if (ranges.isEmpty()) return TransformedText(text.withEmojiFont(), OffsetMapping.Identity)
         val builder = AnnotatedString.Builder(text)
         builder.markMisspellings(0, ranges, 0, null, typingEnd)
-        return TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
+        return TransformedText(builder.toAnnotatedString().withEmojiFont(), OffsetMapping.Identity)
     }
 }
 

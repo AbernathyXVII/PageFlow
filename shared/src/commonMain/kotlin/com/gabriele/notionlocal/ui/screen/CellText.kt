@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.emojiTransformation
+import com.gabriele.notionlocal.platform.withEmojiFont
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -272,6 +274,7 @@ fun TextLikeCell(
                         }
                     },
                     singleLine = !wrap,
+                    visualTransformation = emojiTransformation,
                     readOnly = LocalDatabaseLocked.current,
                     keyboardOptions = keyboardOptions,
                     keyboardActions = KeyboardActions(onDone = { editing = false }),
@@ -336,7 +339,7 @@ fun TextLikeCell(
                 } else {
                     Text(
                         // "Show as…" (dal 27/10/2026): il titolo della pagina o la scritta scelta.
-                        text = if (localValue.isBlank()) localValue else if (link && linkLabel != null) linkLabel.text else shown(localValue),
+                        text = (if (localValue.isBlank()) localValue else if (link && linkLabel != null) linkLabel.text else shown(localValue)).withEmojiFont(),
                         style = if (link) textStyle.copy(textDecoration = TextDecoration.Underline) else textStyle,
                         maxLines = cellMaxLines,
                         overflow = TextOverflow.Ellipsis,

@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.withEmojiFont
 import com.gabriele.notionlocal.ui.theme.FavoriteStar
 import com.gabriele.notionlocal.ui.theme.DarkSheet
 import com.gabriele.notionlocal.ui.i18n.EditorStrings
@@ -393,7 +394,7 @@ fun TreeRow(
         PageIconView(emoji = node.emoji, iconImage = node.iconImage, isDatabase = node.isDatabase, size = pcOr(16.dp, 18.dp), iconSymbol = node.iconSymbol)
         Spacer(modifier = Modifier.width(pcOr(6.dp, 8.dp)))
         Text(
-            text = node.title.ifBlank { Strings.untitled },
+            text = node.title.ifBlank { Strings.untitled }.withEmojiFont(),
             color = NotionWhite,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,

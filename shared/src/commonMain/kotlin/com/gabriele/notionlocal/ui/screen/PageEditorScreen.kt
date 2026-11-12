@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.emojiTransformation
 import com.gabriele.notionlocal.platform.withEmojiFont
 import com.gabriele.notionlocal.platform.emojiFontFamily
 import androidx.compose.ui.input.key.type
@@ -2408,7 +2409,7 @@ private fun PageEditorContent(
                             // restano fuori dal testo, e Invio esce dal titolo come "fine".
                             singleLine = !isPc,
                             visualTransformation = if (titleProofing == null) {
-                                VisualTransformation.None
+                                emojiTransformation
                             } else {
                                 ProofingTransformation(titleMisspellings[titleText].orEmpty(), titleTyping.takeIf { titleFocused })
                             },

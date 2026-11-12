@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.emojiTransformation
+import com.gabriele.notionlocal.platform.withEmojiFont
 import com.gabriele.notionlocal.platform.emojiFontFamily
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -1469,6 +1471,7 @@ private fun DatabaseViewBody(
                         hostViewModel.updateTitle(singleLine)
                     },
                     singleLine = true,
+                    visualTransformation = emojiTransformation,
                     // Pagina bloccata: nemmeno il titolo si tocca.
                     readOnly = hostPage?.isLocked == true,
                     // Un titolo non ha righe: la tastiera deve offrire
@@ -5529,9 +5532,9 @@ private val SearchHighlightRow = Color(0xFFFFD54F).copy(alpha = 0.16f)
 fun highlightedTitle(title: String): AnnotatedString {
     val shown = title.ifBlank { Strings.untitled }
     val query = LocalRowSearch.current?.query
-    if (query.isNullOrEmpty() || title.isBlank()) return AnnotatedString(shown)
+    if (query.isNullOrEmpty() || title.isBlank()) return shown.withEmojiFont()
     return buildAnnotatedString {
-        append(shown)
+        append(shown.withEmojiFont())
         var from = 0
         while (from < shown.length) {
             val at = shown.indexOf(query, from, ignoreCase = true)
@@ -7134,6 +7137,7 @@ private fun NameCell(
                                     onTitleChange(singleLineTitle)
                                 }
                             },
+                            visualTransformation = emojiTransformation,
                             singleLine = !wrap,
                             // Database bloccato: il nome della riga si legge e
                             // si seleziona, non si riscrive.

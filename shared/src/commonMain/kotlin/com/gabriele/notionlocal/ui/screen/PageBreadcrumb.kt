@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.platform.withEmojiFont
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -68,7 +69,7 @@ private fun Crumb(page: PageEntity, onClick: (() -> Unit)?) {
         PageIconView(emoji = page.icon, iconImage = page.iconImage, isDatabase = page.isDatabase, size = 16.dp, iconSymbol = page.iconSymbol)
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = page.title.ifBlank { Strings.untitled },
+            text = page.title.ifBlank { Strings.untitled }.withEmojiFont(),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,

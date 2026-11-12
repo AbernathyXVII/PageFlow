@@ -19,6 +19,15 @@ import com.gabriele.notionlocal.platform.PcEmoji
 import com.gabriele.notionlocal.platform.emojiPresentationRanges
 import com.gabriele.notionlocal.platform.withEmojiFont
 import com.gabriele.notionlocal.ui.screen.PageIconView
+import com.gabriele.notionlocal.ui.screen.FlatTreeRow
+import com.gabriele.notionlocal.ui.screen.TreeRow
+import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
+import com.gabriele.notionlocal.data.repository.PageRepository
+import com.gabriele.notionlocal.data.settings.AppSettings
+import com.gabriele.notionlocal.platform.emojiTransformation
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.BasicTextField
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.Bitmap
@@ -120,6 +129,46 @@ class DesktopEmojiTest {
             assertTrue("☺️ gialla: $icon", icon > 200)
             assertTrue("♥️ rosso nel testo: $heart", heart > 100)
             assertTrue("senza: $plain (la prova vale solo se qui è bianco)", plain < 20)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /** Lo stesso nei titoli, nelle celle (i campi di testo) e nei nomi della barra laterale. */
+    @Test
+    fun titlesCellsAndTheSidebarToo() {
+        assertTrue(PcEmoji.install())
+        val context = DesktopContext(Files.createTempDirectory("pageflow-emoji-titles").toFile())
+        AppSettings.init(context)
+        val node = PageRepository.PageTreeNode(pageId = "p", rowId = null, title = "♥️ Love", emoji = "", iconImage = null, isDatabase = false, hasChildren = false)
+        val scene = onWindowThread {
+            ImageComposeScene(width = 300, height = 120, density = Density(1f)) {
+                PcEmoji.Load()
+                CompositionLocalProvider(LocalPlatformContext provides context) {
+                    NotionLocalTheme {
+                        Column(Modifier.background(Color.Black)) {
+                            Box(Modifier.height(40.dp)) {
+                                TreeRow(FlatTreeRow(node, 0), isCurrent = false, isExpanded = false, onOpen = {}, onToggle = {})
+                            }
+                            BasicTextField(
+                                value = "A ♥️",
+                                onValueChange = {},
+                                visualTransformation = emojiTransformation,
+                                textStyle = TextStyle(fontSize = 40.sp, color = Color.White)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        try {
+            val picture = onWindowThread { scene.render(0L); Bitmap.makeFromImage(scene.render(100_000_000L)) }
+            File("build/desktop-screenshots").mkdirs()
+            File("build/desktop-screenshots", "emoji_titles.png").writeBytes(Image.makeFromBitmap(picture).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val sidebar = picture.count(0 until 40, ::red)
+            val field = picture.count(40 until 120, ::red)
+            assertTrue("♥️ rosso nella barra laterale: $sidebar", sidebar > 15)
+            assertTrue("♥️ rosso nel campo di testo: $field", field > 100)
         } finally {
             onWindowThread { scene.close() }
         }

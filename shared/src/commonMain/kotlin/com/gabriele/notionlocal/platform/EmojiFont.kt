@@ -4,6 +4,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 
 /**
  * **Il carattere delle emoji**: sul PC quello di Google (dal 12/11/2026, vedi
@@ -24,6 +27,17 @@ fun AnnotatedString.withEmojiFont(): AnnotatedString {
         ranges.forEach { addStyle(SpanStyle(fontFamily = family), it.first, it.last + 1) }
     }
 }
+
+/** Lo stesso per una scritta semplice (un titolo, il nome di una pagina). */
+fun String.withEmojiFont(): AnnotatedString = AnnotatedString(this).withEmojiFont()
+
+/** Per un campo di testo (titoli, celle): come `withEmojiFont`, le posizioni non cambiano. */
+private object EmojiTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString) = TransformedText(text.withEmojiFont(), OffsetMapping.Identity)
+}
+
+/** Quella da dare a un campo di testo: sul telefono nessuna. */
+val emojiTransformation: VisualTransformation get() = if (emojiFontFamily != null) EmojiTransformation else VisualTransformation.None
 
 /**
  * Dove stanno le emoji scritte col U+FE0F, sequenza intera: "1️⃣" col suo

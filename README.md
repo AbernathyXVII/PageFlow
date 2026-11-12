@@ -1126,6 +1126,22 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.153.60.2 — 12/11/2026 · 09:33 — On the PC ☺️ and ♥️ in colour in titles, cells and the sidebar too
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1185 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** The emoji Windows also has as letters (☺️, ♥️,
+  ©️, 1️⃣…) were still white **in page and database titles, in database cells
+  and row names, in the sidebar's names and in the path at the top**: now
+  they are in colour there too, as in the text of the pages. Not yet tested
+  by the user
+- **[Project]** `emojiTransformation` (common: `withEmojiFont` as a visual
+  transformation with the same positions; on the phone none) on the title
+  fields, the database title, `NameCell` and `TextLikeCell`; the spell
+  checker's `ProofingTransformation` and `highlightedTitle` (the row names in
+  every view) go through `withEmojiFont` too, and so do `TreeRow` and
+  `PageBreadcrumb`. Test: `DesktopEmojiTest` (♥️ red in a sidebar name and
+  in a text field)
+
 ### 🔧 v0.153.60.1 — 12/11/2026 · 09:20 — On the PC ☺️, ♥️ and the other emoji Windows also has as letters, in colour
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1184 tests passed)*
 
