@@ -2702,7 +2702,16 @@ class PageRepository(private val db: AppDatabase) {
         }
     }
 
-    suspend fun deleteBlock(block: BlockEntity) = blockDao.delete(block)
+    /**
+     * Il blocco se ne va, con quello che ha dentro. Era l'ultima riga di una
+     * colonna? La colonna se ne va con lui, e un gruppo rimasto con una
+     * colonna sola torna righe normali (dal 12/11/2026, come spostandola:
+     * vedi `tidyColumn`).
+     */
+    suspend fun deleteBlock(block: BlockEntity) = db.withTransaction {
+        blockDao.delete(block)
+        tidyColumn(block.parentBlockId)
+    }
 
     /**
      * **Cambia le voci in più di un blocco** (`BlockAttrs`) leggendole dal

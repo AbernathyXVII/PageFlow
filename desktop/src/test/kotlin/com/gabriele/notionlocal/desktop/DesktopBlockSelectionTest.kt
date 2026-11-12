@@ -492,6 +492,44 @@ class DesktopBlockSelectionTest {
     }
 
     /**
+     * **Ogni blocco si elimina dai suoi sei puntini** (chiesto dall'utente il
+     * 12/11/2026: le righe di testo non avevano "Delete"): "Seconda riga",
+     * dal suo menu, se ne va.
+     */
+    @Test
+    fun aTextLineIsDeletedFromItsMenu() = withPage { scene, frames, picture ->
+        val clean = picture()
+        val rows = textRows(clean)
+        onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, rows[5].center()), pressed = false) }
+        frames(5)
+        val dots = Offset(74f, dotsRows(picture(), clean).average().toFloat())
+        onWindowThread {
+            mouse(scene, PointerEventType.Move, dots, pressed = false)
+            mouse(scene, PointerEventType.Press, dots, pressed = true)
+            mouse(scene, PointerEventType.Release, dots, pressed = false)
+        }
+        frames(15)
+        val menu = picture()
+        File("build/desktop-screenshots", "text_line_menu.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(menu).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        val red = (0 until menu.height).flatMap { y ->
+            (0 until menu.width).filter { x ->
+                val c = menu.getColor(x, y)
+                val r = (c shr 16) and 0xFF
+                r > 180 && r - ((c shr 8) and 0xFF) > 40 && r - (c and 0xFF) > 40
+            }.map { x -> Offset(x.toFloat(), y.toFloat()) }
+        }
+        assertTrue("nel menu della riga c'è \"Delete\"", red.size > 20)
+        val delete = Offset(red.map { it.x }.average().toFloat(), red.map { it.y }.average().toFloat())
+        onWindowThread {
+            mouse(scene, PointerEventType.Move, delete, pressed = false)
+            mouse(scene, PointerEventType.Press, delete, pressed = true)
+            mouse(scene, PointerEventType.Release, delete, pressed = false)
+        }
+        frames(5)
+        waitForBlocks(listOf("uno", "titolo", "divisore", "tre"))
+    }
+
+    /**
      * **Sul PC la pagina sta più a destra, ma la copertina no** (chiesto
      * dall'utente l'11/11/2026): il testo comincia dopo il margine dei
      * puntini, la copertina va ancora da un bordo all'altro.

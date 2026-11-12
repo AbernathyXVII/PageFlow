@@ -19,6 +19,9 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
+import com.gabriele.notionlocal.data.entity.ColumnType
+import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
+import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.export.ExportPage
 import com.gabriele.notionlocal.data.export.exportLines
@@ -283,6 +286,19 @@ class DesktopColumnsTest {
         assertEquals(3, childrenOf("vuota").size)
         assertTrue(repo.moveBlockBeside("prima", lineOf("vuota", 0).id, right = false))
         assertEquals(4, childrenOf("vuota").size)
+        assertTidy()
+    }
+
+    /** Eliminata l'ultima riga di una colonna, la colonna se ne va e il gruppo con una colonna sola torna righe normali. */
+    @Test
+    fun deletingTheLastLineOfAColumnUngroups() = runBlocking {
+        repo.makeColumns("vuota", 2)
+        write("vuota", 0, "SINISTRA")
+        write("vuota", 1, "DESTRA")
+        val sinistra = lineOf("vuota", 0).id
+        repo.deleteBlock(lineOf("vuota", 1))
+        assertEquals(listOf("prima", sinistra, "dopo"), childrenOf(null).map { it.id })
+        assertTrue(blocks().none { it.type == BlockType.COLUMN || it.type == BlockType.COLUMN_LIST })
         assertTidy()
     }
 
@@ -747,5 +763,60 @@ class DesktopColumnsTest {
         assertEquals(listOf("prima", sinistra, "dopo", destra), top.map { it.id })
         assertTrue(blocks().none { it.type == BlockType.COLUMN || it.type == BlockType.COLUMN_LIST })
         assertTidy()
+    }
+
+    /** Due database veri (una proprietà, due righe) fra "PRIMA" e "DOPO", affiancati in due colonne. */
+    private fun twoDatabasesSideBySide() = runBlocking {
+        for ((id, name) in listOf("dbA" to "LIBRI", "dbB" to "FILM")) {
+            repo.createPage(PageEntity(id = id, title = name, isDatabase = true, parentId = "colonne"))
+            db.databaseDao().insertColumn(DatabaseColumnEntity(id = "voto-$id", pageId = id, name = "Voto", type = ColumnType.NUMBER, orderIndex = 0))
+            db.databaseDao().insertRow(DatabaseRowEntity(id = "r1-$id", pageId = id, title = "Uno", orderIndex = 0))
+            db.databaseDao().insertRow(DatabaseRowEntity(id = "r2-$id", pageId = id, title = "Due", orderIndex = 1))
+        }
+        repo.saveBlock(childrenOf(null).single { it.id == "vuota" }.copy(type = BlockType.DATABASE_LINK, linkedPageId = "dbA", textJson = "[]"))
+        repo.saveBlock(BlockEntity(id = "tabB", pageId = "colonne", type = BlockType.DATABASE_LINK, linkedPageId = "dbB", orderIndex = 3))
+        assertTrue(repo.moveBlockBeside("tabB", "vuota", right = true))
+    }
+
+    /**
+     * **Due database affiancati** (trovato dall'utente il 12/11/2026: "si sono
+     * creati dei divider sopra i database" e "i sei puntini sono
+     * stortissimi"): fra "PRIMA" e i titoli niente righe, che stanno sotto i
+     * database; col mouse su "LIBRI" i sei puntini a metà del suo titolo.
+     */
+    @Test
+    fun twoDatabasesInColumns() {
+        twoDatabasesSideBySide()
+        withMouse { mouse, shot ->
+            val clean = shot("columns_databases")
+            fun bright(x: Int, y: Int) = clean.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140 }
+            val textRows = (170 until clean.height).filter { y -> (60 until 300).any { x -> bright(x, y) } }
+            val bands = ArrayList<IntRange>()
+            for (y in textRows) {
+                val last = bands.lastOrNull()
+                if (last != null && y <= last.last + 1) bands[bands.lastIndex] = last.first..y else bands += y..y
+            }
+            val prima = bands[0]
+            val title = bands[1]
+            val background = clean.getColor(clean.width - 5, clean.height - 5)
+            // Una riga lunga (più di 200 punti di fila non di fondo) fra "PRIMA" e il titolo: un divisore fuori posto.
+            val stray = (prima.last + 3 until title.first - 3).filter { y ->
+                var run = 0
+                var best = 0
+                for (x in 0 until clean.width) {
+                    if (clean.getColor(x, y) != background) run++ else run = 0
+                    if (run > best) best = run
+                }
+                best > 200
+            }
+            assertTrue("righe fra PRIMA $prima e il titolo $title: $stray", stray.isEmpty())
+            mouse("move", 300f, title.last + 110f)
+            mouse("move", 300f, title.last + 111f)
+            val hovered = shot("columns_databases_dots")
+            val titleLeft = (0 until 400).first { x -> (title.first..title.last).any { y -> bright(x, y) } }
+            val dots = (0 until hovered.height).filter { y -> (titleLeft - 30 until titleLeft - 2).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
+            val center = (title.first + title.last) / 2f
+            assertTrue("puntini $dots, titolo $title", dots.isNotEmpty() && abs(dots.average() - center) <= 2.0)
+        }
     }
 }

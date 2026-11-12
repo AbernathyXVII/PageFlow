@@ -3087,7 +3087,12 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
 
     fun deleteBlock(block: BlockEntity) {
         snapshotForStructuralChange()
-        viewModelScope.launch { repository.deleteBlock(block) }
+        viewModelScope.launch {
+            // In coda alle scritture di prima; poi il campo di testo da cui la riga
+            // se ne va prende le righe nuove anche con una scrittura sua in viaggio.
+            structuralEdits.withLock { repository.deleteBlock(block) }
+            _externalChangeTick.value += 1
+        }
     }
 
     // --- Tutta la pagina selezionata, come su Notion (dal 20/10/2026) ---

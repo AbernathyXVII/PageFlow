@@ -5007,22 +5007,29 @@ private fun ColumnLines(
     val emptyLook = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
     val sidePaddingPx = with(density) { PAGE_SIDE_PADDING.toPx() }
     val lineHandleSpan = with(density) { 26.dp.toPx() }
-    CompositionLocalProvider(LocalFirstLine provides null) {
     lines.forEachIndexed { index, child ->
         key(child.id) {
-            Box(
+            // Un database dice qual è la sua prima riga (il titolo): lì i suoi sei puntini,
+            // come nella pagina (trovato dall'utente: "i sei puntini sono stortissimi").
+            val lineFirst = remember(child.type) { if (child.type == BlockType.DATABASE_LINK) FirstLine() else null }
+            // **Una colonna, non un `Box`** (dal 12/11/2026, trovato dall'utente: "si sono
+            // creati dei divider sopra i database"): il database disegna anche la riga alla
+            // sua fine, e nel `Box` finiva sopra di lui, in cima. Lo stesso errore del 20/10
+            // nelle voci della pagina.
+            Column(
                 modifier = Modifier
                     .padding(vertical = (look.spacingOf(child) / 2f).sp.toDpIn(density))
                     // Col mouse la riga ha i suoi sei puntini, accanto al suo testo (dal 12/11/2026).
                     .pickableAs(
                         "line:" + child.id,
-                        lineOf = { _, c -> LineBounds(0f, minOf(c.size.height.toFloat(), lineHandleSpan), sidePaddingPx) },
+                        lineOf = { _, c -> lineFirst?.boundsIn(c) ?: LineBounds(0f, minOf(c.size.height.toFloat(), lineHandleSpan), sidePaddingPx) },
                         nested = true,
                         textInset = sidePaddingPx
                     ) { child.id }
                     .then(if (index == 0) reportFirst else Modifier)
                     .then(if (emptyColumn && index == 0) Modifier.drawBehind { drawEmptyColumn(emptyLook) } else Modifier)
             ) {
+                CompositionLocalProvider(LocalFirstLine provides lineFirst) {
                 BlockRow(
                     block = child,
                     allBlocks = allBlocks,
@@ -5036,9 +5043,9 @@ private fun ColumnLines(
                     onNavigateToDatabase = onNavigateToDatabase,
                     onOpenBlockMenu = onOpenBlockMenu
                 )
+                }
             }
         }
-    }
     }
     if (column.type == BlockType.COLUMN && lines.isEmpty() && !LocalPageLocked.current) {
         Box(Modifier.fillMaxWidth().height(EMPTY_COLUMN_HEIGHT).clickable { viewModel.addFirstChild(column) })
@@ -6556,7 +6563,8 @@ private fun BlockRow(
             syncedChildren.forEach { child ->
                 // Ogni riga col suo `key`, come dentro un toggle.
                 key(child.id) {
-                    Box(modifier = Modifier.padding(vertical = (syncedLook.spacingOf(child) / 2f).sp.toDpIn(syncedDensity))) {
+                    // Una colonna, non un `Box`: un database qui dentro ha la sua riga di fine sotto, non in cima.
+                    Column(modifier = Modifier.padding(vertical = (syncedLook.spacingOf(child) / 2f).sp.toDpIn(syncedDensity))) {
                         BlockRow(
                             block = child,
                             allBlocks = allBlocks,

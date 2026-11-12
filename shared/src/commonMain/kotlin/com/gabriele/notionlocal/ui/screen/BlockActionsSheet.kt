@@ -72,6 +72,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -186,6 +187,8 @@ fun BlockActionsHost(
     val context = LocalPlatformContext.current
     // Sul PC "Open as…" per la pagina collegata (vedi `PageOpener`).
     val opener = LocalPageOpener.current
+    // "Delete" di una riga di testo: prima il cursore se ne va (vedi `TextBlockMenu`).
+    val deleteFocus = LocalFocusManager.current
 
     val linkedId = block.linkedPageId?.takeIf {
         block.type == BlockType.PAGE_LINK || block.type == BlockType.DATABASE_LINK
@@ -489,13 +492,14 @@ fun BlockActionsHost(
                         } else {
                             null
                         },
-                        onDelete = if (block.type in MULTILINE_TYPES) {
-                            {
-                                onDismiss()
-                                viewModel.deleteBlock(block)
-                            }
-                        } else {
-                            null
+                        // **Ogni blocco si elimina dai suoi puntini** (dal 12/11/2026, chiesto
+                        // dall'utente: le righe di testo non avevano "Delete", e nelle colonne
+                        // non si toglievano). Prima il cursore se ne va: il campo della riga
+                        // può sparire con lei.
+                        onDelete = {
+                            deleteFocus.clearFocus()
+                            onDismiss()
+                            viewModel.deleteBlock(block)
                         },
                         pinned = block.attrs.linkTarget,
                         onTogglePin = {
@@ -1071,7 +1075,7 @@ private fun TextBlockMenu(
     onEditIcon: (() -> Unit)? = null,
     /** Il riquadro: il suo sfondo. Null per gli altri. */
     onBackground: (() -> Unit)? = null,
-    /** Riquadro, citazione e codice: toglierli. Null per le righe di testo. */
+    /** Eliminare la riga (dal 12/11/2026 tutte, prima solo riquadro, citazione e codice). */
     onDelete: (() -> Unit)? = null,
     /** Se la riga è un punto di arrivo dei collegamenti (vedi `BlockLinks.kt`). */
     pinned: Boolean = false,

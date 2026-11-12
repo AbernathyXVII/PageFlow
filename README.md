@@ -1126,6 +1126,33 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.74 — 12/11/2026 · 20:35 — Every block can be deleted; databases in columns
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1228 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Every block can be deleted from
+  its menu** (the six dots on the PC, a long press on the phone): lines of
+  text and lists had no "Delete" and could only be removed from the
+  keyboard, which inside the columns wasn't enough. Deleting the last line
+  of a column removes the column too, and a group left with one column
+  becomes normal lines again, as when the line is moved away
+- **[Bug fix]** **[💻 PC]** **A database in a column had its closing line
+  on top**, above its title, instead of below it: inside the columns the
+  database and its line were stacked one over the other (the same mistake
+  fixed on 20/10/2026 for the page). The same for a database inside a
+  synced block
+- **[Bug fix]** **[💻 PC]** **The six dots of a database in a column** stood
+  at the top of the block, above its name: now they are halfway up its
+  title, as for the databases of the page
+- **[Project]** `PageRepository.deleteBlock` tidies the column it leaves
+  (`tidyColumn`), `PageEditorViewModel.deleteBlock` waits for the writes
+  before it and raises `externalChangeTick`; `TextBlockMenu` always has
+  "Delete" (the cursor leaves the line first); `ColumnLines` puts each line
+  in a `Column` and gives a database its own `FirstLine`. Tests:
+  `DesktopBlockSelectionTest` ("Seconda riga" deleted from its menu),
+  `DesktopColumnsTest` (the last line of a column deleted; two databases
+  side by side, with no line above their titles and the dots halfway up
+  "LIBRI")
+
 ### ✏️ v0.153.73 — 12/11/2026 · 20:05 — At most four columns, also by dragging
 *(Claude Code on the PC; installed on the phone; 1225 tests passed)*
 
