@@ -1126,6 +1126,20 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.68 — 12/11/2026 · 15:25 — A kind of block the app doesn't know becomes a line of text
+*(Claude Code on the PC; phone not connected, APK ready to install; 1200 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **A block of a kind this version
+  of the app doesn't know** (one coming with the Wi‑Fi sync or a backup from
+  a newer version, like the side-by-side columns that are on their way)
+  **is shown as a line of text instead of closing the app** when the page
+  opens. In the database it stays as it was, until the line is written
+  again. A safety net before the columns, which bring two new kinds of block
+- **[Project]** `BlockTypeConverter` (`@TypeConverters` of `AppDatabase`):
+  Room turned the names into `BlockType` by itself and stopped at an unknown
+  one. Test: `DesktopRepositoryTest` (a block with the kind `COLUMN_LIST`
+  written in the database reads as a paragraph, and keeps its name there)
+
 ### 🔧 v0.153.67.1 — 12/11/2026 · 15:04 — On the PC the wheel scrolls the page while dragging a block
 *(Claude Code on the PC; installed on the phone; 1199 tests passed)*
 

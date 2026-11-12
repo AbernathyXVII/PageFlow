@@ -4,6 +4,7 @@ import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
+import androidx.room.TypeConverters
 import com.gabriele.notionlocal.data.dao.BlockDao
 import com.gabriele.notionlocal.data.dao.DatabaseDao
 import com.gabriele.notionlocal.data.dao.InkDao
@@ -16,6 +17,7 @@ import com.gabriele.notionlocal.data.dao.TableCellDao
 import com.gabriele.notionlocal.data.dao.AutomationDao
 import com.gabriele.notionlocal.data.dao.ImageTextDao
 import com.gabriele.notionlocal.data.entity.BlockEntity
+import com.gabriele.notionlocal.data.entity.BlockTypeConverter
 import com.gabriele.notionlocal.data.entity.DatabaseCellEntity
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
@@ -78,6 +80,7 @@ const val DATABASE_VERSION = 70
     exportSchema = false
 )
 @ConstructedBy(AppDatabaseConstructor::class)
+@TypeConverters(BlockTypeConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun pageDao(): PageDao

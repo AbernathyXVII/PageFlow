@@ -1,5 +1,9 @@
 package com.gabriele.notionlocal.desktop
 
+import androidx.room.execSQL
+import androidx.room.immediateTransaction
+import androidx.room.useReaderConnection
+import androidx.room.useWriterConnection
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
@@ -58,6 +62,28 @@ class DesktopRepositoryTest {
     }
 
     private suspend fun blocksOf(pageId: String) = db.blockDao().getBlocksForPageOnce(pageId).sortedBy { it.orderIndex }
+
+    /**
+     * **Un tipo di blocco che questa versione non conosce** (dal 12/11/2026,
+     * prima delle colonne): arrivato da una versione più nuova, si legge come
+     * una riga di testo invece di far chiudere l'app, e nel database resta
+     * com'era.
+     */
+    @Test
+    fun anUnknownBlockTypeReadsAsText() = runBlocking {
+        val before = blocksOf(parent.id).first()
+        db.useWriterConnection { transactor ->
+            transactor.immediateTransaction { execSQL("UPDATE blocks SET type = 'COLUMN_LIST' WHERE id = '${before.id}'") }
+        }
+        val read = blocksOf(parent.id)
+        assertEquals(3, read.size)
+        assertEquals(BlockType.PARAGRAPH, read.first().type)
+        assertEquals("""[{"text":"before"}]""", read.first().textJson)
+        val raw = db.useReaderConnection { connection ->
+            connection.usePrepared("SELECT type FROM blocks WHERE id = '${before.id}'") { it.step(); it.getText(0) }
+        }
+        assertEquals("COLUMN_LIST", raw)
+    }
 
     @Test
     fun duplicateUndoAndRedoWorkOnThePc() = runBlocking {

@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.TypeConverter
 import java.util.UUID
 
 /**
@@ -18,7 +19,8 @@ enum class BlockType {
     // pagina dalla barra Aa e coi titoli a misura fissa non ci faceva
     // più niente. La migrazione 26→27 ha trasformato quelli già scritti
     // in paragrafi. **Non rimetterli senza una migrazione**: un blocco
-    // salvato con un tipo che l'enum non conosce fa chiudere l'app.
+    // salvato con un tipo che l'enum non conosce faceva chiudere l'app
+    // (dal 12/11/2026 diventa una riga di testo: `BlockTypeConverter`).
     BULLET_LIST_ITEM,
     NUMBERED_LIST_ITEM,
     CHECKBOX,
@@ -78,6 +80,25 @@ enum class BlockType {
      * Cambiate in una, si riscrivono nelle altre: vedi `data/sync/SyncedBlocks.kt`.
      */
     SYNCED
+}
+
+/**
+ * **Un tipo di blocco che questa versione non conosce diventa una riga di
+ * testo** (dal 12/11/2026, prima delle colonne affiancate): arrivato con la
+ * sincronizzazione o una copia da una versione più nuova, prima faceva
+ * chiudere l'app aprendo la pagina (Room non sapeva cosa farne). Il nome
+ * nel database resta quello finché il blocco non si riscrive.
+ */
+class BlockTypeConverter {
+    @TypeConverter
+    fun toName(type: BlockType): String = type.name
+
+    @TypeConverter
+    fun fromName(name: String): BlockType = BY_NAME[name] ?: BlockType.PARAGRAPH
+
+    private companion object {
+        val BY_NAME = BlockType.entries.associateBy { it.name }
+    }
 }
 
 /**
