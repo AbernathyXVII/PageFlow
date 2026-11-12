@@ -2,6 +2,13 @@ package com.gabriele.notionlocal.ui
 
 import android.app.Application
 import android.content.Context
+import android.os.Looper
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextInputSelection
+import androidx.compose.ui.text.TextRange
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasSetTextAction
@@ -23,13 +30,16 @@ import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.time.Duration
 import kotlin.math.abs
 
 /**
@@ -85,6 +95,50 @@ class ColumnsPhoneTest {
         val sinistra = order[1].left
         val destra = order[3].left
         assertTrue("SINISTRA a $sinistra, DESTRA a $destra", abs((sinistra - destra).value) < 1f)
+    }
+
+    /** Le righe della colonna [columnId] nel database, dall'alto. */
+    private fun linesOf(columnId: String) = runBlocking {
+        AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce("p")
+            .filter { it.parentBlockId == columnId }.sortedBy { it.orderIndex }.map { it.textJson }
+    }
+
+    private fun settle() {
+        repeat(10) {
+            compose.mainClock.advanceTimeBy(200)
+            Thread.sleep(50)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
+            compose.waitForIdle()
+        }
+    }
+
+    /**
+     * **Scrivere e andare a capo dentro una colonna** (trovato dall'utente il
+     * 12/11/2026: "se vado a capo premendo Invio mi duplica quello che ho
+     * scritto rimanendo nello stesso blocco"): due Invio in fondo a
+     * "SINISTRA" fanno due righe vuote sotto di lei, e nessun doppione.
+     */
+    @Test
+    fun twoEntersInAColumnMakeTwoEmptyLines() {
+        val factory = ViewModelFactory(context)
+        compose.setContent {
+            NotionLocalTheme {
+                PageEditorScreen(pageId = "p", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {}, onNavigateToPage = {}, onNavigateToDatabase = {})
+            }
+        }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("SINISTRA", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        val field = compose.onNode(hasSetTextAction() and hasText("SINISTRA", substring = true))
+        field.performSemanticsAction(SemanticsActions.RequestFocus)
+        compose.waitForIdle()
+        field.performTextInputSelection(TextRange(1 + "SINISTRA".length))
+        field.performTextInput("\n")
+        settle()
+        compose.onNode(isFocused()).performTextInput("\n")
+        settle()
+        assertEquals(
+            listOf("""[{"text":"SINISTRA"}]""", """[{"text":""}]""", """[{"text":""}]""", """[{"text":"ANCORA"}]"""),
+            linesOf("c1")
+        )
     }
 
     @Test

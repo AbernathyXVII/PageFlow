@@ -1126,6 +1126,34 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.153.69.1 — 12/11/2026 · 18:29 — The columns: the lines around them, Enter inside them and the six dots
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1211 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **After "Create two columns" the lines around
+  them stayed as before**: the text box the line came from kept all its old
+  lines, the one that had become the columns included, so the page showed
+  an empty line above the columns and the line after them twice, and the
+  columns looked as if they hadn't been made. Now that box takes the new
+  lines at once, as when a block is moved
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The second Enter in a column
+  doubled the text**: after Enter at the end of a line, a second Enter
+  brought back what had been written in the same line, instead of another
+  empty one. The new line born above wasn't recognised next to the one being
+  written, which was made again with its old text. Now two Enters make two
+  lines, as in a toggle
+- **[Bug fix]** **[💻 PC]** **The six dots of the columns were crooked**:
+  they stood at the top of the group, higher than the letters. Now they are
+  halfway up the first line of the first column, like the other lines
+- **[Project]** `PageEditorViewModel.makeColumns` raises
+  `externalChangeTick`; `ColumnLines` draws the lines of a column with their
+  `key` in the same function, and the first line of the first column is the
+  `FirstLine` of the group. Tests: `DesktopColumnsTest` (the whole round with
+  mouse and keyboard: a click on the empty line, "/two", a click on the
+  entry, "abc", Enter, Enter, "d", with the page's lines counted on screen;
+  the six dots halfway up the letters), `ColumnsPhoneTest` (two Enters in a
+  column). On the PC the keys are now typed in the tests as Windows sends
+  them (`KEY_TYPED`)
+
 ### ✏️ v0.153.69 — 12/11/2026 · 17:57 — Side-by-side columns: created on the PC, one below the other on the phone
 *(Claude Code on the PC; installed on the phone; 1209 tests passed)*
 

@@ -2704,8 +2704,11 @@ private fun PageEditorContent(
                                 // Lo spazio fra i blocchi ("Paragraph"): metà sopra e
                                 // metà sotto, come fa l'altezza di riga nei campi di testo.
                                 val islandSpacing = paragraphLook.spacingOf(item.block)
-                                // Un database dice qual è la sua prima riga (il titolo), per i sei puntini (`BlockHandle.kt`).
-                                val firstLine = remember(item.block.id) { if (item.block.type == BlockType.DATABASE_LINK) FirstLine() else null }
+                                // Un database dice qual è la sua prima riga (il titolo), per i sei puntini (`BlockHandle.kt`);
+                                // le colonne la prima riga della prima colonna (vedi `ColumnLines`).
+                                val firstLine = remember(item.block.id) {
+                                    if (item.block.type == BlockType.DATABASE_LINK || item.block.type == BlockType.COLUMN_LIST) FirstLine() else null
+                                }
                                 Column(
                                     (if (sideScroll != null) Modifier.nestedScroll(KeepSidewaysInside) else Modifier)
                                         .padding(vertical = (islandSpacing / 2f).sp.toDpIn(LocalDensity.current))
@@ -4919,6 +4922,72 @@ private const val CAP_HEIGHT = 0.7f
 /** Quanto è alta una colonna senza righe, da toccare per scriverci (vedi `BlockRow`). */
 private val EMPTY_COLUMN_HEIGHT = 32.dp
 
+/**
+ * Le righe di una colonna ([column]; un blocco finito fra le colonne che non
+ * è una colonna si mostra lui), ognuna col suo `key` **in questa stessa
+ * funzione**: passate una per una da una funzione a parte, il `key` non
+ * bastava a riconoscerle quando ne nasceva una sopra, e la riga col cursore
+ * si rifaceva da capo col testo di prima (trovato dall'utente il 12/11/2026:
+ * "mi duplica quello che ho scritto rimanendo nello stesso blocco").
+ *
+ * La prima riga della prima colonna ([firstColumn]) è la "prima riga" del
+ * gruppo, dove stanno i sei puntini (`FirstLine`): in cima al gruppo erano
+ * più su delle lettere ("i sei puntini diventano storti"). Le righe dentro
+ * non la riportano loro (un database in una colonna lo farebbe col titolo).
+ */
+@Composable
+private fun ColumnLines(
+    column: BlockEntity,
+    allBlocks: List<BlockEntity>,
+    depth: Int,
+    viewModel: PageEditorViewModel,
+    factory: ViewModelFactory,
+    focusRequestBlockId: String?,
+    formatRequest: Pair<String, FormatType>?,
+    onFocusChanged: (String, Boolean) -> Unit,
+    onNavigateToPage: (String) -> Unit,
+    onNavigateToDatabase: (String) -> Unit,
+    onOpenBlockMenu: ((String) -> Unit)?,
+    firstColumn: Boolean = false
+) {
+    val look = LocalParagraphLook.current
+    val density = LocalDensity.current
+    val reportFirst = if (firstColumn) Modifier.reportsFirstLine(PAGE_SIDE_PADDING) else Modifier
+    val lines = if (column.type == BlockType.COLUMN) {
+        allBlocks.filter { it.parentBlockId == column.id }.sortedBy { it.orderIndex }
+    } else {
+        listOf(column)
+    }
+    CompositionLocalProvider(LocalFirstLine provides null) {
+    lines.forEachIndexed { index, child ->
+        key(child.id) {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = (look.spacingOf(child) / 2f).sp.toDpIn(density))
+                    .then(if (index == 0) reportFirst else Modifier)
+            ) {
+                BlockRow(
+                    block = child,
+                    allBlocks = allBlocks,
+                    depth = depth,
+                    viewModel = viewModel,
+                    factory = factory,
+                    focusRequestBlockId = focusRequestBlockId,
+                    formatRequest = formatRequest,
+                    onFocusChanged = onFocusChanged,
+                    onNavigateToPage = onNavigateToPage,
+                    onNavigateToDatabase = onNavigateToDatabase,
+                    onOpenBlockMenu = onOpenBlockMenu
+                )
+            }
+        }
+    }
+    }
+    if (column.type == BlockType.COLUMN && lines.isEmpty() && !LocalPageLocked.current) {
+        Box(Modifier.fillMaxWidth().height(EMPTY_COLUMN_HEIGHT).clickable { viewModel.addFirstChild(column) })
+    }
+}
+
 /** Tutte le righe del blocco [id] nel campo, dall'alto al basso: per trascinarci sopra un blocco (`BlockDrag.kt`). */
 private fun runLineExtent(
     layout: TextLayoutResult,
@@ -6426,46 +6495,31 @@ private fun BlockRow(
     // margine: fra due colonne i due margini fanno lo spazio. Una colonna
     // rimasta senza righe si tocca per ricominciare a scrivere.
     if (block.type == BlockType.COLUMN_LIST) {
-        val columnLook = LocalParagraphLook.current
-        val columnDensity = LocalDensity.current
-        val columnLocked = LocalPageLocked.current
-        val line: @Composable (BlockEntity) -> Unit = { child ->
-            key(child.id) {
-                Box(modifier = Modifier.padding(vertical = (columnLook.spacingOf(child) / 2f).sp.toDpIn(columnDensity))) {
-                    BlockRow(
-                        block = child,
-                        allBlocks = allBlocks,
-                        depth = depth,
-                        viewModel = viewModel,
-                        factory = factory,
-                        focusRequestBlockId = focusRequestBlockId,
-                        formatRequest = formatRequest,
-                        onFocusChanged = onFocusChanged,
-                        onNavigateToPage = onNavigateToPage,
-                        onNavigateToDatabase = onNavigateToDatabase,
-                        onOpenBlockMenu = onOpenBlockMenu
-                    )
-                }
-            }
-        }
-        val columnContent: @Composable (BlockEntity) -> Unit = { column ->
-            if (column.type != BlockType.COLUMN) {
-                line(column)
-            } else {
-                val lines = allBlocks.filter { it.parentBlockId == column.id }.sortedBy { it.orderIndex }
-                lines.forEach { line(it) }
-                if (lines.isEmpty() && !columnLocked) {
-                    Box(Modifier.fillMaxWidth().height(EMPTY_COLUMN_HEIGHT).clickable { viewModel.addFirstChild(column) })
-                }
-            }
-        }
         val columns = allBlocks.filter { it.parentBlockId == block.id }.sortedBy { it.orderIndex }
         if (isPc) {
             Row(Modifier.fillMaxWidth()) {
-                columns.forEach { column -> key(column.id) { Column(Modifier.weight(1f)) { columnContent(column) } } }
+                columns.forEachIndexed { index, column ->
+                    key(column.id) {
+                        Column(Modifier.weight(1f)) {
+                            ColumnLines(
+                                column, allBlocks, depth, viewModel, factory, focusRequestBlockId, formatRequest,
+                                onFocusChanged, onNavigateToPage, onNavigateToDatabase, onOpenBlockMenu, firstColumn = index == 0
+                            )
+                        }
+                    }
+                }
             }
         } else {
-            Column { columns.forEach { column -> key(column.id) { columnContent(column) } } }
+            Column {
+                columns.forEachIndexed { index, column ->
+                    key(column.id) {
+                        ColumnLines(
+                            column, allBlocks, depth, viewModel, factory, focusRequestBlockId, formatRequest,
+                            onFocusChanged, onNavigateToPage, onNavigateToDatabase, onOpenBlockMenu, firstColumn = index == 0
+                        )
+                    }
+                }
+            }
         }
         return
     }

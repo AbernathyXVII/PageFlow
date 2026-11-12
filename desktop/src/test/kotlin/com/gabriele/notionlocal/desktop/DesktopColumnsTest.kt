@@ -46,6 +46,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
+import kotlin.math.abs
 
 /**
  * **Le colonne affiancate** (dal 12/11/2026, chieste dall'utente, come su
@@ -232,6 +233,135 @@ class DesktopColumnsTest {
             // "PRIMA" sopra le colonne e "DOPO" sotto: righe solo a sinistra, prima e dopo.
             assertTrue("niente sopra le colonne", left.any { it < right.min() - 4 })
             assertTrue("niente sotto le colonne", left.any { it > right.max() + 4 })
+
+            // **I sei puntini a metà delle lettere della prima riga** (trovato
+            // dall'utente il 12/11/2026: "i sei puntini diventano storti"),
+            // col mouse sulla riga di destra come su quella di sinistra.
+            val letters = right.min()..right.max()
+            for (x in listOf(200f, mid + 60f)) {
+                onWindowThread {
+                    scene.sendPointerEvent(
+                        androidx.compose.ui.input.pointer.PointerEventType.Move,
+                        androidx.compose.ui.geometry.Offset(x, (letters.first + letters.last) / 2f),
+                        type = androidx.compose.ui.input.pointer.PointerType.Mouse
+                    )
+                }
+                repeat(5) {
+                    onWindowThread { scene.render(time) }
+                    time += 100_000_000L
+                    Thread.sleep(30)
+                }
+                val hovered = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+                File("build/desktop-screenshots", "columns_dots.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(hovered).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+                val dots = (0 until hovered.height).filter { y -> (60 until 85).any { dx -> hovered.getColor(dx, y) != shot.getColor(dx, y) } }
+                val center = (letters.first + letters.last) / 2f
+                assertTrue("puntini $dots, lettere $letters (mouse a x $x)", dots.isNotEmpty() && abs(dots.average() - center) <= 1.5)
+            }
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /** Un tasto battuto, come lo manda la finestra di Windows (un carattere, non un comando). */
+    private fun typed(scene: ImageComposeScene, char: Char) {
+        val awt = java.awt.event.KeyEvent(java.awt.Canvas(), java.awt.event.KeyEvent.KEY_TYPED, 0L, 0, java.awt.event.KeyEvent.VK_UNDEFINED, char)
+        scene.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(androidx.compose.ui.input.key.Key.Unknown, androidx.compose.ui.input.key.KeyEventType.Unknown, codePoint = char.code, nativeEvent = awt))
+    }
+
+    /**
+     * **Tutto il giro col mouse e la tastiera** (l'utente il 12/11/2026: "le
+     * due colonne non si creano"): clic sulla riga vuota, "/two", clic sulla
+     * voce; poi si scrive nella prima colonna, Invio, Invio.
+     */
+    @Test
+    fun fromTheSlashMenuToTwoEntersInAColumn() {
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            PageEditorScreen(
+                                pageId = "colonne", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                                onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun shot(name: String): Bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }.also {
+            File("build/desktop-screenshots").mkdirs()
+            File("build/desktop-screenshots", "$name.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(it).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        }
+        fun click(x: Float, y: Float) = onWindowThread {
+            val at = androidx.compose.ui.geometry.Offset(x, y)
+            val mouse = androidx.compose.ui.input.pointer.PointerType.Mouse
+            scene.sendPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Move, at, type = mouse)
+            scene.sendPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Press, at, type = mouse,
+                buttons = androidx.compose.ui.input.pointer.PointerButtons(isPrimaryPressed = true), button = androidx.compose.ui.input.pointer.PointerButton.Primary)
+            scene.sendPointerEvent(androidx.compose.ui.input.pointer.PointerEventType.Release, at, type = mouse,
+                buttons = androidx.compose.ui.input.pointer.PointerButtons(), button = androidx.compose.ui.input.pointer.PointerButton.Primary)
+        }
+        fun type(text: String) {
+            text.forEach { c -> onWindowThread { typed(scene, c) }; frames(1) }
+        }
+        try {
+            frames(40)
+            // La riga vuota sta fra "PRIMA" (y ~190) e "DOPO" (y ~236).
+            click(100f, 213f)
+            frames(5)
+            type("/two")
+            frames(5)
+            // Nel menu c'è solo "Create two columns": la sua riga sta sotto la pagina, a sinistra.
+            val menu = shot("columns_slash")
+            fun bright(x: Int, y: Int) = menu.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140 }
+            val entry = (245 until 400).first { y -> (130 until 300).any { x -> bright(x, y) } }
+            click(200f, entry + 6f)
+            frames(20)
+            shot("columns_made")
+            val group = childrenOf(null).single { it.type == BlockType.COLUMN_LIST }
+            val columns = childrenOf(group.id)
+            assertEquals(2, columns.size)
+            assertEquals(listOf("prima", group.id, "dopo"), childrenOf(null).map { it.id })
+            // Si scrive nella prima colonna, poi Invio due volte.
+            type("abc")
+            frames(5)
+            fun enter() {
+                onWindowThread {
+                    scene.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(androidx.compose.ui.input.key.Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyDown))
+                    scene.sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(androidx.compose.ui.input.key.Key.Enter, androidx.compose.ui.input.key.KeyEventType.KeyUp))
+                }
+                frames(10)
+            }
+            enter()
+            enter()
+            type("d")
+            frames(10)
+            shot("columns_enters")
+            val texts = childrenOf(columns[0].id).map { it.textJson }
+            assertEquals(listOf("""[{"text":"abc"}]""", """[{"text":""}]""", """[{"text":"d"}]"""), texts)
+            assertEquals(1, childrenOf(columns[1].id).size)
+            // E sullo schermo: "PRIMA" una volta sopra, "DOPO" una volta sotto, le righe della
+            // colonna fra loro (prima si vedevano anche le righe di prima, "DOPO" due volte).
+            val screen = shot("columns_enters")
+            fun brightAt(x: Int, y: Int) = screen.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140 }
+            val rows = (170 until screen.height).filter { y -> (86 until 300).any { x -> brightAt(x, y) } }
+            val bands = ArrayList<IntRange>()
+            for (y in rows) {
+                val last = bands.lastOrNull()
+                if (last != null && y <= last.last + 1) bands[bands.lastIndex] = last.first..y else bands += y..y
+            }
+            assertEquals("righe di testo sullo schermo: $bands", 4, bands.size)
         } finally {
             onWindowThread { scene.close() }
         }

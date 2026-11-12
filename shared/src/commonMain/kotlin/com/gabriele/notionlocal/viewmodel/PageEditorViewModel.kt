@@ -4545,6 +4545,10 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         snapshotForStructuralChange()
         viewModelScope.launch {
             val firstLine = structuralEdits.withLock { blocksDb.makeColumns(block.id, count) } ?: return@launch
+            // Il campo di testo da cui la riga esce deve prendere le righe nuove anche con
+            // una sua scrittura in viaggio (quella del "/" tolto): senza, restava con quelle
+            // di prima, la riga diventata colonne compresa ("le due colonne non si creano").
+            _externalChangeTick.value += 1
             delay(IME_SETTLE_DELAY_MS)
             _focusRequestBlockId.value = firstLine
         }
