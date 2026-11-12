@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.153.69 — 12/11/2026 · 17:57 — Side-by-side columns: created on the PC, one below the other on the phone
-*(Claude Code on the PC; phone not connected, APK ready to install; 1209 tests passed)*
+*(Claude Code on the PC; installed on the phone; 1209 tests passed)*
 
 - **[Change]** **[💻 PC]** **Side-by-side columns**, as in Notion: in the "/"
   and "+" menus there are **Create two columns**, **Create three columns**
@@ -1165,7 +1165,7 @@ say that **they still have to be verified on the phone**: when they are,
   below the other in reading order; no entries in the phone's menus)
 
 ### ✏️ v0.153.68 — 12/11/2026 · 15:25 — A kind of block the app doesn't know becomes a line of text
-*(Claude Code on the PC; phone not connected, APK ready to install; 1200 tests passed)*
+*(Claude Code on the PC; installed on the phone with v0.153.69; 1200 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **A block of a kind this version
   of the app doesn't know** (one coming with the Wi‑Fi sync or a backup from
