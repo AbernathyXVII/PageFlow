@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.153.67 — 12/11/2026 · 14:43 — On the PC blocks move by dragging the six dots
-*(Claude Code on the PC; phone not connected, APK ready to install; 1198 tests passed)*
+*(Claude Code on the PC; installed on the phone; 1198 tests passed)*
 
 - **[Change]** **[💻 PC]** **Holding the six dots next to a block and
   dragging moves it**, as in Notion: a blue line shows where it will land,
