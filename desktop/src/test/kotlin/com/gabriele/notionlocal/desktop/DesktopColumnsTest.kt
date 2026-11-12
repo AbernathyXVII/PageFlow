@@ -258,6 +258,34 @@ class DesktopColumnsTest {
         assertTidy()
     }
 
+    /**
+     * **Al massimo quattro colonne** (chiesto dall'utente il 12/11/2026: "ho
+     * già creato nove colonne solo spostando i blocchi"): accanto a un gruppo
+     * di quattro non nasce la quinta; con tre sì. Spostare la riga sola di una
+     * colonna accanto a un'altra dello stesso gruppo resta permesso: la sua
+     * colonna se ne va, e le colonne restano quattro.
+     */
+    @Test
+    fun noMoreThanFourColumns() = runBlocking {
+        repo.makeColumns("vuota", 4)
+        (0 until 4).forEach { write("vuota", it, "C$it") }
+        assertEquals(false, repo.moveBlockBeside("prima", lineOf("vuota", 0).id, right = true))
+        assertEquals(false, repo.moveBlockBeside("dopo", "vuota", right = true))
+        assertEquals(listOf("prima", "vuota", "dopo"), childrenOf(null).map { it.id })
+        assertEquals(4, childrenOf("vuota").size)
+        val first = lineOf("vuota", 0).id
+        assertTrue(repo.moveBlockBeside(first, lineOf("vuota", 2).id, right = true))
+        assertEquals(4, childrenOf("vuota").size)
+        assertEquals(first, childrenOf(childrenOf("vuota")[2].id).single().id)
+        assertTidy()
+        // Con tre colonne la quarta nasce.
+        assertTrue(repo.moveBlockNextTo(lineOf("vuota", 3).id, "dopo", after = true))
+        assertEquals(3, childrenOf("vuota").size)
+        assertTrue(repo.moveBlockBeside("prima", lineOf("vuota", 0).id, right = false))
+        assertEquals(4, childrenOf("vuota").size)
+        assertTidy()
+    }
+
     /** Niente colonne dentro le colonne, e niente blocco dentro se stesso. */
     @Test
     fun columnsDontGoIntoColumns() = runBlocking {

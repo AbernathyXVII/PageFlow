@@ -343,6 +343,15 @@ class DesktopBlockSelectionTest {
         // Un gruppo di colonne non va accanto, né dentro se stesso.
         assertEquals(DropPlace.BEFORE, drop("g", "a", 30f, 105f)?.place)
         assertEquals(null, drop("g", "x", 200f, 105f))
+        // Accanto a un gruppo che ha già quattro colonne la linea non è verticale.
+        val full = blocks + (1..3).flatMap { i ->
+            listOf(
+                BlockEntity(id = "k$i", pageId = "p", parentBlockId = "g", type = BlockType.COLUMN, orderIndex = i),
+                BlockEntity(id = "x$i", pageId = "p", parentBlockId = "k$i", orderIndex = 0)
+            )
+        }
+        assertEquals(DropPlace.BEFORE, dropFor("a", "x", Offset(30f, 105f), box, 60f, full)?.place)
+        assertEquals(DropPlace.LEFT, dropFor("a", "x", Offset(30f, 105f), box, 60f, blocks)?.place)
     }
 
     /** Tiene premuti i puntini ad [from] (col mouse prima sulla riga, perché compaiano) e trascina fino a [to], a piccoli passi. */

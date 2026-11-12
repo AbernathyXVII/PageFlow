@@ -1126,8 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.73 — 12/11/2026 · 20:05 — At most four columns, also by dragging
+*(Claude Code on the PC; installed on the phone; 1225 tests passed)*
+
+- **[Change]** **[💻 PC]** **A group has at most four columns**, like the
+  "/" menu: dragging a block next to a group that already has four, the blue
+  line doesn't become vertical and the block can only go above or below.
+  Moving the only line of a column next to another column of the same group
+  is still allowed, because its column goes away and they stay four. Groups
+  with more than four columns made before stay as they are: they shrink by
+  moving the lines of the extra columns elsewhere, and the emptied columns
+  go away by themselves. Not yet tested by the user
+- **[Project]** `MAX_COLUMNS` and `columnsAfterBeside` (`Columns.kt`), the
+  same rule for `PageRepository.moveBlockBeside` and for `dropFor`. Tests:
+  `DesktopColumnsTest` (no fifth column next to four, the fourth next to
+  three, a line moved between columns of a full group),
+  `DesktopBlockSelectionTest` (no vertical line next to a full group)
+
 ### ✏️ v0.153.72 — 12/11/2026 · 19:49 — Columns by dragging, as in Notion
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1224 tests passed)*
+*(Claude Code on the PC; tested by the user on 12/11/2026; installed on the phone; 1224 tests passed)*
 
 - **[Change]** **[💻 PC]** **Columns by dragging**, as in Notion: dragging a
   block by its six dots **over the start or the end of another block's

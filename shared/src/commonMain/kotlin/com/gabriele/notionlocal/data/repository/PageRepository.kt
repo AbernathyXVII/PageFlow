@@ -11,6 +11,8 @@ import com.gabriele.notionlocal.data.imageField
 import com.gabriele.notionlocal.data.TextStats
 import com.gabriele.notionlocal.data.textStatsOf
 import com.gabriele.notionlocal.data.entity.BlockEntity
+import com.gabriele.notionlocal.data.entity.MAX_COLUMNS
+import com.gabriele.notionlocal.data.entity.columnsAfterBeside
 import com.gabriele.notionlocal.data.entity.ColumnType
 import com.gabriele.notionlocal.data.entity.copiedLinkOptions
 import com.gabriele.notionlocal.data.entity.encodeRelationIds
@@ -1963,8 +1965,9 @@ class PageRepository(private val db: AppDatabase) {
      *   diventa una colonna in più, subito a destra o a sinistra di quella;
      * - accanto a un gruppo di colonne, una colonna in più in fondo o in cima.
      * La colonna che il blocco lascia si sistema (`tidyColumn`). Falso se non
-     * si può: il blocco su se stesso o dentro di sé, o un gruppo di colonne
-     * (niente colonne dentro le colonne).
+     * si può: il blocco su se stesso o dentro di sé, un gruppo di colonne
+     * (niente colonne dentro le colonne), o un gruppo che passerebbe le
+     * quattro colonne (`MAX_COLUMNS`).
      */
     suspend fun moveBlockBeside(blockId: String, targetId: String, right: Boolean): Boolean = db.withTransaction {
         val block = blockDao.getById(blockId) ?: return@withTransaction false
@@ -1973,6 +1976,7 @@ class PageRepository(private val db: AppDatabase) {
         val byId = all.associateBy { it.id }
         val first = byId[targetId] ?: return@withTransaction false
         if (isInside(first, blockId, byId)) return@withTransaction false
+        if ((columnsAfterBeside(all, blockId, targetId) ?: 0) > MAX_COLUMNS) return@withTransaction false
         val oldParent = block.parentBlockId
         blockDao.shiftOrderIndexes(block.pageId, block.parentBlockId, block.orderIndex + 1, -1)
         val target = blockDao.getById(targetId) ?: return@withTransaction false

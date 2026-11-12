@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
+import com.gabriele.notionlocal.data.entity.MAX_COLUMNS
+import com.gabriele.notionlocal.data.entity.columnsAfterBeside
 import com.gabriele.notionlocal.ui.theme.AccentBlue
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -84,7 +86,9 @@ fun dropFor(dragged: String, target: String, pointer: Offset, box: BlockBox, sid
     val textStart = box.left
     val textEnd = box.right
     val zone = minOf(side, (textEnd - textStart) / 4f)
-    if (!groupMoving) {
+    // Un gruppo con già quattro colonne non ne prende un'altra: niente linea verticale.
+    val besideAllowed = !groupMoving && (columnsAfterBeside(blocks, dragged, target) ?: 0) <= MAX_COLUMNS
+    if (besideAllowed) {
         if (pointer.x >= textStart && pointer.x < textStart + zone) {
             return BlockDrop(target, DropPlace.LEFT, textStart - LINE_GAP, box.top, box.bottom - box.top, vertical = true)
         }
