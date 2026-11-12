@@ -27,6 +27,7 @@ import com.gabriele.notionlocal.data.settings.OpenMode
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.navigation.AppNavHost
+import com.gabriele.notionlocal.ui.navigation.AppShortcuts
 import com.gabriele.notionlocal.ui.navigation.PcTabs
 import com.gabriele.notionlocal.ui.navigation.Routes
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
@@ -198,6 +199,51 @@ class DesktopPeekTest {
             // Il nome "My Space" della seconda scheda comincia prima di 80: la prima è larga quanto l'icona.
             val firstText = (40 until 300).first { x -> (8..26).any { y -> bright(picture!!.getColor(x, y)) } }
             assertTrue("il nome della seconda scheda comincia a $firstText", firstText < 80)
+        } finally {
+            onWindowThread { scene.close() }
+            AppSettings.pcTabs = null
+        }
+    }
+
+    /** Ctrl+T apre una scheda nuova sul menu principale, Ctrl+W chiude quella aperta (12/11/2026). */
+    @Test
+    fun ctrlTAndCtrlWOpenAndCloseTabs() {
+        AppSettings.init(context)
+        AppSettings.lastVisitedRoute = null
+        AppSettings.pcTabs = null
+        runBlocking {
+            PageRepository(AppDatabase.getInstance(context)).createPage(PageEntity(id = PageEntity.ROOT_PAGE_ID, title = "My Space"))
+        }
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 300, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme { Surface(modifier = Modifier.fillMaxSize()) { AppNavHost(factory = factory) } }
+                }
+            }
+        }
+        var time = 0L
+        fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
+        /** Quanti punti di scritta dove sta la seconda scheda (da 200 a 380): con una sola c'è solo il +. */
+        fun tabText(name: String): Int {
+            var picture: Bitmap? = null
+            repeat(15) {
+                picture = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+                time += 100_000_000L
+                Thread.sleep(30)
+            }
+            File("build/desktop-screenshots", "$name.png").writeBytes(Image.makeFromBitmap(picture!!).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            return (6..28).sumOf { y -> (230 until 380).count { x -> bright(picture!!.getColor(x, y)) } }
+        }
+        try {
+            val one = tabText("tabs_one")
+            onWindowThread { AppShortcuts.newTab!!.invoke() }
+            val two = tabText("tabs_ctrl_t")
+            assertTrue("Ctrl+T: una scheda in più ($one → $two)", two > one + 60)
+            onWindowThread { AppShortcuts.closeTab!!.invoke() }
+            val back = tabText("tabs_ctrl_w")
+            assertTrue("Ctrl+W: di nuovo una ($two → $back)", back < two - 60)
         } finally {
             onWindowThread { scene.close() }
             AppSettings.pcTabs = null

@@ -1126,6 +1126,17 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.65 — 12/11/2026 · 13:46 — On the PC Ctrl+T and Ctrl+W for the tabs
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1194 tests passed)*
+
+- **[Change]** **[💻 PC]** **Ctrl+T** opens a new tab on the main menu, like
+  the + of the tab bar, and **Ctrl+W** closes the open one, like its ×, as
+  in browsers. They work from anywhere in the window, even while writing.
+  Not yet tested by the user
+- **[Project]** `AppShortcuts.newTab` and `closeTab`, set by `AppNavHost`
+  on the PC and read by the window (`Main.kt`). Test: `DesktopPeekTest`
+  (Ctrl+T adds the second tab to the bar, Ctrl+W takes it away)
+
 ### ✏️ v0.153.64 — 12/11/2026 · 13:24 — On the PC pages in Center peek, Side peek, Full page or a new tab
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1193 tests passed)*
 

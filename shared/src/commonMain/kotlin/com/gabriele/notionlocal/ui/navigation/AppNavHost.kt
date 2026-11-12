@@ -149,6 +149,15 @@ fun AppNavHost(
     // e sotto la scheda attiva con la sua cronologia. Le altre tengono la loro
     // finché non le si riapre (`SaveableStateProvider`).
     val tabs = remember { PcTabs.load() }
+    // Ctrl+T e Ctrl+W, come nei browser (dal 12/11/2026, vedi `AppShortcuts`).
+    DisposableEffect(tabs) {
+        AppShortcuts.newTab = { tabs.open(Routes.HOME) }
+        AppShortcuts.closeTab = { tabs.close(tabs.activeId) }
+        onDispose {
+            AppShortcuts.newTab = null
+            AppShortcuts.closeTab = null
+        }
+    }
     val holder = rememberSaveableStateHolder()
     Column(modifier = Modifier.fillMaxSize()) {
         PcTabBar(tabs, factory.pageRepository)

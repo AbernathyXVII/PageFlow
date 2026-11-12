@@ -121,6 +121,9 @@ fun main() {
                     event.type != KeyEventType.KeyDown || !event.isCtrlPressed -> null
                     event.key == Key.F -> AppShortcuts.openSearch
                     event.key == Key.N -> AppShortcuts.newPage
+                    // Le schede, come nei browser (vedi `PcTabs`).
+                    event.key == Key.T -> AppShortcuts.newTab
+                    event.key == Key.W -> AppShortcuts.closeTab
                     else -> null
                 }
                 shortcut?.invoke()
