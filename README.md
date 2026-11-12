@@ -1134,13 +1134,13 @@ say that **they still have to be verified on the phone**: when they are,
   mouse belongs to the dots, and the wheel reached them instead of the page.
   Now they hand it on: the page scrolls as with the wheel on a normal page
   (one notch, a twentieth of the page), and the blue line follows the block
-  now under the mouse. Not yet tested by the user
+  now under the mouse. Tested by the user on 12/11/2026
 - **[Bug fix]** **[💻 PC]** **Databases**: the six dots next to their title are
   already the new ones (the old ones are only on the phone), and in the tests
   a real database, with a property and rows, moves both up and down. The
   likely cause: a database taller than the window covers the screen, and
   without the wheel there was no way to reach the blocks above or below it
-  (only the slower scrolling at the edges). Not yet tested by the user
+  (only the slower scrolling at the edges). Tested by the user on 12/11/2026
 - **[Project]** `BlockDrag.wheel`/`takeWheel`, `BlockDragLayer` scrolls by
   them (`height / 20`, as `WindowsWinUIConfig` in Compose); `BlockHandle`
   passes on the scroll events. Tests: `DesktopBlockSelectionTest` (the wheel
@@ -1155,8 +1155,8 @@ say that **they still have to be verified on the phone**: when they are,
   the page scrolls by itself. It works for lines of text, pages, databases,
   dividers, images: every block of the page (not yet the lines inside a
   toggle). A click on the dots still opens the block menu; Ctrl+Z puts the
-  block back. First step towards the side-by-side columns. Not yet tested by
-  the user
+  block back. First step towards the side-by-side columns. Tested by
+  the user on 12/11/2026
 - **[Project]** `BlockDrag.kt` (`dropFor`, `BlockDrag`, `BlockDragLayer`):
   the drop uses "Move to line…" (`moveBlockAfter`); `BlockPicker.blockAt`
   gives the whole height of a block (`runLineExtent` for the lines of
