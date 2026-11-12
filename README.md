@@ -1126,6 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.60 — 12/11/2026 · 09:01 — On the PC Google's emoji, with the flags
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1182 tests passed)*
+
+- **[Change]** **[💻 PC]** **Google's emoji on the PC**, the same as on
+  Android phones (Noto Color Emoji), instead of Windows' ones: everywhere in
+  the app, in pages, titles, icons, the emoji picker and the widgets. Now
+  the **flags** are drawn too: Windows has none, and showed two letters
+  instead ("IT" for 🇮🇹), for example in the sports widget. The letters of
+  the text stay Windows' fonts. On the phone nothing changes. Apple's
+  emoji can't be used: they belong to Apple and may be used only on its
+  devices. Not yet tested by the user
+- **[Project]** `PcEmoji` in the `desktop` module: the font
+  (`fonts/Noto-COLRv1.ttf`, 5 MB, vector, from googlefonts/noto-emoji
+  v2026-09-24, SIL Open Font License in `fonts/Noto-COLRv1-OFL.txt`) goes
+  at the end of the font lists Compose uses for the generic families
+  (Segoe UI, Arial…), so Skia takes it only for what those can't draw.
+  Compose has no public way to do it on the PC (Windows always answers
+  first, with Segoe UI Emoji): the list and its cache are touched by
+  reflection, marked as a shortcut; if a Compose update changes them, the
+  Windows emoji come back and `DesktopEmojiTest` (the 🇮🇹 flag in green
+  and red with the normal, Serif and Monospace text) fails
+
 ### ✏️ v0.153.59 — 12/11/2026 · 08:07 — The README and the Patch Notes in English, without personal data
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1181 tests passed)*
 

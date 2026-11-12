@@ -54,6 +54,8 @@ import java.awt.EventQueue
  * del telefono (i suoni…) sul PC per ora manca.
  */
 fun main() {
+    // Le emoji di Google al posto di quelle di Windows, prima di qualunque testo (vedi `PcEmoji`).
+    PcEmoji.install()
     val context = DesktopContext()
     // Un backup del telefono scelto in "Backup": al suo posto prima che si legga qualcosa.
     Backups.applyPendingRestore(context)
@@ -132,6 +134,7 @@ fun main() {
                     window.toFront()
                 }
             }
+            PcEmoji.Load()
             CompositionLocalProvider(LocalPlatformContext provides context) {
                 NotionLocalTheme {
                     // Tutta la finestra, come Notion (chiesto dall'utente il 09/11/2026): la barra
