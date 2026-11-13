@@ -41,7 +41,7 @@ import java.nio.file.Files
  * **Sul PC "Full width" o al centro** (12/11/2026, chiesto dall'utente come
  * in Notion): tolto "Full width" dai tre puntini, il testo sta in una colonna
  * larga 637 al centro dello spazio della pagina; rimesso, torna a cominciare
- * a 86 come prima.
+ * a 53 (dal 13/11/2026 il margine a sinistra è la metà: 33 più i 20 della riga).
  */
 class DesktopPageWidthTest {
     private val dir: File = Files.createTempDirectory("pageflow-width").toFile()
@@ -113,7 +113,7 @@ class DesktopPageWidthTest {
             assertTrue("al centro comincia a $centered", centered in 378..392)
             onWindowThread { viewModel.setPageParagraph(PageParagraph()) }
             val full = textStart("page_full_width")
-            assertTrue("full width comincia a $full", full in 84..92)
+            assertTrue("full width comincia a $full", full in 51..59)
         } finally {
             onWindowThread { scene.close() }
         }

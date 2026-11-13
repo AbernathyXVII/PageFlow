@@ -155,15 +155,15 @@ class DesktopBlockSelectionTest {
     fun draggingAcrossBlocksSelectsThemAndDeleteRemovesThem() = withPage { scene, frames, picture ->
         val rows = textRows(picture())
         assertEquals("righe trovate: $rows", 7, rows.size)
-        val first = Offset(60f, rows[3].center())
-        val second = Offset(60f, rows[5].center())
+        val first = Offset(27f, rows[3].center())
+        val second = Offset(27f, rows[5].center())
         onWindowThread {
             mouse(scene, PointerEventType.Move, first, pressed = false)
             mouse(scene, PointerEventType.Press, first, pressed = true)
         }
         frames(3)
         for (step in 1..6) {
-            onWindowThread { mouse(scene, PointerEventType.Move, Offset(60f, first.y + (second.y - first.y) * step / 6f), pressed = true) }
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(27f, first.y + (second.y - first.y) * step / 6f), pressed = true) }
             frames(1)
         }
         onWindowThread { mouse(scene, PointerEventType.Release, second, pressed = false) }
@@ -178,7 +178,7 @@ class DesktopBlockSelectionTest {
     @Test
     fun clickingADividerAndBackspaceRemovesIt() = withPage { scene, frames, picture ->
         val rows = textRows(picture())
-        val divider = Offset(60f, (rows[5].last + rows[6].first) / 2f)
+        val divider = Offset(27f, (rows[5].last + rows[6].first) / 2f)
         onWindowThread {
             mouse(scene, PointerEventType.Move, divider, pressed = false)
             mouse(scene, PointerEventType.Press, divider, pressed = true)
@@ -199,7 +199,7 @@ class DesktopBlockSelectionTest {
     @Test
     fun ctrlZInALineUndoesThePageAndCtrlYRedoes() = withPage { scene, frames, picture ->
         val rows = textRows(picture())
-        val divider = Offset(60f, (rows[5].last + rows[6].first) / 2f)
+        val divider = Offset(27f, (rows[5].last + rows[6].first) / 2f)
         onWindowThread {
             mouse(scene, PointerEventType.Move, divider, pressed = false)
             mouse(scene, PointerEventType.Press, divider, pressed = true)
@@ -209,7 +209,7 @@ class DesktopBlockSelectionTest {
         onWindowThread { key(scene, Key.Backspace) }
         frames(5)
         waitForBlocks(listOf("uno", "titolo", "due", "tre"))
-        val line = Offset(60f, rows[3].center())
+        val line = Offset(27f, rows[3].center())
         onWindowThread {
             mouse(scene, PointerEventType.Move, line, pressed = false)
             mouse(scene, PointerEventType.Press, line, pressed = true)
@@ -274,7 +274,7 @@ class DesktopBlockSelectionTest {
         val rows = textRows(clean)
         // Sul PC la pagina sta più a destra (chiesto dall'utente): a sinistra del testo c'è il posto per i puntini.
         val firstInk = (0 until 200).first { x -> bright(clean.getColor(x, rows[5].center().toInt())) }
-        assertTrue("il testo comincia a $firstInk", firstInk >= 86)
+        assertTrue("il testo comincia a $firstInk", firstInk >= 53)
         onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, rows[5].center()), pressed = false) }
         frames(5)
         val onLine = dotsRows(picture(), clean)
@@ -285,7 +285,7 @@ class DesktopBlockSelectionTest {
         val onDivider = dotsRows(picture(), clean)
         assertTrue("puntini accanto al divisore: $onDivider", onDivider.isNotEmpty() && onDivider.average() > rows[5].last && onDivider.average() < rows[6].first)
         // Andandoci sopra restano.
-        val dots = Offset(74f, onDivider.average().toFloat())
+        val dots = Offset(41f, onDivider.average().toFloat())
         onWindowThread { mouse(scene, PointerEventType.Move, dots, pressed = false) }
         frames(5)
         assertTrue("i puntini restano col mouse sopra", dotsRows(picture(), clean).isNotEmpty())
@@ -359,7 +359,7 @@ class DesktopBlockSelectionTest {
     private fun dragDots(scene: ImageComposeScene, frames: (Int) -> Unit, picture: () -> Bitmap, lineY: Float, to: Float): Int {
         onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, lineY), pressed = false) }
         frames(3)
-        val dots = Offset(74f, lineY)
+        val dots = Offset(41f, lineY)
         onWindowThread {
             mouse(scene, PointerEventType.Move, dots, pressed = false)
             mouse(scene, PointerEventType.Press, dots, pressed = true)
@@ -374,7 +374,7 @@ class DesktopBlockSelectionTest {
         val shot = picture()
         File("build/desktop-screenshots", "block_drag.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(shot).encodeToData(EncodedImageFormat.PNG)!!.bytes)
         val blue = (0 until shot.height).sumOf { y ->
-            (86 until 400).count { x -> shot.getColor(x, y).let { c -> ((c shr 16) and 0xFF) < 80 && (c and 0xFF) > 180 && ((c shr 8) and 0xFF) in 100..160 } }
+            (53 until 400).count { x -> shot.getColor(x, y).let { c -> ((c shr 16) and 0xFF) < 80 && (c and 0xFF) > 180 && ((c shr 8) and 0xFF) in 100..160 } }
         }
         onWindowThread { mouse(scene, PointerEventType.Release, Offset(200f, to), pressed = false) }
         frames(5)
@@ -421,7 +421,7 @@ class DesktopBlockSelectionTest {
             val lineY = rows[3].center()
             onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, lineY), pressed = false) }
             frames(3)
-            val dots = Offset(74f, lineY)
+            val dots = Offset(41f, lineY)
             val at = Offset(200f, lineY + 40f)
             onWindowThread {
                 mouse(scene, PointerEventType.Move, dots, pressed = false)
@@ -503,7 +503,7 @@ class DesktopBlockSelectionTest {
         val rows = textRows(clean)
         onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, rows[5].center()), pressed = false) }
         frames(5)
-        val dots = Offset(74f, dotsRows(picture(), clean).average().toFloat())
+        val dots = Offset(41f, dotsRows(picture(), clean).average().toFloat())
         onWindowThread {
             mouse(scene, PointerEventType.Move, dots, pressed = false)
             mouse(scene, PointerEventType.Press, dots, pressed = true)
@@ -554,7 +554,7 @@ class DesktopBlockSelectionTest {
             assertTrue("la copertina arriva al bordo destro", red(page.width - 3, 100))
             val line = textRows(page).last()
             val firstInk = (0 until 300).first { x -> bright(page.getColor(x, line.center().toInt())) }
-            assertTrue("il testo comincia a $firstInk", firstInk >= 86)
+            assertTrue("il testo comincia a $firstInk", firstInk >= 53)
         }
     }
 
@@ -630,7 +630,7 @@ class DesktopBlockSelectionTest {
             val title = rows.firstOrNull { abs(fromRow.average() - it.center()) <= 2 }
             assertTrue("puntini $fromRow, righe $rows (mouse sulla riga $middle)", fromRow.isNotEmpty() && title != null && title.last < middle.first - 100)
             // Il mouse va sopra i puntini e resta lì.
-            onWindowThread { mouse(scene, PointerEventType.Move, Offset(74f, fromRow.average().toFloat()), pressed = false) }
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(41f, fromRow.average().toFloat()), pressed = false) }
             frames(5)
             runBlocking {
                 val repo = PageRepository(AppDatabase.getInstance(context))
@@ -643,7 +643,7 @@ class DesktopBlockSelectionTest {
             val after = textRows(moved)
             // I puntini: nel margine prima del testo (x 58–77, prima del titolo del database che comincia a 82).
             val background = moved.getColor(5, moved.height - 5)
-            val dots = (TOP_BAR until moved.height).filter { y -> (58 until 78).any { x -> moved.getColor(x, y) != background } }
+            val dots = (TOP_BAR until moved.height).filter { y -> (25 until 45).any { x -> moved.getColor(x, y) != background } }
             val near = after.any { band -> abs(dots.average() - band.center()) <= 3 }
             assertTrue("i puntini $dots non stanno a metà di una riga (righe $after)", dots.isEmpty() || near)
         }
@@ -817,7 +817,7 @@ class DesktopBlockSelectionTest {
             val before = textRows(picture())
             val from = Offset(30f, before[5].center())
             // Prima si seleziona del testo trascinando nella riga (o, la seconda volta, fino a quella sotto).
-            val at = if (acrossBlocks) Offset(80f, before[7].center()) else Offset(90f, before[5].center())
+            val at = if (acrossBlocks) Offset(47f, before[7].center()) else Offset(57f, before[5].center())
             onWindowThread {
                 mouse(scene, PointerEventType.Move, from, pressed = false)
                 mouse(scene, PointerEventType.Press, from, pressed = true)
@@ -855,7 +855,7 @@ class DesktopBlockSelectionTest {
         withPage("lunga") { scene, frames, picture ->
             val before = textRows(picture())
             val from = Offset(30f, before[5].center())
-            val edge = Offset(60f, 690f)
+            val edge = Offset(27f, 690f)
             onWindowThread {
                 mouse(scene, PointerEventType.Move, from, pressed = false)
                 mouse(scene, PointerEventType.Press, from, pressed = true)
@@ -944,9 +944,9 @@ class DesktopBlockSelectionTest {
 
     private fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
 
-    /** Le fasce di righe dello schermo con del testo chiaro, fra x 86 (dopo i puntini) e 300: dove sono le righe della pagina. */
+    /** Le fasce di righe dello schermo con del testo chiaro, fra x 53 (dopo i puntini) e 300: dove sono le righe della pagina. */
     private fun textRows(bitmap: Bitmap): List<IntRange> {
-        val rows = (0 until bitmap.height).filter { y -> (86 until 300).any { x -> bright(bitmap.getColor(x, y)) } }
+        val rows = (0 until bitmap.height).filter { y -> (53 until 300).any { x -> bright(bitmap.getColor(x, y)) } }
         val bands = ArrayList<IntRange>()
         for (y in rows) {
             val last = bands.lastOrNull()
@@ -964,8 +964,8 @@ class DesktopBlockSelectionTest {
             button = if (type == PointerEventType.Move) null else PointerButton.Primary
         )
 
-    /** Dove stanno i sei puntini: nel margine, subito prima del testo (x 86, il margine di Notion). */
-    private val DOTS_X = 60 until 85
+    /** Dove stanno i sei puntini: nel margine, subito prima del testo (x 53: dal 13/11/2026 il margine a sinistra è 33). */
+    private val DOTS_X = 27 until 52
 
     /** Sopra quest'altezza c'è la barra in alto, coi pulsanti e il percorso della pagina. */
     private val TOP_BAR = 60

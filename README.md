@@ -1126,6 +1126,26 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.78 — 13/11/2026 · 12:57 — Half the left margin; every column as far from its edge as the first
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1241 tests passed)*
+
+- **[Change]** **[💻 PC]** **The left margin of a page is half**: 33
+  points instead of 66, so the text starts at 53 instead of 86 and a
+  database at 33; the six dots still fit in it. The right margin stays 66,
+  and a page "at the centre" (without Full width) stays at the centre
+- **[Change]** **[💻 PC]** **Every column as far from its edge as the
+  first from the edge of the page**: before every column after the first
+  there are the same 33 points, so a database in the second column no longer
+  starts right on the edge between the two columns (the space was zero), and
+  its six dots sit in that space like the first column's in the margin
+- **[Project]** `PAGE_LEFT_INSET` and `pageLeftInsetFor` in
+  `PageEditorScreen` (the list, the six dots, the drawings and the cover
+  with `bleedSides(left, right)`), the padding of the columns after the
+  first in the COLUMN_LIST row. Tests: the coordinates of
+  `DesktopColumnsTest`, `DesktopBlockSelectionTest`, `DesktopPageWidthTest`
+  and `DesktopToggleMemoryTest` moved by 33 points; the two databases side by
+  side: the second one 33 points after the edge
+
 ### ✏️ v0.153.77 — 13/11/2026 · 10:06 — Columns resized with the mouse; files dragged in from outside; images at their own size
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1241 tests passed)*
 

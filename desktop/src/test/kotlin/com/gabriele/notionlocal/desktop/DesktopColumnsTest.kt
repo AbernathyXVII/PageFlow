@@ -566,7 +566,8 @@ class DesktopColumnsTest {
             // colonna fra loro (prima si vedevano anche le righe di prima, "DOPO" due volte).
             val screen = shot("columns_enters")
             fun brightAt(x: Int, y: Int) = screen.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140 }
-            val rows = (170 until screen.height).filter { y -> (86 until 300).any { x -> brightAt(x, y) } }
+            // Il testo comincia a 53 (dal 13/11/2026 il margine a sinistra è 33).
+            val rows = (170 until screen.height).filter { y -> (50 until 300).any { x -> brightAt(x, y) } }
             val bands = ArrayList<IntRange>()
             for (y in rows) {
                 val last = bands.lastOrNull()
@@ -740,8 +741,8 @@ class DesktopColumnsTest {
     fun draggingOntoTheRightEdgeMakesColumns() {
         runBlocking { repo.saveBlock(childrenOf(null).single { it.id == "vuota" }.copy(textJson = """[{"text":"MEZZO"}]""")) }
         withMouse { mouse, shot ->
-            // Le righe: PRIMA a y ~190, MEZZO ~213, DOPO ~236 (il testo comincia a x 86).
-            val during = dragLine(mouse, shot, textX = 120f, dotsX = 74f, fromY = 236f, toX = 800f, toY = 190f, name = "columns_drag_right")
+            // Le righe: PRIMA a y ~190, MEZZO ~213, DOPO ~236 (il testo comincia a x 53, i puntini fra 28 e 48).
+            val during = dragLine(mouse, shot, textX = 120f, dotsX = 38f, fromY = 236f, toX = 800f, toY = 190f, name = "columns_drag_right")
             val blue = blueOf(during)
             assertTrue("la linea blu verticale a destra: ${blue.size} punti", blue.size > 20 && blue.average() > 700)
         }
@@ -766,8 +767,8 @@ class DesktopColumnsTest {
         val sinistra = lineOf("vuota", 0).id
         val destra = lineOf("vuota", 1).id
         withMouse { mouse, shot ->
-            // "DESTRA" comincia a x 470 (metà della pagina più il margine): i suoi puntini poco prima.
-            dragLine(mouse, shot, textX = 500f, dotsX = 456f, fromY = 213f, toX = 200f, toY = 242f, name = "columns_drag_out")
+            // "DESTRA" comincia a x 486 (il bordo a 433, lo spazio di 33 e il margine di 20): i suoi puntini poco prima.
+            dragLine(mouse, shot, textX = 515f, dotsX = 471f, fromY = 213f, toX = 200f, toY = 242f, name = "columns_drag_out")
         }
         val top = childrenOf(null)
         assertEquals(listOf("prima", sinistra, "dopo", destra), top.map { it.id })
@@ -842,11 +843,11 @@ class DesktopColumnsTest {
         twoDatabasesSideBySide()
         withMouse { mouse, shot ->
             val clean = shot("columns_group_clean")
-            // A metà dei database, nel margine a sinistra delle colonne (che cominciano a x 66).
-            mouse("move", 40f, 330f)
-            mouse("move", 42f, 331f)
+            // A metà dei database, nel margine a sinistra delle colonne (che cominciano a x 33).
+            mouse("move", 18f, 330f)
+            mouse("move", 20f, 331f)
             val hovered = shot("columns_group_margin")
-            val changed = (0 until hovered.height).filter { y -> (0 until 85).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
+            val changed = (0 until hovered.height).filter { y -> (0 until 52).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
             assertTrue("comparso qualcosa nel margine, alle altezze $changed", changed.isEmpty())
         }
     }
@@ -917,7 +918,7 @@ class DesktopColumnsTest {
             val (greenX, greenY) = spanOf(before, 0x43A047) ?: error("la verde")
             // I puntini di un'immagine stanno alla sua prima riga, in alto.
             val fromY = greenY.first + 6f
-            dragLine(mouse, shot, textX = (greenX.first + greenX.last) / 2f, dotsX = 74f, fromY = fromY, toX = 800f, toY = (redY.first + redY.last) / 2f, name = "images_drag_beside")
+            dragLine(mouse, shot, textX = (greenX.first + greenX.last) / 2f, dotsX = 38f, fromY = fromY, toX = 800f, toY = (redY.first + redY.last) / 2f, name = "images_drag_beside")
             // Nelle colonne le immagini si ricaricano: un attimo.
             repeat(20) { mouse("move", 450f, 500f) }
             val after = shot("images_in_columns")
@@ -936,7 +937,7 @@ class DesktopColumnsTest {
      * **Il bordo fra due colonne si trascina** (chiesto dall'utente il
      * 13/11/2026: "stessa cosa per i blocchi che si possono spostare tra le
      * colonne"): col mouse sopra c'è la linea blu; portato 100 punti a destra,
-     * la prima colonna prende 484 punti dei 768 del gruppo, e restano salvati.
+     * la prima colonna prende 500 punti degli 801 del gruppo, e restano salvati.
      */
     @Test
     fun theEdgeBetweenTwoColumnsIsDragged() {
@@ -946,26 +947,26 @@ class DesktopColumnsTest {
             write("vuota", 1, "DESTRA")
         }
         withMouse { mouse, shot ->
-            // Il gruppo va da 66 a 834: il bordo a metà, a 450, all'altezza delle righe (213).
+            // Il gruppo va da 33 a 834: il bordo a metà, a 433, all'altezza delle righe (213).
             mouse("move", 300f, 213f)
-            mouse("move", 450f, 213f)
+            mouse("move", 433f, 213f)
             val hover = shot("columns_edge_hover")
             fun blue(c: Int) = (c and 0xFF) > 180 && ((c shr 16) and 0xFF) < 80
-            assertTrue("la linea blu sul bordo", (446..454).any { x -> blue(hover.getColor(x, 213)) })
-            mouse("press", 450f, 213f)
-            for (step in 1..20) mouse("drag", 450f + 5f * step, 213f)
+            assertTrue("la linea blu sul bordo", (429..438).any { x -> blue(hover.getColor(x, 213)) })
+            mouse("press", 433f, 213f)
+            for (step in 1..20) mouse("drag", 433f + 5f * step, 213f)
             shot("columns_edge_drag")
-            mouse("release", 550f, 213f)
+            mouse("release", 533f, 213f)
             mouse("move", 300f, 500f)
             val after = shot("columns_edge_after")
             fun startOf(rgbBright: Bitmap): Int = (520 until 640).first { x -> (200..226).any { y -> rgbBright.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 150 && (c and 0xFF) > 150 } } }
-            // DESTRA ora comincia 100 punti più a destra di prima (470).
-            assertTrue("DESTRA si è spostata a destra: ${startOf(after)}", startOf(after) in 560..580)
+            // DESTRA ora comincia 100 punti più a destra di prima (486).
+            assertTrue("DESTRA si è spostata a destra: ${startOf(after)}", startOf(after) in 576..597)
         }
         val list = childrenOf(null).single { it.type == BlockType.COLUMN_LIST }
         val parts = childrenOf(list.id).map { it.attrs.width }
-        assertEquals("le parti salvate: $parts", 484f / 768f, parts[0]!!, 0.01f)
-        assertEquals(284f / 768f, parts[1]!!, 0.01f)
+        assertEquals("le parti salvate: $parts", 500.5f / 801f, parts[0]!!, 0.01f)
+        assertEquals(300.5f / 801f, parts[1]!!, 0.01f)
     }
 
     /**

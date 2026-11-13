@@ -423,21 +423,35 @@ fun pageInsetFor(fullWidth: Boolean, areaWidth: Dp): Dp =
     if (!isPc || fullWidth || areaWidth <= 0.dp) PAGE_INSET
     else maxOf(PAGE_INSET, (areaWidth - PC_CENTERED_TEXT_WIDTH - PAGE_SIDE_PADDING * 2) / 2)
 
+/**
+ * **Sul PC il margine a sinistra è la metà** (dal 13/11/2026, chiesto
+ * dall'utente: "dimezza la distanza tra il margine più a sinistra e il
+ * contenuto della prima colonna"): 33 punti invece di 66; i sei puntini ci
+ * stanno ancora. A destra resta [PAGE_INSET]. Lo stesso spazio c'è prima di
+ * ogni colonna che non è la prima (vedi COLUMN_LIST in `BlockRow`), così ogni
+ * colonna sta staccata dal suo bordo quanto la prima dal bordo della pagina.
+ */
+internal val PAGE_LEFT_INSET = PAGE_INSET / 2
+
+/** Il margine a sinistra, dato quello di ogni lato ([inset]): metà del solito; la pagina al centro resta al centro. */
+fun pageLeftInsetFor(inset: Dp): Dp = if (inset == PAGE_INSET) PAGE_LEFT_INSET else inset
+
 /** L'ultima larghezza misurata della pagina: una pagina appena aperta parte già al centro, senza un salto. */
 private object PageAreaMemory {
     var width: Dp = 0.dp
 }
 
-/** Allarga di [inset] per lato chi sta nella pagina coi margini (`PAGE_INSET`): la copertina arriva ai bordi. */
-private fun Modifier.bleedSides(inset: Dp): Modifier = layout { measurable, constraints ->
-    val extra = inset.roundToPx()
-    if (extra == 0 || !constraints.hasBoundedWidth) {
+/** Allarga di [left] e [right] chi sta nella pagina coi margini (`PAGE_INSET`): la copertina arriva ai bordi. */
+private fun Modifier.bleedSides(left: Dp, right: Dp): Modifier = layout { measurable, constraints ->
+    val start = left.roundToPx()
+    val end = right.roundToPx()
+    if ((start == 0 && end == 0) || !constraints.hasBoundedWidth) {
         val placeable = measurable.measure(constraints)
         return@layout layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
-    val width = constraints.maxWidth + 2 * extra
+    val width = constraints.maxWidth + start + end
     val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-    layout(constraints.maxWidth, placeable.height) { placeable.place(-extra, 0) }
+    layout(constraints.maxWidth, placeable.height) { placeable.place(-start, 0) }
 }
 
 private const val RUN_LEAD = "\n"
@@ -1636,6 +1650,7 @@ private fun PageEditorContent(
     // Sul PC "Full width" o al centro (vedi `pageInsetFor`): dalla larghezza del riquadro della pagina.
     var pageAreaWidth by remember { mutableStateOf(PageAreaMemory.width) }
     val pageInset = pageInsetFor(page?.paragraph?.fullWidth != false, pageAreaWidth)
+    val pageLeftInset = pageLeftInsetFor(pageInset)
     val showTemplatePicker = page?.isRowPage == true && !readOnlyPage && !templatePickerDismissed &&
         blocks.isNotEmpty() && blocks.all { block ->
             block.type == BlockType.PARAGRAPH && block.parentBlockId == null && viewModel.plainTextOf(block).isEmpty()
@@ -2294,12 +2309,12 @@ private fun PageEditorContent(
                             }
                         }
                     }
-                    .inkLayer(inkState, inkStrokes, inkCache, NotionWhite, originX = pageInset)
+                    .inkLayer(inkState, inkStrokes, inkCache, NotionWhite, originX = pageLeftInset)
                     .then(
                         if (drawingMode) {
                             Modifier.inkInput(
                                 state = inkState,
-                                originX = pageInset,
+                                originX = pageLeftInset,
                                 onStroke = { anchor, pen, points ->
                                     inkViewModel.addStroke(anchor, pen.tool, pen.color, pen.width, points)
                                 },
@@ -2380,7 +2395,7 @@ private fun PageEditorContent(
 
                     Box(
                         modifier = Modifier
-                            .bleedSides(pageInset)
+                            .bleedSides(pageLeftInset, pageInset)
                             .fillMaxWidth()
                             .height(COVER_HEIGHT)
                             .onSizeChanged { coverBox = it }
@@ -2845,7 +2860,7 @@ private fun PageEditorContent(
                 LazyColumn(
                     state = listState,
                     // Sul PC il margine in più a sinistra (vedi `PAGE_INSET`).
-                    contentPadding = PaddingValues(start = pageInset, end = pageInset, top = if (isPc) PC_TOP_BAR else 0.dp),
+                    contentPadding = PaddingValues(start = pageLeftInset, end = pageInset, top = if (isPc) PC_TOP_BAR else 0.dp),
                     modifier = Modifier
                         .fillMaxSize()
                         // Il verso del dito, per "Back" quando si è scesi molto (`BackToTop.kt`).
@@ -2954,7 +2969,7 @@ private fun PageEditorContent(
                     layout = { listState.layoutInfo.visibleItemsInfo.map { Triple(it.key, it.offset, it.size) } },
                     spot = blockSpot
                 )
-                BlockHandle(blockSpot, endsAt = pageInset + PAGE_SIDE_PADDING, drag = blockDrag) { id -> blockMenuFor = id }
+                BlockHandle(blockSpot, endsAt = pageLeftInset + PAGE_SIDE_PADDING, drag = blockDrag) { id -> blockMenuFor = id }
                 ColumnEdgeLayer(columnEdges, { pageListCoordinates.get() }) { notches ->
                     // Uno scatto, un ventesimo della pagina, come la rotella sulla pagina.
                     listState.dispatchRawDelta(notches * (pageListCoordinates.get()?.size?.height ?: 0) / 20f)
@@ -6785,7 +6800,9 @@ private fun BlockRow(
             ) {
                 columns.forEachIndexed { index, column ->
                     key(column.id) {
-                        Column(Modifier.weight(shown.getOrElse(index) { 1f })) {
+                        // **Ogni colonna staccata dal suo bordo quanto la prima dal bordo della pagina**
+                        // (dal 13/11/2026, chiesto dall'utente: fra la prima e la seconda lo spazio era nullo).
+                        Column(Modifier.weight(shown.getOrElse(index) { 1f }).padding(start = if (index > 0) PAGE_LEFT_INSET else 0.dp)) {
                             ColumnLines(
                                 column, allBlocks, depth, viewModel, factory, focusRequestBlockId, formatRequest,
                                 onFocusChanged, onNavigateToPage, onNavigateToDatabase, onOpenBlockMenu

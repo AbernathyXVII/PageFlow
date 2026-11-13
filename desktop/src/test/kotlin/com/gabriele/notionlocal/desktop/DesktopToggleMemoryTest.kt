@@ -68,7 +68,7 @@ class DesktopToggleMemoryTest {
 
     /** Le fasce di righe con lettere chiare sotto la barra in alto. */
     private fun bands(page: Bitmap): List<IntRange> {
-        val rows = (60 until page.height).filter { y -> (80 until page.width - 20).any { x -> bright(page.getColor(x, y)) } }
+        val rows = (60 until page.height).filter { y -> (47 until page.width - 20).any { x -> bright(page.getColor(x, y)) } }
         val bands = ArrayList<IntRange>()
         for (y in rows) {
             val last = bands.lastOrNull()
@@ -135,7 +135,7 @@ class DesktopToggleMemoryTest {
             // Le ultime tre righe: "Titolo" col triangolino, "Dentro", "Sotto" (sopra c'è il titolo della pagina).
             val toggleLine = lines[lines.size - 3]
             val y = (toggleLine.first + toggleLine.last) / 2
-            val arrowLeft = (80 until 300).first { x -> (toggleLine.first..toggleLine.last).any { bright(page.getColor(x, it)) } }
+            val arrowLeft = (47 until 300).first { x -> (toggleLine.first..toggleLine.last).any { bright(page.getColor(x, it)) } }
             val at = Offset(arrowLeft + 4f, y.toFloat())
             onWindowThread {
                 scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse)
