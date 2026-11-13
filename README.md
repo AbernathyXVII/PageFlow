@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.155.5 — 13/11/2026 · 19:19 — PC: dark window bar, tabs you drag (also into a new window), a taller cover
-*(Claude Code on the PC; not yet tested by the user; not yet installed on the phone; 1264 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1264 tests passed)*
 
 - **[Change]** **[💻 PC]** **The bar at the top of the window** (the one with
   minimize, maximize and close) **is no longer white**: dark with the dark
