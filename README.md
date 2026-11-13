@@ -1126,6 +1126,40 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.2 — 13/11/2026 · 17:51 — The main property like the others: change its type, hide it
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1258 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The main property ("Aa Name")
+  changes type**, from "Change type" in its menu, as the other properties:
+  it becomes a real property of that type (Number, Date, Select…), with its
+  name, in its place and with the names of the rows written in it (a Select
+  has them as tags), and from then on it is treated like any other: filter,
+  sort, calculate, width, alignment, hide, delete. **Every row is called as
+  the value written there** (chosen by the user): changing the value changes
+  the name of its page, in the sidebar, in the search and in the calendar;
+  the title of the page of a row is changed from the property, not from the
+  page. Deleting that property, the names stay as they are and "Aa Name"
+  comes back
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The main property can be
+  hidden**: "Hide" in its menu, and it comes back from "Property
+  visibility", where it is now listed with the others. Without it the table
+  starts from the first visible property, and **OPEN** (the button that
+  opens the page of a row) is in that property's cell
+- **[Project]** `TitleColumn.kt`: "Name hidden" and the property that gives
+  the names are written among the hidden properties of the view
+  (`viewHiddenColumnIds`), without changing the database of the phone and of
+  the PC (the PC cannot yet upgrade one, and a newer database would block the
+  other device when syncing). `DatabaseRepository.syncTitle`/`syncTitles`
+  (the value as `exportCellText` reads it), `fillFromTitles`,
+  `DatabaseViewModel.convertNameColumn`/`setNameHidden`,
+  `PropertyTarget.NameAsColumn`, `namePlace` -1 in `TableLayout`,
+  `OpenInCell`, `PageRepository.titleFromColumn` (the title of the row page
+  read-only). Tests: `TitleColumnTest` (Name to Number in its place, the
+  names follow the property, not from Name any more, deleted the property
+  Name comes back; a Select with the names as tags; Name hidden and shown),
+  `DesktopDatabaseTableTest` (with Name hidden the table starts from "Voto"
+  and OPEN appears in its cell)
+
 ### ✏️ v0.155.1 — 13/11/2026 · 15:12 — No grey background in Recents
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1254 tests passed)*
 

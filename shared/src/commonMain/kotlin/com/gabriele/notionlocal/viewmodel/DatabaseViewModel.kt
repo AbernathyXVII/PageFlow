@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.viewmodel
 
+import com.gabriele.notionlocal.data.entity.withNameHidden
+import com.gabriele.notionlocal.data.entity.titleColumnId
+import com.gabriele.notionlocal.data.entity.nameColumnHidden
 import com.gabriele.notionlocal.data.entity.nextOccurrenceValue
 import com.gabriele.notionlocal.data.symbolField
 import com.gabriele.notionlocal.data.replacedImage
@@ -211,10 +214,11 @@ data class DatabaseTableState(
      * sposterebbe niente di visibile. Name si vede sempre. Una colonna
      * nascosta invece si muove fra tutte, perché fra le visibili non c'è.
      */
-    fun orderAfterMove(key: String, delta: Int, nameOrder: Int): List<String>? {
+    fun orderAfterMove(key: String, delta: Int, nameOrder: Int, nameHidden: Boolean = false): List<String>? {
         val keys = tableKeys(columns, nameOrder).toMutableList()
         if (key !in keys) return null
-        val hidden = columns.filter { it.hidden }.map { it.id }.toSet()
+        // Name nascosta (vedi `TitleColumn.kt`) è come una proprietà nascosta.
+        val hidden = columns.filter { it.hidden }.map { it.id }.toSet() + if (nameHidden) setOf(NAME_COLUMN_KEY) else emptySet()
         val lane = if (key in hidden) keys else keys.filterNot { it in hidden }
         val neighbour = lane.getOrNull(lane.indexOf(key) + delta) ?: return null
         keys.remove(key)
@@ -1929,7 +1933,65 @@ class DatabaseViewModel(
 
     fun deleteColumn(column: DatabaseColumnEntity) {
         // Una Relation nei due sensi si porta via la gemella.
-        viewModelScope.launch { repository.deleteColumnWithTwin(rawColumn(column.id) ?: column) }
+        viewModelScope.launch {
+            repository.deleteColumnWithTwin(rawColumn(column.id) ?: column)
+            // Era quella che dava il nome alle righe: i nomi restano quelli di adesso, e Name torna a vedersi.
+            val data = _dataPage.value ?: return@launch
+            if (data.titleColumnId() == column.id) {
+                pageRepository.setTitleColumn(data.id, null)
+                pageRepository.setNameHidden(data.id, false)
+                _page.value?.takeIf { it.id != data.id }?.let { setNameHidden(false) }
+            }
+        }
+    }
+
+    // --- **La proprietà principale come le altre** (dal 13/11/2026, vedi `TitleColumn.kt`) ---
+
+    /** Name nascosta o no in questa vista ("Hide" nel suo menu, o "Property visibility"). */
+    fun setNameHidden(hidden: Boolean) {
+        val page = _page.value ?: return
+        _page.value = page.copy(viewHiddenColumnIds = withNameHidden(page.viewHiddenColumnIds, hidden))
+        viewModelScope.launch { pageRepository.setNameHidden(page.id, hidden) }
+    }
+
+    /**
+     * **"Change type" sulla proprietà principale** (dal 13/11/2026, chiesto
+     * dall'utente): una colonna vera di quel tipo, chiamata [name], al posto di
+     * Name e coi nomi delle righe scritti dentro; Name si nasconde, e da qui in
+     * poi ogni riga si chiama come il valore della colonna (vedi `TitleColumn.kt`).
+     * Una colonna a tag nasce coi nomi come tag.
+     */
+    fun convertNameColumn(name: String, type: ColumnType, optionsJson: String, number: NumberSettings?) {
+        val data = _dataPage.value ?: return
+        val view = _page.value ?: return
+        val before = rawColumns.sortedBy { it.orderIndex }
+        val index = nextColumnIndex()
+        _page.value = view.copy(viewHiddenColumnIds = withNameHidden(view.viewHiddenColumnIds, true))
+        viewModelScope.launch {
+            val tags = type == ColumnType.SELECT || type == ColumnType.MULTI_SELECT
+            val options = if (tags && (optionsJson.isBlank() || optionsJson == "[]")) {
+                val labels = repository.rowTitles(data.id).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+                json.encodeToString(labels.mapIndexed { i, label -> SelectOption(label = label, color = TAG_COLORS[i % TAG_COLORS.size].hex) })
+            } else {
+                optionsJson
+            }
+            val made = DatabaseColumnEntity(pageId = data.id, name = name, type = type, optionsJson = options, orderIndex = index)
+            val column = number?.let { made.withNumberSettings(it) } ?: made
+            repository.addColumn(column)
+            repository.fillFromTitles(data.id, column.id)
+            // Al posto di Name, che le sta subito dopo (nascosta).
+            val keys = tableKeys(before, data.nameColumnOrder).toMutableList()
+            keys.add(keys.indexOf(NAME_COLUMN_KEY), column.id)
+            val all = before + column
+            val changed = keys.filterNot { it == NAME_COLUMN_KEY }.mapIndexedNotNull { i, id ->
+                all.find { it.id == id }?.takeIf { it.orderIndex != i }?.copy(orderIndex = i)
+            }
+            repository.reorderColumns(changed, data.id, nameOrderAt(keys.indexOf(NAME_COLUMN_KEY)))
+            pageRepository.setTitleColumn(data.id, column.id)
+            pageRepository.setNameHidden(data.id, true)
+            if (view.id != data.id) pageRepository.setNameHidden(view.id, true)
+            repository.syncTitles(data.id)
+        }
     }
 
     /**
@@ -1963,8 +2025,11 @@ class DatabaseViewModel(
 
     /** Nasconde o rimostra tutte le colonne in un colpo solo. */
     fun setAllColumnsHidden(hidden: Boolean) {
-        if (_page.value?.sourceDatabaseId != null) {
-            setViewHidden(if (hidden) rawColumns.map { it.id }.toSet() else emptySet())
+        val view = _page.value
+        if (view?.sourceDatabaseId != null) {
+            // Name resta com'è: si nasconde e si mostra da sola.
+            val name = if (view.nameColumnHidden()) setOf(NAME_COLUMN_KEY) else emptySet()
+            setViewHidden((if (hidden) rawColumns.map { it.id }.toSet() else emptySet()) + name)
             return
         }
         val columns = rawColumns.filter { it.hidden != hidden }
@@ -2005,6 +2070,8 @@ class DatabaseViewModel(
             repository.updateColumn(
                 duration?.let { withDate.copy(durationFormat = it.takeIf { unit -> unit != DurationUnit.MINUTES }?.name) } ?: withDate
             )
+            // La colonna dei nomi (vedi `TitleColumn.kt`): le righe si chiamano come il valore letto col tipo nuovo.
+            _dataPage.value?.takeIf { it.titleColumnId() == columnId }?.let { repository.syncTitles(it.id) }
         }
     }
 
@@ -2234,7 +2301,7 @@ class DatabaseViewModel(
     fun moveColumn(key: String, delta: Int) {
         val state = _tableState.value
         val data = _dataPage.value ?: return
-        val order = state.orderAfterMove(key, delta, data.nameColumnOrder) ?: return
+        val order = state.orderAfterMove(key, delta, data.nameColumnOrder, _page.value?.nameColumnHidden() == true) ?: return
         val columnIds = order.filterNot { it == NAME_COLUMN_KEY }
         // Dalle colonne vere: quelle dello stato, in una vista collegata,
         // hanno il "nascosto" della vista (vedi `rawColumns`).
@@ -2349,6 +2416,8 @@ class DatabaseViewModel(
     }
 
     fun updateRowTitle(row: DatabaseRowEntity, newTitle: String) {
+        // Le righe si chiamano come la loro colonna dei nomi (vedi `TitleColumn.kt`): il nome si cambia da lì.
+        if (_dataPage.value?.titleColumnId() != null) return
         viewModelScope.launch { repository.setRowTitle(row.id, newTitle) }
     }
 

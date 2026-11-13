@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.data.repository
 
+import com.gabriele.notionlocal.data.export.exportCellText
+import com.gabriele.notionlocal.data.entity.titleColumnId
 import com.gabriele.notionlocal.data.withTransaction
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.RowIconRef
@@ -325,7 +327,47 @@ class DatabaseRepository(private val db: AppDatabase) {
         }
         // Le automazioni "Property edited" (vedi `Automations`).
         DatabaseChanges.cellChanged(rowId, columnId, existing?.value, value)
+        syncTitle(rowId, columnId)
     }
+
+    /**
+     * **La riga si chiama come la sua colonna dei nomi** (dal 13/11/2026, vedi
+     * `TitleColumn.kt`): scritta una cella di quella colonna, il nome della
+     * riga (e della sua pagina) diventa il valore come si legge nella tabella.
+     */
+    private suspend fun syncTitle(rowId: String, columnId: String) {
+        val row = dao.getRowById(rowId) ?: return
+        if (db.pageDao().getById(row.pageId)?.titleColumnId() != columnId) return
+        val column = dao.getColumnById(columnId) ?: return
+        val title = titleText(column, row, dao.getCell(rowId, columnId)?.value.orEmpty())
+        if (title != row.title) setRowTitle(rowId, title)
+    }
+
+    /** I nomi delle righe di [databaseId], per le opzioni di una colonna a tag nata da Name. */
+    suspend fun rowTitles(databaseId: String): List<String> = dao.getRowsForPageOnce(databaseId).map { it.title }
+
+    /** Il nome di ogni riga di [databaseId] scritto nella sua cella di [columnId], dove è vuota: la colonna che prende il posto di Name. */
+    suspend fun fillFromTitles(databaseId: String, columnId: String) = db.withTransaction {
+        dao.getRowsForPageOnce(databaseId).forEach { row ->
+            if (row.title.isNotEmpty() && dao.getCell(row.id, columnId) == null) {
+                dao.insertCell(DatabaseCellEntity(rowId = row.id, columnId = columnId, value = row.title))
+            }
+        }
+    }
+
+    /** Tutte le righe di [databaseId] col nome dalla loro colonna dei nomi, se ce n'è una (dopo "Change type" su Name o sulla colonna). */
+    suspend fun syncTitles(databaseId: String) {
+        val columnId = db.pageDao().getById(databaseId)?.titleColumnId() ?: return
+        val column = dao.getColumnById(columnId) ?: return
+        dao.getRowsForPageOnce(databaseId).forEach { row ->
+            val title = titleText(column, row, dao.getCell(row.id, columnId)?.value.orEmpty())
+            if (title != row.title) setRowTitle(row.id, title)
+        }
+    }
+
+    /** Il valore di una cella come si legge (vedi `exportCellText`): il nome della riga. */
+    private fun titleText(column: DatabaseColumnEntity, row: DatabaseRowEntity, value: String): String =
+        exportCellText(column, row, value, emptyMap(), emptyMap(), null).replace("\n", " ").trim()
 
     /**
      * **La scritta di una cella URL** (dal 27/10/2026, "Show as…"): [label]

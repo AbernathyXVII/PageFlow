@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.data.repository
 
+import com.gabriele.notionlocal.data.entity.titleColumnId
+import com.gabriele.notionlocal.data.entity.withTitleColumn
+import com.gabriele.notionlocal.data.entity.withNameHidden
 import com.gabriele.notionlocal.data.symbolField
 import com.gabriele.notionlocal.data.withTransaction
 import com.gabriele.notionlocal.data.AppDatabase
@@ -3116,6 +3119,29 @@ class PageRepository(private val db: AppDatabase) {
     /** Le proprietà nascoste di una vista collegata, solo sue. */
     suspend fun setViewHiddenColumns(viewPageId: String, columnIds: Set<String>) =
         pageDao.setViewHiddenColumns(viewPageId, columnIds.joinToString(",").ifEmpty { null })
+
+    /** La colonna Name nascosta o no in questa vista (dal 13/11/2026, vedi `TitleColumn.kt`). */
+    suspend fun setNameHidden(viewPageId: String, hidden: Boolean) {
+        val page = pageDao.getById(viewPageId) ?: return
+        pageDao.setViewHiddenColumns(viewPageId, withNameHidden(page.viewHiddenColumnIds, hidden))
+    }
+
+    /** Da quale colonna prendono il nome le righe del database [databaseId] (null: dal loro nome). Vedi `TitleColumn.kt`. */
+    suspend fun setTitleColumn(databaseId: String, columnId: String?) {
+        val page = pageDao.getById(databaseId) ?: return
+        pageDao.setViewHiddenColumns(databaseId, withTitleColumn(page.viewHiddenColumnIds, columnId))
+    }
+
+    /**
+     * **Il nome di questa pagina viene da una colonna** (dal 13/11/2026): è la
+     * pagina di una riga di un database che ha la sua colonna dei nomi (vedi
+     * `TitleColumn.kt`). Allora il titolo non si scrive dalla pagina: si
+     * cambia dalla colonna.
+     */
+    suspend fun titleFromColumn(pageId: String): Boolean {
+        val databaseId = db.databaseDao().getRowsLinkingTo(pageId).firstOrNull()?.pageId ?: return false
+        return pageDao.getById(databaseId)?.titleColumnId() != null
+    }
 
     /**
      * Una riga nuova sotto un blocco, che richiama una pagina: serve a

@@ -381,6 +381,62 @@ class DesktopDatabaseTableTest {
         }
     }
 
+    /**
+     * **Name nascosta** (chiesto dall'utente il 13/11/2026: la proprietà
+     * principale "trattata come qualsiasi altra colonna, quindi con la
+     * possibilità di nasconderla"): la tabella comincia da "Voto", e col mouse
+     * su una riga OPEN compare nella sua cella.
+     */
+    @Test
+    fun withNameHiddenTheTableStartsFromTheFirstColumn() {
+        runBlocking { PageRepository(AppDatabase.getInstance(context)).setNameHidden("giochi", true) }
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            DatabaseViewScreen(
+                                pageId = "giochi", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
+                                onOpenUpdates = {}, onOpenPage = {}, onOpenDatabase = {}
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun picture(): Bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+        fun save(bitmap: Bitmap, name: String) =
+            File("build/desktop-screenshots", name).apply { parentFile.mkdirs() }.writeBytes(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        try {
+            frames(40)
+            val table = picture()
+            save(table, "database_name_hidden.png")
+            val background = table.getColor(1100, table.height - 5)
+            val lines = (60 until table.height - 20).filter { y -> (1000..1100).all { x -> table.getColor(x, y) != background } }
+            val firstRow = (lines[0] + lines[1]) / 2
+            // Le linee in piedi fra le celle della prima riga: senza Name, la prima sta dopo "Voto" (66 + 150).
+            val separators = (70 until 600).filter { x -> table.getColor(x, firstRow) != background && table.getColor(x, firstRow - 8) != background && table.getColor(x, firstRow + 8) != background }
+            assertTrue("la prima linea dopo Voto, non dopo Name (266): $separators", separators.isNotEmpty() && separators.first() in 205..225)
+            // Col mouse sulla riga, OPEN nella cella di Voto.
+            onWindowThread { scene.sendPointerEvent(PointerEventType.Move, Offset(120f, firstRow.toFloat()), type = PointerType.Mouse) }
+            frames(5)
+            val hovered = picture()
+            save(hovered, "database_name_hidden_open.png")
+            val changed = (130 until 215).count { x -> hovered.getColor(x, firstRow) != table.getColor(x, firstRow) }
+            assertTrue("OPEN nella cella di Voto: $changed punti cambiati", changed > 4)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
     private fun click(scene: ImageComposeScene, at: Offset) = onWindowThread {
         scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse)
         scene.sendPointerEvent(PointerEventType.Press, at, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)

@@ -1755,6 +1755,8 @@ private fun PageEditorContent(
         (((focusedBlockId != null || barHeld) && imeVisible) || showTypeMenu)
 
     val isRootPage = pageId == PageEntity.ROOT_PAGE_ID
+    // La pagina di una riga il cui nome viene da una colonna del database (vedi `TitleColumn.kt`).
+    val titleFromColumn by produceState(false, pageId) { value = factory.pageRepository.titleFromColumn(pageId) }
     // Sul PC le pagine che contengono questa, per il percorso in alto (`PageBreadcrumb`).
     val breadcrumb by produceState(emptyList<PageEntity>(), pageId) {
         if (isPc) value = factory.pageRepository.ancestorsOf(pageId)
@@ -2580,8 +2582,9 @@ private fun PageEditorContent(
                                 ProofingTransformation(titleMisspellings[titleText].orEmpty(), titleTyping.takeIf { titleFocused })
                             },
                             onTextLayout = { titleLayout = it },
-                            // Pagina bloccata (o nel cestino): nemmeno il titolo si tocca.
-                            readOnly = readOnlyPage,
+                            // Pagina bloccata (o nel cestino): nemmeno il titolo si tocca. Nemmeno la pagina
+                            // di una riga che prende il nome da una colonna (dal 13/11/2026, vedi `TitleColumn.kt`).
+                            readOnly = readOnlyPage || titleFromColumn,
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.Sentences,
                                 imeAction = ImeAction.Done

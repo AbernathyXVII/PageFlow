@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.nameColumnHidden
 import com.gabriele.notionlocal.ui.navigation.horizontalResizeCursor
 import kotlinx.coroutines.delay
 import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
@@ -520,6 +521,8 @@ private sealed class PropertyTarget {
     data class New(val initialType: ColumnType = ColumnType.TEXT) : PropertyTarget()
     /** [mode]: tutto, o solo "Edit property" o "Change type" dal menu dell'intestazione (`PropertyMode`). */
     data class Existing(val column: DatabaseColumnEntity, val mode: PropertyMode = PropertyMode.FULL) : PropertyTarget()
+    /** "Change type" su Name (dal 13/11/2026): diventa una colonna vera, chiamata [name] (vedi `TitleColumn.kt`). */
+    data class NameAsColumn(val name: String) : PropertyTarget()
 }
 
 /**
@@ -1672,6 +1675,16 @@ private fun DatabaseViewBody(
                     nameColumnOrder = dataPage?.nameColumnOrder ?: -1,
                     onMoveName = { delta -> viewModel.moveColumn(NAME_COLUMN_KEY, delta) },
                     onRenameName = viewModel::renameNameColumn,
+                    nameHidden = page?.nameColumnHidden() == true,
+                    onHideName = if (viewLocked) null else { { viewModel.setNameHidden(true) } },
+                    onNameType = if (contentLocked) {
+                        null
+                    } else {
+                        {
+                            focusManager.clearFocus()
+                            propertyTarget = PropertyTarget.NameAsColumn(dataPage?.nameColumnTitle ?: DbStrings.name)
+                        }
+                    },
                     onHideProperty = { viewModel.setColumnHidden(it.id, true) },
                     // I tre puntini accanto al "+": dritti a "Property visibility".
                     onShowProperties = {
@@ -1917,6 +1930,9 @@ private fun DatabaseViewBody(
                 viewModel.setColumnHidden(columnId, hidden)
             },
             onSetAllColumnsHidden = { viewModel.setAllColumnsHidden(it) },
+            nameLabel = dataPage?.nameColumnTitle ?: DbStrings.name,
+            nameHidden = page?.nameColumnHidden() == true,
+            onSetNameHidden = if (viewLocked) null else { hidden -> viewModel.setNameHidden(hidden) },
             filterColumn = viewModel.filterColumn(),
             filterValue = page?.filterValue.orEmpty(),
             onOpenFilter = {
@@ -2023,6 +2039,7 @@ private fun DatabaseViewBody(
             onSave = { name, type, optionsJson, number, duration, twoWayName ->
                 when {
                     target is PropertyTarget.New -> viewModel.addColumn(name, type, optionsJson, twoWayName)
+                    target is PropertyTarget.NameAsColumn -> viewModel.convertNameColumn(name, type, optionsJson, number)
                     target is PropertyTarget.Existing && type == ColumnType.RELATION ->
                         viewModel.updateRelationColumn(target.column.id, name, optionsJson, twoWayName)
                     target is PropertyTarget.Existing ->
@@ -2243,10 +2260,15 @@ private fun TableLayout(
     onMoveProperty: (DatabaseColumnEntity, Int) -> Unit,
     /** Dove sta Name fra le colonne (`PageEntity.nameColumnOrder`, vedi `namePosition`). */
     nameColumnOrder: Int = -1,
+    /** Name nascosta in questa vista (dal 13/11/2026, vedi `TitleColumn.kt`): la tabella comincia dalla prima colonna. */
+    nameHidden: Boolean = false,
     /** "Move to left" (-1) / "Move to right" (+1) di Name. */
     onMoveName: (Int) -> Unit = {},
     /** Rinomina la proprietà principale (vedi `NameHeaderCell`). */
     onRenameName: ((String) -> Unit)? = null,
+    /** "Hide" e "Change type" di Name (dal 13/11/2026); null se non si può. */
+    onHideName: (() -> Unit)? = null,
+    onNameType: (() -> Unit)? = null,
     onHideProperty: (DatabaseColumnEntity) -> Unit,
     onToggleCenterProperty: (DatabaseColumnEntity, CellAlignment) -> Unit,
     onAddProperty: () -> Unit,
@@ -2303,7 +2325,8 @@ private fun TableLayout(
     // com'era e nasconderne una non servirebbe a niente.
     val shownColumns = state.visibleColumns
     // Name al suo posto fra quelle che si vedono (dal 29/09/2026 si sposta).
-    val namePlace = namePosition(shownColumns, nameColumnOrder)
+    // Nascosta, Name non ha posto: -1 (vedi `TableSlots`).
+    val namePlace = if (nameHidden) -1 else namePosition(shownColumns, nameColumnOrder)
     val resize = remember { ColumnResize() }
     // Con "Lock view" le colonne non cambiano misura: via il segnalino.
     LaunchedEffect(viewLocked) { if (viewLocked) resize.stop() }
@@ -2336,7 +2359,7 @@ private fun TableLayout(
         name = widthOf(NAME_COLUMN_KEY, NAME_COLUMN_WIDTH, fitMinColumnWidth(NAME_COLUMN_KEY)),
         byKey = shownColumns.associate { it.id to widthOf(it.id, defaultColumnWidth(it.id, it.type).dp, fitMinColumnWidth(it.id, it.type)) }
     )
-    val columnsWidth = widths.name + SEPARATOR_WIDTH +
+    val columnsWidth = (if (namePlace >= 0) widths.name + SEPARATOR_WIDTH else 0.dp) +
         shownColumns.fold(0.dp) { sum, column -> sum + widths.of(column) + SEPARATOR_WIDTH } +
         ADD_PROPERTY_WIDTH
     // **Le linee delle righe vanno fino in fondo** (dal 11/11/2026, chiesto
@@ -2389,6 +2412,8 @@ private fun TableLayout(
                 namePlace = namePlace,
                 onMoveName = onMoveName,
                 onRenameName = onRenameName,
+                onHideName = onHideName,
+                onNameType = onNameType,
                 onHideProperty = onHideProperty,
                 onToggleCenterProperty = onToggleCenterProperty,
                 onAddProperty = onAddProperty,
@@ -2542,6 +2567,8 @@ private fun TableLayout(
                 namePlace = namePlace,
                 onMoveName = onMoveName,
                 onRenameName = onRenameName,
+                onHideName = onHideName,
+                onNameType = onNameType,
                 onHideProperty = onHideProperty,
                 onToggleCenterProperty = onToggleCenterProperty,
                 onAddProperty = onAddProperty,
@@ -2607,6 +2634,8 @@ private fun TableLayout(
                 namePlace = namePlace,
                 onMoveName = onMoveName,
                 onRenameName = onRenameName,
+                onHideName = onHideName,
+                onNameType = onNameType,
                 onHideProperty = onHideProperty,
                 onToggleCenterProperty = onToggleCenterProperty,
                 onAddProperty = onAddProperty,
@@ -3000,6 +3029,9 @@ private fun TableHeaderRow(
     namePlace: Int = 0,
     onMoveName: (Int) -> Unit = {},
     onRenameName: ((String) -> Unit)? = null,
+    /** "Hide" e "Change type" di Name (dal 13/11/2026); null se non si può. */
+    onHideName: (() -> Unit)? = null,
+    onNameType: (() -> Unit)? = null,
     onHideProperty: (DatabaseColumnEntity) -> Unit,
     onToggleCenterProperty: (DatabaseColumnEntity, CellAlignment) -> Unit,
     onAddProperty: () -> Unit,
@@ -3029,6 +3061,8 @@ private fun TableHeaderRow(
                 NameHeaderCell(
                     onCalculate = { onCalculate(CalculateTarget(NAME_CALCULATION_KEY, null, nameLabel)) },
                     onRename = onRenameName,
+                    onHide = onHideName,
+                    onChangeType = onNameType,
                     canMoveLeft = !viewLocked && namePlace > 0,
                     canMoveRight = !viewLocked && namePlace < columns.size,
                     onMove = onMoveName,
@@ -3062,7 +3096,7 @@ private fun TableHeaderRow(
     // dopo tutte quelle alla sua sinistra, Name compresa, e lei.
     val key = resize?.key
     if (resize != null && key != null && !resize.byMouse) {
-        val keys = columns.map { it.id }.toMutableList().apply { add(namePlace, NAME_COLUMN_KEY) }
+        val keys = columns.map { it.id }.toMutableList().apply { if (namePlace >= 0) add(namePlace, NAME_COLUMN_KEY) }
         val index = keys.indexOf(key)
         // Con la prima colonna ferma, il suo bordo è spostato di quanto la tabella è scorsa.
         val frozen = LocalFrozenColumn.current
@@ -3089,7 +3123,7 @@ private fun TableHeaderRow(
     // blu e il puntatore la doppia freccia; trascinata, la colonna alla sua
     // sinistra si allarga o si stringe, e lasciandola la misura resta.
     if (isPc && resize != null && !viewLocked) {
-        val keys = columns.map { it.id }.toMutableList().apply { add(namePlace, NAME_COLUMN_KEY) }
+        val keys = columns.map { it.id }.toMutableList().apply { if (namePlace >= 0) add(namePlace, NAME_COLUMN_KEY) }
         val frozen = LocalFrozenColumn.current
         var edge = 0.dp
         keys.forEachIndexed { index, edgeKey ->
@@ -3371,7 +3405,7 @@ private fun TableSlots(
     }
     columns.forEachIndexed { index, c ->
         if (index == namePlace) key(NAME_COLUMN_KEY) { if (index == 0) first(name) else name() }
-        key(c.id) { if (index == 0 && namePlace > 0) first { column(index, c) } else column(index, c) }
+        key(c.id) { if (index == 0 && namePlace != 0) first { column(index, c) } else column(index, c) }
     }
     if (namePlace >= columns.size) key(NAME_COLUMN_KEY) { if (columns.isEmpty()) first(name) else name() }
 }
@@ -3446,19 +3480,23 @@ private fun TableBodyRow(
                 )
                 CellSeparator(NAME_COLUMN_KEY, stretch = wrap)
             }
-        ) { _, column ->
-            CellEditor(
-                row = row,
-                column = column,
-                value = state.cellValues[row.id to column.id] ?: "",
-                onValueChange = { onSetCellValue(row, column, it) },
-                onAddOption = { onAddOption(column, it) },
-                onRenameOption = onRenameOption,
-                onSetOptionColor = onSetOptionColor,
-                onDeleteOption = onDeleteOption,
-                onMoveOptions = onMoveOptions,
-                onSetOptionSecondColor = onSetOptionSecondColor
-            )
+        ) { index, column ->
+            val cell: @Composable () -> Unit = {
+                CellEditor(
+                    row = row,
+                    column = column,
+                    value = state.cellValues[row.id to column.id] ?: "",
+                    onValueChange = { onSetCellValue(row, column, it) },
+                    onAddOption = { onAddOption(column, it) },
+                    onRenameOption = onRenameOption,
+                    onSetOptionColor = onSetOptionColor,
+                    onDeleteOption = onDeleteOption,
+                    onMoveOptions = onMoveOptions,
+                    onSetOptionSecondColor = onSetOptionSecondColor
+                )
+            }
+            // Name nascosta (dal 13/11/2026): OPEN sta nella prima colonna che si vede.
+            if (namePlace < 0 && index == 0) OpenInCell(onOpen = { onOpenRow(row) }, content = cell) else cell()
             CellSeparator(column.id, stretch = wrap)
         }
         Box(modifier = Modifier.width(ADD_PROPERTY_WIDTH).height(ROW_HEIGHT))
@@ -6742,7 +6780,10 @@ private fun NameHeaderCell(
     canResize: Boolean = true,
     fit: Boolean = false,
     onResize: () -> Unit = {},
-    onFitChange: (Boolean) -> Unit = {}
+    onFitChange: (Boolean) -> Unit = {},
+    /** "Hide" e "Change type", come le altre proprietà (dal 13/11/2026, vedi `TitleColumn.kt`); null: grigie. */
+    onHide: (() -> Unit)? = null,
+    onChangeType: (() -> Unit)? = null
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
@@ -6800,6 +6841,11 @@ private fun NameHeaderCell(
             PropertyMenuGroup(
                 listOf({ OptionRow(Icons.Filled.Edit, DbStrings.renameProperty, enabled = rename != null, onClick = pick { renaming = true }) })
             )
+            // **"Change type"** (dal 13/11/2026, chiesto dall'utente): Name diventa una
+            // colonna vera di quel tipo, e le righe si chiamano come il suo valore.
+            PropertyMenuGroup(
+                listOf({ PropertyMenuChevronRow(Icons.Filled.SwapHoriz, DbStrings.changeType, enabled = onChangeType != null, onClick = pick { onChangeType?.invoke() }) })
+            )
             // **Name si sposta** (dal 29/09/2026: "permettimi di spostare
             // ovunque io voglia anche la colonna Name").
             PropertyMenuGroup(
@@ -6831,6 +6877,10 @@ private fun NameHeaderCell(
                 )
             )
             PropertyMenuGroup(columnWidthRows(canResize, fit, onResize = pick(onResize), onFitChange = { menuOpen = false; onFitChange(it) }))
+            // **"Hide"**, come le altre (dal 13/11/2026): torna da "Property visibility".
+            PropertyMenuGroup(
+                listOf({ OptionRow(Icons.Filled.VisibilityOff, DbStrings.hide, enabled = onHide != null, onClick = pick { onHide?.invoke() }) })
+            )
         }
     }
     if (renaming && rename != null) {
@@ -7443,23 +7493,47 @@ private fun NameCell(
         // Niente OPEN in un database semplice: la riga non ha una pagina
         // da aprire. Il nome si scrive qui, toccandolo, e il resto dalla
         // scheda che si apre tenendolo premuto.
-        if (!LocalSimpleDatabase.current) {
-            Text(
-                text = DbStrings.open,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .alpha(if (showOpen) 1f else 0f)
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.outline,
-                        RoundedCornerShape(6.dp)
-                    )
-                    .clickable(enabled = showOpen) { onOpen() }
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+        if (!LocalSimpleDatabase.current) OpenChip(showOpen, onOpen)
+    }
+}
+
+/** Il pulsante OPEN di una riga: [visible] (sul PC col mouse sopra), e toccato apre la sua pagina. */
+@Composable
+private fun OpenChip(visible: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    Text(
+        text = DbStrings.open,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier
+            .padding(end = 8.dp)
+            .alpha(if (visible) 1f else 0f)
+            .background(MaterialTheme.colorScheme.background, RoundedCornerShape(6.dp))
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outline,
+                RoundedCornerShape(6.dp)
             )
-        }
+            .clickable(enabled = visible) { onOpen() }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    )
+}
+
+/**
+ * **OPEN nella prima colonna** quando Name è nascosta (dal 13/11/2026, vedi
+ * `TitleColumn.kt`): sopra la cella, a destra, come nella cella del nome;
+ * sul PC col mouse sopra, sul telefono sempre.
+ */
+@Composable
+private fun OpenInCell(onOpen: () -> Unit, content: @Composable () -> Unit) {
+    if (LocalSimpleDatabase.current) {
+        content()
+        return
+    }
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
+    Box(modifier = Modifier.hoverable(hover), contentAlignment = Alignment.CenterEnd) {
+        content()
+        OpenChip(!isPc || hovered, onOpen)
     }
 }
 
@@ -10216,6 +10290,10 @@ private fun SettingsSheet(
     /** Nasconde o rimostra una colonna, e tutte insieme. */
     onSetColumnHidden: (String, Boolean) -> Unit,
     onSetAllColumnsHidden: (Boolean) -> Unit,
+    /** Name in "Property visibility" (dal 13/11/2026, vedi `TitleColumn.kt`): il suo nome, se è nascosta, chi la nasconde. */
+    nameLabel: String = DbStrings.name,
+    nameHidden: Boolean = false,
+    onSetNameHidden: ((Boolean) -> Unit)? = null,
     /** Il filtro attivo, da riassumere; toccarlo apre la sua finestra. */
     filterColumn: DatabaseColumnEntity? = null,
     filterValue: String = "",
@@ -10682,8 +10760,14 @@ private fun SettingsSheet(
                 }
 
                 SettingsPage.PROPERTY_VISIBILITY -> {
-                    val shown = columns.filterNot { it.hidden }
-                    val hidden = columns.filter { it.hidden }
+                    // Name come le altre (dal 13/11/2026): in cima, nascosta o no.
+                    val nameEntry = DatabaseColumnEntity(id = NAME_COLUMN_KEY, pageId = "", name = nameLabel, type = ColumnType.TEXT, orderIndex = -1, hidden = nameHidden)
+                    val listed = if (onSetNameHidden != null) listOf(nameEntry) + columns else columns
+                    val shown = listed.filterNot { it.hidden }
+                    val hidden = listed.filter { it.hidden }
+                    fun toggle(column: DatabaseColumnEntity, hide: Boolean) {
+                        if (column.id == NAME_COLUMN_KEY) onSetNameHidden?.invoke(hide) else onSetColumnHidden(column.id, hide)
+                    }
 
                     if (columns.isEmpty()) {
                         Text(
@@ -10694,9 +10778,8 @@ private fun SettingsSheet(
                         )
                     }
 
-                    // DbStrings.name non compare in nessuna delle due liste: è
-                    // il titolo della pagina, non una proprietà, e una
-                    // riga senza nome non si saprebbe più aprire.
+                    // Name c'è anche lei dal 13/11/2026 (chiesto dall'utente): nascosta,
+                    // le righe si aprono da OPEN nella prima colonna che si vede.
                     if (shown.isNotEmpty()) {
                         VisibilitySectionHeader(
                             title = DbStrings.shownInTable,
@@ -10709,7 +10792,7 @@ private fun SettingsSheet(
                                 PropertyVisibilityRow(
                                     column = column,
                                     hidden = false,
-                                    onToggle = { onSetColumnHidden(column.id, true) }
+                                    onToggle = { toggle(column, true) }
                                 )
                             }
                         }
@@ -10727,7 +10810,7 @@ private fun SettingsSheet(
                                 PropertyVisibilityRow(
                                     column = column,
                                     hidden = true,
-                                    onToggle = { onSetColumnHidden(column.id, false) }
+                                    onToggle = { toggle(column, false) }
                                 )
                             }
                         }
@@ -10912,7 +10995,7 @@ private fun PropertySheet(
     var number by remember(existing?.id) { mutableStateOf(existing?.numberSettings() ?: NumberSettings()) }
     var duration by remember(existing?.id) { mutableStateOf(durationFormatOf(existing?.durationFormat)) }
 
-    var name by remember(existing?.id) { mutableStateOf(existing?.name ?: "") }
+    var name by remember(existing?.id) { mutableStateOf(existing?.name ?: (target as? PropertyTarget.NameAsColumn)?.name ?: "") }
     var selectedType by remember(existing?.id) {
         mutableStateOf(existing?.type ?: (target as? PropertyTarget.New)?.initialType ?: ColumnType.TEXT)
     }
