@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.153.76 — 13/11/2026 · 09:18 — The right-click menu on the PC; database columns resized with the mouse
-*(Claude Code on the PC; not yet tested by the user; not yet installed on the phone, which was not connected; 1237 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1237 tests passed)*
 
 - **[Change]** **[💻 PC]** **The right-click menu of a page**: a right
   click on a line opens, one under the other, what on the phone is in the bar
