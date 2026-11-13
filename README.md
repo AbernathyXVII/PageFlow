@@ -1126,8 +1126,20 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
-### 🆕 v0.155 — 13/11/2026 · 14:49 — Recents in the sidebar, and the Library
+### ✏️ v0.155.1 — 13/11/2026 · 15:12 — No grey background in Recents
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1254 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **No grey background in
+  Recents**: the page open at the moment had the grey background of the tree
+  also there, and so did the main page, which in the tree does not have it
+  (asked by the user on 11/11/2026). Now no line of Recents has it: the open
+  page is only in bold. In the tree everything stays as it was
+- **[Project]** `RecentsSidebarSection` without the background of the
+  current page. Test: `DesktopLibraryTest` (on the line of the open page the
+  background is that of the sidebar)
+
+### 🆕 v0.155 — 13/11/2026 · 14:49 — Recents in the sidebar, and the Library
+*(Claude Code on the PC; seen by the user on the phone, who asked for no grey background in Recents (v0.155.1); installed on the phone; 1254 tests passed)*
 
 - **[New feature]** **[📱 Mobile]** **[💻 PC]** **Recents in the sidebar**,
   as in Notion: under the tree of the pages, the last ten pages opened on

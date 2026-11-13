@@ -113,6 +113,10 @@ class DesktopLibraryTest {
                 val rows = (0 until shot.height).filter { y -> (fromX until toX).any { x -> bright(shot.getColor(x, y)) } }
                 return rows.zipWithNext().count { (a, b) -> b - a > 1 } + if (rows.isEmpty()) 0 else 1
             }
+            // Nessun fondo grigio in Recents, neanche sulla pagina aperta ("Film"), scelto dall'utente il 13/11/2026.
+            // La riga di "Film" (la seconda, a y 73): a sinistra del nome il fondo è quello della pagina.
+            val background = shot.getColor(5, shot.height - 5)
+            assertTrue("fondo grigio sulla pagina aperta", (12 until 36).all { x -> shot.getColor(x, 73) == background })
             // Nella barra: le cinque pagine e "View all".
             assertTrue("righe nella barra: ${bands(30, 230)}", bands(30, 230) >= 6)
             // Nella Library: la barra in alto, le cinque righe.

@@ -290,12 +290,13 @@ fun RecentsSidebarSection(
     SidebarSectionTitle(Strings.recents)
     shown.forEach { page ->
         val isCurrent = page.id == currentPageId
+        // **Niente fondo grigio in Recents** (dal 13/11/2026, scelto dall'utente): la pagina aperta
+        // si riconosce dal nome in grassetto, il grigio resta solo nell'albero.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(if (isCurrent) DarkSurfaceVariant else Color.Transparent)
                 .clickable { onOpen(page) }
                 .padding(start = TREE_START - 8.dp + TREE_ARROW + 4.dp, end = 8.dp)
                 .height(pcOr(28.dp, 36.dp)),
