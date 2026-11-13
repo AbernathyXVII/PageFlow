@@ -1126,8 +1126,39 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.75 — 13/11/2026 · 08:19 — The scroll bar can be dragged; calendars from Monday, five events a day
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1233 tests passed)*
+
+- **[Change]** **[💻 PC]** **The scroll bar on the right of a page can be
+  dragged with the mouse**: it appears also with the mouse over it, it is
+  grabbed and the page follows it; a click on its track brings it there. The
+  wheel over it still scrolls the page. On the phone it stays as it was,
+  only to look at
+- **[Change]** **[💻 PC]** **The calendar's month is compact**: each week
+  puts its events in its first free lines and shows **at most five a day**;
+  a day with more has **Show more** under it, which shows them all and
+  becomes **Show less**. Before, every page with a date kept a line of its
+  own in every week (up to twenty), and weeks were tall and mostly empty
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The weeks start on Monday** in
+  every calendar: the calendar of databases (month, week, year), the
+  timeline, the date picker and the days of a repetition. Before, the first
+  day followed the language of the system, and with Windows or the phone in
+  English it was Sunday
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Saturday and Sunday are grey** in
+  the columns of the calendar (month and week); the bars of events without a
+  colour are a little lighter, so they still show on the grey
+- **[Project]** `PageScrollIndicator` (on the PC hover, drag with
+  `dispatchRawDelta`, click on the track, the wheel; `Thumb`),
+  `FIRST_DAY_OF_WEEK` (`DateGrouping.kt`), `packWeek` and `CompactWeek` with
+  `CALENDAR_COMPACT_ROWS` = 5 in `CalendarWeekRow`, `weekendTint`. Tests:
+  `DesktopCalendarTest` (eight events today: five and Show more, all eight
+  and Show less, five again; the grey columns are the last two),
+  `DesktopBlockSelectionTest` (the bar appears with the mouse on the edge,
+  dragged down the page follows, a click at the bottom of the track takes
+  the page to the end)
+
 ### 🔧 v0.153.74.2 — 13/11/2026 · 00:30 — No six dots of their own for a group of columns
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1231 tests passed)*
+*(Claude Code on the PC; tested by the user on 13/11/2026; installed on the phone; 1231 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **Extra six dots in the middle of a database in
   columns**: with "Main calendar" next to "Notebook", moving the mouse in the

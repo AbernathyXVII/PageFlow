@@ -64,6 +64,7 @@ import com.gabriele.notionlocal.ui.theme.NotionGray400
 import com.gabriele.notionlocal.ui.theme.NotionWhite
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
+import com.gabriele.notionlocal.data.entity.FIRST_DAY_OF_WEEK
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -227,7 +228,8 @@ private fun monthTitle(month: YearMonth): String =
         .replaceFirstChar { it.titlecase(pickerLocale) } + " " + month.year
 
 /** Il giorno da cui comincia la settimana dove si è: domenica negli Stati Uniti, lunedì in Italia. */
-private val firstDayOfWeek: DayOfWeek get() = WeekFields.of(Locale.getDefault()).firstDayOfWeek
+// Di lunedì, come tutti i calendari dell'app (vedi `FIRST_DAY_OF_WEEK`).
+private val firstDayOfWeek: DayOfWeek get() = FIRST_DAY_OF_WEEK
 
 /**
  * Il calendario di un mese, come quello di Samsung.

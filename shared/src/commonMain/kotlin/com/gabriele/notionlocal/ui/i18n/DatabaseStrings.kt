@@ -209,6 +209,9 @@ object DbStrings {
     val previous get() = t("Previous", "Precedente", "Zurück", "Précédent", "Anterior", "上一个", "이전", "前へ")
     val next get() = t("Next", "Successivo", "Weiter", "Suivant", "Siguiente", "下一个", "다음", "次へ")
     val today get() = t("Today", "Oggi", "Heute", "Aujourd'hui", "Hoy", "今天", "오늘", "今日")
+    /** Il calendario sul PC (dal 13/11/2026): un giorno con più di cinque eventi. */
+    val showMore get() = t("Show more", "Mostra altro", "Mehr anzeigen", "Afficher plus", "Mostrar más", "显示更多", "더 보기", "もっと見る")
+    val showLess get() = t("Show less", "Mostra meno", "Weniger anzeigen", "Afficher moins", "Mostrar menos", "收起", "간략히 보기", "表示を減らす")
     fun noDate(count: Int) = t("No date ($count)", "Senza data ($count)", "Ohne Datum ($count)", "Sans date ($count)", "Sin fecha ($count)", "无日期（$count）", "날짜 없음 ($count)", "日付なし（$count）")
 
     val boardNeedsSelect get() = t(

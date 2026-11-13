@@ -63,6 +63,13 @@ fun parseDateGroupings(json: String?): DateGroupings =
 fun encodeDateGroupings(groupings: DateGroupings): String? =
     if (groupings == DateGroupings()) null else groupingJson.encodeToString(groupings)
 
+/**
+ * **Le settimane cominciano di lunedì**, in tutti i calendari (dal 13/11/2026,
+ * chiesto dall'utente): prima il primo giorno seguiva la lingua del sistema, e
+ * con Windows o il telefono in inglese era la domenica.
+ */
+val FIRST_DAY_OF_WEEK: DayOfWeek = DayOfWeek.MONDAY
+
 /** Il primo giorno del gruppo che contiene [day]: lui stesso, l'inizio della settimana, del mese o dell'anno. */
 fun DateUnit.startOf(day: LocalDate, firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY): LocalDate = when (this) {
     DateUnit.DAY -> day

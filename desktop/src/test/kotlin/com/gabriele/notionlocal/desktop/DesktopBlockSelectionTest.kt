@@ -716,6 +716,60 @@ class DesktopBlockSelectionTest {
         }
     }
 
+    /**
+     * **La barretta di scorrimento si trascina col mouse** (chiesto
+     * dall'utente il 13/11/2026): col mouse sul bordo destro compare; presa e
+     * portata in giù, la pagina la segue; un clic in fondo alla corsia porta la
+     * pagina in fondo.
+     */
+    @Test
+    fun theScrollBarCanBeDragged() {
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "barra", title = "Barra"))
+            for (i in 0 until 80) repo.saveBlock(BlockEntity(id = "barra-$i", pageId = "barra", textJson = """[{"text":"Riga numero $i"}]""", orderIndex = i))
+        }
+        withPage("barra") { scene, frames, picture ->
+            frames(20)
+            val before = picture()
+            val background = before.getColor(5, before.height - 5)
+            /** Dove sta la barretta: le altezze in cui il bordo destro non è del colore del fondo. */
+            fun thumb(bitmap: Bitmap): List<Int> = (0 until bitmap.height).filter { y -> (510 until 519).any { x -> bitmap.getColor(x, y) != background } }
+            assertTrue("prima di avvicinarsi la barretta non si vede", thumb(before).isEmpty())
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(514f, 120f), pressed = false) }
+            frames(5)
+            val shown = picture()
+            val bar = thumb(shown)
+            assertTrue("col mouse sul bordo la barretta compare", bar.isNotEmpty())
+            val start = bar.average().toFloat()
+            onWindowThread {
+                mouse(scene, PointerEventType.Move, Offset(514f, start), pressed = false)
+                mouse(scene, PointerEventType.Press, Offset(514f, start), pressed = true)
+            }
+            frames(2)
+            for (step in 1..10) {
+                onWindowThread { mouse(scene, PointerEventType.Move, Offset(514f, start + 20f * step), pressed = true) }
+                frames(1)
+            }
+            onWindowThread { mouse(scene, PointerEventType.Release, Offset(514f, start + 200f), pressed = false) }
+            frames(5)
+            val dragged = picture()
+            File("build/desktop-screenshots", "scrollbar_dragged.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(dragged).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val moved = thumb(dragged)
+            assertTrue("la barretta è scesa: da $start a ${moved.average()}", moved.isNotEmpty() && moved.average() > start + 120)
+            assertNotEquals("la pagina si è mossa", textRows(before).take(6), textRows(dragged).take(6))
+            // Un clic in fondo alla corsia: la pagina va in fondo, e la barretta con lei.
+            onWindowThread {
+                mouse(scene, PointerEventType.Move, Offset(514f, before.height - 12f), pressed = false)
+                mouse(scene, PointerEventType.Press, Offset(514f, before.height - 12f), pressed = true)
+                mouse(scene, PointerEventType.Release, Offset(514f, before.height - 12f), pressed = false)
+            }
+            frames(10)
+            val bottom = thumb(picture())
+            assertTrue("dopo il clic in fondo la barretta è in fondo: ${bottom.lastOrNull()}", bottom.isNotEmpty() && bottom.last() > before.height - 30)
+        }
+    }
+
     /** Scorrendo con la rotella, col mouse fermo, i puntini passano alla riga che ora c'è sotto. */
     @Test
     fun theSixDotsFollowTheWheel() {

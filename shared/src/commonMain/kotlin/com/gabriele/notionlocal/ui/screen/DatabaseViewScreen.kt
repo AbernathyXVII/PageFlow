@@ -13,6 +13,7 @@ import androidx.compose.foundation.hoverable
 import androidx.compose.runtime.produceState
 import com.gabriele.notionlocal.ui.theme.pcOr
 import com.gabriele.notionlocal.platform.isPc
+import com.gabriele.notionlocal.data.entity.FIRST_DAY_OF_WEEK
 import androidx.compose.material.icons.filled.BorderTop
 import androidx.compose.material.icons.filled.BorderLeft
 import com.gabriele.notionlocal.data.hasChosenIcon
@@ -3893,15 +3894,17 @@ private fun CalendarLayout(
     // — toccare un giorno e scriverci una pagina — funziona comunque:
     // la proprietà data viene creata al volo al primo tocco.
 
-    // Il primo giorno della settimana segue le convenzioni locali:
-    // lunedì in Italia, domenica altrove.
-    val firstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek
+    // Il primo giorno della settimana è il lunedì (dal 13/11/2026, vedi
+    // `FIRST_DAY_OF_WEEK`): prima seguiva la lingua del sistema.
+    val firstDayOfWeek = FIRST_DAY_OF_WEEK
     val today = LocalDate.now()
 
     // Il periodo mostrato è sempre individuato da un giorno che ci sta
     // dentro, così spostarsi avanti e indietro è la stessa operazione
     // per il mese e per la settimana.
     var anchor by remember { mutableStateOf(today) }
+    // Sul PC, le settimane del mese aperte con "Show more" (vedi `CompactWeek`).
+    var openWeeks by remember { mutableStateOf(emptySet<LocalDate>()) }
 
     // Una pagina creata dal pulsante in fondo nasce datata oggi: se si
     // stava guardando un altro periodo, bisogna tornare lì per vederla.
@@ -4118,14 +4121,14 @@ private fun CalendarLayout(
         } else if (mode != CalendarMode.DAY) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 (0..6).forEach { offset ->
+                    val weekday = firstDayOfWeek.plus(offset.toLong())
                     Text(
-                        text = firstDayOfWeek.plus(offset.toLong())
-                            .getDisplayName(TextStyle.SHORT, displayLocale),
+                        text = weekday.getDisplayName(TextStyle.SHORT, displayLocale),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
-                        modifier = Modifier.weight(1f).padding(vertical = 6.dp)
+                        modifier = Modifier.weight(1f).weekendTint(weekday).padding(vertical = 6.dp)
                     )
                 }
             }
@@ -4171,17 +4174,32 @@ private fun CalendarLayout(
 
             repeat(monthWeekCount) { index ->
                 val weekStart = monthGridStart.plusWeeks(index.toLong())
+                val weekSegments = calendarSegments(weekStart, dated)
+                // **Sul PC le settimane sono compatte** (dal 13/11/2026, chiesto
+                // dall'utente: "troppo spazio inutilizzato"): ognuna mette gli
+                // eventi nelle sue prime righe libere e ne mostra cinque per
+                // giorno, gli altri con "Show more" (vedi `packWeek`).
+                val compact = if (isPc) {
+                    CompactWeek(
+                        placed = remember(weekSegments, rowIndexes) { packWeek(weekSegments, rowIndexes) },
+                        expanded = weekStart in openWeeks,
+                        onToggle = { openWeeks = if (weekStart in openWeeks) openWeeks - weekStart else openWeeks + weekStart }
+                    )
+                } else {
+                    null
+                }
                 CalendarWeekRow(
                     weekStart = weekStart,
                     shownMonth = shownMonth,
                     today = today,
-                    segments = calendarSegments(weekStart, dated),
+                    segments = weekSegments,
                     rowIndexes = rowIndexes,
                     maxRows = CALENDAR_MAX_ROWS,
-                    height = monthWeekHeight,
+                    height = compact?.height() ?: monthWeekHeight,
                     onOpenRow = onOpenRow,
                     onRowLongPress = onRowLongPress,
-                    onAddRowOnDate = onAddOnDate
+                    onAddRowOnDate = onAddOnDate,
+                    compact = compact
                 )
                 HorizontalDivider()
             }
@@ -4224,6 +4242,54 @@ private fun CalendarLayout(
         }
     }
 }
+
+/**
+ * **Una settimana del mese sul PC** (dal 13/11/2026, chiesto dall'utente: "di
+ * base concedimi di vedere massimo cinque eventi"): le barre al loro posto in
+ * questa settimana ([placed], vedi `packWeek`), le prime cinque righe o tutte
+ * se aperta ([expanded]); [onToggle] la apre e la chiude.
+ */
+internal class CompactWeek(
+    val placed: List<Pair<Int, CalendarSegment>>,
+    val expanded: Boolean,
+    val onToggle: () -> Unit
+) {
+    /** Quante righe servono per vedere tutto. */
+    val rows: Int = (placed.maxOfOrNull { it.first } ?: -1) + 1
+
+    /** Alta quanto le righe che si vedono, più quella di "Show more" o "Show less", mai meno di prima. */
+    fun height(): Dp {
+        val shown = if (expanded) rows else minOf(rows, CALENDAR_COMPACT_ROWS)
+        val more = if (rows > CALENDAR_COMPACT_ROWS) CALENDAR_BAR_HEIGHT else 0.dp
+        return (CALENDAR_WEEK_HEADER + CALENDAR_BAR_HEIGHT * shown + more).coerceAtLeast(CALENDAR_MONTH_WEEK_HEIGHT)
+    }
+}
+
+/** Quanti eventi si vedono per giorno sul PC prima di "Show more". */
+internal const val CALENDAR_COMPACT_ROWS = 5
+
+/**
+ * **Le righe di una settimana, riempite dall'alto** (dal 13/11/2026, sul PC):
+ * ogni barra va nella prima riga libera per tutti i suoi giorni, nell'ordine
+ * delle pagine ([order]: chi comincia prima sta più in alto, vedi
+ * `calendarRowIndexes`). Così una settimana è alta quanto gli eventi che ha,
+ * non quanto tutte le pagine datate del database.
+ */
+internal fun packWeek(segments: List<CalendarSegment>, order: Map<String, Int>): List<Pair<Int, CalendarSegment>> {
+    val taken = ArrayList<BooleanArray>()
+    return segments.sortedWith(compareBy({ order[it.row.id] ?: Int.MAX_VALUE }, { it.startColumn })).map { segment ->
+        var row = 0
+        while (row < taken.size && (segment.startColumn..segment.endColumn).any { taken[row][it] }) row++
+        if (row == taken.size) taken += BooleanArray(7)
+        for (column in segment.startColumn..segment.endColumn) taken[row][column] = true
+        row to segment
+    }
+}
+
+/** Sabato e domenica un poco più grigi, nella colonna del calendario (dal 13/11/2026, chiesto dall'utente). */
+@Composable
+private fun Modifier.weekendTint(day: DayOfWeek): Modifier =
+    if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f)) else this
 
 /** Il primo giorno della settimana che contiene questa data. */
 private fun startOfWeek(date: LocalDate, firstDayOfWeek: DayOfWeek): LocalDate {
@@ -4501,7 +4567,7 @@ private fun CalendarModeChip(label: String, selected: Boolean, onClick: () -> Un
  * riconoscibile come una cosa sola.
  */
 @Immutable
-private data class CalendarSegment(
+internal data class CalendarSegment(
     val row: DatabaseRowEntity,
     /** La data vera della pagina, non il giorno in cui la barra entra nella settimana. */
     val rangeStart: LocalDate,
@@ -4639,7 +4705,9 @@ private fun CalendarBar(
             .fillMaxHeight()
             .padding(horizontal = 1.dp, vertical = 1.dp)
             .background(
-                if (eventColor != null) eventBackground(eventColor) else DarkSurface,
+                // Un poco più chiara del grigio di sabato e domenica (dal 13/11/2026, vedi `weekendTint`):
+                // col grigio di prima, nelle loro colonne la barra spariva.
+                if (eventColor != null) eventBackground(eventColor) else DarkSurfaceVariant,
                 RoundedCornerShape(
                     topStart = if (segment.continuesBefore) flat else round,
                     bottomStart = if (segment.continuesBefore) flat else round,
@@ -4686,7 +4754,9 @@ private fun CalendarWeekRow(
     height: Dp,
     onOpenRow: (DatabaseRowEntity) -> Unit,
     onRowLongPress: (DatabaseRowEntity) -> Unit,
-    onAddRowOnDate: (LocalDate) -> Unit
+    onAddRowOnDate: (LocalDate) -> Unit,
+    /** Sul PC nel mese (dal 13/11/2026): righe di questa settimana e "Show more" (vedi `CompactWeek`). */
+    compact: CompactWeek? = null
 ) {
     Box(modifier = Modifier.fillMaxWidth().height(height)) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -4696,6 +4766,7 @@ private fun CalendarWeekRow(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
+                        .weekendTint(date.dayOfWeek)
                         .pointerInput(date) {
                             detectTapGestures(onTap = { onAddRowOnDate(date) })
                         }
@@ -4732,14 +4803,20 @@ private fun CalendarWeekRow(
             // Il posto di ogni barra dipende solo dai pezzi e dalle
             // righe: rifarlo ad ogni fotogramma di scorrimento è lavoro
             // buttato proprio quando il tempo serve tutto per scorrere.
-            val placed = remember(segments, rowIndexes) {
+            val fixed = remember(segments, rowIndexes) {
                 segments.mapNotNull { segment ->
                     rowIndexes[segment.row.id]?.let { index -> index to segment }
                 }
             }
+            val placed = compact?.placed ?: fixed
+            val limit = when {
+                compact == null -> maxRows
+                compact.expanded -> Int.MAX_VALUE
+                else -> CALENDAR_COMPACT_ROWS
+            }
             // Una riga può avere più barre: le volte di una pagina che si
-            // ripete (vedi `CalendarBarRow`).
-            val visible = placed.filter { it.first < maxRows }.groupBy({ it.first }, { it.second })
+            // ripete, e sul PC gli eventi di giorni diversi (vedi `CalendarBarRow`).
+            val visible = placed.filter { it.first < limit }.groupBy({ it.first }, { it.second })
             val rowsToDraw = (visible.keys.maxOrNull()?.plus(1)) ?: 0
             repeat(rowsToDraw) { rowIndex ->
                 val rowSegments = visible[rowIndex]
@@ -4752,6 +4829,31 @@ private fun CalendarWeekRow(
                 } else {
                     Spacer(modifier = Modifier.height(CALENDAR_BAR_HEIGHT))
                 }
+            }
+            if (compact != null) {
+                // "Show more" sotto i giorni con eventi oltre i primi cinque; aperta, "Show less".
+                if (compact.rows > CALENDAR_COMPACT_ROWS) {
+                    Row(modifier = Modifier.fillMaxWidth().height(CALENDAR_BAR_HEIGHT)) {
+                        repeat(7) { day ->
+                            val more = placed.any { (row, segment) -> row >= CALENDAR_COMPACT_ROWS && day in segment.startColumn..segment.endColumn }
+                            Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
+                                if (more) {
+                                    Text(
+                                        text = if (compact.expanded) DbStrings.showLess else DbStrings.showMore,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .clickable { compact.onToggle() }
+                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                return@Column
             }
             // Le pagine oltre il tetto, contate una volta anche se si ripetono.
             val hidden = placed.filter { it.first >= maxRows }.map { it.second.row.id }.distinct().size
@@ -9216,7 +9318,7 @@ fun CustomRecurrenceDialog(
 @Composable
 private fun WeekdayChips(isOn: (DayOfWeek) -> Boolean, onClick: (DayOfWeek) -> Unit) {
     Row {
-        val first = WeekFields.of(Locale.getDefault()).firstDayOfWeek
+        val first = FIRST_DAY_OF_WEEK
         (0..6).forEach { offset ->
             val day = first.plus(offset.toLong())
             val on = isOn(day)
@@ -11125,7 +11227,7 @@ private fun TimelineLayout(
     }
 
     val today = LocalDate.now()
-    val firstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek
+    val firstDayOfWeek = FIRST_DAY_OF_WEEK
 
     val dated = remember(state.rows, state.cellValues, dateColumn.id) {
         state.rows.mapNotNull { row ->
