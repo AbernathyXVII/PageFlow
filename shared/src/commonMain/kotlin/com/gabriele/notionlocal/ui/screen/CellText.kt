@@ -1,5 +1,9 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.theme.NotionGray400
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
 import com.gabriele.notionlocal.platform.emojiTransformation
 import com.gabriele.notionlocal.platform.withEmojiFont
 import androidx.compose.foundation.background
@@ -16,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -207,6 +210,10 @@ class CellLinkLabels(
 val LocalCellLinkLabels = compositionLocalOf<CellLinkLabels?> { null }
 
 val FULL_TEXT_MIN_WIDTH = 260.dp
+
+/** La matita di una cella URL col titolo, e il posto che le lascia il testo (vedi `TextLikeCell`). */
+private val LINK_PENCIL_SIZE = 18.dp
+val LINK_PENCIL_SPACE = 20.dp
 val FULL_TEXT_PADDING_H = 12.dp
 private val FULL_TEXT_PADDING_V = 10.dp
 
@@ -305,7 +312,10 @@ fun TextLikeCell(
             val context = LocalPlatformContext.current
             val haptics = LocalHapticFeedback.current
             var linkMenu by remember(cellKey) { mutableStateOf(false) }
-            var showAs by remember(cellKey) { mutableStateOf(false) }
+            var editingTitle by remember(cellKey) { mutableStateOf(false) }
+            // **La matita** (dal 13/11/2026, chiesto dall'utente): accanto al titolo letto dal
+            // sito (o alla scritta), per correggerlo. "Show as" sta nel menu della proprietà.
+            val pencil = link && linkLabel != null && onLinkLabel != null && !locked
             /** Si scrive nella cella; `inPlace` anche se il testo non ci sta, invece del riquadro del testo intero. */
             fun startEditing(inPlace: Boolean = false) {
                 if (cut && !wrap && !showsVisual && !inPlace) {
@@ -344,7 +354,20 @@ fun TextLikeCell(
                         maxLines = cellMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         onTextLayout = { cut = it.isCut() },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().padding(end = if (pencil) LINK_PENCIL_SPACE else 0.dp)
+                    )
+                }
+                if (pencil) {
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = DbStrings.editLinkTitle,
+                        tint = NotionGray400,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(LINK_PENCIL_SIZE)
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable { editingTitle = true }
+                            .padding(2.dp)
                     )
                 }
                 DropdownMenu(
@@ -367,18 +390,8 @@ fun TextLikeCell(
                             }
                         )
                     }
-                    // **"Show as…"** (dal 27/10/2026, chiesto dall'utente): il link
-                    // per intero, il titolo della pagina web o una scritta propria.
-                    if (!locked && onLinkLabel != null) {
-                        DropdownMenuItem(
-                            text = { Text(DbStrings.showLinkAs) },
-                            leadingIcon = { Icon(Icons.Filled.TextFields, contentDescription = null) },
-                            onClick = {
-                                linkMenu = false
-                                showAs = true
-                            }
-                        )
-                    }
+                    // "Show as…" stava qui dal 27/10/2026: dal 13/11/2026 è nel menu della
+                    // proprietà, per tutte le celle (chiesto dall'utente, vedi `LinkColumnShow`).
                     DropdownMenuItem(
                         text = { Text(DbStrings.copyLink) },
                         leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
@@ -402,14 +415,16 @@ fun TextLikeCell(
                         )
                     }
                 }
-                if (showAs && onLinkLabel != null) {
-                    LinkShowDialog(
-                        value = localValue,
-                        current = linkLabel,
-                        onDismiss = { showAs = false },
-                        onSave = { label ->
-                            showAs = false
-                            onLinkLabel(label)
+                if (editingTitle && onLinkLabel != null) {
+                    LinkTitleEditSheet(
+                        current = linkLabel?.text.orEmpty(),
+                        onDismiss = { editingTitle = false },
+                        onSave = { written ->
+                            editingTitle = false
+                            val clean = written.trim()
+                            // Vuota: di nuovo il titolo della pagina. Uguale: com'era (un titolo resta un titolo).
+                            if (clean.isEmpty()) onLinkLabel(null)
+                            else if (clean != linkLabel?.text) onLinkLabel(LinkLabel(clean, isTitle = false))
                         }
                     )
                 }

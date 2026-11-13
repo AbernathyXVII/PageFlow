@@ -10,6 +10,7 @@ import com.gabriele.notionlocal.data.entity.ColumnType
 import com.gabriele.notionlocal.data.entity.DatabaseCellEntity
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
+import com.gabriele.notionlocal.data.entity.LinkColumnShow
 import com.gabriele.notionlocal.data.entity.LinkLabel
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.repository.DatabaseRepository
@@ -143,5 +144,31 @@ class CellLinkLabelTest {
         viewModel.setCellLinkLabel(row, wiki, null)
         waitFor("il link per intero") { viewModel.tableState.value.linkLabels[key] == null }
         assertEquals(bulbasaur, stored().value)
+    }
+
+    /**
+     * **"Show as" della proprietà** (13/11/2026, chiesto dall'utente): con
+     * "Page title" le celle col link e senza scritta lo leggono dal sito; con
+     * "Full link" la scritta non si vede ma resta, e torna rimettendo il titolo.
+     */
+    @Test
+    fun aPropertyShowingTitlesReadsThem() {
+        val column = runBlocking { db.databaseDao().getColumnsForPageOnce(pokedex.id).single() }
+        viewModel.setLinkColumnShow(column, LinkColumnShow.TITLE)
+        waitFor("il titolo letto") { viewModel.tableState.value.linkLabels[key] == LinkLabel("Bulbasaur (Pokémon)", true) }
+        assertEquals("TITLE", runBlocking { db.databaseDao().getColumnsForPageOnce(pokedex.id).single().numberDisplay })
+
+        viewModel.setLinkColumnShow(column, LinkColumnShow.LINK)
+        waitFor("il link per intero") { viewModel.tableState.value.linkLabels[key] == null }
+        assertEquals(LinkLabel("Bulbasaur (Pokémon)", true), stored().label)
+
+        viewModel.setLinkColumnShow(column, LinkColumnShow.TITLE)
+        waitFor("di nuovo il titolo") { viewModel.tableState.value.linkLabels[key] != null }
+
+        // Corretto con la matita e poi svuotato: il titolo si rilegge.
+        viewModel.setCellLinkLabel(row, wiki, LinkLabel("Il primo", isTitle = false))
+        waitFor("la scritta") { viewModel.tableState.value.linkLabels[key]?.text == "Il primo" }
+        viewModel.setCellLinkLabel(row, wiki, null)
+        waitFor("il titolo riletto") { viewModel.tableState.value.linkLabels[key] == LinkLabel("Bulbasaur (Pokémon)", true) }
     }
 }

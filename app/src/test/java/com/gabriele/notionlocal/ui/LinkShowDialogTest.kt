@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui
 
+import androidx.compose.ui.test.onNodeWithContentDescription
 import android.app.Application
 import android.content.Intent
 import android.os.Looper
@@ -42,7 +43,7 @@ import java.time.Duration
  * **Quello che si vede di un link** (27/10/2026, chiesto dall'utente: "il
  * link per intero", "il titolo della pagina web" o "una scritta che io
  * scriverò manualmente"): le tre scelte sotto l'indirizzo nella finestrella
- * del link, e "Show as…" nel menu di una cella URL. Il titolo viene da
+ * del link, e (dal 13/11/2026) la matita di una cella URL. Il titolo viene da
  * `LinkTitles`, qui senza rete.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -194,31 +195,38 @@ class LinkShowDialogTest {
         assertEquals(bulbapedia, intent?.dataString)
     }
 
+    /** Dal 13/11/2026 "Show as…" non sta più nel menu della cella: è nel menu della proprietà. */
     @Test
-    fun showAsInTheCellMenu() {
+    fun theCellMenuHasNoShowAs() {
         cell(null)
         compose.onNodeWithText(bulbapedia).performTouchInput { longClick() }
         compose.waitForIdle()
-        compose.onNodeWithText("Show as…").performClick()
-        compose.waitForIdle()
-        // Ora la cella mostra il link: "Full link" è quello scelto.
-        compose.onNodeWithText("Page title").performClick()
-        waitForText("Bulbasaur (Pokémon) - Bulbapedia")
-        compose.onNodeWithText("Done").performClick()
-        compose.waitForIdle()
-        assertEquals(LinkLabel("Bulbasaur (Pokémon) - Bulbapedia", isTitle = true), label)
+        compose.onNodeWithText("Copy link").assertExists()
+        compose.onNodeWithText("Show as…").assertDoesNotExist()
+        // Senza titolo, niente matita.
+        compose.onNodeWithContentDescription("Edit title").assertDoesNotExist()
     }
 
+    /** **La matita** (13/11/2026, chiesto dall'utente): il titolo letto si corregge. */
     @Test
-    fun theCellMenuOpensOnTheTitleAlreadyRead() {
+    fun thePencilEditsTheTitle() {
         cell(LinkLabel("Bulbasaur (Pokémon) - Bulbapedia", isTitle = true))
-        compose.onNodeWithText("Bulbasaur (Pokémon) - Bulbapedia").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription("Edit title").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("Show as…").performClick()
+        compose.onNode(hasSetTextAction()).performTextReplacement("Bulbasaur")
+        compose.onNodeWithText("Save").performClick()
         compose.waitForIdle()
-        // Il titolo c'è già, senza rileggerlo: si torna al link per intero.
-        compose.onNodeWithText("Full link").performClick()
-        compose.onNodeWithText("Done").performClick()
+        assertEquals(LinkLabel("Bulbasaur", isTitle = false), label)
+    }
+
+    /** Svuotata: di nuovo il titolo della pagina (la scritta se ne va, il database lo rilegge). */
+    @Test
+    fun theEmptiedPencilGivesThePageTitleBack() {
+        cell(LinkLabel("Bulbasaur", isTitle = false))
+        compose.onNodeWithContentDescription("Edit title").performClick()
+        compose.waitForIdle()
+        compose.onNode(hasSetTextAction()).performTextReplacement("")
+        compose.onNodeWithText("Save").performClick()
         compose.waitForIdle()
         assertEquals(null, label)
     }

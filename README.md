@@ -1126,6 +1126,40 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.6 — 13/11/2026 · 23:18 — Link property: "Show as" in its menu, faster page titles, a pencil to correct them
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1269 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"Show as" of a Link property is
+  in the menu of the property**, right under the box with its name (only for
+  Link properties), for all its cells: "Full link" or "Page title". It is no
+  longer in the menu of the long press on a link. With "Page title" every cell
+  reads the title of its page by itself (with the internet; without, it shows
+  the link and tries again the next time the database is opened), also for
+  the links written later
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **A pencil on the right of the
+  title** in the cell: it opens a panel to correct the title that was read;
+  left empty, the cell gets the page title again
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The title of a web page arrives
+  much sooner**, and no more "No title found" where there is one: only the
+  beginning of the page is read (where the title is), not up to half a MB of
+  it; a link that goes from http to https is followed (before, it gave "No
+  title found"); if the network doesn't answer, it tries once more; YouTube
+  videos ask YouTube for their title (the page, in Europe, would give the
+  cookie request); a page without a title gives at least the name of the
+  site; a title already read isn't read again. Also for "Page title" of the
+  links in the text and for the web bookmarks
+- **[Project]** `LinkColumnShow` (in `numberDisplay`, which a Link property
+  doesn't use: no change to the database), `DatabaseViewModel.setLinkColumnShow`
+  and `fetchMissingLinkTitles` (four sites at a time),
+  `PropertyMenuActions.setLinkShow`, `LinkTitleEditSheet`, `LinkPreviews.download`
+  (redirects by hand, stop at the end of `<head>`), `LinkTitles` remembers the
+  titles of the session; `LinkShowDialog` removed. Tests: `DesktopLinkPreviewsTest`
+  (a fake site: the title in less than 2 seconds while the rest of the page
+  takes 5, a redirect), `PropertyMenuTest.aLinkPropertyHasShowAsUnderItsName`,
+  `CellLinkLabelTest.aPropertyShowingTitlesReadsThem`,
+  `LinkShowDialogTest.theCellMenuHasNoShowAs`/`thePencilEditsTheTitle`/
+  `theEmptiedPencilGivesThePageTitleBack`
+
 ### ✏️ v0.155.5 — 13/11/2026 · 19:19 — PC: dark window bar, tabs you drag (also into a new window), a taller cover
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1264 tests passed)*
 

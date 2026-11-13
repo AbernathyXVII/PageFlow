@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.viewmodel
 
+import com.gabriele.notionlocal.ui.screen.LINK_PENCIL_SPACE
 import android.app.Application
 import android.os.Looper
 import androidx.compose.material3.Typography
@@ -147,7 +148,8 @@ class PageLinkTest {
         val measure: (String, androidx.compose.ui.text.TextStyle) -> androidx.compose.ui.unit.Dp = { text, _ -> (text.length * 7).dp }
         val url = DatabaseColumnEntity(pageId = "db", name = "URL", type = ColumnType.URL, orderIndex = 0)
         val teams = "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abcdefghijklmno"
-        assertEquals(("Meeting Teams".length * 7 + 2).dp, cellFitWidth(url, jam, teams, Typography(), measure, linkLabel = "Meeting Teams"))
+        // Dal 13/11/2026 accanto alla scritta c'è la matita per correggerla: anche lei.
+        assertEquals(("Meeting Teams".length * 7 + 2).dp + LINK_PENCIL_SPACE, cellFitWidth(url, jam, teams, Typography(), measure, linkLabel = "Meeting Teams"))
         // Senza scritta, il link intero come prima; una cella vuota non ha niente da misurare.
         assertEquals((teams.length * 7 + 2).dp, cellFitWidth(url, jam, teams, Typography(), measure))
         assertEquals(2.dp, cellFitWidth(url, jam, "", Typography(), measure, linkLabel = "Meeting Teams"))

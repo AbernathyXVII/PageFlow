@@ -1,5 +1,13 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -163,45 +171,44 @@ internal fun LinkShowChoice(state: LinkShowState, choice: LinkShow, label: Strin
 }
 
 /**
- * **"Show as…" di una cella URL** (dal 27/10/2026): le stesse scelte per la
- * scritta che la cella mostra al posto dell'indirizzo [value]. [onSave]
- * riceve la scritta, o null per il link per intero.
+ * **La matita di una cella URL** (dal 13/11/2026, chiesto dall'utente): il
+ * titolo letto dal sito (o la scritta di prima) si corregge qui, in un
+ * pannello come gli altri del database (sul PC accanto al clic). [onSave]
+ * riceve il testo scritto; vuoto vuol dire di nuovo il titolo della pagina.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LinkShowDialog(value: String, current: LinkLabel?, onDismiss: () -> Unit, onSave: (LinkLabel?) -> Unit) {
-    val url = linkUri(value)
-    val state = remember {
-        when {
-            current == null -> LinkShowState(LinkShow.LINK, "")
-            current.isTitle -> LinkShowState(LinkShow.TITLE, "", url to current.text)
-            else -> LinkShowState(LinkShow.TEXT, current.text)
+fun LinkTitleEditSheet(current: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var text by remember { mutableStateOf(current) }
+    NoteBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = DarkSheet
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).navigationBarsPadding()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    DbStrings.editLinkTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onDismiss) { Text(Strings.cancel) }
+                TextButton(onClick = { onSave(text) }) { Text(EditorStrings.save) }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            SheetTextField(
+                value = text,
+                onValueChange = { text = it.replace('\n', ' ') },
+                placeholder = EditorStrings.linkTextHint,
+                leading = Icons.Filled.Edit
+            )
+            Text(
+                DbStrings.linkTitleEmptyHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = NotionGray400,
+                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+            )
         }
     }
-    val shown = state.shownFor(url)
-    FitAlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = DarkSheet,
-        title = { Text(DbStrings.showLinkAs, color = NotionWhite) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                LinkShowChoices(url = url, whole = value.trim(), state = state)
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = shown != null,
-                onClick = {
-                    val text = shown ?: return@TextButton
-                    onSave(
-                        when (state.show) {
-                            LinkShow.LINK -> null
-                            LinkShow.TITLE -> LinkLabel(text, isTitle = true)
-                            LinkShow.TEXT -> LinkLabel(text, isTitle = false)
-                        }
-                    )
-                }
-            ) { Text(Strings.done) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(Strings.cancel) } }
-    )
 }

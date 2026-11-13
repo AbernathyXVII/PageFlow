@@ -1,5 +1,10 @@
 package com.gabriele.notionlocal.viewmodel
 
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.sync.Semaphore
+import com.gabriele.notionlocal.ui.screen.hasWebTitle
+import com.gabriele.notionlocal.data.entity.linkShow
+import com.gabriele.notionlocal.data.entity.LinkColumnShow
 import com.gabriele.notionlocal.ui.screen.coverKey
 import com.gabriele.notionlocal.data.entity.withNameHidden
 import com.gabriele.notionlocal.data.entity.titleColumnId
@@ -174,6 +179,10 @@ const val RECURRING_CHECK_FLASH_MS = 400L
 
 /** Quanto si aspetta a rileggere il titolo di una cella URL il cui link è cambiato: lo si sta forse ancora scrivendo. */
 private const val LINK_TITLE_PAUSE_MS = 1_500L
+
+/** I titoli che mancano: dopo quanto si leggono, e quanti siti insieme (vedi `fetchMissingLinkTitles`). */
+private const val MISSING_TITLE_PAUSE_MS = 600L
+private const val LINK_TITLE_FETCHES = 4
 
 /** L'anteprima di una formula: la riga su cui si è calcolata, e il risultato. */
 data class FormulaPreview(val row: DatabaseRowEntity, val value: FormulaValue)
@@ -761,7 +770,11 @@ class DatabaseViewModel(
                         rows.filter { it.id in ids || it.id in held }
                     }
                 }
-                val linkLabels = cells.mapNotNull { cell -> cell.label?.let { (cell.rowId to cell.columnId) to it } }.toMap()
+                // "Show as: Full link" (dal 13/11/2026, vedi `LinkColumnShow`): le scritte restano salvate, ma non si vedono.
+                val fullLinks = columns.filter { it.linkShow == LinkColumnShow.LINK }.mapTo(HashSet()) { it.id }
+                val linkLabels = cells.mapNotNull { cell ->
+                    cell.label?.takeIf { cell.columnId !in fullLinks }?.let { (cell.rowId to cell.columnId) to it }
+                }.toMap()
                 val (kept, search) = searchRows(filtered, columns, cellValues, query, index, added, related, linkLabels)
                 val sorted = sortRows(kept, columns, cellValues, page, rollups, related, formulas)
                 DatabaseTableState(
@@ -779,6 +792,7 @@ class DatabaseViewModel(
                 .flowOn(Dispatchers.Default)
                 .collect { state ->
                     _tableState.value = state
+                    fetchMissingLinkTitles(state)
                 }
         }
     }
@@ -2564,10 +2578,55 @@ class DatabaseViewModel(
 
     /** "Show as…" di una cella URL (dal 27/10/2026): la scritta al posto del link, o null per il link. */
     fun setCellLinkLabel(row: DatabaseRowEntity, column: DatabaseColumnEntity, label: LinkLabel?) {
+        // Tolta la scritta (la matita, svuotata) in una proprietà che mostra i titoli: il titolo si rilegge.
+        if (label == null) titleTries.removeAll { it.first == row.id && it.second == column.id }
         viewModelScope.launch { repository.setCellLinkLabel(row.id, column.id, label) }
     }
 
     private val titleReads = mutableMapOf<Pair<String, String>, Job>()
+
+    /**
+     * **"Show as" di una proprietà Link** (dal 13/11/2026, chiesto
+     * dall'utente: nel menu della proprietà, sotto il nome). Coi titoli, quelli
+     * che mancano li legge `fetchMissingLinkTitles`. Vedi `LinkColumnShow`.
+     */
+    fun setLinkColumnShow(column: DatabaseColumnEntity, show: LinkColumnShow) {
+        val current = rawColumn(column.id) ?: return
+        if (current.type != ColumnType.URL || current.linkShow == show) return
+        viewModelScope.launch { repository.updateColumn(current.copy(numberDisplay = show.name)) }
+    }
+
+    /** Le celle (riga, colonna, link) di cui si è già provato a leggere il titolo, in questa sessione. */
+    private val titleTries = HashSet<Triple<String, String, String>>()
+    private val titleFetches = Semaphore(LINK_TITLE_FETCHES)
+
+    /**
+     * **I titoli che mancano** (dal 13/11/2026): in una proprietà Link che
+     * mostra i titoli, ogni cella col link e senza scritta lo legge dal sito,
+     * una volta per link (senza rete, di nuovo la volta che si riapre il
+     * database), poche alla volta, e dopo una breve pausa: il link si sta
+     * forse ancora scrivendo.
+     */
+    // shortcut: con "Full link" le scritte non si vedono, e un link cambiato lì tiene il titolo di
+    // quello di prima finché non lo si tocca con la matita; da sistemare se capita.
+    private fun fetchMissingLinkTitles(state: DatabaseTableState) {
+        val titled = state.columns.filter { it.linkShow == LinkColumnShow.TITLE }
+        if (titled.isEmpty()) return
+        for (column in titled) for (row in state.rows) {
+            val key = row.id to column.id
+            val raw = state.cellValues[key].orEmpty()
+            if (raw.isBlank() || state.linkLabels[key] != null) continue
+            val url = linkUri(raw).takeIf { hasWebTitle(it) } ?: continue
+            if (!titleTries.add(Triple(row.id, column.id, raw))) continue
+            titleReads.remove(key)?.cancel()
+            titleReads[key] = viewModelScope.launch {
+                delay(MISSING_TITLE_PAUSE_MS)
+                val title = titleFetches.withPermit { LinkTitles.read(url) }
+                if (title != null) repository.setCellLinkLabel(row.id, column.id, LinkLabel(title, isTitle = true), expectedValue = raw)
+                titleReads.remove(key)
+            }
+        }
+    }
 
     /**
      * **Il link di una cella che mostra il titolo della sua pagina è

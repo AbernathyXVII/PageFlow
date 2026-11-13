@@ -312,8 +312,9 @@ fun LinkDialog(
 // un campo testo normale o in un database, con tre opzioni: 1) il link per
 // intero; 2) il titolo della pagina web; 3) una scritta che io scriverò
 // manualmente"). Nel testo cambia il testo del link (`LinkDialog`); in una
-// cella URL la scritta mostrata al posto dell'indirizzo (`LinkShowDialog`,
-// `DatabaseCellEntity.linkLabel`).
+// cella URL la scritta mostrata al posto dell'indirizzo
+// (`DatabaseCellEntity.linkLabel`): dal 13/11/2026 la si sceglie per tutta la
+// proprietà (`LinkColumnShow`) e si corregge con la matita della cella.
 // ---------------------------------------------------------------------------
 
 /**

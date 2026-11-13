@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.LinkColumnShow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -98,7 +99,9 @@ class PropertyMenuActions(
     /** Che valori ha una proprietà: per le scritte delle due scelte di "Sort". */
     val sortKind: (String) -> SortKind,
     /** "Edit actions" di una proprietà Button (dal 27/10/2026); null col database bloccato. */
-    val editButton: ((DatabaseColumnEntity) -> Unit)? = null
+    val editButton: ((DatabaseColumnEntity) -> Unit)? = null,
+    /** "Show as" di una proprietà Link (dal 13/11/2026, vedi `LinkColumnShow`); null col database bloccato. */
+    val setLinkShow: ((DatabaseColumnEntity, LinkColumnShow) -> Unit)? = null
 )
 
 val LocalPropertyMenuActions = compositionLocalOf<PropertyMenuActions?> { null }

@@ -886,6 +886,8 @@ object DbStrings {
     val copyLink get() = t("Copy link", "Copia link", "Link kopieren", "Copier le lien", "Copiar enlace", "复制链接", "링크 복사", "リンクをコピー")
     val pasteLink get() = t("Paste link", "Incolla link", "Link einfügen", "Coller le lien", "Pegar enlace", "粘贴链接", "링크 붙여넣기", "リンクを貼り付け")
     val linkCopied get() = t("Link copied", "Link copiato", "Link kopiert", "Lien copié", "Enlace copiado", "链接已复制", "링크를 복사했어요", "リンクをコピーしました")
+    val editLinkTitle get() = t("Edit title", "Modifica il titolo", "Titel bearbeiten", "Modifier le titre", "Editar el título", "编辑标题", "제목 편집", "タイトルを編集")
+    val linkTitleEmptyHint get() = t("Leave it empty for the page title again.", "Lascialo vuoto per riavere il titolo della pagina.", "Leer lassen für wieder den Seitentitel.", "Laissez vide pour retrouver le titre de la page.", "Déjalo vacío para volver al título de la página.", "留空则恢复网页标题。", "비워 두면 페이지 제목으로 돌아가요.", "空にするとページのタイトルに戻ります。")
     val showLinkAs get() = t("Show as…", "Mostra come…", "Anzeigen als…", "Afficher comme…", "Mostrar como…", "显示为…", "표시 방식…", "表示方法…")
     // "Hide icon" tenendo premuta una proprietà (dal 27/10/2026).
     val hideIcon get() = t("Hide icon", "Nascondi icona", "Symbol ausblenden", "Masquer l'icône", "Ocultar icono", "隐藏图标", "아이콘 숨기기", "アイコンを隠す")

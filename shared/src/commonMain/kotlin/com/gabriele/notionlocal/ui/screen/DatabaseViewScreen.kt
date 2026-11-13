@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.screen
 
+import androidx.compose.material.icons.filled.Link
+import com.gabriele.notionlocal.data.entity.linkShow
+import com.gabriele.notionlocal.data.entity.LinkColumnShow
 import com.gabriele.notionlocal.data.entity.PageParagraph
 import com.gabriele.notionlocal.data.entity.nameColumnHidden
 import com.gabriele.notionlocal.ui.navigation.horizontalResizeCursor
@@ -1355,7 +1358,8 @@ private fun DatabaseViewBody(
             editButton = if (contentLocked) null else { column ->
                 focusManager.clearFocus()
                 editingButton = column
-            }
+            },
+            setLinkShow = if (contentLocked) null else { column, show -> viewModel.setLinkColumnShow(column, show) }
         )
     }
 
@@ -2872,7 +2876,9 @@ fun cellFitWidth(
     /** Il titolo della pagina di una cella "Page link", o null se non c'è più. */
     pageTitle: (String) -> String? = { null }
 ): Dp = when (column.type) {
-    ColumnType.URL -> measure(linkLabel?.takeIf { value.isNotBlank() } ?: value, typography.bodyMedium) + 2.dp
+    // Col titolo, anche la matita (dal 13/11/2026, vedi `TextLikeCell`).
+    ColumnType.URL -> measure(linkLabel?.takeIf { value.isNotBlank() } ?: value, typography.bodyMedium) + 2.dp +
+        if (linkLabel != null && value.isNotBlank()) LINK_PENCIL_SPACE else 0.dp
     ColumnType.CHECKBOX -> 24.dp
     // Ogni riga collegata: la freccia, 3 punti, il nome, e 8 fra l'una e l'altra (`RelatedRowLink`).
     ColumnType.RELATION -> relationTitles(value, column.relationConfig()?.let { related[it.database] })
@@ -7061,6 +7067,40 @@ private fun PropertyHeaderCell(
             onDismiss = { menuOpen = false },
             onRename = actions?.rename?.let { rename -> { name: String -> rename(column, name) } }
         ) {
+            // **"Show as" di una proprietà Link** (dal 13/11/2026, chiesto dall'utente): subito
+            // sotto il nome, per tutte le celle; prima stava nel menu del tocco lungo di ognuna.
+            val setLinkShow = actions?.setLinkShow
+            if (column.type == ColumnType.URL && setLinkShow != null) {
+                val labels = LocalCellLinkLabels.current?.labels
+                // Mai scelto: come si vede adesso (qualche cella col titolo, o tutti link).
+                val shown = column.linkShow
+                    ?: if (labels?.keys?.any { it.second == column.id } == true) LinkColumnShow.TITLE else LinkColumnShow.LINK
+                Spacer(modifier = Modifier.size(16.dp))
+                Text(
+                    DbStrings.showAs,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+                )
+                OptionsGroup {
+                    listOf(
+                        Triple(LinkColumnShow.LINK, Icons.Filled.Link, EditorStrings.linkShowLink),
+                        Triple(LinkColumnShow.TITLE, Icons.Filled.Title, EditorStrings.linkShowTitle)
+                    ).forEachIndexed { i, (show, icon, label) ->
+                        if (i > 0) HorizontalDivider()
+                        OptionRow(
+                            icon,
+                            label,
+                            onClick = { setLinkShow(column, show) },
+                            trailing = if (show == shown) {
+                                { Icon(Icons.Filled.Check, contentDescription = DbStrings.selected, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                }
+            }
             // Gli spostamenti **in cima**: l'ha chiesto l'utente, perché
             // spostare è la cosa per cui si apre il menu di un'intestazione.
             PropertyMenuGroup(

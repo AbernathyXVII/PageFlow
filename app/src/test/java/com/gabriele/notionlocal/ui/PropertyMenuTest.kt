@@ -1,5 +1,12 @@
 package com.gabriele.notionlocal.ui
 
+import java.time.Duration
+import org.robolectric.Shadows.shadowOf
+import com.gabriele.notionlocal.data.LinkTitles
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsActions
+import android.os.Looper
 import android.app.Application
 import android.content.Context
 import androidx.activity.ComponentActivity
@@ -132,6 +139,41 @@ class PropertyMenuTest {
         // "Edit property" non c'è più; le caselle nemmeno: questa non è una colonna di caselle.
         assertTrue(compose.onAllNodesWithText("Edit property").fetchSemanticsNodes().isEmpty())
         assertTrue(compose.onAllNodesWithText("Activate all").fetchSemanticsNodes().isEmpty())
+    }
+
+    /**
+     * **"Show as" di una proprietà Link** (13/11/2026, chiesto dall'utente):
+     * subito sotto il nome, prima di tutto il resto, e solo per lei; "Page
+     * title" lo salva per la proprietà e le celle mostrano i titoli.
+     */
+    @Test
+    fun aLinkPropertyHasShowAsUnderItsName() {
+        val original = LinkTitles.source
+        LinkTitles.source = { url -> if (url == "https://example.com/zelda") "Zelda - La wiki" else null }
+        try {
+            runBlocking {
+                val db = AppDatabase.getInstance(context)
+                db.databaseDao().insertColumn(DatabaseColumnEntity(id = "sito", pageId = "giochi", name = "Sito", type = ColumnType.URL, orderIndex = -1))
+                db.databaseDao().insertCell(DatabaseCellEntity(rowId = "r1", columnId = "sito", value = "https://example.com/zelda"))
+            }
+            open()
+            compose.onNodeWithText("Sito").performClick()
+            compose.waitForIdle()
+            assertTrue("\"Show as\" sotto il nome, prima di \"Move to left\"", topOf("Show as") < topOf("Move to left"))
+            compose.onNodeWithText("Page title").performClick()
+            waitFor { column("sito").numberDisplay == "TITLE" }
+            compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss)).performSemanticsAction(SemanticsActions.Dismiss)
+            compose.waitUntil(5_000) {
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
+                compose.onAllNodesWithText("Zelda - La wiki").fetchSemanticsNodes().isNotEmpty()
+            }
+            // Le altre proprietà non ce l'hanno.
+            compose.onNodeWithText("Voto").performClick()
+            compose.waitForIdle()
+            assertTrue(compose.onAllNodesWithText("Page title").fetchSemanticsNodes().isEmpty())
+        } finally {
+            LinkTitles.source = original
+        }
     }
 
     @Test
