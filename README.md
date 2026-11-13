@@ -1126,6 +1126,24 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.6.1 — 13/11/2026 · 23:45 — PC: up and down arrows go to the right line
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1270 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The up and down arrows go to the line above or
+  below**, also in numbered and bulleted lists: going to a shorter line, the
+  cursor ended a few letters further on (Compose counted also the numbers
+  drawn in front of the lines, "4.  "), often already in the line below, and
+  from there letters, arrows and Backspace went where one wasn't looking —
+  as after pasting lines into a numbered list. Now the line above or below
+  keeps the column, as before; Shift with the arrows selects the same way.
+  Found by the user; reproduced in a test (copy two lines, paste them at the
+  end of a numbered list, up arrow: the cursor went into the line below)
+- **[Project]** `verticalTarget` (the line above/below at the same x of the
+  shown text, back to the real text with the `OffsetMapping`),
+  `VerticalColumn`, `shiftArrowDirection`, in `arrowKey` and `islandArrowKey`
+  (the jump to another field stays as in v0.153.79.1). Test:
+  `DesktopPasteKeysTest` (fake clipboard: the Windows one isn't touched)
+
 ### ✏️ v0.155.6 — 13/11/2026 · 23:18 — Link property: "Show as" in its menu, faster page titles, a pencil to correct them
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1269 tests passed)*
 

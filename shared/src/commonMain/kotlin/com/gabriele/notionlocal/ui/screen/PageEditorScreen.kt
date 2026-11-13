@@ -492,6 +492,44 @@ private fun arrowDirection(event: KeyEvent): Boolean? {
     }
 }
 
+/** Freccia su o giù con Maiusc sul PC (si allarga la selezione): true = giù; null per gli altri tasti. */
+private fun shiftArrowDirection(event: KeyEvent): Boolean? {
+    if (!isPc || event.type != KeyEventType.KeyDown || !event.isShiftPressed || event.isCtrlPressed || event.isAltPressed) return null
+    return when (event.key) {
+        Key.DirectionDown -> true
+        Key.DirectionUp -> false
+        else -> null
+    }
+}
+
+/**
+ * **Su e giù dentro un campo, fatti qui** (dal 13/11/2026, trovato
+ * dall'utente: "scorrere con le freccette direzionali sul PC è buggatissimo",
+ * dopo un incolla in un elenco numerato). Compose, passando a una riga più
+ * corta di quella dove si è, mette il cursore in fondo a quella riga contando
+ * anche quello che il campo disegna davanti alle righe (i numeri "4.  ", i
+ * pallini): il cursore finiva qualche lettera più in là, spesso già nella riga
+ * sotto, e da lì le lettere e il Backspace andavano dove non si guardava. Qui
+ * la riga sopra (o sotto) all'altezza [x] del testo mostrato, riportata nel
+ * testo vero con [mapping]. La riga deve esserci (vedi [onEdgeLine]).
+ */
+private fun verticalTarget(layout: TextLayoutResult, mapping: OffsetMapping, shown: Int, down: Boolean, x: Float): Int {
+    val line = layout.getLineForOffset(shown) + if (down) 1 else -1
+    val at = x.coerceIn(layout.getLineLeft(line), layout.getLineRight(line))
+    val y = (layout.getLineTop(line) + layout.getLineBottom(line)) / 2f
+    return mapping.transformedToOriginal(layout.getOffsetForPosition(Offset(at, y)))
+}
+
+/**
+ * La colonna da tenere salendo e scendendo, come fa Compose: la x da cui si è
+ * partiti, finché il cursore si muove solo con le frecce ([at] è dove l'hanno
+ * lasciato; spostato in un altro modo, si riparte da dove è).
+ */
+private class VerticalColumn {
+    var x = 0f
+    var at = -1
+}
+
 /** Il cursore (in [shown], nel testo mostrato) sta sull'ultima riga del campo ([down]) o sulla prima. */
 private fun onEdgeLine(layout: TextLayoutResult, shown: Int, down: Boolean): Boolean {
     val line = layout.getLineForOffset(shown)
@@ -6154,13 +6192,31 @@ private fun MergedTextRunField(
     )
     // **Le frecce su e giù fuori dal campo** (dal 13/11/2026, vedi `PageEditorViewModel.lineNextTo`).
     val fieldCoords = remember(runKey) { arrayOfNulls<LayoutCoordinates>(1) }
+    val vertical = remember(runKey) { VerticalColumn() }
     fun arrowKey(event: KeyEvent): Boolean {
-        val down = arrowDirection(event) ?: return false
+        val extend = shiftArrowDirection(event)
+        val down = arrowDirection(event) ?: extend ?: return false
         val layout = textLayout ?: return false
         val coords = fieldCoords[0]?.takeIf { it.isAttached } ?: return false
         val mapping = mergedTransformation.filter(fieldValue.annotatedString).offsetMapping
         val shown = mapping.originalToTransformed(fieldValue.selection.end).coerceIn(0, layout.layoutInput.text.length)
-        if (!onEdgeLine(layout, shown, down)) return false
+        if (!onEdgeLine(layout, shown, down)) {
+            // Dentro il campo: la riga sopra o sotto la trova la pagina (vedi `verticalTarget`).
+            if (vertical.at != fieldValue.selection.end) vertical.x = layout.getCursorRect(shown).left
+            val target = verticalTarget(layout, mapping, shown, down, vertical.x).coerceIn(RUN_LEAD.length, fieldValue.text.length)
+            vertical.at = target
+            fieldValue = fieldValue.copy(selection = if (extend != null) TextRange(fieldValue.selection.start, target) else TextRange(target))
+            // Come quando il cursore lo sposta il campo: la riga col cursore è questa.
+            val lineId = runBlocks.getOrNull(lineIndexAt(bodyOf(fieldValue.text), target - RUN_LEAD.length))?.id
+            if (lineId != null && lineId != lastLineBlockId) {
+                lastLineBlockId?.let { onFocusChanged(it, false) }
+                onFocusChanged(lineId, true)
+                lastLineBlockId = lineId
+            }
+            return true
+        }
+        // Con Maiusc sulla prima o sull'ultima riga: allarga fin lì, come prima.
+        if (extend != null) return false
         val here = runBlocks.getOrNull(lineIndexAt(bodyOf(fieldValue.text), fieldValue.selection.end - 1)) ?: return false
         val next = viewModel.lineNextTo(here.id, down) ?: return false
         viewModel.arriveWithArrow(next.id, coords.localToWindow(Offset(layout.getHorizontalPosition(shown, true), 0f)).x, fromAbove = down)
@@ -7570,13 +7626,24 @@ private fun BlockRow(
         )
         // Le frecce su e giù fuori dal campo, come nel campo unito.
         val islandCoords = remember(block.id) { arrayOfNulls<LayoutCoordinates>(1) }
+        val islandVertical = remember(block.id) { VerticalColumn() }
         fun islandArrowKey(event: KeyEvent): Boolean {
-            val down = arrowDirection(event) ?: return false
+            val extend = shiftArrowDirection(event)
+            val down = arrowDirection(event) ?: extend ?: return false
             val layout = islandLayout ?: return false
             val coords = islandCoords[0]?.takeIf { it.isAttached } ?: return false
-            val mapping = islandTransformation.filter(editState.fieldValue.annotatedString).offsetMapping
-            val shown = mapping.originalToTransformed(editState.fieldValue.selection.end).coerceIn(0, layout.layoutInput.text.length)
-            if (!onEdgeLine(layout, shown, down)) return false
+            val value = editState.fieldValue
+            val mapping = islandTransformation.filter(value.annotatedString).offsetMapping
+            val shown = mapping.originalToTransformed(value.selection.end).coerceIn(0, layout.layoutInput.text.length)
+            if (!onEdgeLine(layout, shown, down)) {
+                // Dentro il campo (una riga lunga che va a capo): vedi `verticalTarget`.
+                if (islandVertical.at != value.selection.end) islandVertical.x = layout.getCursorRect(shown).left
+                val target = verticalTarget(layout, mapping, shown, down, islandVertical.x).coerceIn(RUN_LEAD.length, value.text.length)
+                islandVertical.at = target
+                editState = editState.copy(fieldValue = value.copy(selection = if (extend != null) TextRange(value.selection.start, target) else TextRange(target)))
+                return true
+            }
+            if (extend != null) return false
             val next = viewModel.lineNextTo(block.id, down) ?: return false
             viewModel.arriveWithArrow(next.id, coords.localToWindow(Offset(layout.getHorizontalPosition(shown, true), 0f)).x, fromAbove = down)
             return true
