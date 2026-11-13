@@ -1126,6 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.3 — 13/11/2026 · 18:16 — Room at the bottom of every page, and "Back" only far down
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1259 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Every page ends with the room
+  of two empty lines**, so what is written last is never stuck to the bottom
+  edge, even without empty lines below it. They are not lines: nothing can be
+  written there, and touching them puts the cursor in the last line, as the
+  empty part under a page already did
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"Back" (the button with the
+  arrow up that goes back to the top)** is lower, just above the bottom edge
+  of the window; it shows only when what you see goes past **two thirds of
+  the page** (on a long page, much further down than before), and **goes
+  away after two seconds without scrolling**; scrolling down again brings it
+  back
+- **[Project]** `PAGE_BOTTOM_SPACE` (48 dp at the bottom of the
+  `contentPadding` of the list of the page), `BACK_TO_TOP_SHARE` (2/3, on the
+  estimate of the scroll bar, `ItemSizes`), `BACK_TO_TOP_IDLE_MS` and
+  `BackToTop.moves` (every scroll restarts the two seconds). Tests:
+  `BackToTopTest.onlyPastTwoThirdsAndGoneAfterTwoSeconds` (a page of 600
+  lines: not there two screens down, there at the bottom, gone after two
+  seconds still, back scrolling down again)
+
 ### ✏️ v0.155.2 — 13/11/2026 · 17:51 — The main property like the others: change its type, hide it
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1258 tests passed)*
 

@@ -439,6 +439,14 @@ fun pageInsetFor(fullWidth: Boolean, areaWidth: Dp): Dp =
 internal val PAGE_LEFT_INSET = PAGE_INSET / 2
 
 /**
+ * **In fondo a ogni pagina lo spazio di due righe vuote** (dal 13/11/2026,
+ * chiesto dall'utente sul PC e sul telefono: tolte le righe vuote in fondo,
+ * quello che si scrive restava attaccato al bordo). Non sono blocchi: non ci
+ * si scrive, e toccandolo il cursore va nell'ultima riga, come sotto.
+ */
+internal val PAGE_BOTTOM_SPACE = 48.dp
+
+/**
  * **A destra un margine un po' più piccolo di quello a sinistra** (dal
  * 13/11/2026, chiesto dall'utente: "fallo un po' più piccolo di quello che
  * c'è a sinistra, ma comunque non nullo"): 24 punti invece di 66, e la
@@ -2917,7 +2925,7 @@ private fun PageEditorContent(
                 LazyColumn(
                     state = listState,
                     // Sul PC il margine in più a sinistra (vedi `PAGE_INSET`).
-                    contentPadding = PaddingValues(start = pageLeftInset, end = pageRightInset, top = if (isPc) PC_TOP_BAR else 0.dp),
+                    contentPadding = PaddingValues(start = pageLeftInset, end = pageRightInset, top = if (isPc) PC_TOP_BAR else 0.dp, bottom = PAGE_BOTTOM_SPACE),
                     modifier = Modifier
                         .fillMaxSize()
                         // Il verso del dito, per "Back" quando si è scesi molto (`BackToTop.kt`).
@@ -3139,7 +3147,8 @@ private fun PageEditorContent(
                 allowed = !pageSelected && linkReturn == null && !drawingMode,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 40.dp)
+                    // Appena sopra il bordo della finestra (dal 13/11/2026, chiesto dall'utente; prima 40).
+                    .padding(bottom = 12.dp)
             )
             linkReturn?.takeIf { !pageSelected }?.let { back ->
                 LinkBackButton(
