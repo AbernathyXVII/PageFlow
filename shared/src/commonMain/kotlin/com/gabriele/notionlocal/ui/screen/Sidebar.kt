@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.settings.AppSettings
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.Flow
 import com.gabriele.notionlocal.platform.withEmojiFont
 import com.gabriele.notionlocal.ui.theme.FavoriteStar
 import com.gabriele.notionlocal.ui.theme.DarkSheet
@@ -142,6 +145,8 @@ fun SidebarContent(
     widgetsActive: Boolean = true,
     /** La voce "Notebooks" coi quaderni: vedi `NotebooksSidebarSection`. */
     notebooks: @Composable () -> Unit = {},
+    /** "Recents" sotto l'albero delle pagine: vedi `RecentsSidebarSection`. */
+    recents: @Composable () -> Unit = {},
     /** A destra di "Main menu": sul PC il pulsante per fissarla o richiuderla (vedi `AppNavHost`). */
     header: @Composable () -> Unit = {}
 ) {
@@ -217,6 +222,9 @@ fun SidebarContent(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
+        // 3½. Le pagine aperte di recente, sotto l'albero (dal 13/11/2026, chiesto dall'utente).
+        recents()
+
         // 4. I quaderni (dal 26/09/2026, prima era una fascia grigia ferma):
         // la stessa fascia di un altro colore, staccata dal resto, e sotto
         // i quaderni come in OneNote. Un mondo a parte dal menu principale.
@@ -254,6 +262,62 @@ fun SidebarContent(
         SidebarItem(Icons.Filled.Devices, Strings.connections, onClick = actions.onConnections)
         SidebarItem(Icons.Filled.Settings, Strings.settings, onClick = actions.onSettings)
     }
+}
+
+/** Quante pagine aperte di recente mostra la barra laterale: le altre stanno nella Library. */
+const val SIDEBAR_RECENTS = 10
+
+/**
+ * **"Recents" nella barra laterale** (dal 13/11/2026, chiesto dall'utente
+ * come in Notion): sotto l'albero delle pagine, le ultime [SIDEBAR_RECENTS]
+ * aperte su questo dispositivo, anche senza toccarle (vedi
+ * `AppSettings.recentVisits`), e "View all", che apre la Library (vedi
+ * `LibraryScreen`). Finché non si è aperta nessuna pagina non c'è.
+ */
+@Composable
+fun RecentsSidebarSection(
+    observePages: (List<String>) -> Flow<List<PageEntity>>,
+    currentPageId: String?,
+    onOpen: (PageEntity) -> Unit,
+    onViewAll: () -> Unit
+) {
+    // Qualcuna in più delle dieci: una nel cestino o sparita non lascia la lista corta.
+    val ids = AppSettings.recentVisits.take(SIDEBAR_RECENTS * 3).map { it.pageId }
+    val pages by remember(ids) { observePages(ids) }.collectAsStateWithLifecycle(emptyList())
+    val byId = pages.associateBy { it.id }
+    val shown = ids.mapNotNull { byId[it] }.filter { it.trashedAt == null && it.viewHostId == null }.take(SIDEBAR_RECENTS)
+    if (shown.isEmpty()) return
+    SidebarSectionTitle(Strings.recents)
+    shown.forEach { page ->
+        val isCurrent = page.id == currentPageId
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (isCurrent) DarkSurfaceVariant else Color.Transparent)
+                .clickable { onOpen(page) }
+                .padding(start = TREE_START - 8.dp + TREE_ARROW + 4.dp, end = 8.dp)
+                .height(pcOr(28.dp, 36.dp)),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PageIconView(emoji = page.icon, iconImage = page.iconImage, isDatabase = page.isDatabase, size = pcOr(16.dp, 18.dp), iconSymbol = page.iconSymbol)
+            Spacer(modifier = Modifier.width(pcOr(6.dp, 8.dp)))
+            Text(
+                text = page.title.ifBlank { Strings.untitled }.withEmojiFont(),
+                color = NotionWhite,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+    SidebarItem(Icons.Filled.MoreHoriz, Strings.viewAll, onClick = onViewAll)
+    HorizontalDivider(
+        color = NotionGray900,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
 }
 
 // Sul PC più piccole, come in Notion (vedi `pcOr`).

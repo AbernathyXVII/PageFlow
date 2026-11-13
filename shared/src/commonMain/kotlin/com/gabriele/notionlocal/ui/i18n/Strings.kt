@@ -602,4 +602,29 @@ object Strings {
     )
     val deleteEverything get() = t("Delete everything", "Elimina tutto", "Alles löschen", "Tout supprimer", "Eliminar todo", "全部删除", "모두 삭제", "すべて削除")
     val searchTimeZones get() = t("Search time zones", "Cerca un fuso orario", "Zeitzonen suchen", "Rechercher un fuseau", "Buscar zona horaria", "搜索时区", "시간대 검색", "タイムゾーンを検索")
+
+    // --- "Recents" e la Library (dal 13/11/2026) ---
+    val recents get() = t("Recents", "Recenti", "Zuletzt", "Récents", "Recientes", "最近", "최근", "最近")
+    val viewAll get() = t("View all", "Vedi tutte", "Alle anzeigen", "Tout afficher", "Ver todo", "查看全部", "모두 보기", "すべて表示")
+    val library get() = t("Library", "Libreria", "Bibliothek", "Bibliothèque", "Biblioteca", "资料库", "라이브러리", "ライブラリ")
+    val favorites get() = t("Favorites", "Preferiti", "Favoriten", "Favoris", "Favoritos", "收藏", "즐겨찾기", "お気に入り")
+    val pageName get() = t("Page name", "Nome della pagina", "Seitenname", "Nom de la page", "Nombre de la página", "页面名称", "페이지 이름", "ページ名")
+    val pageSource get() = t("Source", "Dove sta", "Ort", "Emplacement", "Ubicación", "位置", "위치", "場所")
+    val lastEditedTime get() = t("Last edited time", "Ultima modifica", "Zuletzt bearbeitet", "Dernière modification", "Última edición", "上次编辑时间", "마지막 편집 일시", "最終更新日時")
+    val lastVisitedTime get() = t("Last visited time", "Ultima visita", "Zuletzt besucht", "Dernière visite", "Última visita", "上次访问时间", "마지막 방문 일시", "最終閲覧日時")
+    val justNow get() = t("Just now", "Adesso", "Gerade eben", "À l'instant", "Ahora mismo", "刚刚", "방금", "たった今")
+    fun minutesAgo(n: Long) = t("${n}m ago", "$n min fa", "vor $n Min.", "il y a $n min", "hace $n min", "${n}分钟前", "${n}분 전", "${n}分前")
+    fun hoursAgo(n: Long) = t("${n}h ago", "$n h fa", "vor $n Std.", "il y a $n h", "hace $n h", "${n}小时前", "${n}시간 전", "${n}時間前")
+    fun daysAgo(n: Long) = t("${n}d ago", "$n g fa", "vor $n T.", "il y a $n j", "hace $n d", "${n}天前", "${n}일 전", "${n}日前")
+    fun weeksAgo(n: Long) = t("${n}w ago", "$n sett. fa", "vor $n Wo.", "il y a $n sem.", "hace $n sem.", "${n}周前", "${n}주 전", "${n}週間前")
+    val noRecents get() = t(
+        "The pages you open will show up here",
+        "Qui compariranno le pagine che apri",
+        "Hier erscheinen die Seiten, die du öffnest",
+        "Les pages que vous ouvrez apparaîtront ici",
+        "Aquí aparecerán las páginas que abras",
+        "你打开的页面会显示在这里",
+        "열어 본 페이지가 여기에 표시됩니다",
+        "開いたページがここに表示されます"
+    )
 }

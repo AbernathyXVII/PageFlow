@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.navigation
 
+import com.gabriele.notionlocal.ui.screen.LibraryScreen
+import com.gabriele.notionlocal.ui.screen.RecentsSidebarSection
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -276,7 +278,11 @@ private fun AppTab(
     var peek by remember { mutableStateOf<PagePeek?>(null) }
     fun openWith(pageId: String, isDatabase: Boolean, mode: OpenMode) {
         when (mode) {
-            OpenMode.SIDE_PEEK, OpenMode.CENTER_PEEK -> peek = PagePeek(pageId, isDatabase, mode)
+            OpenMode.SIDE_PEEK, OpenMode.CENTER_PEEK -> {
+                peek = PagePeek(pageId, isDatabase, mode)
+                // Aperta di lato o al centro è aperta lo stesso: va fra le recenti.
+                AppSettings.recordVisit(pageId)
+            }
             OpenMode.NEW_TAB -> {
                 peek = null
                 onOpenNewTab?.invoke(Routes.forPage(pageId, isDatabase)) ?: navController.navigate(Routes.forPage(pageId, isDatabase))
@@ -453,6 +459,11 @@ private fun AppTab(
                 Routes.PAGE_EDITOR -> id?.let { AppSettings.lastVisitedRoute = Routes.pageEditor(it) }
                 Routes.DATABASE_VIEW -> id?.let { AppSettings.lastVisitedRoute = Routes.databaseView(it) }
             }
+            // Le pagine aperte, per "Recents" (dal 13/11/2026): anche quella principale, che è il menu principale.
+            when (entry.destination.route) {
+                Routes.HOME -> AppSettings.recordVisit(PageEntity.ROOT_PAGE_ID)
+                Routes.PAGE_EDITOR, Routes.DATABASE_VIEW -> id?.let { AppSettings.recordVisit(it) }
+            }
             // La scheda (sul PC) ricorda dove è arrivata: pagine e schermate senza argomenti.
             val route = when (val template = entry.destination.route) {
                 Routes.PAGE_EDITOR -> id?.let(Routes::pageEditor)
@@ -583,6 +594,17 @@ private fun AppTab(
                     actions = actions,
                     widgetsActive = widgetsActive,
                     header = pinButton,
+                    recents = {
+                        RecentsSidebarSection(
+                            observePages = factory.pageRepository::observePages,
+                            currentPageId = currentPageId,
+                            onOpen = { page ->
+                                closeSidebar()
+                                if (page.id == PageEntity.ROOT_PAGE_ID) goHome() else jumpTo(Routes.forPage(page.id, page.isDatabase))
+                            },
+                            onViewAll = { closeSidebar(); navController.navigate(Routes.LIBRARY) { launchSingleTop = true } }
+                        )
+                    },
                     notebooks = {
                         NotebooksSidebarSection(
                             viewModel = notebooks,
@@ -844,6 +866,14 @@ private fun AppRoutes(
                         }
                     }
                 }
+            )
+        }
+
+        composable(Routes.LIBRARY) {
+            LibraryScreen(
+                repository = factory.pageRepository,
+                onBack = { navController.popBackStack() },
+                onOpenPage = { page -> navController.navigate(Routes.forPage(page.id, page.isDatabase)) }
             )
         }
 

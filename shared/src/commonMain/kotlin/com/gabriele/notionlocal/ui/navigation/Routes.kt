@@ -18,6 +18,8 @@ object Routes {
 
     // Le voci della barra laterale che aprono una schermata a sé.
     const val FAVORITES = "favorites"
+    /** La Library: le pagine aperte di recente e le preferite (dal 13/11/2026, vedi `LibraryScreen`). */
+    const val LIBRARY = "library"
     const val TRASH = "trash"
     const val STARTUP = "startup"
     /** I template delle pagine (dal 26/09/2026). */

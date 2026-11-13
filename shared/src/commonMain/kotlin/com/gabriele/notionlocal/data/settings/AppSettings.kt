@@ -125,6 +125,7 @@ object AppSettings {
     fun init(context: PlatformContext) {
         if (::prefs.isInitialized) return
         prefs = openSettingsStore(context, "settings")
+        recentVisitsState.value = decodeVisits(prefs.getString(KEY_RECENT_VISITS, null))
         themeModeState.value = enumOr(KEY_THEME, ThemeMode.DARK)
         animationsState.value = enumOr(KEY_ANIMATIONS, AnimationLevel.FULL)
         titlePositionState.value = enumOr(KEY_TITLE_POSITION, TitlePosition.BELOW_ICON)
@@ -390,6 +391,34 @@ object AppSettings {
     var lastVisitedRoute: String?
         get() = prefs.getString(KEY_LAST_ROUTE, null)
         set(value) { prefs.edit().putString(KEY_LAST_ROUTE, value).apply() }
+
+    // --- Le pagine aperte di recente (dal 13/11/2026) ---
+
+    private val recentVisitsState = mutableStateOf<List<PageVisit>>(emptyList())
+
+    /**
+     * **Le pagine aperte su questo dispositivo**, la più recente prima, al
+     * massimo [MAX_RECENT_VISITS]: "Recents" nella barra laterale e nella
+     * Library (dal 13/11/2026, chiesto dall'utente come in Notion). Anche solo
+     * aperte, senza toccarle. Restano sul dispositivo: il telefono e il PC
+     * hanno le loro.
+     */
+    val recentVisits: List<PageVisit> get() = recentVisitsState.value
+
+    /** La pagina [pageId] è stata aperta adesso: in cima, una volta sola. */
+    fun recordVisit(pageId: String, at: Long = System.currentTimeMillis()) {
+        val updated = (listOf(PageVisit(pageId, at)) + recentVisitsState.value.filter { it.pageId != pageId }).take(MAX_RECENT_VISITS)
+        recentVisitsState.value = updated
+        prefs.edit().putString(KEY_RECENT_VISITS, encodeVisits(updated)).apply()
+    }
+
+    /** Scritte come "id=millisecondi;id=millisecondi", la più recente prima. */
+    private fun encodeVisits(visits: List<PageVisit>): String = visits.joinToString(";") { "${it.pageId}=${it.at}" }
+
+    private fun decodeVisits(text: String?): List<PageVisit> = text.orEmpty().split(";").mapNotNull { part ->
+        val at = part.substringAfterLast('=', "").toLongOrNull() ?: return@mapNotNull null
+        PageVisit(part.substringBeforeLast('='), at)
+    }
 
     // --- Cestino e preferiti ---
 
@@ -682,6 +711,10 @@ object AppSettings {
     private const val KEY_STARTUP_PAGE = "startup_page"
     private const val KEY_SHARE_PAGE = "share_page"
     private const val KEY_LAST_ROUTE = "last_route"
+    private const val KEY_RECENT_VISITS = "recent_visits"
+
+    /** Quante pagine aperte si ricordano (la barra laterale ne mostra le prime dieci, la Library tutte). */
+    const val MAX_RECENT_VISITS = 100
     private const val KEY_TRASH_POLICY = "trash_policy"
     private const val KEY_FAVORITES_SORT = "favorites_sort"
     private const val KEY_FAVORITES_DESC = "favorites_desc"
@@ -740,3 +773,6 @@ fun List<String>.withFavoriteColorToggled(hex: String, max: Int = AppSettings.FA
         else -> this + clean
     }
 }
+
+/** Una pagina aperta: quale e quando (vedi `AppSettings.recentVisits`). */
+data class PageVisit(val pageId: String, val at: Long)

@@ -1126,6 +1126,32 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🆕 v0.155 — 13/11/2026 · 14:49 — Recents in the sidebar, and the Library
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1254 tests passed)*
+
+- **[New feature]** **[📱 Mobile]** **[💻 PC]** **Recents in the sidebar**,
+  as in Notion: under the tree of the pages, the last ten pages opened on
+  this device, even only opened and not changed, the most recent first (also
+  the main page, and those opened at the side or in the centre on the PC).
+  Pages in the trash do not appear. Each device keeps its own: the phone
+  and the PC have theirs. Under them, **View all**
+- **[New feature]** **[📱 Mobile]** **[💻 PC]** **The Library**, opened by
+  "View all": two tabs, **Recents** (the pages opened, up to a hundred) and
+  **Favorites**. On the PC it is a table as in Notion: the page name, where
+  it is (the page that contains it), the last edited time and the last
+  visited time ("Just now", "5m ago", "3h ago", "2d ago", "2w ago", then the
+  date). On the phone each page is a line, with below where it is and when
+  it was seen. A touch or a click opens the page
+- **[Project]** `AppSettings.recentVisits` and `recordVisit` (`PageVisit`,
+  `MAX_RECENT_VISITS` = 100, saved as text in the settings of the device),
+  written by `AppNavHost` when a page opens (and a peek); `RecentsSidebarSection`
+  in `Sidebar.kt` (`SIDEBAR_RECENTS` = 10), `LibraryScreen` (`LibraryTab`,
+  `timeAgo`), `Routes.LIBRARY`; new words in eight languages. Tests:
+  `RecentsTest` (twelve pages: the ten most recent, a page opened again on
+  top, none in the trash, View all; the Library with where each page is,
+  Recents and Favorites; how long ago), `DesktopLibraryTest` (the section and
+  the wide Library on the PC)
+
 ### 🆕 v0.154 — 13/11/2026 · 14:26 — A recurring event, ticked, goes to its next date
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1250 tests passed)*
 
