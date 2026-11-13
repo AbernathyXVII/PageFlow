@@ -3903,7 +3903,7 @@ private fun CalendarLayout(
     // dentro, così spostarsi avanti e indietro è la stessa operazione
     // per il mese e per la settimana.
     var anchor by remember { mutableStateOf(today) }
-    // Sul PC, le settimane del mese aperte con "Show more" (vedi `CompactWeek`).
+    // Le settimane del mese aperte con "Show more" (vedi `CompactWeek`).
     var openWeeks by remember { mutableStateOf(emptySet<LocalDate>()) }
 
     // Una pagina creata dal pulsante in fondo nasce datata oggi: se si
@@ -4166,28 +4166,20 @@ private fun CalendarLayout(
             // allineate ai giorni.
             val shownMonth = YearMonth.from(anchor)
 
-            // Tutte le settimane riservano le stesse righe: è quello
-            // che fa restare una barra sempre alla stessa altezza
-            // scendendo da una settimana all'altra.
-            val monthWeekHeight = (CALENDAR_WEEK_HEADER + CALENDAR_BAR_HEIGHT * reservedRows)
-                .coerceAtLeast(CALENDAR_MONTH_WEEK_HEIGHT)
-
             repeat(monthWeekCount) { index ->
                 val weekStart = monthGridStart.plusWeeks(index.toLong())
                 val weekSegments = calendarSegments(weekStart, dated)
-                // **Sul PC le settimane sono compatte** (dal 13/11/2026, chiesto
-                // dall'utente: "troppo spazio inutilizzato"): ognuna mette gli
-                // eventi nelle sue prime righe libere e ne mostra cinque per
-                // giorno, gli altri con "Show more" (vedi `packWeek`).
-                val compact = if (isPc) {
-                    CompactWeek(
-                        placed = remember(weekSegments, rowIndexes) { packWeek(weekSegments, rowIndexes) },
-                        expanded = weekStart in openWeeks,
-                        onToggle = { openWeeks = if (weekStart in openWeeks) openWeeks - weekStart else openWeeks + weekStart }
-                    )
-                } else {
-                    null
-                }
+                // **Le settimane del mese sono compatte** (dal 13/11/2026 sul PC, chiesto
+                // dall'utente: "troppo spazio inutilizzato"; lo stesso giorno anche sul
+                // telefono: "l'hai fatto male"): ognuna mette gli eventi nelle sue prime
+                // righe libere e ne mostra cinque per giorno, gli altri con "Show more"
+                // (vedi `packWeek`). Prima ogni pagina datata aveva una riga sua in tutte
+                // le settimane, fino a venti, e le settimane erano alte e quasi vuote.
+                val compact = CompactWeek(
+                    placed = remember(weekSegments, rowIndexes) { packWeek(weekSegments, rowIndexes) },
+                    expanded = weekStart in openWeeks,
+                    onToggle = { openWeeks = if (weekStart in openWeeks) openWeeks - weekStart else openWeeks + weekStart }
+                )
                 CalendarWeekRow(
                     weekStart = weekStart,
                     shownMonth = shownMonth,
@@ -4195,7 +4187,7 @@ private fun CalendarLayout(
                     segments = weekSegments,
                     rowIndexes = rowIndexes,
                     maxRows = CALENDAR_MAX_ROWS,
-                    height = compact?.height() ?: monthWeekHeight,
+                    height = compact.height(),
                     onOpenRow = onOpenRow,
                     onRowLongPress = onRowLongPress,
                     onAddRowOnDate = onAddOnDate,
@@ -4244,7 +4236,7 @@ private fun CalendarLayout(
 }
 
 /**
- * **Una settimana del mese sul PC** (dal 13/11/2026, chiesto dall'utente: "di
+ * **Una settimana del mese** (dal 13/11/2026, chiesto dall'utente: "di
  * base concedimi di vedere massimo cinque eventi"): le barre al loro posto in
  * questa settimana ([placed], vedi `packWeek`), le prime cinque righe o tutte
  * se aperta ([expanded]); [onToggle] la apre e la chiude.
@@ -4265,11 +4257,11 @@ internal class CompactWeek(
     }
 }
 
-/** Quanti eventi si vedono per giorno sul PC prima di "Show more". */
+/** Quanti eventi si vedono per giorno prima di "Show more". */
 internal const val CALENDAR_COMPACT_ROWS = 5
 
 /**
- * **Le righe di una settimana, riempite dall'alto** (dal 13/11/2026, sul PC):
+ * **Le righe di una settimana, riempite dall'alto** (dal 13/11/2026):
  * ogni barra va nella prima riga libera per tutti i suoi giorni, nell'ordine
  * delle pagine ([order]: chi comincia prima sta più in alto, vedi
  * `calendarRowIndexes`). Così una settimana è alta quanto gli eventi che ha,
@@ -4755,7 +4747,7 @@ private fun CalendarWeekRow(
     onOpenRow: (DatabaseRowEntity) -> Unit,
     onRowLongPress: (DatabaseRowEntity) -> Unit,
     onAddRowOnDate: (LocalDate) -> Unit,
-    /** Sul PC nel mese (dal 13/11/2026): righe di questa settimana e "Show more" (vedi `CompactWeek`). */
+    /** Nel mese (dal 13/11/2026): righe di questa settimana e "Show more" (vedi `CompactWeek`). */
     compact: CompactWeek? = null
 ) {
     Box(modifier = Modifier.fillMaxWidth().height(height)) {
@@ -4843,7 +4835,10 @@ private fun CalendarWeekRow(
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
+                                        softWrap = false,
                                         modifier = Modifier
+                                            // Sul telefono la colonna di un giorno è stretta: la scritta ne esce un poco, intera.
+                                            .wrapContentWidth(Alignment.Start, unbounded = true)
                                             .clip(RoundedCornerShape(4.dp))
                                             .clickable { compact.onToggle() }
                                             .padding(horizontal = 4.dp, vertical = 1.dp)

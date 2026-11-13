@@ -1126,8 +1126,24 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.153.75.1 — 13/11/2026 · 08:37 — The compact calendar also on the phone
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1234 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **The calendar's month on the phone was still
+  tall and mostly empty**: v0.153.75 made the weeks compact only on the PC,
+  and on the phone every page with a date kept a line of its own in every
+  week, as before. Now the phone works like the PC: each week puts its events
+  in its first free lines, at most five a day, and a day with more has
+  **Show more** (then **Show less**) under it. In the narrow columns of the
+  phone the words come out a little from their day instead of being cut.
+  Found by the user
+- **[Project]** `CompactWeek` and `packWeek` for every month week, without the
+  PC check (`monthWeekHeight` removed); the "Show more" text with
+  `wrapContentWidth(unbounded = true)`. Test: `CalendarPhoneTest` (Robolectric,
+  eight events today: five and Show more, eight and Show less, five again)
+
 ### ✏️ v0.153.75 — 13/11/2026 · 08:19 — The scroll bar can be dragged; calendars from Monday, five events a day
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1233 tests passed)*
+*(Claude Code on the PC; seen by the user on the phone, where the calendar was not compact: fixed in v0.153.75.1; 1233 tests passed)*
 
 - **[Change]** **[💻 PC]** **The scroll bar on the right of a page can be
   dragged with the mouse**: it appears also with the mouse over it, it is
