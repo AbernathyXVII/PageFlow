@@ -1126,6 +1126,27 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.153.79.1 — 13/11/2026 · 13:39 — The arrows up and down go to the next line
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1242 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The arrows up and down got stuck or jumped**:
+  a page is made of several text fields (the pieces of the text, a quote, a
+  toggle, a callout…), and the arrows moved the cursor only inside one of
+  them; on the last line of a field the arrow down brought it to the end of
+  the line and it stayed there, or Windows moved it somewhere else. Now on
+  the last line of a field the arrow down goes to the next line where one
+  writes, and on the first line the arrow up to the line above, in the
+  order they are seen (also inside open toggles and columns, skipping
+  images, databases and dividers), at the same distance from the left as far
+  as the line allows. Found by the user
+- **[Project]** `PageEditorViewModel.lineNextTo` and `arriveWithArrow`
+  (`ArrowCaret`), `arrowDirection`, `onEdgeLine` and `arrivalOffset` in
+  `PageEditorScreen`, in the merged field and in the islands. Test:
+  `DesktopArrowKeysTest` (paragraphs, a bullet, a checkbox, a quote, a toggle:
+  eight arrows down, each digit typed in the next line; eight up, each
+  letter in the line above; before, from the bullet on everything ended at
+  the end of the same line)
+
 ### ✏️ v0.153.79 — 13/11/2026 · 13:19 — A smaller right margin
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1241 tests passed)*
 

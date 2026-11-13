@@ -1,5 +1,11 @@
 package com.gabriele.notionlocal.ui.screen
 
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import com.gabriele.notionlocal.data.ocr.PhotoTextRequests
 import com.gabriele.notionlocal.data.entity.NewBlock
 import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
@@ -466,6 +472,43 @@ private fun Modifier.bleedSides(left: Dp, right: Dp): Modifier = layout { measur
 }
 
 private const val RUN_LEAD = "\n"
+
+/** Sul PC la freccia in giù (vero) o in su (falso), senza Maiusc, Ctrl o Alt; null per gli altri tasti. */
+private fun arrowDirection(event: KeyEvent): Boolean? {
+    if (!isPc || event.type != KeyEventType.KeyDown || event.isShiftPressed || event.isCtrlPressed || event.isAltPressed) return null
+    return when (event.key) {
+        Key.DirectionDown -> true
+        Key.DirectionUp -> false
+        else -> null
+    }
+}
+
+/** Il cursore (in [shown], nel testo mostrato) sta sull'ultima riga del campo ([down]) o sulla prima. */
+private fun onEdgeLine(layout: TextLayoutResult, shown: Int, down: Boolean): Boolean {
+    val line = layout.getLineForOffset(shown)
+    return if (down) line >= layout.lineCount - 1 else line <= 0
+}
+
+/**
+ * Dove mettere il cursore arrivando con le frecce in una riga che nel campo va
+ * da [start] a [end]: alla sua prima riga mostrata se si viene dall'alto, se
+ * no all'ultima, all'altezza della finestra che dice [arrow].
+ */
+private fun arrivalOffset(
+    layout: TextLayoutResult,
+    coords: LayoutCoordinates,
+    mapping: OffsetMapping,
+    start: Int,
+    end: Int,
+    arrow: PageEditorViewModel.ArrowCaret
+): Int? {
+    if (!coords.isAttached) return null
+    val length = layout.layoutInput.text.length
+    val line = layout.getLineForOffset(mapping.originalToTransformed(if (arrow.fromAbove) start else end).coerceIn(0, length))
+    val x = coords.windowToLocal(Offset(arrow.x, 0f)).x
+    val shown = layout.getOffsetForPosition(Offset(x, (layout.getLineTop(line) + layout.getLineBottom(line)) / 2f))
+    return mapping.transformedToOriginal(shown).coerceIn(start, end)
+}
 
 /**
  * **L'a-capo nascosto in testa resta fuori da una selezione** (18/10/2026).
@@ -5997,6 +6040,34 @@ private fun MergedTextRunField(
         typingAt = if (fieldFocused) proofTyping else null,
         gapScale = gapScale
     )
+    // **Le frecce su e giù fuori dal campo** (dal 13/11/2026, vedi `PageEditorViewModel.lineNextTo`).
+    val fieldCoords = remember(runKey) { arrayOfNulls<LayoutCoordinates>(1) }
+    fun arrowKey(event: KeyEvent): Boolean {
+        val down = arrowDirection(event) ?: return false
+        val layout = textLayout ?: return false
+        val coords = fieldCoords[0]?.takeIf { it.isAttached } ?: return false
+        val mapping = mergedTransformation.filter(fieldValue.annotatedString).offsetMapping
+        val shown = mapping.originalToTransformed(fieldValue.selection.end).coerceIn(0, layout.layoutInput.text.length)
+        if (!onEdgeLine(layout, shown, down)) return false
+        val here = runBlocks.getOrNull(lineIndexAt(bodyOf(fieldValue.text), fieldValue.selection.end - 1)) ?: return false
+        val next = viewModel.lineNextTo(here.id, down) ?: return false
+        viewModel.arriveWithArrow(next.id, coords.localToWindow(Offset(layout.getHorizontalPosition(shown, true), 0f)).x, fromAbove = down)
+        return true
+    }
+    val arrowCaret by viewModel.arrowCaret.collectAsStateWithLifecycle()
+    LaunchedEffect(arrowCaret) {
+        val arrow = arrowCaret ?: return@LaunchedEffect
+        val index = runBlocks.indexOfFirst { it.id == arrow.blockId }
+        if (index < 0) return@LaunchedEffect
+        viewModel.consumeArrowCaret()
+        var start = RUN_LEAD.length
+        for (i in 0 until index) start += viewModel.plainTextOf(runBlocks[i]).length + 1
+        val end = start + viewModel.plainTextOf(runBlocks[index]).length
+        val layout = textLayout ?: withTimeoutOrNull(500) { snapshotFlow { textLayout }.first { it != null } } ?: return@LaunchedEffect
+        val coords = fieldCoords[0]?.takeIf { it.isAttached } ?: return@LaunchedEffect
+        val mapping = mergedTransformation.filter(fieldValue.annotatedString).offsetMapping
+        arrivalOffset(layout, coords, mapping, start, end, arrow)?.let { fieldValue = fieldValue.copy(selection = TextRange(it)) }
+    }
     PageTextMenuArea {
     AutoCaps {
         BasicTextField(
@@ -6405,10 +6476,11 @@ private fun MergedTextRunField(
                 // `TextLinks.kt`): prima del correttore, che così non apre
                 // il suo menu sopra il link.
                 .linkTaps(layout = { textLayout }, onLink = openLink)
-                .onPreviewKeyEvent { slashKey(it) }
+                .onPreviewKeyEvent { slashKey(it) || arrowKey(it) }
                 .proofingTaps(enabled = proofing != null && !pageLocked, layout = { textLayout }) { word, at ->
                     proofMenu = word to at
                 }
+                .onGloballyPositioned { fieldCoords[0] = it }
                 // Col tasto destro il cursore va dove si clicca, poi il menu (vedi `PcContextMenu.kt`).
                 .rightClickCaret(
                     enabled = isPc && !pageLocked,
@@ -7389,6 +7461,31 @@ private fun BlockRow(
             proof = proofing?.let { { text: String -> islandMisspellings[text].orEmpty() } },
             typingAt = if (fieldFocused) proofTyping else null
         )
+        // Le frecce su e giù fuori dal campo, come nel campo unito.
+        val islandCoords = remember(block.id) { arrayOfNulls<LayoutCoordinates>(1) }
+        fun islandArrowKey(event: KeyEvent): Boolean {
+            val down = arrowDirection(event) ?: return false
+            val layout = islandLayout ?: return false
+            val coords = islandCoords[0]?.takeIf { it.isAttached } ?: return false
+            val mapping = islandTransformation.filter(editState.fieldValue.annotatedString).offsetMapping
+            val shown = mapping.originalToTransformed(editState.fieldValue.selection.end).coerceIn(0, layout.layoutInput.text.length)
+            if (!onEdgeLine(layout, shown, down)) return false
+            val next = viewModel.lineNextTo(block.id, down) ?: return false
+            viewModel.arriveWithArrow(next.id, coords.localToWindow(Offset(layout.getHorizontalPosition(shown, true), 0f)).x, fromAbove = down)
+            return true
+        }
+        val islandArrow by viewModel.arrowCaret.collectAsStateWithLifecycle()
+        LaunchedEffect(islandArrow) {
+            val arrow = islandArrow?.takeIf { it.blockId == block.id } ?: return@LaunchedEffect
+            viewModel.consumeArrowCaret()
+            val layout = islandLayout ?: withTimeoutOrNull(500) { snapshotFlow { islandLayout }.first { it != null } } ?: return@LaunchedEffect
+            val coords = islandCoords[0]?.takeIf { it.isAttached } ?: return@LaunchedEffect
+            val mapping = islandTransformation.filter(editState.fieldValue.annotatedString).offsetMapping
+            val end = editState.fieldValue.text.length
+            arrivalOffset(layout, coords, mapping, RUN_LEAD.length, end, arrow)?.let {
+                editState = editState.copy(fieldValue = editState.fieldValue.copy(selection = TextRange(it)))
+            }
+        }
         PageTextMenuArea {
         AutoCaps {
             BasicTextField(
@@ -7758,6 +7855,8 @@ private fun BlockRow(
                     .proofingTaps(enabled = proofing != null && !pageLocked, layout = { islandLayout }) { word, at ->
                         proofMenu = word to at
                     }
+                    .onGloballyPositioned { islandCoords[0] = it }
+                    .onPreviewKeyEvent { islandArrowKey(it) }
                     // Col tasto destro, come nel campo unito.
                     .rightClickCaret(
                         enabled = isPc && !pageLocked,

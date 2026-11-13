@@ -938,6 +938,53 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         _pendingCaret.value = null
     }
 
+    /**
+     * **Arrivando con le frecce su e giù** (dal 13/11/2026, vedi `lineNextTo`):
+     * nella riga [blockId], all'altezza [x] della finestra, sulla sua prima riga
+     * se si viene dall'alto ([fromAbove]), se no sull'ultima.
+     */
+    data class ArrowCaret(val blockId: String, val x: Float, val fromAbove: Boolean)
+
+    private val _arrowCaret = MutableStateFlow<ArrowCaret?>(null)
+    val arrowCaret: StateFlow<ArrowCaret?> = _arrowCaret
+
+    /** Il cursore va nella riga [blockId] col fuoco, dove dice [ArrowCaret]. */
+    fun arriveWithArrow(blockId: String, x: Float, fromAbove: Boolean) {
+        _arrowCaret.value = ArrowCaret(blockId, x, fromAbove)
+        _focusRequestBlockId.value = blockId
+    }
+
+    fun consumeArrowCaret() {
+        _arrowCaret.value = null
+    }
+
+    /**
+     * **Le frecce su e giù da un campo all'altro** (dal 13/11/2026, trovato
+     * dall'utente sul PC: "certe volte mi salta di due blocchi, certe volte
+     * non si muove proprio"): dentro un campo di testo le righe le scorre
+     * Compose, ma la pagina è fatta di più campi (i pezzi del testo, le
+     * citazioni, i toggle…) e dall'ultima riga di uno alla prima del seguente
+     * non portava nessuno: il cursore finiva in fondo alla riga e restava lì.
+     * Qui la riga dove si scrive subito dopo (o prima, con [down] falso) di
+     * [blockId], nell'ordine in cui si vedono: anche dentro i toggle aperti e
+     * le colonne, saltando quelle dove non si scrive (immagini, database,
+     * divisori). Null in fondo (o in cima) alla pagina.
+     */
+    fun lineNextTo(blockId: String, down: Boolean): BlockEntity? {
+        val children = _blocks.value.groupBy { it.parentBlockId }
+        val lines = ArrayList<BlockEntity>()
+        fun visit(parent: String?) {
+            children[parent].orEmpty().sortedBy { it.orderIndex }.forEach { block ->
+                if (isFocusableBlockType(block.type)) lines += block
+                if (block.type != BlockType.TOGGLE || block.isExpanded) visit(block.id)
+            }
+        }
+        visit(null)
+        val at = lines.indexOfFirst { it.id == blockId }
+        if (at < 0) return null
+        return lines.getOrNull(if (down) at + 1 else at - 1)
+    }
+
     // Richiesta "applica questa formattazione alla selezione corrente
     // del blocco X" — impostata dalla barra Aa, consumata dal BlockRow
     // del blocco interessato una volta applicata. Stesso schema di
