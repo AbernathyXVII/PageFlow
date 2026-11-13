@@ -141,7 +141,9 @@ import androidx.compose.runtime.DisposableEffect
 fun AppNavHost(
     factory: ViewModelFactory,
     /** Una nota al volo chiesta a questa finestra (vedi `QuickNotes`); di suo quella dei test. */
-    quickNoteRequest: MutableState<Boolean> = QuickNotes.requested
+    quickNoteRequest: MutableState<Boolean> = QuickNotes.requested,
+    /** Le schede di questa finestra del PC; null = quelle salvate (la finestra principale). */
+    windowTabs: PcTabs? = null
 ) {
     if (!isPc) {
         AppTab(factory, quickNoteRequest, rememberNavController())
@@ -150,14 +152,15 @@ fun AppNavHost(
     // **Le schede del PC** (dal 12/11/2026, vedi `PcTabs`): la barra in cima,
     // e sotto la scheda attiva con la sua cronologia. Le altre tengono la loro
     // finché non le si riapre (`SaveableStateProvider`).
-    val tabs = remember { PcTabs.load() }
-    // Ctrl+T e Ctrl+W, come nei browser (dal 12/11/2026, vedi `AppShortcuts`).
-    DisposableEffect(tabs) {
-        AppShortcuts.newTab = { tabs.open(Routes.HOME) }
-        AppShortcuts.closeTab = { tabs.close(tabs.activeId) }
+    val tabs = remember { windowTabs ?: PcTabs.load() }
+    // Ctrl+T e Ctrl+W, come nei browser (dal 12/11/2026, vedi `AppShortcuts`), di questa finestra.
+    val shortcuts = LocalShortcuts.current
+    DisposableEffect(tabs, shortcuts) {
+        shortcuts.newTab = { tabs.open(Routes.HOME) }
+        shortcuts.closeTab = { tabs.close(tabs.activeId) }
         onDispose {
-            AppShortcuts.newTab = null
-            AppShortcuts.closeTab = null
+            shortcuts.newTab = null
+            shortcuts.closeTab = null
         }
     }
     val holder = rememberSaveableStateHolder()
@@ -504,11 +507,12 @@ private fun AppTab(
     }
 
     // Ctrl+F sul PC (vedi `AppShortcuts`): la ricerca, come dalla barra laterale.
-    DisposableEffect(navController) {
-        AppShortcuts.openSearch = { closeSidebar(); navController.navigate(Routes.SEARCH) { launchSingleTop = true } }
+    val shortcuts = LocalShortcuts.current
+    DisposableEffect(navController, shortcuts) {
+        shortcuts.openSearch = { closeSidebar(); navController.navigate(Routes.SEARCH) { launchSingleTop = true } }
         // Ctrl+N: una pagina nuova in fondo a quella aperta (o al menu principale), e dentro col
         // cursore, come la nota al volo: lasciata vuota se ne va, senza titolo prende la prima riga.
-        AppShortcuts.newPage = {
+        shortcuts.newPage = {
             val open = navController.currentBackStackEntry?.takeIf { it.destination.route == Routes.PAGE_EDITOR }
                 ?.arguments?.read { getStringOrNull("pageId") }
             scope.launch(Dispatchers.Main.immediate) {
@@ -519,8 +523,8 @@ private fun AppTab(
             }
         }
         onDispose {
-            AppShortcuts.openSearch = null
-            AppShortcuts.newPage = null
+            shortcuts.openSearch = null
+            shortcuts.newPage = null
         }
     }
 

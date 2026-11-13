@@ -2121,11 +2121,26 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
             coverOffsetY = 0f,
             cardCoverScale = null,
             cardCoverOffsetX = null,
-            cardCoverOffsetY = null
+            cardCoverOffsetY = null,
+            // Anche quella del PC; l'altezza della copertina sul PC invece resta.
+            paragraphJson = PageParagraph.encode(
+                PageParagraph.parse(current.paragraphJson).copy(pcCoverScale = null, pcCoverOffsetX = null, pcCoverOffsetY = null)
+            )
         )
         _page.value = updated
         viewModelScope.launch { repository.updatePage(updated) }
         return previous?.takeIf { it != fileName }
+    }
+
+    /**
+     * **La copertina del PC** (dal 13/11/2026): altezza, ingrandimento e
+     * spostamento solo del PC (vedi `PageParagraph.pcCoverHeight`), così il
+     * telefono resta com'era.
+     */
+    fun setPcCover(change: (PageParagraph) -> PageParagraph) {
+        val current = _page.value ?: return
+        _page.value = current.copy(paragraphJson = PageParagraph.encode(change(PageParagraph.parse(current.paragraphJson))))
+        viewModelScope.launch { repository.updatePageParagraph(current.id, change) }
     }
 
     /** Come è inquadrata la copertina: ingrandimento e spostamento. */

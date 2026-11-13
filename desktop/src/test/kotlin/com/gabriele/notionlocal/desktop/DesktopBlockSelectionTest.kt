@@ -1,6 +1,7 @@
 package com.gabriele.notionlocal.desktop
 
 import com.gabriele.notionlocal.data.PageImageStore
+import com.gabriele.notionlocal.data.entity.paragraph
 import kotlin.math.abs
 import com.gabriele.notionlocal.ui.screen.notePresses
 import androidx.compose.ui.Modifier
@@ -555,6 +556,105 @@ class DesktopBlockSelectionTest {
             val line = textRows(page).last()
             val firstInk = (0 until 300).first { x -> bright(page.getColor(x, line.center().toInt())) }
             assertTrue("il testo comincia a $firstInk", firstInk >= 53)
+        }
+    }
+
+    /**
+     * **La copertina si allunga trascinandone il bordo di sotto** (13/11/2026,
+     * chiesto dall'utente, solo sul PC): 100 punti più giù la striscia è più
+     * alta di 100, l'altezza si salva fra quelle del PC e l'inquadratura del
+     * telefono non cambia.
+     */
+    @Test
+    fun theCoverGrowsByDraggingItsBottomEdge() {
+        runBlocking {
+            // Metà rossa e metà blu: allungando la striscia se ne vede di più.
+            val bitmap = Bitmap().apply { allocN32Pixels(400, 400) }
+            val canvas = org.jetbrains.skia.Canvas(bitmap)
+            canvas.clear(0xFFCC2233.toInt())
+            canvas.drawRect(org.jetbrains.skia.Rect.makeXYWH(0f, 200f, 400f, 200f), org.jetbrains.skia.Paint().apply { color = 0xFF2233CC.toInt() })
+            PageImageStore(context).fileFor("alta.png")
+                .writeBytes(org.jetbrains.skia.Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "alta", title = "Alta", coverImage = "alta.png", coverScale = 1.5f, coverOffsetY = 0.1f))
+            repo.saveBlock(BlockEntity(id = "sotto", pageId = "alta", textJson = """[{"text":"Sotto la copertina"}]""", orderIndex = 0))
+        }
+        fun stored() = runBlocking { AppDatabase.getInstance(context).pageDao().getById("alta")!! }
+        withPage("alta") { scene, frames, picture ->
+            frames(20)
+            fun coverRows(page: Bitmap) = (0 until page.height).filter { y ->
+                page.getColor(10, y).let { c -> ((c shr 16) and 0xFF) > 150 || (c and 0xFF) > 150 } && ((page.getColor(10, y) shr 8) and 0xFF) < 90
+            }
+            val before = coverRows(picture())
+            assertTrue("una copertina alta 160: ${before.size}", before.size in 155..165)
+            val edge = Offset(260f, before.last() - 3f)
+            onWindowThread {
+                mouse(scene, PointerEventType.Move, edge, pressed = false)
+                mouse(scene, PointerEventType.Press, edge, pressed = true)
+            }
+            for (step in 1..20) {
+                onWindowThread { mouse(scene, PointerEventType.Move, edge + Offset(0f, step * 5f), pressed = true) }
+                frames(1)
+            }
+            onWindowThread { mouse(scene, PointerEventType.Release, edge + Offset(0f, 100f), pressed = false) }
+            frames(10)
+            val after = picture()
+            File("build/desktop-screenshots", "cover_taller.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(after).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val grown = coverRows(after)
+            assertTrue("alta ${grown.size} invece di ${before.size}", grown.size - before.size in 95..105)
+            val page = stored()
+            val height = page.paragraph.pcCoverHeight
+            assertTrue("salvata $height", height != null && abs(height - 260f) < 3f)
+            // Il telefono resta com'era.
+            assertEquals(1.5f, page.coverScale)
+            assertEquals(0.1f, page.coverOffsetY)
+
+            // "Reposition" sul PC: la rotella ingrandisce, e "Save" lo scrive solo per il PC.
+            val clean = picture()
+            val middle = Offset(260f, grown.first() + 60f)
+            onWindowThread {
+                mouse(scene, PointerEventType.Move, middle, pressed = false)
+                mouse(scene, PointerEventType.Press, middle, pressed = true)
+                mouse(scene, PointerEventType.Release, middle, pressed = false)
+            }
+            frames(10)
+            val panel = picture()
+            File("build/desktop-screenshots", "cover_panel.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(panel).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            fun white(c: Int) = ((c shr 16) and 0xFF) > 200 && ((c shr 8) and 0xFF) > 200 && (c and 0xFF) > 200
+            // Le righe di scritta bianca del riquadro: "Cover", "Upload", "Reposition".
+            val textRows = (0 until panel.height).filter { y -> (0 until panel.width).any { x -> white(panel.getColor(x, y)) && panel.getColor(x, y) != clean.getColor(x, y) } }
+            val groups = textRows.fold(mutableListOf<MutableList<Int>>()) { acc, y -> if (acc.isNotEmpty() && y - acc.last().last() <= 2) acc.last() += y else acc += mutableListOf(y); acc }
+            assertTrue("righe del riquadro: ${groups.map { it.first()..it.last() }}", groups.size >= 3)
+            val repositionY = groups[2].let { (it.first() + it.last()) / 2 }
+            val repositionX = (0 until panel.width).first { x -> white(panel.getColor(x, repositionY)) && panel.getColor(x, repositionY) != clean.getColor(x, repositionY) }
+            onWindowThread {
+                val at = Offset(repositionX + 10f, repositionY.toFloat())
+                mouse(scene, PointerEventType.Move, at, pressed = false)
+                mouse(scene, PointerEventType.Press, at, pressed = true)
+                mouse(scene, PointerEventType.Release, at, pressed = false)
+            }
+            frames(10)
+            repeat(3) {
+                onWindowThread {
+                    scene.sendPointerEvent(PointerEventType.Move, middle, type = PointerType.Mouse)
+                    scene.sendPointerEvent(PointerEventType.Scroll, middle, scrollDelta = Offset(0f, -1f), type = PointerType.Mouse)
+                }
+                frames(2)
+            }
+            val zoomed = picture()
+            File("build/desktop-screenshots", "cover_reposition_zoomed.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(zoomed).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            // "Save": l'ultimo pulsante in basso a destra della copertina.
+            val save = Offset(zoomed.width - 40f, grown.last() - 28f)
+            onWindowThread {
+                mouse(scene, PointerEventType.Move, save, pressed = false)
+                mouse(scene, PointerEventType.Press, save, pressed = true)
+                mouse(scene, PointerEventType.Release, save, pressed = false)
+            }
+            frames(10)
+            val saved = stored()
+            val scale = saved.paragraph.pcCoverScale
+            assertTrue("zoom del PC $scale", scale != null && abs(scale - 1.5f * 1.1f * 1.1f * 1.1f) < 0.02f)
+            assertEquals("lo zoom del telefono resta", 1.5f, saved.coverScale)
         }
     }
 

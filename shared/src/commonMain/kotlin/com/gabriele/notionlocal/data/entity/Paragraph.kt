@@ -98,7 +98,19 @@ data class PageParagraph(
      * [fullWidth], per non cambiare il database. Vedi `CellSpoiler.kt`.
      */
     val cellSpoiler: Boolean? = null,
-    val coveredCells: List<String>? = null
+    val coveredCells: List<String>? = null,
+    /**
+     * **La copertina sul PC** (dal 13/11/2026, chiesto dall'utente: le
+     * modifiche fatte sul PC non devono cambiarla sul telefono): l'altezza in
+     * dp, scelta trascinandone il bordo di sotto, e ingrandimento e
+     * spostamento scelti col "Reposition" del PC. Il telefono non li legge
+     * (ha `PageEntity.coverScale`…); null = come prima (alta 160, inquadrata
+     * come sul telefono).
+     */
+    val pcCoverHeight: Float? = null,
+    val pcCoverScale: Float? = null,
+    val pcCoverOffsetX: Float? = null,
+    val pcCoverOffsetY: Float? = null
 ) {
     companion object {
         private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }

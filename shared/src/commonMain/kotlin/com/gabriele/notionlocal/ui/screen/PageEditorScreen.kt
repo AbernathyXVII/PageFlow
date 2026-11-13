@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.navigation.verticalResizeCursor
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1073,6 +1075,22 @@ private const val BAR_HANDOFF_GRACE_MS = 300L
 
 /** Quanto è alta la copertina, e quanto grande l'icona-immagine. */
 private val COVER_HEIGHT = 160.dp
+
+/**
+ * **Quanto è alta la copertina**: sul PC quella scelta trascinandone il bordo
+ * (o quella di prova mentre lo si trascina), altrimenti [COVER_HEIGHT].
+ */
+private fun coverHeightOf(page: PageEntity?, live: Float?): Dp =
+    (live ?: if (isPc) page?.paragraph?.pcCoverHeight else null)?.dp ?: COVER_HEIGHT
+
+/** Il bordo di sotto della copertina che si trascina sul PC, e fin dove. */
+private val COVER_EDGE = 8.dp
+private const val MIN_PC_COVER_HEIGHT = 80f
+private const val MAX_PC_COVER_HEIGHT = 720f
+
+/** Di quanto ingrandisce uno scatto della rotella, e un clic su + (sul PC, nel "Reposition"). */
+private const val COVER_WHEEL_ZOOM = 1.1f
+private const val COVER_BUTTON_ZOOM = 1.25f
 private val PAGE_ICON_SIZE = 56.dp
 
 // Il quadratino delle caselle da spuntare: grande quanto le lettere
@@ -1843,6 +1861,18 @@ private fun PageEditorContent(
     // striscia stessa e l'immagine come è stata letta dal disco.
     var coverBox by remember { mutableStateOf(IntSize.Zero) }
     var coverImageSize by remember { mutableStateOf(IntSize.Zero) }
+    // **La copertina del PC** (dal 13/11/2026): mentre se ne trascina il bordo di sotto, l'altezza di prova (dp).
+    var liveCoverHeight by remember { mutableStateOf<Float?>(null) }
+    // Lo zoom del "Reposition" (la rotella e i pulsanti − e + sul PC): l'immagine resta dentro la striscia.
+    fun zoomCover(factor: Float) {
+        val newScale = (liveCoverScale * factor).coerceIn(1f, MAX_COVER_ZOOM)
+        val limit = coverPanLimit(coverBox, coverImageSize.width, coverImageSize.height, newScale)
+        liveCoverScale = newScale
+        liveCoverOffset = Offset(
+            (liveCoverOffset.x * coverBox.width).coerceIn(-limit.x, limit.x) / coverBox.width.coerceAtLeast(1),
+            (liveCoverOffset.y * coverBox.height).coerceIn(-limit.y, limit.y) / coverBox.height.coerceAtLeast(1)
+        )
+    }
 
     var anythingFocused by remember { mutableStateOf(false) }
     // Il cursore che passa da una riga all'altra è un cambio di campo:
@@ -1995,7 +2025,7 @@ private fun PageEditorContent(
             } else {
                 { sideScroll.offset }
             }
-            inkState.coverHeightPx = if (page?.coverImage != null) with(inkDensity) { COVER_HEIGHT.toPx() } else 0f
+            inkState.coverHeightPx = if (page?.coverImage != null) with(inkDensity) { coverHeightOf(page, liveCoverHeight).toPx() } else 0f
             val focusPark = remember { FocusRequester() }
 
             // **Il salto di un collegamento dentro la pagina** (dal 20/10/2026,
@@ -2450,18 +2480,23 @@ private fun PageEditorContent(
                     // quella salvata torna solo se si annulla. Così il
                     // dito muove l'immagine subito, senza scrivere nel
                     // database ad ogni millimetro.
-                    val shownScale = if (movingCover) liveCoverScale else page?.coverScale ?: 1f
+                    // Sul PC l'inquadratura sua, se c'è (dal 13/11/2026, vedi `PageParagraph.pcCoverHeight`).
+                    val pcCover = if (isPc) page?.paragraph else null
+                    val shownScale = if (movingCover) liveCoverScale else pcCover?.pcCoverScale ?: page?.coverScale ?: 1f
                     val shownOffset = if (movingCover) {
                         liveCoverOffset
                     } else {
-                        Offset(page?.coverOffsetX ?: 0f, page?.coverOffsetY ?: 0f)
+                        Offset(
+                            pcCover?.pcCoverOffsetX ?: page?.coverOffsetX ?: 0f,
+                            pcCover?.pcCoverOffsetY ?: page?.coverOffsetY ?: 0f
+                        )
                     }
 
                     Box(
                         modifier = Modifier
                             .bleedSides(pageLeftInset, pageRightInset)
                             .fillMaxWidth()
-                            .height(COVER_HEIGHT)
+                            .height(coverHeightOf(page, liveCoverHeight))
                             .onSizeChanged { coverBox = it }
                     ) {
                         CoverImage(
@@ -2470,6 +2505,8 @@ private fun PageEditorContent(
                             scale = shownScale,
                             offsetFraction = shownOffset,
                             onImageSize = { coverImageSize = it },
+                            // Sul PC la striscia cambia altezza: l'immagine non deve lasciare bordi vuoti.
+                            clampOffset = isPc,
                             modifier = Modifier
                                 .matchParentSize()
                                 .then(
@@ -2496,7 +2533,26 @@ private fun PageEditorContent(
                                                         coverBox.height.coerceAtLeast(1)
                                                 )
                                             }
-                                        }
+                                        }.then(
+                                            // **Sul PC la rotella ingrandisce** (dal 13/11/2026, chiesto
+                                            // dall'utente): col mouse non si pizzica.
+                                            if (isPc) {
+                                                Modifier.pointerInput(coverImage) {
+                                                    awaitPointerEventScope {
+                                                        while (true) {
+                                                            val event = awaitPointerEvent()
+                                                            if (event.type != PointerEventType.Scroll) continue
+                                                            val wheel = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                                                            if (wheel == 0f) continue
+                                                            event.changes.forEach { it.consume() }
+                                                            zoomCover(if (wheel < 0f) COVER_WHEEL_ZOOM else 1f / COVER_WHEEL_ZOOM)
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                Modifier
+                                            }
+                                        )
                                     } else {
                                         Modifier.clickable(enabled = !isTrashed) { editingImage = PageImageTarget.COVER }
                                     }
@@ -2507,13 +2563,46 @@ private fun PageEditorContent(
                             CoverMoveOverlay(
                                 onCancel = { movingCover = false },
                                 onSave = {
-                                    viewModel.setCoverTransform(
-                                        liveCoverScale,
-                                        liveCoverOffset.x,
-                                        liveCoverOffset.y
-                                    )
+                                    if (isPc) {
+                                        // Sul PC solo per il PC: il telefono resta com'era (dal 13/11/2026).
+                                        val (scale, offset) = liveCoverScale to liveCoverOffset
+                                        viewModel.setPcCover { it.copy(pcCoverScale = scale, pcCoverOffsetX = offset.x, pcCoverOffsetY = offset.y) }
+                                    } else {
+                                        viewModel.setCoverTransform(
+                                            liveCoverScale,
+                                            liveCoverOffset.x,
+                                            liveCoverOffset.y
+                                        )
+                                    }
                                     movingCover = false
-                                }
+                                },
+                                onZoom = if (isPc) { bigger -> zoomCover(if (bigger) COVER_BUTTON_ZOOM else 1f / COVER_BUTTON_ZOOM) } else null
+                            )
+                        } else if (isPc && !isTrashed && !readOnlyPage) {
+                            // **Il bordo di sotto della copertina si trascina** (dal 13/11/2026, chiesto
+                            // dall'utente, solo sul PC): la striscia si allunga o si accorcia e
+                            // dell'immagine, che resta com'è, se ne vede di più o di meno.
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .height(COVER_EDGE)
+                                    .verticalResizeCursor()
+                                    .pointerInput(Unit) {
+                                        detectVerticalDragGestures(
+                                            onDragStart = { liveCoverHeight = coverBox.height.toDp().value },
+                                            onDragCancel = { liveCoverHeight = null },
+                                            onDragEnd = {
+                                                liveCoverHeight?.let { height -> viewModel.setPcCover { it.copy(pcCoverHeight = height) } }
+                                                liveCoverHeight = null
+                                            },
+                                            onVerticalDrag = { change, dy ->
+                                                change.consume()
+                                                val from = liveCoverHeight ?: COVER_HEIGHT.value
+                                                liveCoverHeight = (from + dy.toDp().value).coerceIn(MIN_PC_COVER_HEIGHT, MAX_PC_COVER_HEIGHT)
+                                            }
+                                        )
+                                    }
                             )
                         }
                     }
@@ -3650,10 +3739,11 @@ private fun PageEditorContent(
                     // Si riparte da dove si era rimasti, non da capo:
                     // ritoccare un'inquadratura già scelta è la cosa
                     // che si fa più spesso.
-                    liveCoverScale = page?.coverScale ?: 1f
+                    val pcCover = if (isPc) page?.paragraph else null
+                    liveCoverScale = pcCover?.pcCoverScale ?: page?.coverScale ?: 1f
                     liveCoverOffset = Offset(
-                        page?.coverOffsetX ?: 0f,
-                        page?.coverOffsetY ?: 0f
+                        pcCover?.pcCoverOffsetX ?: page?.coverOffsetX ?: 0f,
+                        pcCover?.pcCoverOffsetY ?: page?.coverOffsetY ?: 0f
                     )
                     movingCover = true
                 }
@@ -4118,10 +4208,15 @@ private data class LinkedViewRequest(val block: BlockEntity, val keepText: Boole
  * improvvisamente non risponde più al tocco sembra rotta.
  */
 @Composable
-private fun CoverMoveOverlay(onCancel: () -> Unit, onSave: () -> Unit) {
+private fun CoverMoveOverlay(
+    onCancel: () -> Unit,
+    onSave: () -> Unit,
+    /** Sul PC i pulsanti − e + (true = più grande); null sul telefono, dove si pizzica. */
+    onZoom: ((Boolean) -> Unit)? = null
+) {
     Box(modifier = Modifier.fillMaxSize()) {
         Text(
-            text = EditorStrings.dragToMove,
+            text = if (onZoom != null) EditorStrings.dragToMovePc else EditorStrings.dragToMove,
             style = MaterialTheme.typography.labelMedium,
             color = NotionWhite,
             modifier = Modifier
@@ -4136,6 +4231,12 @@ private fun CoverMoveOverlay(onCancel: () -> Unit, onSave: () -> Unit) {
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (onZoom != null) {
+                PageImageAction(label = "−", enabled = true, onClick = { onZoom(false) })
+                Spacer(modifier = Modifier.size(8.dp))
+                PageImageAction(label = "+", enabled = true, onClick = { onZoom(true) })
+                Spacer(modifier = Modifier.size(8.dp))
+            }
             PageImageAction(label = Strings.cancel, enabled = true, onClick = onCancel)
             Spacer(modifier = Modifier.size(8.dp))
             PageImageAction(label = EditorStrings.save, enabled = true, onClick = onSave)

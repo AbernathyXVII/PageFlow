@@ -1,5 +1,18 @@
 package com.gabriele.notionlocal.desktop
 
+import com.gabriele.notionlocal.ui.navigation.Shortcuts
+import com.gabriele.notionlocal.ui.navigation.PcWindowActions
+import com.gabriele.notionlocal.ui.navigation.PcTabs
+import com.gabriele.notionlocal.ui.navigation.LocalShortcuts
+import com.gabriele.notionlocal.ui.navigation.LocalPcWindow
+import androidx.compose.ui.window.WindowState
+import androidx.compose.ui.window.WindowPosition
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.key
+import androidx.compose.runtime.getValue
 import com.gabriele.notionlocal.ui.theme.zoomKeyOf
 import com.gabriele.notionlocal.ui.theme.ctrlWheelZoom
 import com.gabriele.notionlocal.ui.theme.PcZoom
@@ -98,18 +111,30 @@ fun main() {
                 windowMemory.save(windowState)
             }
         }
-        Window(
-            // Senza togliere l'icona dall'area di notifica il programma resterebbe acceso.
-            onCloseRequest = {
-                windowMemory.save(windowState)
+        // **Più finestre** (dal 13/11/2026, chiesto dall'utente): una scheda trascinata fuori
+        // dalla barra si apre in una finestra sua (vedi `PcTabBar`). La prima è quella di sempre.
+        val windows = remember { mutableStateListOf(PcWindow(0, PcTabs.load(), windowState)) }
+        var nextWindowId by remember { mutableIntStateOf(1) }
+        fun close(closing: PcWindow) {
+            if (closing.state === windowState) windowMemory.save(windowState)
+            windows.remove(closing)
+            if (windows.isEmpty()) {
+                // Senza togliere l'icona dall'area di notifica il programma resterebbe acceso.
                 AudioRecorder.stopBeforeExit(context)
                 SyncServer.stop()
                 DesktopNotifications.close()
                 exitApplication()
-            },
+            } else if (closing.tabs.persist) {
+                // Le schede da ritrovare alla volta dopo diventano quelle di una finestra che resta.
+                windows.first().tabs.persist = true
+            }
+        }
+        windows.forEach { pcWindow -> key(pcWindow.id) {
+        Window(
+            onCloseRequest = { close(pcWindow) },
             title = "PageFlow",
             icon = icon,
-            state = windowState,
+            state = pcWindow.state,
             // Le scorciatoie da tastiera (vedi `AppShortcuts`): la finestra le riceve anche senza un cursore.
             onPreviewKeyEvent = { event ->
                 // Lo zoom come nei browser: Ctrl + e Ctrl − (vedi `PcZoom`).
@@ -117,13 +142,14 @@ fun main() {
                     PcZoom.step(bigger)
                     return@Window true
                 }
+                val shortcuts = pcWindow.shortcuts
                 val shortcut = when {
                     event.type != KeyEventType.KeyDown || !event.isCtrlPressed -> null
-                    event.key == Key.F -> AppShortcuts.openSearch
-                    event.key == Key.N -> AppShortcuts.newPage
+                    event.key == Key.F -> shortcuts.openSearch
+                    event.key == Key.N -> shortcuts.newPage
                     // Le schede, come nei browser (vedi `PcTabs`).
-                    event.key == Key.T -> AppShortcuts.newTab
-                    event.key == Key.W -> AppShortcuts.closeTab
+                    event.key == Key.T -> shortcuts.newTab
+                    event.key == Key.W -> shortcuts.closeTab
                     else -> null
                 }
                 shortcut?.invoke()
@@ -131,27 +157,58 @@ fun main() {
             }
         ) {
             // Cliccando una notifica la finestra torna davanti, anche se era ridotta a icona.
-            LaunchedEffect(Unit) {
-                Biometrics.windowHandle = window.windowHandle
-                DesktopNotifications.bringToFront = {
-                    windowState.isMinimized = false
-                    window.toFront()
+            if (pcWindow.state === windowState) {
+                LaunchedEffect(Unit) {
+                    Biometrics.windowHandle = window.windowHandle
+                    DesktopNotifications.bringToFront = {
+                        windowState.isMinimized = false
+                        window.toFront()
+                    }
                 }
             }
+            // La barra in alto scura come l'app, col vetro di Windows 11 (vedi `WindowFrame`).
+            val dark = AppSettings.isDark
+            LaunchedEffect(dark) { WindowFrame.style(window.windowHandle, dark) }
             PcEmoji.Load()
-            CompositionLocalProvider(LocalPlatformContext provides context) {
+            // Una scheda staccata: una finestra nuova, grande come questa, col mouse sulla sua scheda.
+            val tearOff = remember(window) {
+                PcWindowActions { tab, pointer ->
+                    val scale = window.graphicsConfiguration.defaultTransform.scaleX.toFloat()
+                    val origin = window.contentPane.locationOnScreen
+                    val position = WindowPosition(
+                        (origin.x + pointer.x / scale - TORN_TAB_GRAB_X).dp,
+                        (origin.y + pointer.y / scale - TORN_TAB_GRAB_Y).dp
+                    )
+                    windows.add(PcWindow(nextWindowId++, PcTabs.detached(tab), WindowState(position = position, size = pcWindow.state.size)))
+                }
+            }
+            CompositionLocalProvider(
+                LocalPlatformContext provides context,
+                LocalShortcuts provides pcWindow.shortcuts,
+                LocalPcWindow provides tearOff
+            ) {
                 NotionLocalTheme {
                     // Tutta la finestra, come Notion (chiesto dall'utente il 09/11/2026): la barra
                     // laterale attaccata al bordo sinistro, la pagina larga quanto lo spazio che resta.
                     // I clic segnati: le finestrelle si aprono lì accanto (vedi `PcPanel.desktop.kt`).
                     Surface(modifier = Modifier.fillMaxSize().notePresses().ctrlWheelZoom()) {
-                        AppNavHost(factory = factory)
+                        AppNavHost(factory = factory, windowTabs = pcWindow.tabs)
                     }
                 }
             }
         }
+        } }
     }
 }
+
+/** Una finestra di PageFlow: le sue schede, dove sta e le sue scorciatoie. */
+private class PcWindow(val id: Int, val tabs: PcTabs, val state: WindowState) {
+    val shortcuts = Shortcuts()
+}
+
+/** Dove sta il mouse nella finestra nuova di una scheda staccata: sopra la sua scheda, sotto la barra di Windows. */
+private const val TORN_TAB_GRAB_X = 80f
+private const val TORN_TAB_GRAB_Y = 16f
 
 private const val WINDOW_SAVE_DELAY_MS = 500L
 

@@ -234,6 +234,7 @@ object EditorStrings {
     val reposition get() = t("Reposition", "Riposiziona", "Neu positionieren", "Repositionner", "Reposicionar", "调整位置", "위치 조정", "位置を調整")
     val remove get() = t("Remove", "Rimuovi", "Entfernen", "Retirer", "Quitar", "移除", "제거", "削除")
     val dragToMove get() = t("Drag to move · pinch to zoom", "Trascina per spostare · pizzica per ingrandire", "Ziehen zum Verschieben · Zwei Finger zum Zoomen", "Glissez pour déplacer · pincez pour zoomer", "Arrastra para mover · pellizca para ampliar", "拖动以移动 · 双指缩放", "드래그하여 이동 · 핀치하여 확대", "ドラッグで移動・ピンチで拡大")
+    val dragToMovePc get() = t("Drag to move · scroll to zoom", "Trascina per spostare · rotella per ingrandire", "Ziehen zum Verschieben · Mausrad zum Zoomen", "Glissez pour déplacer · molette pour zoomer", "Arrastra para mover · rueda para ampliar", "拖动以移动 · 滚轮缩放", "드래그하여 이동 · 휠로 확대", "ドラッグで移動・ホイールで拡大")
     val save get() = t("Save", "Salva", "Speichern", "Enregistrer", "Guardar", "保存", "저장", "保存")
     val imageReadFailed get() = t("Couldn't read the image.", "Non sono riuscito a leggere l'immagine.", "Das Bild konnte nicht gelesen werden.", "Impossible de lire l'image.", "No se pudo leer la imagen.", "无法读取图片。", "이미지를 읽을 수 없습니다.", "画像を読み込めませんでした。")
 

@@ -7,3 +7,6 @@ expect val canPinSidebar: Boolean
 
 /** Il cursore delle frecce a destra e a sinistra, sul bordo che ridimensiona la barra (sul telefono niente). */
 expect fun Modifier.horizontalResizeCursor(): Modifier
+
+/** Il cursore delle frecce in su e in giù, sul bordo di sotto della copertina del PC (sul telefono niente). */
+expect fun Modifier.verticalResizeCursor(): Modifier

@@ -9,6 +9,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -28,7 +29,9 @@ import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.navigation.AppNavHost
 import com.gabriele.notionlocal.ui.navigation.AppShortcuts
+import com.gabriele.notionlocal.ui.navigation.LocalPcWindow
 import com.gabriele.notionlocal.ui.navigation.PcTabs
+import com.gabriele.notionlocal.ui.navigation.PcWindowActions
 import com.gabriele.notionlocal.ui.navigation.Routes
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
@@ -245,6 +248,113 @@ class DesktopPeekTest {
             onWindowThread { AppShortcuts.closeTab!!.invoke() }
             val back = tabText("tabs_ctrl_w")
             assertTrue("Ctrl+W: di nuovo una ($two → $back)", back < two - 60)
+        } finally {
+            onWindowThread { scene.close() }
+            AppSettings.pcTabs = null
+        }
+    }
+
+    /** Le regole dello spostamento: le fissate fra le fissate, le altre fra le altre; una finestra staccata non si ricorda. */
+    @Test
+    fun movingAndDetachingTabsFollowThePins() {
+        AppSettings.init(context)
+        AppSettings.pcTabs = """{"tabs":[{"id":"p1","route":"page/x","pinned":true},{"id":"p2","route":"page/y","pinned":true},{"id":"a","route":"home"},{"id":"b","route":"page/z"}],"activeId":"a"}"""
+        val tabs = PcTabs.load()
+        fun order() = tabs.tabs.map { it.id }
+        assertTrue("una fissata dopo le altre no", !tabs.move("p2", 2))
+        assertTrue("un'altra fra le fissate no", !tabs.move("a", 1))
+        assertTrue(tabs.move("p2", 0))
+        assertTrue(tabs.move("b", 2))
+        assertEquals(listOf("p2", "p1", "b", "a"), order())
+        assertEquals(null, tabs.detach("p1"))
+        val torn = tabs.detach("b")
+        assertEquals("b", torn?.id)
+        assertEquals(listOf("p2", "p1", "a"), order())
+        // La finestra nuova ha la sua scheda, ma non tocca quelle salvate.
+        val saved = AppSettings.pcTabs
+        val window = PcTabs.detached(torn!!)
+        window.open(Routes.HOME)
+        assertEquals(saved, AppSettings.pcTabs)
+        assertEquals(null, window.launchId)
+        // Diventata lei la finestra che si ricorda, sì.
+        window.persist = true
+        assertTrue(AppSettings.pcTabs!!.contains("\"b\""))
+        AppSettings.pcTabs = null
+    }
+
+    /**
+     * **Le schede si trascinano** (13/11/2026, chiesto dall'utente): col mouse
+     * una scheda passa dopo quella accanto; una fissata, unica fra le fissate,
+     * resta dov'è e non si stacca; una scheda portata giù, fuori dalla barra, va
+     * in una finestra nuova e sparisce da questa.
+     */
+    @Test
+    fun aTabIsDraggedAmongTheOthersAndOutIntoANewWindow() {
+        AppSettings.init(context)
+        AppSettings.lastVisitedRoute = null
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = PageEntity.ROOT_PAGE_ID, title = "My Space"))
+            repo.createPage(PageEntity(id = "target", title = "Target"))
+            repo.createPage(PageEntity(id = "other", title = "Other"))
+        }
+        AppSettings.pcTabs = """{"tabs":[{"id":"p","route":"page/target","pinned":true},{"id":"a","route":"home"},{"id":"b","route":"page/other"}],"activeId":"a"}"""
+        val opened = mutableListOf<Pair<String, Offset>>()
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 300, density = Density(1f)) {
+                CompositionLocalProvider(
+                    LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner,
+                    LocalPcWindow provides PcWindowActions { tab, at -> opened += tab.id to at }
+                ) {
+                    NotionLocalTheme { Surface(modifier = Modifier.fillMaxSize()) { AppNavHost(factory = factory) } }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun order() = Regex(""""id":"(\w+)"""").findAll(AppSettings.pcTabs.orEmpty()).map { it.groupValues[1] }.toList()
+        fun drag(from: Offset, by: Offset) {
+            fun send(type: PointerEventType, at: Offset, pressed: Boolean) = onWindowThread {
+                scene.sendPointerEvent(
+                    type, at, type = PointerType.Mouse,
+                    buttons = if (pressed) PointerButtons(isPrimaryPressed = true) else PointerButtons(),
+                    button = if (type == PointerEventType.Move) null else PointerButton.Primary
+                )
+            }
+            send(PointerEventType.Move, from, false)
+            send(PointerEventType.Press, from, true)
+            for (step in 1..20) {
+                send(PointerEventType.Move, from + by * (step / 20f), true)
+                frames(1)
+            }
+            send(PointerEventType.Release, from + by, false)
+            frames(5)
+        }
+        try {
+            frames(20)
+            File("build/desktop-screenshots", "tabs_drag_before.png").writeBytes(Image.makeFromBitmap(onWindowThread { Bitmap.makeFromImage(scene.render(time)) }).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            // La fissata (6..38) portata a destra: è l'unica fissata, resta prima.
+            drag(Offset(22f, 17f), Offset(300f, 0f))
+            assertEquals(listOf("p", "a", "b"), order())
+            // "My Space" (da 42) portata oltre "Other": passa dopo.
+            drag(Offset(70f, 17f), Offset(260f, 0f))
+            assertEquals(listOf("p", "b", "a"), order())
+            File("build/desktop-screenshots", "tabs_drag_moved.png").writeBytes(Image.makeFromBitmap(onWindowThread { Bitmap.makeFromImage(scene.render(time)) }).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            // La fissata portata giù non si stacca.
+            drag(Offset(22f, 17f), Offset(40f, 150f))
+            assertEquals(listOf("p", "b", "a"), order())
+            assertTrue(opened.isEmpty())
+            // "Other", ora seconda (da 42), portata giù: una finestra nuova con lei, dove il mouse l'ha lasciata.
+            drag(Offset(70f, 17f), Offset(60f, 150f))
+            assertEquals(listOf("b"), opened.map { it.first })
+            assertTrue("il mouse a ${opened.single().second}", (opened.single().second - Offset(130f, 167f)).getDistance() < 3f)
+            assertEquals(listOf("p", "a"), order())
         } finally {
             onWindowThread { scene.close() }
             AppSettings.pcTabs = null

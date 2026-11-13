@@ -1126,6 +1126,46 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.5 — 13/11/2026 · 19:19 — PC: dark window bar, tabs you drag (also into a new window), a taller cover
+*(Claude Code on the PC; not yet tested by the user; not yet installed on the phone; 1264 tests passed)*
+
+- **[Change]** **[💻 PC]** **The bar at the top of the window** (the one with
+  minimize, maximize and close) **is no longer white**: dark with the dark
+  theme, and on Windows 11 with the glass of Windows (what is behind the
+  window shows through it, blurred); with the transparency effects of Windows
+  switched off, or on Windows 10, it is just dark
+- **[Change]** **[💻 PC]** **The tabs can be dragged**: a tab moves among the
+  others, as in a browser; a pinned tab moves only among the pinned ones (and
+  stays where it is if it is the only one). **Dragged out of the bar** (down
+  or up) and released, a tab **opens in a new PageFlow window**, where the
+  mouse is, as large as the one it comes from; pinned tabs can't be taken
+  out. Every window has its own tabs and its own Ctrl+T, Ctrl+W, Ctrl+F and
+  Ctrl+N; PageFlow closes with the last window. Next time PageFlow opens with
+  the tabs of the main window (or, if that one was closed first, of the last
+  window left)
+- **[Change]** **[💻 PC]** **The cover of a page can be taller or shorter**:
+  dragging its bottom edge (the cursor becomes the up-and-down arrows), from 80
+  to 720; the image stays as it is, and more or less of it is shown. In
+  "Reposition" **the mouse wheel zooms** in and out, and so do the new − and +
+  buttons. The height, the zoom and the position chosen on the PC are only of
+  the PC: on the phone the cover stays as it was (and the PC follows what was
+  chosen on the phone until it gets its own)
+- **[Project]** `desktop/WindowFrame.kt` (`DwmSetWindowAttribute` with
+  `DWMWA_USE_IMMERSIVE_DARK_MODE` and `DWMWA_SYSTEMBACKDROP_TYPE` = acrylic,
+  called through `java.lang.foreign` of Java 21, no new libraries), `Main.kt`
+  with a list of windows (`PcWindow`), `Shortcuts`/`LocalShortcuts` (the
+  shortcuts of each window; `AppShortcuts` stays the default),
+  `PcTabs.move`/`detach`/`detached`/`persist`, `PcWindowActions`/`LocalPcWindow`,
+  the drag in `PcTabBar` (`TabDrag`, `tabShift`), `PageParagraph.pcCoverHeight`/
+  `pcCoverScale`/`pcCoverOffsetX`/`pcCoverOffsetY` (no change to the database),
+  `PageEditorViewModel.setPcCover`, `verticalResizeCursor`. Tests:
+  `DesktopPeekTest.movingAndDetachingTabsFollowThePins`,
+  `aTabIsDraggedAmongTheOthersAndOutIntoANewWindow`,
+  `DesktopBlockSelectionTest.theCoverGrowsByDraggingItsBottomEdge` (100 points
+  taller, saved for the PC only; "Reposition" with three wheel steps and
+  "Save"). The bar of the window can't be photographed in the tests: to be
+  checked by the user
+
 ### ✏️ v0.155.4 — 13/11/2026 · 18:47 — "Cell spoiler": cover any cell of a table
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1261 tests passed)*
 

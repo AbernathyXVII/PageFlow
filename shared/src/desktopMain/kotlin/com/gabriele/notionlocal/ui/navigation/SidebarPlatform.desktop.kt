@@ -8,3 +8,5 @@ import java.awt.Cursor
 actual val canPinSidebar: Boolean = true
 
 actual fun Modifier.horizontalResizeCursor(): Modifier = pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+
+actual fun Modifier.verticalResizeCursor(): Modifier = pointerHoverIcon(PointerIcon(Cursor(Cursor.N_RESIZE_CURSOR)))
