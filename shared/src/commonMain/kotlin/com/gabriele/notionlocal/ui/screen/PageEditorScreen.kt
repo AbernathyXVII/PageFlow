@@ -64,7 +64,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import com.gabriele.notionlocal.data.entity.PageFont
 import com.gabriele.notionlocal.ui.theme.PageFontGroup
@@ -6970,14 +6969,9 @@ private fun BlockRow(
         )
         }
         }
-        // **La riga alla fine del database** (dal 18/10/2026, chiesto
-        // dall'utente): il testo che viene dopo non sembra più attaccato
-        // alla tabella. Come il divisore delle pagine.
-        HorizontalDivider(
-            modifier = Modifier
-                .padding(start = PAGE_SIDE_PADDING + (depth * 20).dp, end = PAGE_SIDE_PADDING, bottom = 8.dp)
-                .testTag("database-end-divider")
-        )
+        // La riga alla fine del database (messa il 18/10/2026) non c'è più dal
+        // 13/11/2026, chiesto dall'utente sul PC e sul telefono: "preferisco che
+        // sia pulito come Notion".
 
         if (confirmDatabaseDeletion) {
             FitAlertDialog(

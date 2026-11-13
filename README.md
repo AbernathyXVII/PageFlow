@@ -1126,6 +1126,15 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.80 — 13/11/2026 · 13:59 — No line at the end of a database
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1242 tests passed)*
+
+- **[Removed]** **[📱 Mobile]** **[💻 PC]** **The line at the end of a
+  database** in a page (added on 18/10/2026): after a database there is only
+  the space, as in Notion, on the phone and on the PC, for all databases
+- **[Project]** The `HorizontalDivider` after `DatabaseContent` in
+  `BlockRow` (and its `database-end-divider` test tag) is gone
+
 ### 🔧 v0.153.79.1 — 13/11/2026 · 13:39 — The arrows up and down go to the next line
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1242 tests passed)*
 
