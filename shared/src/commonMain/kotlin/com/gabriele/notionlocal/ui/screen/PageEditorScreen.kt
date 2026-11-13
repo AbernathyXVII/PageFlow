@@ -427,14 +427,25 @@ fun pageInsetFor(fullWidth: Boolean, areaWidth: Dp): Dp =
  * **Sul PC il margine a sinistra è la metà** (dal 13/11/2026, chiesto
  * dall'utente: "dimezza la distanza tra il margine più a sinistra e il
  * contenuto della prima colonna"): 33 punti invece di 66; i sei puntini ci
- * stanno ancora. A destra resta [PAGE_INSET]. Lo stesso spazio c'è prima di
- * ogni colonna che non è la prima (vedi COLUMN_LIST in `BlockRow`), così ogni
- * colonna sta staccata dal suo bordo quanto la prima dal bordo della pagina.
+ * stanno ancora. Lo stesso spazio c'è prima di ogni colonna che non è la
+ * prima (vedi COLUMN_LIST in `BlockRow`), così ogni colonna sta staccata dal
+ * suo bordo quanto la prima dal bordo della pagina.
  */
 internal val PAGE_LEFT_INSET = PAGE_INSET / 2
 
+/**
+ * **A destra un margine un po' più piccolo di quello a sinistra** (dal
+ * 13/11/2026, chiesto dall'utente: "fallo un po' più piccolo di quello che
+ * c'è a sinistra, ma comunque non nullo"): 24 punti invece di 66, e la
+ * barretta di scorrimento (14) ci sta senza coprire il contenuto.
+ */
+internal val PAGE_RIGHT_INSET = if (isPc) 24.dp else 0.dp
+
 /** Il margine a sinistra, dato quello di ogni lato ([inset]): metà del solito; la pagina al centro resta al centro. */
 fun pageLeftInsetFor(inset: Dp): Dp = if (inset == PAGE_INSET) PAGE_LEFT_INSET else inset
+
+/** Il margine a destra, dato quello di ogni lato ([inset]): [PAGE_RIGHT_INSET]; la pagina al centro resta al centro. */
+fun pageRightInsetFor(inset: Dp): Dp = if (inset == PAGE_INSET) PAGE_RIGHT_INSET else inset
 
 /** L'ultima larghezza misurata della pagina: una pagina appena aperta parte già al centro, senza un salto. */
 private object PageAreaMemory {
@@ -1651,6 +1662,7 @@ private fun PageEditorContent(
     var pageAreaWidth by remember { mutableStateOf(PageAreaMemory.width) }
     val pageInset = pageInsetFor(page?.paragraph?.fullWidth != false, pageAreaWidth)
     val pageLeftInset = pageLeftInsetFor(pageInset)
+    val pageRightInset = pageRightInsetFor(pageInset)
     val showTemplatePicker = page?.isRowPage == true && !readOnlyPage && !templatePickerDismissed &&
         blocks.isNotEmpty() && blocks.all { block ->
             block.type == BlockType.PARAGRAPH && block.parentBlockId == null && viewModel.plainTextOf(block).isEmpty()
@@ -2395,7 +2407,7 @@ private fun PageEditorContent(
 
                     Box(
                         modifier = Modifier
-                            .bleedSides(pageLeftInset, pageInset)
+                            .bleedSides(pageLeftInset, pageRightInset)
                             .fillMaxWidth()
                             .height(COVER_HEIGHT)
                             .onSizeChanged { coverBox = it }
@@ -2860,7 +2872,7 @@ private fun PageEditorContent(
                 LazyColumn(
                     state = listState,
                     // Sul PC il margine in più a sinistra (vedi `PAGE_INSET`).
-                    contentPadding = PaddingValues(start = pageLeftInset, end = pageInset, top = if (isPc) PC_TOP_BAR else 0.dp),
+                    contentPadding = PaddingValues(start = pageLeftInset, end = pageRightInset, top = if (isPc) PC_TOP_BAR else 0.dp),
                     modifier = Modifier
                         .fillMaxSize()
                         // Il verso del dito, per "Back" quando si è scesi molto (`BackToTop.kt`).

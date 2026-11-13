@@ -742,7 +742,7 @@ class DesktopColumnsTest {
         runBlocking { repo.saveBlock(childrenOf(null).single { it.id == "vuota" }.copy(textJson = """[{"text":"MEZZO"}]""")) }
         withMouse { mouse, shot ->
             // Le righe: PRIMA a y ~190, MEZZO ~213, DOPO ~236 (il testo comincia a x 53, i puntini fra 28 e 48).
-            val during = dragLine(mouse, shot, textX = 120f, dotsX = 38f, fromY = 236f, toX = 800f, toY = 190f, name = "columns_drag_right")
+            val during = dragLine(mouse, shot, textX = 120f, dotsX = 38f, fromY = 236f, toX = 840f, toY = 190f, name = "columns_drag_right")
             val blue = blueOf(during)
             assertTrue("la linea blu verticale a destra: ${blue.size} punti", blue.size > 20 && blue.average() > 700)
         }
@@ -767,8 +767,8 @@ class DesktopColumnsTest {
         val sinistra = lineOf("vuota", 0).id
         val destra = lineOf("vuota", 1).id
         withMouse { mouse, shot ->
-            // "DESTRA" comincia a x 486 (il bordo a 433, lo spazio di 33 e il margine di 20): i suoi puntini poco prima.
-            dragLine(mouse, shot, textX = 515f, dotsX = 471f, fromY = 213f, toX = 200f, toY = 242f, name = "columns_drag_out")
+            // "DESTRA" comincia a x 507 (il bordo a 454, lo spazio di 33 e il margine di 20): i suoi puntini poco prima.
+            dragLine(mouse, shot, textX = 536f, dotsX = 492f, fromY = 213f, toX = 200f, toY = 242f, name = "columns_drag_out")
         }
         val top = childrenOf(null)
         assertEquals(listOf("prima", sinistra, "dopo", destra), top.map { it.id })
@@ -897,7 +897,7 @@ class DesktopColumnsTest {
             val (redX, _) = spanOf(page, 0xE53935) ?: error("l'immagine rossa non si vede")
             val (greenX, _) = spanOf(page, 0x43A047) ?: error("l'immagine verde non si vede")
             assertTrue("la rossa larga 200: ${redX.first}..${redX.last}", (redX.last - redX.first + 1) in 196..202)
-            assertTrue("la verde larga quanto la pagina: ${greenX.first}..${greenX.last}", (greenX.last - greenX.first + 1) in 700..780)
+            assertTrue("la verde larga quanto la pagina: ${greenX.first}..${greenX.last}", (greenX.last - greenX.first + 1) in 780..830)
         }
     }
 
@@ -918,7 +918,7 @@ class DesktopColumnsTest {
             val (greenX, greenY) = spanOf(before, 0x43A047) ?: error("la verde")
             // I puntini di un'immagine stanno alla sua prima riga, in alto.
             val fromY = greenY.first + 6f
-            dragLine(mouse, shot, textX = (greenX.first + greenX.last) / 2f, dotsX = 38f, fromY = fromY, toX = 800f, toY = (redY.first + redY.last) / 2f, name = "images_drag_beside")
+            dragLine(mouse, shot, textX = (greenX.first + greenX.last) / 2f, dotsX = 38f, fromY = fromY, toX = 840f, toY = (redY.first + redY.last) / 2f, name = "images_drag_beside")
             // Nelle colonne le immagini si ricaricano: un attimo.
             repeat(20) { mouse("move", 450f, 500f) }
             val after = shot("images_in_columns")
@@ -937,7 +937,7 @@ class DesktopColumnsTest {
      * **Il bordo fra due colonne si trascina** (chiesto dall'utente il
      * 13/11/2026: "stessa cosa per i blocchi che si possono spostare tra le
      * colonne"): col mouse sopra c'è la linea blu; portato 100 punti a destra,
-     * la prima colonna prende 500 punti degli 801 del gruppo, e restano salvati.
+     * la prima colonna prende 521 punti degli 843 del gruppo, e restano salvati.
      */
     @Test
     fun theEdgeBetweenTwoColumnsIsDragged() {
@@ -947,26 +947,26 @@ class DesktopColumnsTest {
             write("vuota", 1, "DESTRA")
         }
         withMouse { mouse, shot ->
-            // Il gruppo va da 33 a 834: il bordo a metà, a 433, all'altezza delle righe (213).
+            // Il gruppo va da 33 a 876: il bordo a metà, a 454, all'altezza delle righe (213).
             mouse("move", 300f, 213f)
-            mouse("move", 433f, 213f)
+            mouse("move", 454f, 213f)
             val hover = shot("columns_edge_hover")
             fun blue(c: Int) = (c and 0xFF) > 180 && ((c shr 16) and 0xFF) < 80
-            assertTrue("la linea blu sul bordo", (429..438).any { x -> blue(hover.getColor(x, 213)) })
-            mouse("press", 433f, 213f)
-            for (step in 1..20) mouse("drag", 433f + 5f * step, 213f)
+            assertTrue("la linea blu sul bordo", (450..459).any { x -> blue(hover.getColor(x, 213)) })
+            mouse("press", 454f, 213f)
+            for (step in 1..20) mouse("drag", 454f + 5f * step, 213f)
             shot("columns_edge_drag")
-            mouse("release", 533f, 213f)
+            mouse("release", 554f, 213f)
             mouse("move", 300f, 500f)
             val after = shot("columns_edge_after")
             fun startOf(rgbBright: Bitmap): Int = (520 until 640).first { x -> (200..226).any { y -> rgbBright.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 150 && (c and 0xFF) > 150 } } }
-            // DESTRA ora comincia 100 punti più a destra di prima (486).
-            assertTrue("DESTRA si è spostata a destra: ${startOf(after)}", startOf(after) in 576..597)
+            // DESTRA ora comincia 100 punti più a destra di prima (507).
+            assertTrue("DESTRA si è spostata a destra: ${startOf(after)}", startOf(after) in 597..618)
         }
         val list = childrenOf(null).single { it.type == BlockType.COLUMN_LIST }
         val parts = childrenOf(list.id).map { it.attrs.width }
-        assertEquals("le parti salvate: $parts", 500.5f / 801f, parts[0]!!, 0.01f)
-        assertEquals(300.5f / 801f, parts[1]!!, 0.01f)
+        assertEquals("le parti salvate: $parts", 521.5f / 843f, parts[0]!!, 0.01f)
+        assertEquals(321.5f / 843f, parts[1]!!, 0.01f)
     }
 
     /**

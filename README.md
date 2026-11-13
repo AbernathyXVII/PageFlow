@@ -1126,8 +1126,21 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
-### ✏️ v0.153.78 — 13/11/2026 · 12:57 — Half the left margin; every column as far from its edge as the first
+### ✏️ v0.153.79 — 13/11/2026 · 13:19 — A smaller right margin
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1241 tests passed)*
+
+- **[Change]** **[💻 PC]** **The right margin of a page is smaller than the
+  left one**: 24 points instead of 66 (on the left there are 33), so tables,
+  databases and columns reach almost to the right edge of the window; the
+  scroll bar still fits in it. A page "at the centre" (without Full width)
+  stays at the centre
+- **[Project]** `PAGE_RIGHT_INSET` and `pageRightInsetFor` in
+  `PageEditorScreen` (the end padding of the list and the cover). Tests: the
+  coordinates of `DesktopColumnsTest` (the group of columns now ends at 876
+  of 900)
+
+### ✏️ v0.153.78 — 13/11/2026 · 12:57 — Half the left margin; every column as far from its edge as the first
+*(Claude Code on the PC; seen by the user, who asked for a smaller right margin too (v0.153.79); installed on the phone; 1241 tests passed)*
 
 - **[Change]** **[💻 PC]** **The left margin of a page is half**: 33
   points instead of 66, so the text starts at 53 instead of 86 and a
