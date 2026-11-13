@@ -26,6 +26,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.ColumnType
+import com.gabriele.notionlocal.data.entity.NAME_COLUMN_KEY
+import com.gabriele.notionlocal.data.entity.parseColumnWidths
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.DatabaseCellEntity
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
@@ -299,6 +301,84 @@ class DesktopDatabaseTableTest {
         val again = openDatabase("group_reopened.png")
         assertEquals("riaperto il database il gruppo è ancora chiuso", bands(closed).size, bands(again).size)
         assertTrue("e ha meno righe di quando era aperto", bands(again).size < openBands.size)
+    }
+
+    /**
+     * **La lineetta fra due colonne si trascina col mouse** (chiesto
+     * dall'utente il 13/11/2026, come su Notion): col mouse sopra diventa blu;
+     * trascinata 100 punti a destra, Name diventa larga 300 invece di 200, e la
+     * misura resta salvata nella vista.
+     */
+    @Test
+    fun theColumnLineIsDraggedWithTheMouse() {
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            DatabaseViewScreen(
+                                pageId = "giochi", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
+                                onOpenUpdates = {}, onOpenPage = {}, onOpenDatabase = {}
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun picture(): Bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+        fun save(bitmap: Bitmap, name: String) =
+            File("build/desktop-screenshots", name).apply { parentFile.mkdirs() }.writeBytes(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        try {
+            frames(40)
+            val table = picture()
+            val background = table.getColor(1100, table.height - 5)
+            val lines = (60 until table.height - 20).filter { y -> (1000..1100).all { x -> table.getColor(x, y) != background } }
+            val headerY = lines.first() - 16
+            /** La lineetta a destra di Name (66 di margine più 200 di Name): l'unica cosa fra 230 e 300, nei titoli. */
+            fun lineX(bitmap: Bitmap, from: Int, to: Int) = (from..to).first { x -> bitmap.getColor(x, headerY) != background && bitmap.getColor(x, headerY - 6) != background }
+            val x = lineX(table, 230, 300)
+            fun mouse(type: PointerEventType, at: Float, pressed: Boolean) = onWindowThread {
+                scene.sendPointerEvent(
+                    type, Offset(at, headerY.toFloat()), type = PointerType.Mouse,
+                    buttons = if (pressed) PointerButtons(isPrimaryPressed = true) else PointerButtons(),
+                    button = if (type == PointerEventType.Move) null else PointerButton.Primary
+                )
+            }
+            mouse(PointerEventType.Move, x - 40f, false)
+            frames(2)
+            mouse(PointerEventType.Move, x.toFloat(), false)
+            frames(3)
+            val hover = picture()
+            save(hover, "database_column_line_hover.png")
+            fun blue(c: Int) = (c and 0xFF) > ((c shr 16) and 0xFF) + 60
+            assertTrue("col mouse sopra la lineetta è blu", blue(hover.getColor(x, headerY)))
+            mouse(PointerEventType.Press, x.toFloat(), true)
+            frames(1)
+            for (step in 1..20) {
+                mouse(PointerEventType.Move, x + 5f * step, true)
+                frames(1)
+            }
+            save(picture(), "database_column_line_drag.png")
+            mouse(PointerEventType.Release, x + 100f, false)
+            frames(10)
+            val widths = runBlocking { parseColumnWidths(AppDatabase.getInstance(context).pageDao().getById("giochi")?.columnWidths) }
+            assertEquals("Name larga 300: $widths", 300, widths[NAME_COLUMN_KEY])
+            mouse(PointerEventType.Move, 700f, false)
+            frames(5)
+            val after = picture()
+            save(after, "database_column_line_after.png")
+            assertEquals("la lineetta ora sta 100 più a destra", x + 100, lineX(after, x + 60, x + 140))
+        } finally {
+            onWindowThread { scene.close() }
+        }
     }
 
     private fun click(scene: ImageComposeScene, at: Offset) = onWindowThread {

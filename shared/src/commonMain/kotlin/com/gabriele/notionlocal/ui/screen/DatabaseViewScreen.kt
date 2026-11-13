@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.ui.navigation.horizontalResizeCursor
+import kotlinx.coroutines.delay
 import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
 import androidx.compose.material.icons.filled.OpenInNew
 import com.gabriele.notionlocal.data.settings.OpenMode
@@ -381,6 +383,9 @@ private class ColumnResize {
     var raw = 0.dp
     /** Il dito è appena sceso sul segnalino: quel tocco non lo chiude. */
     var handleTouched = false
+    /** Sul PC: la lineetta sotto il mouse (blu), e se si sta trascinando col mouse (niente segnalino). */
+    var hovered by mutableStateOf<String?>(null)
+    var byMouse by mutableStateOf(false)
 
     fun start(column: String) {
         key = column
@@ -390,6 +395,7 @@ private class ColumnResize {
     fun stop() {
         key = null
         draft = null
+        byMouse = false
     }
 }
 
@@ -406,6 +412,8 @@ private class TitleEditRequest(val rowId: String?, val consume: () -> Unit)
 private val LocalTitleEditRequest = compositionLocalOf { TitleEditRequest(null) {} }
 
 private val RESIZE_HANDLE_WIDTH = 24.dp
+/** Sul PC, quanto è larga la striscia sopra la lineetta fra due colonne che si prende col mouse. */
+private val COLUMN_EDGE_GRAB = 8.dp
 private val RESIZE_HANDLE_HEIGHT = 40.dp
 // Il "+" per una colonna nuova e, accanto, i tre puntini per mostrarle o nasconderle (dal 11/11/2026).
 private val ADD_PROPERTY_WIDTH = 88.dp
@@ -3051,7 +3059,7 @@ private fun TableHeaderRow(
     // Il segnalino, sopra il bordo destro della colonna che si allarga:
     // dopo tutte quelle alla sua sinistra, Name compresa, e lei.
     val key = resize?.key
-    if (resize != null && key != null) {
+    if (resize != null && key != null && !resize.byMouse) {
         val keys = columns.map { it.id }.toMutableList().apply { add(namePlace, NAME_COLUMN_KEY) }
         val index = keys.indexOf(key)
         // Con la prima colonna ferma, il suo bordo è spostato di quanto la tabella è scorsa.
@@ -3074,7 +3082,90 @@ private fun TableHeaderRow(
             )
         }
     }
+    // **Sul PC la lineetta fra due colonne si trascina col mouse** (dal
+    // 13/11/2026, chiesto dall'utente, come su Notion): col mouse sopra diventa
+    // blu e il puntatore la doppia freccia; trascinata, la colonna alla sua
+    // sinistra si allarga o si stringe, e lasciandola la misura resta.
+    if (isPc && resize != null && !viewLocked) {
+        val keys = columns.map { it.id }.toMutableList().apply { add(namePlace, NAME_COLUMN_KEY) }
+        val frozen = LocalFrozenColumn.current
+        var edge = 0.dp
+        keys.forEachIndexed { index, edgeKey ->
+            edge += widths.of(edgeKey)
+            val type = columns.find { it.id == edgeKey }?.type
+            ColumnEdgeDrag(
+                resize = resize,
+                key = edgeKey,
+                center = edge + SEPARATOR_WIDTH * index + SEPARATOR_WIDTH / 2,
+                // Con la prima colonna ferma, il suo bordo è spostato di quanto la tabella è scorsa.
+                frozenShift = { if (frozen != null && index == 0) frozen.scroll.value else 0 },
+                current = widths.of(edgeKey),
+                defaultWidth = defaultColumnWidth(edgeKey, type),
+                minWidth = minColumnWidth(edgeKey, type),
+                onCommit = { onSetColumnWidth(edgeKey, it) }
+            )
+        }
     }
+    }
+}
+
+/**
+ * La striscia sopra la lineetta a destra della colonna [key], nella riga dei
+ * titoli: si prende col mouse e si trascina (vedi `TableHeaderRow`). La
+ * larghezza cambia mentre si trascina, come col segnalino del telefono, e si
+ * aggancia alla misura di sempre quando ci si passa vicino.
+ */
+@Composable
+private fun ColumnEdgeDrag(
+    resize: ColumnResize,
+    key: String,
+    center: Dp,
+    frozenShift: () -> Int,
+    current: Dp,
+    defaultWidth: Int,
+    minWidth: Int,
+    onCommit: (Int) -> Unit
+) {
+    val density = LocalDensity.current
+    val latestCurrent by rememberUpdatedState(current)
+    val latestCommit by rememberUpdatedState(onCommit)
+    val scope = rememberCoroutineScope()
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    LaunchedEffect(hovered) {
+        if (hovered) resize.hovered = key else if (resize.hovered == key) resize.hovered = null
+    }
+    Box(
+        modifier = Modifier
+            .offset { IntOffset((center - COLUMN_EDGE_GRAB / 2).roundToPx() + frozenShift(), 0) }
+            .size(COLUMN_EDGE_GRAB, ROW_HEIGHT)
+            .hoverable(interaction)
+            .horizontalResizeCursor()
+            .pointerInput(key) {
+                detectHorizontalDragGestures(
+                    onDragStart = {
+                        resize.start(key)
+                        resize.byMouse = true
+                        resize.raw = latestCurrent
+                        resize.draft = latestCurrent
+                    },
+                    onDragEnd = {
+                        resize.draft?.let { latestCommit(it.value.roundToInt()) }
+                        // La misura nuova arriva dalla vista fra un attimo: fino ad allora resta quella trascinata.
+                        scope.launch {
+                            delay(200)
+                            if (resize.key == key && resize.byMouse) resize.stop()
+                        }
+                    },
+                    onDragCancel = { resize.stop() },
+                    onHorizontalDrag = { change, amount ->
+                        change.consume()
+                        resize.raw += with(density) { amount.toDp() }
+                        resize.draft = snapColumnWidth(key, resize.raw.value.roundToInt(), defaultWidth, minWidth).dp
+                    }
+                )
+            }
+    )
 }
 
 /**
@@ -6624,7 +6715,8 @@ private fun CellSeparator(
     /** Con "Wrap cells" la riga può essere più alta: la linea la segue tutta. */
     stretch: Boolean = false
 ) {
-    val resizing = afterKey != null && LocalColumnResize.current?.key == afterKey
+    val resize = LocalColumnResize.current
+    val resizing = afterKey != null && (resize?.key == afterKey || resize?.hovered == afterKey)
     VerticalDivider(
         modifier = if (stretch) Modifier.fillMaxHeight() else Modifier.height(ROW_HEIGHT),
         color = if (resizing) MaterialTheme.colorScheme.primary else DividerDefaults.color

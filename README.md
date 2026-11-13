@@ -1126,6 +1126,45 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.76 — 13/11/2026 · 09:18 — The right-click menu on the PC; database columns resized with the mouse
+*(Claude Code on the PC; not yet tested by the user; not yet installed on the phone, which was not connected; 1237 tests passed)*
+
+- **[Change]** **[💻 PC]** **The right-click menu of a page**: a right
+  click on a line opens, one under the other, what on the phone is in the bar
+  above the keyboard, in the same order: Block options (the six dots), Copy,
+  Paste, Cut, Select all, Outdent, Indent, Move up, Move down, Add or change
+  block type (the "+"), Paragraph, **Text formatting** (the Aa bar: font,
+  font size, Bold, Italic, Underline, Strikethrough, Subscript, Superscript,
+  Spoiler), Text and background color, Link (with text selected or the cursor
+  in a link) and Undo, Redo. It looks like the menus of Windows 11: dark,
+  rounded corners, the icon on the left, the keyboard shortcut in grey on the
+  right (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A, Ctrl+Z, Ctrl+Y), and the menus with
+  an arrow open at the side when the mouse goes over them (Text formatting,
+  and Paste with its three ways: Keep Source Formatting, Match Destination
+  Formatting, Keep Text Only). As in Windows, the right click first puts the
+  cursor where it is clicked, unless it is inside the selected text, which
+  stays selected for Bold, the colour or Copy. Esc or a click outside closes
+  it. Before, the right click opened only Cut, Copy and Paste
+- **[Change]** **[💻 PC]** **Database columns are resized with the
+  mouse**, as in Notion: with the mouse on the line between two column titles
+  the pointer becomes the double arrow and the line turns blue; dragging it to
+  the right the column on its left gets wider, to the left narrower, and the
+  width stays in the view. Near the usual width it snaps there, as with
+  "Resize column"
+- **[Project]** `PcContextMenu.kt` (`PcContextMenu`, `PcMenuItem`,
+  `PageTextMenuHost`, `rightClickCaret`), `PageTextMenuArea` (on the PC it
+  takes the place of Compose's text menu through `LocalTextContextMenu`, and
+  gives the page the real Cut, Copy, Paste of the field), `PcPageMenu` in
+  `PageEditorScreen`; `applyTypeMenuEntry`, `openParagraph` and `FontMenu`
+  shared by the bar and the menu. `ColumnEdgeDrag` in the titles of the
+  table, `ColumnResize.hovered` and `byMouse`. New words: Text formatting,
+  Bold, Italic, Underline, Strikethrough (eight languages). Tests:
+  `DesktopPcMenuTest` (a right click on a line without the cursor and Move up
+  moves that line; selected text, right click inside it, Text formatting and
+  Bold make it bold), `DesktopDatabaseTableTest` (the line turns blue under
+  the mouse; dragged 100 points to the right, Name is 300 wide and the line
+  stays there)
+
 ### 🔧 v0.153.75.1 — 13/11/2026 · 08:37 — The compact calendar also on the phone
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1234 tests passed)*
 

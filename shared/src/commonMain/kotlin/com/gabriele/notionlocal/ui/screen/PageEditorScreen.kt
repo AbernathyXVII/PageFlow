@@ -167,6 +167,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -203,6 +204,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -718,6 +720,12 @@ private fun BarValueChip(
  */
 private val BarMenuProperties = PopupProperties(focusable = false)
 
+/** Quale menu del tasto destro è aperto sul PC: quello principale, o il "+" e i font che si aprono da lì. */
+private enum class PcMenuKind { MAIN, BLOCK_TYPE, FONT }
+
+/** Il menu del tasto destro aperto: [at] è il punto del clic nella finestra, [edit] le azioni del campo. */
+private data class PcMenuOpen(val at: Offset, val edit: TextEditActions, val kind: PcMenuKind = PcMenuKind.MAIN)
+
 /**
  * Il font della pagina, dalla barra Aa. Nella barra c'è solo il nome
  * chiesto dall'utente ("Calibri"); qui nell'elenco c'è anche, fra
@@ -757,34 +765,42 @@ private fun FontPickerChip(
             },
             modifier = Modifier.widthIn(max = FONT_CHIP_MAX_WIDTH)
         )
-        DropdownMenu(
-            expanded = open,
-            onDismissRequest = { open = false },
-            properties = BarMenuProperties,
-            modifier = Modifier.background(DarkSheet)
-        ) {
-            FontMenuItem(
-                label = EditorStrings.defaultFont,
-                selected = current == null,
-                fontFamily = null,
-                onClick = {
-                    open = false
-                    onPick(null)
-                }
-            )
-            PageFontGroup.entries.forEach { group ->
-                HorizontalDivider()
-                PageFont.entries.filter { it.group == group }.forEach { font ->
-                    FontMenuItem(
-                        label = "${font.label} (${font.lookalike})",
-                        selected = current == font,
-                        fontFamily = if (group == PageFontGroup.LATIN) font.fontFamily() else null,
-                        onClick = {
-                            open = false
-                            onPick(font)
-                        }
-                    )
-                }
+        FontMenu(expanded = open, current = current, onDismiss = { open = false }) { font ->
+            open = false
+            onPick(font)
+        }
+    }
+}
+
+/** L'elenco dei font, dalla barra Aa e dal menu del tasto destro sul PC. */
+@Composable
+private fun FontMenu(
+    expanded: Boolean,
+    current: PageFont?,
+    onDismiss: () -> Unit,
+    onPick: (PageFont?) -> Unit
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        properties = BarMenuProperties,
+        modifier = Modifier.background(DarkSheet)
+    ) {
+        FontMenuItem(
+            label = EditorStrings.defaultFont,
+            selected = current == null,
+            fontFamily = null,
+            onClick = { onPick(null) }
+        )
+        PageFontGroup.entries.forEach { group ->
+            HorizontalDivider()
+            PageFont.entries.filter { it.group == group }.forEach { font ->
+                FontMenuItem(
+                    label = "${font.label} (${font.lookalike})",
+                    selected = current == font,
+                    fontFamily = if (group == PageFontGroup.LATIN) font.fontFamily() else null,
+                    onClick = { onPick(font) }
+                )
             }
         }
     }
@@ -1507,6 +1523,16 @@ private fun PageEditorContent(
     // La finestrella del collegamento: null chiusa, altrimenti l'indirizzo
     // che c'è già ("" se non ce n'è uno).
     var linkDialogFor by remember { mutableStateOf<String?>(null) }
+    // **Il menu del tasto destro sul PC** (dal 13/11/2026, vedi `PcContextMenu.kt`):
+    // i campi di testo lo aprono da `LocalPageTextMenu`.
+    var pcMenu by remember { mutableStateOf<PcMenuOpen?>(null) }
+    val pcMenuHost = remember {
+        PageTextMenuHost(
+            open = { at, edit -> pcMenu = PcMenuOpen(at, edit) },
+            isOpen = { pcMenu != null },
+            close = { pcMenu = null }
+        )
+    }
     // **Tutta la pagina selezionata** (dal 20/10/2026, vedi `PageSelection.kt`).
     var pageSelected by remember(pageId) { mutableStateOf(false) }
     // **I blocchi selezionati col mouse** (dal 10/11/2026, vedi `BlockSelection.kt`).
@@ -1995,6 +2021,20 @@ private fun PageEditorContent(
             // (il "+" non sapeva mettere la vista giusta a un database
             // nuovo); con una sola, la stessa voce fa la stessa cosa da
             // dovunque la si scelga. Vedi `SLASH_ENTRIES`.
+            // **"Paragraph"** (dal 21/10/2026, chiesto dall'utente): lo spazio fra i
+            // blocchi e dopo i marcatori solo per le righe che il testo selezionato
+            // tocca, o per quella del cursore. La selezione si mette da parte prima,
+            // come per il pennello; poi il cursore si spegne, perché cambiando lo
+            // spazio quelle righe diventano un campo a sé, e un campo che sparisce
+            // col cursore dentro fa chiudere l'app.
+            val openParagraph: (BlockEntity?) -> Unit = { focused ->
+                viewModel.captureSelection()
+                val lines = viewModel.capturedSelectionBlocks().ifEmpty { listOfNotNull(focused) }
+                if (lines.isNotEmpty()) {
+                    focusManager.clearFocus()
+                    paragraphLines = lines
+                }
+            }
             val applyInsertAction: (BlockEntity, SlashAction) -> Unit = { block, action ->
                 // Le voci del 03/11/2026: registrare e scansionare.
                 if (action == SlashAction.Record || action == SlashAction.Scan) focusManager.clearFocus()
@@ -2100,6 +2140,23 @@ private fun PageEditorContent(
                     // Lo scanner di Google: le pagine diventano foto qui.
                     SlashAction.Scan -> scanDocument(block.id)
                     SlashAction.NotYet -> Unit
+                }
+            }
+            // **La voce scelta dal menu "+"** (della barra, o del tasto destro sul PC).
+            // Con del testo selezionato cambiano tutte le righe che tocca (dal
+            // 14/10/2026, chiesto dall'utente): prima solo quella col cursore. Vale
+            // per i tipi che una riga di testo diventa da sola; la notifica (che apre
+            // la sua finestra), la tabella e il resto restano della riga col cursore.
+            // La selezione si è messa da parte aprendo il menu.
+            val applyTypeMenuEntry: (BlockEntity, SlashEntry) -> Unit = { block, entry ->
+                val action = entry.action
+                val selected = viewModel.capturedSelectionBlocks()
+                if (action is SlashAction.Type && action.type in TURN_INTO_MANY && selected.isNotEmpty()) {
+                    if (action.type == BlockType.TOGGLE || action.type in MULTILINE_TYPES) focusPark.requestFocus()
+                    viewModel.updateBlockTypes(selected, action.type)
+                } else {
+                    // La stessa funzione del menu "/": vedi `applyInsertAction`.
+                    applyInsertAction(block, action)
                 }
             }
 
@@ -2759,67 +2816,70 @@ private fun PageEditorContent(
                     }
                 }
             }
-            LazyColumn(
-                state = listState,
-                // Sul PC il margine in più a sinistra (vedi `PAGE_INSET`).
-                contentPadding = PaddingValues(start = pageInset, end = pageInset, top = if (isPc) PC_TOP_BAR else 0.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    // Il verso del dito, per "Back" quando si è scesi molto (`BackToTop.kt`).
-                    .nestedScroll(backToTop.connection)
-                    // Con tutta la pagina selezionata, un tocco la lascia (vedi `PageSelection.kt`).
-                    .tapToEndPageSelection(pageSelected) { pageSelected = false }
-                    // Col mouse: più blocchi trascinando, un divisore con un clic (vedi `BlockSelection.kt`).
-                    .onGloballyPositioned { pageListCoordinates.set(it) }
-                    .mouseBlockSelection(
-                        picker = blockPicker,
-                        coordinates = { pageListCoordinates.get() },
-                        order = { latestRenderItems.value.flatMap { renderItemBlockIds(it) } },
-                        selectsOnClick = { id -> viewModel.blocks.value.firstOrNull { it.id == id }?.type == BlockType.DIVIDER },
-                        selected = { selectedBlocks.value.isNotEmpty() },
-                        scrollBy = { listState.scrollBy(it) },
-                        onSelect = { ids ->
-                            if (!ids.isNullOrEmpty() && selectedBlocks.value.isEmpty()) focusManager.clearFocus()
-                            pageSelected = false
-                            selectedBlocks.value = ids.orEmpty()
-                        }
-                    )
-                    // Sul PC i sei puntini accanto al blocco sotto il mouse (vedi `BlockHandle.kt`).
-                    .then(if (isPc) Modifier.blockHover(blockPicker, { pageListCoordinates.get() }, { blockSpot.value }, { lastPagePointer[0] = it }) { blockSpot.value = it } else Modifier)
-                    .stickyViewport(stickyViewport)
-                    // Di lato, con "Full line view": il primo verso in cui si
-                    // muove il dito decide per tutto il gesto.
-                    .sideScrollGestures(sideScroll, enabled = !drawingMode)
-                    // Tocco sullo spazio vuoto sotto l'ultimo blocco per
-                    // continuare a scrivere. Deve rispondere SOLO a tocchi
-                    // veri: con Modifier.clickable rispondeva anche al tasto
-                    // Invio (Compose lo tratta come attivazione quando un
-                    // elemento interno ha il focus), quindi ogni a-capo
-                    // faceva anche ripartire focusLastBlock, che riportava
-                    // il cursore sull'ultimo blocco *noto prima* che l'a-capo
-                    // creasse quello nuovo — il carattere successivo finiva
-                    // sulla riga precedente.
-                    .pointerInput(Unit) {
-                        detectTapGestures { tap ->
-                            // **Solo il vuoto sotto l'ultimo blocco.**
-                            // Il gestore copre tutta la lista, quindi
-                            // prendeva anche lo spazio accanto al
-                            // titolo e i buchi fra una riga e l'altra:
-                            // toccandoli, il cursore saltava in fondo
-                            // alla pagina e si apriva la tastiera, che
-                            // non è mai quello che si voleva fare.
-                            val info = listState.layoutInfo
-                            val last = info.visibleItemsInfo.lastOrNull()
-                            if (last != null &&
-                                last.index == info.totalItemsCount - 1 &&
-                                tap.y > last.offset + last.size
-                            ) {
-                                viewModel.focusLastBlock()
+            // Sul PC il tasto destro sulle righe apre il menu della pagina (vedi `PcContextMenu.kt`).
+            CompositionLocalProvider(LocalPageTextMenu provides pcMenuHost.takeIf { isPc && !readOnlyPage && !drawingMode }) {
+                LazyColumn(
+                    state = listState,
+                    // Sul PC il margine in più a sinistra (vedi `PAGE_INSET`).
+                    contentPadding = PaddingValues(start = pageInset, end = pageInset, top = if (isPc) PC_TOP_BAR else 0.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // Il verso del dito, per "Back" quando si è scesi molto (`BackToTop.kt`).
+                        .nestedScroll(backToTop.connection)
+                        // Con tutta la pagina selezionata, un tocco la lascia (vedi `PageSelection.kt`).
+                        .tapToEndPageSelection(pageSelected) { pageSelected = false }
+                        // Col mouse: più blocchi trascinando, un divisore con un clic (vedi `BlockSelection.kt`).
+                        .onGloballyPositioned { pageListCoordinates.set(it) }
+                        .mouseBlockSelection(
+                            picker = blockPicker,
+                            coordinates = { pageListCoordinates.get() },
+                            order = { latestRenderItems.value.flatMap { renderItemBlockIds(it) } },
+                            selectsOnClick = { id -> viewModel.blocks.value.firstOrNull { it.id == id }?.type == BlockType.DIVIDER },
+                            selected = { selectedBlocks.value.isNotEmpty() },
+                            scrollBy = { listState.scrollBy(it) },
+                            onSelect = { ids ->
+                                if (!ids.isNullOrEmpty() && selectedBlocks.value.isEmpty()) focusManager.clearFocus()
+                                pageSelected = false
+                                selectedBlocks.value = ids.orEmpty()
                             }
-                        }
-                    },
-                content = listContent
-            )
+                        )
+                        // Sul PC i sei puntini accanto al blocco sotto il mouse (vedi `BlockHandle.kt`).
+                        .then(if (isPc) Modifier.blockHover(blockPicker, { pageListCoordinates.get() }, { blockSpot.value }, { lastPagePointer[0] = it }) { blockSpot.value = it } else Modifier)
+                        .stickyViewport(stickyViewport)
+                        // Di lato, con "Full line view": il primo verso in cui si
+                        // muove il dito decide per tutto il gesto.
+                        .sideScrollGestures(sideScroll, enabled = !drawingMode)
+                        // Tocco sullo spazio vuoto sotto l'ultimo blocco per
+                        // continuare a scrivere. Deve rispondere SOLO a tocchi
+                        // veri: con Modifier.clickable rispondeva anche al tasto
+                        // Invio (Compose lo tratta come attivazione quando un
+                        // elemento interno ha il focus), quindi ogni a-capo
+                        // faceva anche ripartire focusLastBlock, che riportava
+                        // il cursore sull'ultimo blocco *noto prima* che l'a-capo
+                        // creasse quello nuovo — il carattere successivo finiva
+                        // sulla riga precedente.
+                        .pointerInput(Unit) {
+                            detectTapGestures { tap ->
+                                // **Solo il vuoto sotto l'ultimo blocco.**
+                                // Il gestore copre tutta la lista, quindi
+                                // prendeva anche lo spazio accanto al
+                                // titolo e i buchi fra una riga e l'altra:
+                                // toccandoli, il cursore saltava in fondo
+                                // alla pagina e si apriva la tastiera, che
+                                // non è mai quello che si voleva fare.
+                                val info = listState.layoutInfo
+                                val last = info.visibleItemsInfo.lastOrNull()
+                                if (last != null &&
+                                    last.index == info.totalItemsCount - 1 &&
+                                    tap.y > last.offset + last.size
+                                ) {
+                                    viewModel.focusLastBlock()
+                                }
+                            }
+                        },
+                    content = listContent
+                )
+            }
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
             // Nel margine a sinistra: un clic apre il menu del blocco, trascinandoli si sposta (vedi `BlockDrag.kt`).
@@ -2849,6 +2909,51 @@ private fun PageEditorContent(
                     spot = blockSpot
                 )
                 BlockHandle(blockSpot, endsAt = pageInset + PAGE_SIDE_PADDING, drag = blockDrag) { id -> blockMenuFor = id }
+                pcMenu?.let { open ->
+                    val local = pageListCoordinates.get()?.takeIf { it.isAttached }?.windowToLocal(open.at)
+                    if (local != null) {
+                        Box(modifier = Modifier.offset { IntOffset(local.x.roundToInt(), local.y.roundToInt()) }.size(0.dp)) {
+                            PcPageMenu(
+                                open = open,
+                                focused = viewModel.blocks.value.find { it.id == focusedBlockId },
+                                viewModel = viewModel,
+                                canUndo = canUndo,
+                                canRedo = canRedo,
+                                selectionLink = selectionLink,
+                                currentFont = selectionTypography.font,
+                                currentSize = selectionTypography.size ?: DEFAULT_PAGE_FONT_SIZE,
+                                onKind = { kind -> pcMenu = open.copy(kind = kind) },
+                                onClose = { pcMenu = null },
+                                onBlockMenu = { block ->
+                                    focusManager.clearFocus()
+                                    blockMenuFor = block.id
+                                },
+                                onSelectAll = selectWholePage,
+                                onTypeEntry = applyTypeMenuEntry,
+                                onParagraph = openParagraph,
+                                onFontSize = {
+                                    viewModel.captureSelection()
+                                    if (viewModel.hasCapturedSelection()) {
+                                        showFontSizeDialog = true
+                                    } else {
+                                        showMessage(context, EditorStrings.selectTextFirst)
+                                    }
+                                },
+                                onFont = { font ->
+                                    if (!viewModel.applyFontToCapturedSelection(font)) showMessage(context, EditorStrings.selectTextFirst)
+                                },
+                                onColors = {
+                                    viewModel.captureSelection()
+                                    showColorPicker = true
+                                },
+                                onLink = {
+                                    viewModel.captureSelection()
+                                    linkDialogFor = viewModel.capturedLink().orEmpty()
+                                }
+                            )
+                        }
+                    }
+                }
                 BlockDragLayer(blockDrag, { pageListCoordinates.get() }) { listState.scrollBy(it) }
             }
             // Tutta la pagina, o i blocchi scelti col mouse (null): Copy, Cut, Delete per tutti e due.
@@ -3143,24 +3248,7 @@ private fun PageEditorContent(
                                 onSelect = { entry ->
                                     showTypeMenu = false
                                     val block = focusedBlock ?: return@BlockTypeMenu
-                                    // **Con del testo selezionato cambiano
-                                    // tutte le righe che tocca** (dal
-                                    // 14/10/2026, chiesto dall'utente): prima
-                                    // solo quella col cursore. Vale per i tipi
-                                    // che una riga di testo diventa da sola;
-                                    // la notifica (che apre la sua finestra),
-                                    // la tabella e il resto restano della riga
-                                    // col cursore.
-                                    val action = entry.action
-                                    val selected = viewModel.capturedSelectionBlocks()
-                                    if (action is SlashAction.Type && action.type in TURN_INTO_MANY && selected.isNotEmpty()) {
-                                        if (action.type == BlockType.TOGGLE || action.type in MULTILINE_TYPES) focusPark.requestFocus()
-                                        viewModel.updateBlockTypes(selected, action.type)
-                                    } else {
-                                        // La stessa funzione del menu "/":
-                                        // vedi `applyInsertAction`.
-                                        applyInsertAction(block, action)
-                                    }
+                                    applyTypeMenuEntry(block, entry)
                                 }
                             )
                         }
@@ -3171,14 +3259,7 @@ private fun PageEditorContent(
                         // il pennello; poi il cursore si spegne, perché cambiando
                         // lo spazio quelle righe diventano un campo a sé, e un
                         // campo che sparisce col cursore dentro fa chiudere l'app.
-                        BarButton(onClick = {
-                            viewModel.captureSelection()
-                            val lines = viewModel.capturedSelectionBlocks().ifEmpty { listOfNotNull(focusedBlock) }
-                            if (lines.isNotEmpty()) {
-                                focusManager.clearFocus()
-                                paragraphLines = lines
-                            }
-                        }) {
+                        BarButton(onClick = { openParagraph(focusedBlock) }) {
                             Icon(
                                 Icons.Filled.FormatLineSpacing,
                                 contentDescription = ParagraphStrings.paragraph,
@@ -3952,6 +4033,8 @@ private fun CoverMoveOverlay(onCancel: () -> Unit, onSave: () -> Unit) {
 private fun BlockTypeMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
+    /** Dal menu del tasto destro sul PC un clic fuori lo chiude, come gli altri menu di Windows. */
+    closeOnClickOutside: Boolean = false,
     onSelect: (SlashEntry) -> Unit
 ) {
     DropdownMenu(
@@ -3969,7 +4052,7 @@ private fun BlockTypeMenu(
         //
         // `focusable = false` resta: un menu che prende il fuoco fa
         // chiudere la tastiera, e qui la tastiera deve restare dov'è.
-        properties = PopupProperties(focusable = false, dismissOnClickOutside = false)
+        properties = PopupProperties(focusable = false, dismissOnClickOutside = closeOnClickOutside)
     ) {
         // Le voci sono più di quante ne stiano sopra la tastiera: il
         // menu scorre (lo fa `DropdownMenu` da sé).
@@ -5821,6 +5904,23 @@ private fun MergedTextRunField(
     ) {
     // Il campo incolla il testo e basta: `formatPaste` ci rimette link e stili (vedi `PasteLinks.kt`).
     val linkClipboard = LocalClipboard.current as? LinkClipboard
+    val mergedTransformation = MergedRunVisualTransformation(
+        runBlocks,
+        ordinals,
+        viewModel,
+        // Il cursore serve solo a scoprire gli spoiler che tocca, e
+        // senza fuoco non c'è nessun cursore da guardare.
+        caret = if (fieldFocused) {
+            (fieldValue.selection.min - 1).coerceAtLeast(0)..
+                (fieldValue.selection.max - 1).coerceAtLeast(0)
+        } else {
+            null
+        },
+        proof = proofing?.let { { line: String -> misspellings[line].orEmpty() } },
+        typingAt = if (fieldFocused) proofTyping else null,
+        gapScale = gapScale
+    )
+    PageTextMenuArea {
     AutoCaps {
         BasicTextField(
             value = fieldValue,
@@ -6186,22 +6286,7 @@ private fun MergedTextRunField(
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Sentences
             ),
-            visualTransformation = MergedRunVisualTransformation(
-                runBlocks,
-                ordinals,
-                viewModel,
-                // Il cursore serve solo a scoprire gli spoiler che tocca, e
-                // senza fuoco non c'è nessun cursore da guardare.
-                caret = if (fieldFocused) {
-                    (fieldValue.selection.min - 1).coerceAtLeast(0)..
-                        (fieldValue.selection.max - 1).coerceAtLeast(0)
-                } else {
-                    null
-                },
-                proof = proofing?.let { { line: String -> misspellings[line].orEmpty() } },
-                typingAt = if (fieldFocused) proofTyping else null,
-                gapScale = gapScale
-            ),
+            visualTransformation = mergedTransformation,
             modifier = Modifier
                 .fillMaxWidth()
                 .atLeastLane(sideLane, (2 * sidePadPx).roundToInt())
@@ -6247,6 +6332,17 @@ private fun MergedTextRunField(
                 .proofingTaps(enabled = proofing != null && !pageLocked, layout = { textLayout }) { word, at ->
                     proofMenu = word to at
                 }
+                // Col tasto destro il cursore va dove si clicca, poi il menu (vedi `PcContextMenu.kt`).
+                .rightClickCaret(
+                    enabled = isPc && !pageLocked,
+                    layout = { textLayout },
+                    value = { fieldValue },
+                    transformation = { mergedTransformation },
+                    focused = { fieldFocused }
+                ) { moved ->
+                    fieldValue = moved
+                    focusRequester.requestFocus()
+                }
                 .drawBehind {
                     val strength = moveFlash.value
                     val movedId = movedBlock?.blockId
@@ -6288,6 +6384,7 @@ private fun MergedTextRunField(
                     }
                 }
         )
+    }
     }
 
     // **Dopo** il campo, non prima: dentro un `Box` i tocchi li riceve
@@ -7166,6 +7263,18 @@ private fun BlockRow(
         }
 
         val linkClipboard = LocalClipboard.current as? LinkClipboard
+        val islandTransformation = RichTextVisualTransformation(
+            editState.spans,
+            caret = if (fieldFocused) {
+                (editState.fieldValue.selection.min - RUN_LEAD.length).coerceAtLeast(0)..
+                    (editState.fieldValue.selection.max - RUN_LEAD.length).coerceAtLeast(0)
+            } else {
+                null
+            },
+            proof = proofing?.let { { text: String -> islandMisspellings[text].orEmpty() } },
+            typingAt = if (fieldFocused) proofTyping else null
+        )
+        PageTextMenuArea {
         AutoCaps {
             BasicTextField(
                 value = editState.fieldValue,
@@ -7483,17 +7592,7 @@ private fun BlockRow(
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Sentences
                 ),
-                visualTransformation = RichTextVisualTransformation(
-                    editState.spans,
-                    caret = if (fieldFocused) {
-                        (editState.fieldValue.selection.min - RUN_LEAD.length).coerceAtLeast(0)..
-                            (editState.fieldValue.selection.max - RUN_LEAD.length).coerceAtLeast(0)
-                    } else {
-                        null
-                    },
-                    proof = proofing?.let { { text: String -> islandMisspellings[text].orEmpty() } },
-                    typingAt = if (fieldFocused) proofTyping else null
-                ),
+                visualTransformation = islandTransformation,
                 onTextLayout = { islandLayout = it },
                 // Una notifica senza testo mostrerà il nome della pagina: il
                 // suggerimento lo dice, finché non si scrive niente.
@@ -7544,6 +7643,17 @@ private fun BlockRow(
                     .proofingTaps(enabled = proofing != null && !pageLocked, layout = { islandLayout }) { word, at ->
                         proofMenu = word to at
                     }
+                    // Col tasto destro, come nel campo unito.
+                    .rightClickCaret(
+                        enabled = isPc && !pageLocked,
+                        layout = { islandLayout },
+                        value = { editState.fieldValue },
+                        transformation = { islandTransformation },
+                        focused = { fieldFocused }
+                    ) { moved ->
+                        editState = editState.copy(fieldValue = moved)
+                        focusRequester.requestFocus()
+                    }
                     .focusRequester(focusRequester)
                     .onFocusChanged { state ->
                         noteLog(
@@ -7554,6 +7664,7 @@ private fun BlockRow(
                         onFocusChanged(block.id, state.isFocused)
                     }
             )
+        }
         }
 
         if (block.type == BlockType.NOTIFICATION) NotificationTimeChip(block, viewModel)
@@ -8132,6 +8243,131 @@ fun TableBlockContent(
                     modifier = Modifier.size(16.dp)
                 )
             }
+        }
+    }
+}
+
+/**
+ * **Il menu del tasto destro sul PC** (dal 13/11/2026, chiesto dall'utente:
+ * "mostrami le stesse identiche impostazioni della toolbar sopra la tastiera
+ * del telefono"): le voci della barra, nello stesso ordine, una sotto l'altra,
+ * dai sei puntini a Undo e Redo. Aa è un sottomenu con quello che sul telefono
+ * è la seconda barra (font, corpo, B, I, U, S, pedice, apice, spoiler); il "+"
+ * e il font aprono il loro elenco nello stesso punto. Taglia, copia e incolla
+ * sono quelli veri del campo ([PcMenuOpen.edit]), come Ctrl+X, Ctrl+C, Ctrl+V.
+ */
+@Composable
+private fun PcPageMenu(
+    open: PcMenuOpen,
+    /** La riga col cursore: il clic destro ce l'ha appena messo (vedi `rightClickCaret`). */
+    focused: BlockEntity?,
+    viewModel: PageEditorViewModel,
+    canUndo: Boolean,
+    canRedo: Boolean,
+    selectionLink: PageEditorViewModel.SelectionLink,
+    currentFont: PageFont?,
+    currentSize: Int,
+    onKind: (PcMenuKind) -> Unit,
+    onClose: () -> Unit,
+    onBlockMenu: (BlockEntity) -> Unit,
+    onSelectAll: () -> Unit,
+    onTypeEntry: (BlockEntity, SlashEntry) -> Unit,
+    onParagraph: (BlockEntity?) -> Unit,
+    onFontSize: () -> Unit,
+    onFont: (PageFont?) -> Unit,
+    onColors: () -> Unit,
+    onLink: () -> Unit
+) {
+    when (open.kind) {
+        PcMenuKind.BLOCK_TYPE -> BlockTypeMenu(expanded = true, onDismiss = onClose, closeOnClickOutside = true) { entry ->
+            onClose()
+            focused?.let { onTypeEntry(it, entry) }
+        }
+        PcMenuKind.FONT -> FontMenu(expanded = true, current = currentFont, onDismiss = onClose) { font ->
+            onClose()
+            onFont(font)
+        }
+        PcMenuKind.MAIN -> {
+            val clipboard = LocalClipboardManager.current as? LinkClipboard
+            fun icon(vector: ImageVector): @Composable () -> Unit = { Icon(vector, contentDescription = null, modifier = Modifier.size(16.dp)) }
+            fun glyph(
+                text: String,
+                weight: FontWeight? = null,
+                style: FontStyle? = null,
+                decoration: TextDecoration? = null
+            ): @Composable () -> Unit = {
+                Text(text, color = LocalContentColor.current, fontSize = 13.sp, fontWeight = weight, fontStyle = style, textDecoration = decoration)
+            }
+            /** Un'azione sulla riga col cursore; senza riga la voce è spenta. */
+            fun onLine(action: (BlockEntity) -> Unit): (() -> Unit)? = focused?.let { block -> { action(block) } }
+            fun format(type: FormatType): (() -> Unit)? = onLine { viewModel.requestFormat(it.id, type) }
+            fun paste(mode: PasteMode) {
+                clipboard?.nextPasteMode = mode
+                open.edit.paste()
+            }
+            val entries = buildList {
+                add(PcMenuItem(EditorStrings.blockOptions, icon(Icons.Filled.DragIndicator), enabled = focused != null, onClick = onLine(onBlockMenu)))
+                add(PcMenuSeparator)
+                add(PcMenuItem(EditorStrings.copy, icon(Icons.Filled.ContentCopy), hint = "Ctrl+C", onClick = open.edit.copy))
+                // Come sul telefono: il clic incolla, e il modo si sceglie a parte (lì tenendo premuto, qui passando sopra).
+                add(
+                    PcMenuItem(
+                        EditorStrings.paste, icon(Icons.Filled.ContentPaste), hint = "Ctrl+V",
+                        submenu = listOf(
+                            PcMenuItem(EditorStrings.pasteKeepSource, onClick = { paste(PasteMode.KEEP_SOURCE) }),
+                            PcMenuItem(EditorStrings.pasteMatchDestination, onClick = { paste(PasteMode.MATCH_DESTINATION) }),
+                            PcMenuItem(EditorStrings.pasteTextOnly, onClick = { paste(PasteMode.TEXT_ONLY) })
+                        ),
+                        onClick = { paste(PasteMode.KEEP_SOURCE) }
+                    )
+                )
+                add(PcMenuItem(EditorStrings.cut, icon(Icons.Filled.ContentCut), hint = "Ctrl+X", onClick = open.edit.cut))
+                add(PcMenuItem(EditorStrings.selectAll, icon(Icons.Filled.SelectAll), hint = "Ctrl+A", onClick = onSelectAll))
+                add(PcMenuSeparator)
+                add(PcMenuItem(EditorStrings.outdent, icon(Icons.Filled.FormatIndentDecrease), enabled = focused != null, onClick = onLine { viewModel.outdentBlock(it) }))
+                add(PcMenuItem(EditorStrings.indent, icon(Icons.Filled.FormatIndentIncrease), enabled = focused != null, onClick = onLine { viewModel.indentBlock(it) }))
+                add(PcMenuItem(EditorStrings.moveUp, icon(Icons.Filled.ArrowUpward), enabled = focused != null, onClick = onLine { viewModel.moveBlockUp(it) }))
+                add(PcMenuItem(EditorStrings.moveDown, icon(Icons.Filled.ArrowDownward), enabled = focused != null, onClick = onLine { viewModel.moveBlockDown(it) }))
+                add(PcMenuSeparator)
+                add(
+                    PcMenuItem(EditorStrings.addOrChangeBlock, icon(Icons.Filled.Add), enabled = focused != null, onClick = {
+                        viewModel.captureSelection()
+                        onKind(PcMenuKind.BLOCK_TYPE)
+                    })
+                )
+                add(PcMenuItem(ParagraphStrings.paragraph, icon(Icons.Filled.FormatLineSpacing), enabled = focused != null, onClick = { onParagraph(focused) }))
+                // Il codice ha i suoi colori, quelli del linguaggio: niente Aa né pennello, come nella barra.
+                if (focused != null && focused.type != BlockType.CODE) {
+                    add(
+                        PcMenuItem(
+                            EditorStrings.textFormatting, glyph("Aa", weight = FontWeight.Bold),
+                            submenu = listOf(
+                                PcMenuItem(EditorStrings.font, hint = currentFont?.label ?: EditorStrings.defaultFont, onClick = {
+                                    viewModel.captureSelection()
+                                    onKind(PcMenuKind.FONT)
+                                }),
+                                PcMenuItem(EditorStrings.fontSize, hint = currentSize.toString(), onClick = onFontSize),
+                                PcMenuSeparator,
+                                PcMenuItem(EditorStrings.bold, glyph("B", weight = FontWeight.Bold), onClick = format(FormatType.BOLD)),
+                                PcMenuItem(EditorStrings.italic, glyph("I", style = FontStyle.Italic), onClick = format(FormatType.ITALIC)),
+                                PcMenuItem(EditorStrings.underline, glyph("U", decoration = TextDecoration.Underline), onClick = format(FormatType.UNDERLINE)),
+                                PcMenuItem(EditorStrings.strikethrough, glyph("S", decoration = TextDecoration.LineThrough), onClick = format(FormatType.STRIKETHROUGH)),
+                                PcMenuItem(EditorStrings.subscript, glyph("x\u2082"), onClick = format(FormatType.SUBSCRIPT)),
+                                PcMenuItem(EditorStrings.superscript, glyph("x\u00B2"), onClick = format(FormatType.SUPERSCRIPT)),
+                                PcMenuItem(EditorStrings.spoiler, icon(Icons.Filled.VisibilityOff), onClick = format(FormatType.SPOILER))
+                            )
+                        )
+                    )
+                    add(PcMenuItem(EditorStrings.textAndBackgroundColor, icon(Icons.Filled.Brush), onClick = onColors))
+                    if (selectionLink.hasText || selectionLink.link != null || selectionLink.onSite) {
+                        add(PcMenuItem(EditorStrings.link, icon(Icons.Filled.Link), onClick = onLink))
+                    }
+                }
+                add(PcMenuSeparator)
+                add(PcMenuItem(EditorStrings.undo, icon(Icons.Filled.Undo), hint = "Ctrl+Z", enabled = canUndo, onClick = { viewModel.undo() }))
+                add(PcMenuItem(EditorStrings.redo, icon(Icons.Filled.Redo), hint = "Ctrl+Y", enabled = canRedo, onClick = { viewModel.redo() }))
+            }
+            PcContextMenu(entries, onDismiss = onClose)
         }
     }
 }

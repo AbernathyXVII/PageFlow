@@ -25,6 +25,12 @@ object EditorStrings {
 
     // --- Il menu di un blocco (sei puntini nella barra, o il dito tenuto su una pagina) ---
 
+    // --- Il menu del tasto destro sul PC (dal 13/11/2026): la barra Aa in colonna ---
+    val textFormatting get() = t("Text formatting", "Formattazione del testo", "Textformatierung", "Mise en forme du texte", "Formato de texto", "文本格式", "텍스트 서식", "テキストの書式")
+    val bold get() = t("Bold", "Grassetto", "Fett", "Gras", "Negrita", "加粗", "굵게", "太字")
+    val italic get() = t("Italic", "Corsivo", "Kursiv", "Italique", "Cursiva", "斜体", "기울임꼴", "斜体")
+    val underline get() = t("Underline", "Sottolineato", "Unterstrichen", "Souligné", "Subrayado", "下划线", "밑줄", "下線")
+    val strikethrough get() = t("Strikethrough", "Barrato", "Durchgestrichen", "Barré", "Tachado", "删除线", "취소선", "取り消し線")
     val blockOptions get() = t("Block options", "Opzioni del blocco", "Blockoptionen", "Options du bloc", "Opciones del bloque", "块选项", "블록 옵션", "ブロックのオプション")
     val turnInto get() = t("Turn into", "Trasforma in", "Umwandeln in", "Transformer en", "Convertir en", "转换为", "전환", "変換")
     val color get() = t("Color", "Colore", "Farbe", "Couleur", "Color", "颜色", "색상", "カラー")
