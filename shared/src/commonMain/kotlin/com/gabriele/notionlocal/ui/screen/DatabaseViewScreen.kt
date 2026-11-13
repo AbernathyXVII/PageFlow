@@ -1126,6 +1126,7 @@ private fun DatabaseViewBody(
     val sourceMissing by viewModel.sourceMissing.collectAsStateWithLifecycle()
     val page by viewModel.page.collectAsStateWithLifecycle()
     val rowIcons by viewModel.rowIcons.collectAsStateWithLifecycle()
+    val checkFlash by viewModel.checkFlash.collectAsStateWithLifecycle()
     // Copertine e testo delle pagine delle righe: arrivano solo quando la
     // vista è la galleria (vedi `DatabaseViewModel.load`).
     val rowCovers by viewModel.rowCovers.collectAsStateWithLifecycle()
@@ -1384,6 +1385,7 @@ private fun DatabaseViewBody(
         LocalRowIcons provides rowIcons,
         LocalSimpleDatabase provides simple,
         LocalRowSearch provides state.search,
+        LocalCheckFlash provides checkFlash,
         LocalCellLinkLabels provides cellLinkLabels,
         LocalTitleEditRequest provides TitleEditRequest(editTitleOf, viewModel::consumeEditTitle),
         LocalRowLimits provides rowLimits
@@ -5717,6 +5719,9 @@ private fun DatabaseSearchBar(
  */
 private val LocalRowSearch = compositionLocalOf<RowSearch?> { null }
 
+/** Le caselle ("riga:colonna") piene un attimo mentre un evento che si ripete passa alla volta dopo (vedi `DatabaseViewModel.checkFlash`). */
+private val LocalCheckFlash = compositionLocalOf<Set<String>> { emptySet() }
+
 /**
  * Il giallo della ricerca. **Pieno** sulle lettere trovate nel nome di una
  * riga; **leggero** su tutta la riga quando la parola non è nel nome ma
@@ -7562,7 +7567,8 @@ private fun CellContent(
         when (column.type) {
             ColumnType.CHECKBOX -> {
                 Checkbox(
-                    checked = value == "true",
+                    // Un evento che si ripete, appena spuntato: piena un attimo, poi vuota con la data dopo.
+                    checked = value == "true" || cellKey in LocalCheckFlash.current,
                     onCheckedChange = { onValueChange(it.toString()) },
                     modifier = Modifier.size(24.dp)
                 )

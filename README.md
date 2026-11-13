@@ -1126,6 +1126,30 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🆕 v0.154 — 13/11/2026 · 14:26 — A recurring event, ticked, goes to its next date
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1250 tests passed)*
+
+- **[New feature]** **[📱 Mobile]** **[💻 PC]** **Ticking a recurring event
+  takes it to its next date**: in a database seen as a table and grouped by a
+  checkbox, ticking that checkbox on a row whose date repeats (among the
+  properties the view shows) no longer moves it among the ticked ones. The
+  box fills for a moment, then empties again, and the date becomes the next
+  time: "Elena's payment", every month, goes to the month after and stays
+  among the unchecked. The time and the length of the date stay, and so do
+  its days: an event on the 31st, moved to 28 February, comes back to the
+  31st in March; a rule that ends after a number of times has one less. When
+  the repetitions are over, or the date does not repeat, or the table is not
+  grouped by that checkbox, the tick is the usual one
+- **[Project]** `nextOccurrenceValue` (`DateValue.kt`: the next occurrence,
+  with the days taken from the start written into the rule),
+  `DatabaseViewModel.completeRecurring` and `checkFlash`
+  (`RECURRING_CHECK_FLASH_MS` = 400), `LocalCheckFlash` in the checkbox of
+  `CellContent`. Tests: `NextOccurrenceTest` (every month, the 31st after a
+  short month, time and length, the third Monday, a count that ends, an end
+  date already passed), `RecurringCheckTest` (grouped by the checkbox: never
+  written as ticked and the date a month later; a date that does not repeat
+  and a table not grouped: the usual tick)
+
 ### ✏️ v0.153.80 — 13/11/2026 · 13:59 — No line at the end of a database
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1242 tests passed)*
 

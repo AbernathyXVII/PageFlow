@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.viewmodel
 
+import com.gabriele.notionlocal.data.entity.nextOccurrenceValue
 import com.gabriele.notionlocal.data.symbolField
 import com.gabriele.notionlocal.data.replacedImage
 import com.gabriele.notionlocal.data.imageField
@@ -163,6 +164,9 @@ data class RowSearch(val query: String, val foundInside: Set<String>)
  * per l'utente (09/10/2026).
  */
 const val CHECKBOX_SETTLE_MS = 200L
+
+/** Quanto si vede piena la casella di un evento che si ripete, prima di tornare vuota con la data dopo (vedi `DatabaseViewModel.completeRecurring`). */
+const val RECURRING_CHECK_FLASH_MS = 400L
 
 /** Quanto si aspetta a rileggere il titolo di una cella URL il cui link è cambiato: lo si sta forse ancora scrivendo. */
 private const val LINK_TITLE_PAUSE_MS = 1_500L
@@ -2410,7 +2414,49 @@ class DatabaseViewModel(
         viewModelScope.launch { repository.setColumnOptions(columnId, ButtonConfig.encode(config)) }
     }
 
+    // --- **Spuntare un evento che si ripete** (dal 13/11/2026) ---
+
+    private val _checkFlash = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Le caselle ("riga:colonna") che si vedono spuntate un attimo mentre la data va avanti: vedi [completeRecurring]. */
+    val checkFlash: StateFlow<Set<String>> = _checkFlash
+
+    /**
+     * **Spuntare un evento che si ripete lo porta alla volta dopo** (dal
+     * 13/11/2026, chiesto dall'utente: "quando checko l'evento Elena's
+     * payment, essendo un evento ricorrente del mese successivo, farà
+     * un'animazione veloce di checked-unchecked e mostra il mese dopo"): in
+     * una vista tabella raggruppata per la casella [column], una riga con una
+     * data che si ripete (fra le proprietà che la vista mostra) non passa fra
+     * le spuntate. La casella si vede piena per [RECURRING_CHECK_FLASH_MS],
+     * poi torna vuota e la data diventa la volta dopo (vedi
+     * `nextOccurrenceValue`): la riga resta fra le non spuntate. Vero se è
+     * andata così; falso per una spunta normale (un'altra vista, nessun gruppo
+     * su questa casella, nessuna data che si ripete, ripetizioni finite).
+     */
+    private fun completeRecurring(row: DatabaseRowEntity, column: DatabaseColumnEntity): Boolean {
+        val page = _page.value ?: return false
+        if (page.databaseLayout != DatabaseLayout.TABLE) return false
+        if (tableGroupLevels().none { it.column.id == column.id }) return false
+        val state = _tableState.value
+        val zone = com.gabriele.notionlocal.data.settings.AppSettings.zoneId
+        val advanced = state.visibleColumns.filter { it.type == ColumnType.DATE }.mapNotNull { date ->
+            val current = state.cellValues[row.id to date.id] ?: return@mapNotNull null
+            nextOccurrenceValue(current, zone)?.let { date.id to it }
+        }
+        if (advanced.isEmpty()) return false
+        val key = "${row.id}:${column.id}"
+        _checkFlash.value = _checkFlash.value + key
+        viewModelScope.launch {
+            delay(RECURRING_CHECK_FLASH_MS)
+            advanced.forEach { (columnId, next) -> repository.setCellValue(row.id, columnId, next) }
+            _checkFlash.value = _checkFlash.value - key
+        }
+        return true
+    }
+
     fun setCellValue(row: DatabaseRowEntity, column: DatabaseColumnEntity, value: String) {
+        if (column.type == ColumnType.CHECKBOX && value == "true" && completeRecurring(row, column)) return
         if (column.type == ColumnType.CHECKBOX) holdAfterCheckbox(row, column, value)
         // Un Rollup e una formula non hanno un valore loro: si calcolano. Un bottone non ne ha.
         if (column.type == ColumnType.ROLLUP || column.type == ColumnType.BUTTON || column.type == ColumnType.FORMULA) return

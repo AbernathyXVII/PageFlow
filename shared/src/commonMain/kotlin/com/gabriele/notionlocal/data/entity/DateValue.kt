@@ -1,5 +1,9 @@
 package com.gabriele.notionlocal.data.entity
 
+import java.time.temporal.ChronoUnit
+import java.time.ZoneId
+import java.time.LocalDate
+import java.time.Instant
 /**
  * Il valore di una cella data: un inizio, una fine facoltativa, se
  * l'ora conta e la regola di ripetizione.
@@ -109,3 +113,52 @@ fun encodeDateRange(
         else -> base
     }
 }
+
+/**
+ * **La volta dopo di una data che si ripete** (dal 13/11/2026, vedi
+ * `DatabaseViewModel.completeRecurring`): il valore della cella con l'inizio
+ * spostato alla ripetizione successiva, alla stessa ora, con la stessa durata
+ * e la stessa regola. I giorni che la regola prendeva dall'inizio (il giorno
+ * del mese, quello della settimana, "il terzo lunedì") ci vengono scritti
+ * dentro, così le volte dopo restano quelle di prima: il 31 gennaio, passato
+ * al 28 febbraio, torna al 31 marzo. Una regola che finisce dopo un numero di
+ * volte ne ha una in meno. Null se la data non si ripete o se le ripetizioni
+ * sono finite.
+ */
+fun nextOccurrenceValue(value: String, zone: ZoneId): String? {
+    val range = parseDateRange(value) ?: return null
+    val rule = range.recurrence ?: return null
+    val startAt = Instant.ofEpochMilli(range.start).atZone(zone)
+    val first = startAt.toLocalDate()
+    val next = rule.occurrences(first, first.plusDays(1), first.plusYears(rule.interval.toLong() + 1)).firstOrNull() ?: return null
+    val pinned = when (rule.freq) {
+        RecurrenceFreq.WEEKLY -> if (rule.weekdays.isEmpty()) rule.copy(weekdays = setOf(first.dayOfWeek)) else rule
+        RecurrenceFreq.MONTHLY -> when (rule.monthlyMode) {
+            MonthlyMode.DAY_OF_MONTH -> rule.copy(monthDay = rule.monthDay ?: first.dayOfMonth)
+            MonthlyMode.NTH_WEEKDAY -> rule.copy(
+                nthWeek = rule.nthWeek
+                    ?: if (first.plusWeeks(1).month != first.month) Recurrence.LAST_WEEK else (first.dayOfMonth - 1) / 7 + 1,
+                nthWeekday = rule.nthWeekday ?: first.dayOfWeek
+            )
+        }
+        else -> rule
+    }
+    val left = when (val end = rule.end) {
+        is RecurrenceEnd.AfterCount -> RecurrenceEnd.AfterCount(end.count - 1)
+        else -> end
+    }
+    fun at(day: LocalDate, time: java.time.LocalTime): Long = day.atTime(time).atZone(zone).toInstant().toEpochMilli()
+    val newEnd = range.end?.let { end ->
+        val endAt = Instant.ofEpochMilli(end).atZone(zone)
+        at(next.plusDays(ChronoUnit.DAYS.between(first, endAt.toLocalDate())), endAt.toLocalTime())
+    }
+    return encodeDateRange(
+        start = at(next, startAt.toLocalTime()),
+        end = newEnd,
+        hasTime = range.hasTime,
+        recurrence = pinned.copy(end = left),
+        notify = range.notify,
+        reminders = range.reminders
+    )
+}
+
