@@ -826,6 +826,7 @@ object DbStrings {
     val viewOptions get() = t("View options", "Opzioni della vista", "Ansichtsoptionen", "Options de la vue", "Opciones de la vista", "视图选项", "보기 옵션", "ビューのオプション")
     val freezeFirstColumn get() = t("Freeze first column", "Blocca la prima colonna", "Erste Spalte fixieren", "Figer la première colonne", "Fijar la primera columna", "冻结首列", "첫 열 고정", "最初の列を固定")
     /** È la riga con i nomi delle proprietà, non una riga del database: il nome lo dice (dal 20/10/2026). */
+    val cellSpoiler get() = t("Cell spoiler", "Spoiler delle celle", "Zellen-Spoiler", "Spoiler des cellules", "Spoiler de celdas", "单元格剧透", "셀 스포일러", "セルのネタバレ")
     val freezeFirstRow get() = t("Freeze Properties Row", "Blocca la riga delle proprietà", "Eigenschaftenzeile fixieren", "Figer la ligne des propriétés", "Fijar la fila de propiedades", "冻结属性行", "속성 행 고정", "プロパティ行を固定")
     val editView get() = t("Edit view", "Modifica la vista", "Ansicht bearbeiten", "Modifier la vue", "Editar vista", "编辑视图", "보기 편집", "ビューを編集")
     val deleteView get() = t("Delete view", "Elimina la vista", "Ansicht löschen", "Supprimer la vue", "Eliminar vista", "删除视图", "보기 삭제", "ビューを削除")

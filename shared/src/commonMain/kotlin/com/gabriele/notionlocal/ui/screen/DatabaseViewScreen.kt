@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.PageParagraph
 import com.gabriele.notionlocal.data.entity.nameColumnHidden
 import com.gabriele.notionlocal.ui.navigation.horizontalResizeCursor
 import kotlinx.coroutines.delay
@@ -1717,6 +1718,7 @@ private fun DatabaseViewBody(
                     cellOverflow = CellOverflow.of(page?.cellOverflow ?: 0),
                     freezeFirstColumn = page?.freezeFirstColumn == true,
                     freezeFirstRow = page?.freezeFirstRow == true,
+                    cellSpoilers = rememberCellSpoilers(page?.paragraphJson) { rowId, key -> viewModel.toggleCellCover(rowId, key) },
                     onOpenRow = openRow,
                     onRowLongPress = { row, place ->
                         focusManager.clearFocus()
@@ -1926,6 +1928,8 @@ private fun DatabaseViewBody(
             onSetFreezeFirstColumn = { viewModel.setFreezeFirstColumn(it) },
             freezeFirstRow = page?.freezeFirstRow == true,
             onSetFreezeFirstRow = { viewModel.setFreezeFirstRow(it) },
+            cellSpoiler = PageParagraph.parse(page?.paragraphJson).cellSpoiler == true,
+            onSetCellSpoiler = { viewModel.setCellSpoiler(it) },
             onSetColumnHidden = { columnId, hidden ->
                 viewModel.setColumnHidden(columnId, hidden)
             },
@@ -2310,6 +2314,8 @@ private fun TableLayout(
     freezeFirstColumn: Boolean = false,
     /** "Freeze first row": la riga dei titoli resta in cima scorrendo in giù. */
     freezeFirstRow: Boolean = false,
+    /** "Cell spoiler" acceso: le celle coperte e il tocco che copre (vedi `CellSpoiler.kt`); null = spento. */
+    cellSpoilers: CellSpoilers? = null,
     /** A pagina intera: una lista che disegna solo le righe sullo schermo (vedi `LazyBody`). */
     lazy: LazyBody? = null,
     /** I tre puntini accanto al "+": "Property visibility" (vedi `AddPropertyCell`). */
@@ -2381,7 +2387,8 @@ private fun TableLayout(
         LocalTableWidths provides widths,
         LocalColumnResize provides resize,
         LocalWrapCells provides (cellOverflow == CellOverflow.WRAP),
-        LocalFrozenColumn provides frozenColumn
+        LocalFrozenColumn provides frozenColumn,
+        LocalCellSpoilers provides cellSpoilers
     ) {
     // **A pagina intera, solo le righe sullo schermo** (dal 18/10/2026): con
     // diecimila righe disegnarle tutte voleva dire secondi. Le stesse righe,
@@ -3467,33 +3474,37 @@ private fun TableBodyRow(
             namePlace = namePlace,
             rowId = row.id,
             name = {
-                NameCell(
-                    row = row,
-                    onTitleChange = { onTitleChange(row, it) },
-                    onOpen = { onOpenRow(row) },
-                    onLongPress = { onRowLongPress(row) },
-                    onEditingChange = onTitleEditing,
-                    depth = depth,
-                    hasSubRows = hasSubRows,
-                    toggleSlot = toggleSlot,
-                    onToggleSubRows = onToggleSubRows
-                )
+                Box(Modifier.cellSpoiler(row.id, NAME_COLUMN_KEY)) {
+                    NameCell(
+                        row = row,
+                        onTitleChange = { onTitleChange(row, it) },
+                        onOpen = { onOpenRow(row) },
+                        onLongPress = { onRowLongPress(row) },
+                        onEditingChange = onTitleEditing,
+                        depth = depth,
+                        hasSubRows = hasSubRows,
+                        toggleSlot = toggleSlot,
+                        onToggleSubRows = onToggleSubRows
+                    )
+                }
                 CellSeparator(NAME_COLUMN_KEY, stretch = wrap)
             }
         ) { index, column ->
             val cell: @Composable () -> Unit = {
-                CellEditor(
-                    row = row,
-                    column = column,
-                    value = state.cellValues[row.id to column.id] ?: "",
-                    onValueChange = { onSetCellValue(row, column, it) },
-                    onAddOption = { onAddOption(column, it) },
-                    onRenameOption = onRenameOption,
-                    onSetOptionColor = onSetOptionColor,
-                    onDeleteOption = onDeleteOption,
-                    onMoveOptions = onMoveOptions,
-                    onSetOptionSecondColor = onSetOptionSecondColor
-                )
+                Box(Modifier.cellSpoiler(row.id, column.id)) {
+                    CellEditor(
+                        row = row,
+                        column = column,
+                        value = state.cellValues[row.id to column.id] ?: "",
+                        onValueChange = { onSetCellValue(row, column, it) },
+                        onAddOption = { onAddOption(column, it) },
+                        onRenameOption = onRenameOption,
+                        onSetOptionColor = onSetOptionColor,
+                        onDeleteOption = onDeleteOption,
+                        onMoveOptions = onMoveOptions,
+                        onSetOptionSecondColor = onSetOptionSecondColor
+                    )
+                }
             }
             // Name nascosta (dal 13/11/2026): OPEN sta nella prima colonna che si vede.
             if (namePlace < 0 && index == 0) OpenInCell(onOpen = { onOpenRow(row) }, content = cell) else cell()
@@ -10287,6 +10298,9 @@ private fun SettingsSheet(
     onSetFreezeFirstColumn: ((Boolean) -> Unit)? = null,
     freezeFirstRow: Boolean = false,
     onSetFreezeFirstRow: ((Boolean) -> Unit)? = null,
+    /** "Cell spoiler" (dal 13/11/2026): vedi `CellSpoiler.kt`. */
+    cellSpoiler: Boolean = false,
+    onSetCellSpoiler: ((Boolean) -> Unit)? = null,
     /** Nasconde o rimostra una colonna, e tutte insieme. */
     onSetColumnHidden: (String, Boolean) -> Unit,
     onSetAllColumnsHidden: (Boolean) -> Unit,
@@ -10527,6 +10541,19 @@ private fun SettingsSheet(
                                     checked = freezeFirstRow,
                                     enabled = !viewLocked,
                                     onCheckedChange = onSetFreezeFirstRow
+                                )
+                            }
+                            // **"Cell spoiler"** (dal 13/11/2026, chiesto dall'utente):
+                            // acceso, un tocco su una cella la copre col velo dello
+                            // spoiler, un altro la scopre. Non cambia i dati, quindi
+                            // anche con la vista bloccata.
+                            if (onSetCellSpoiler != null) {
+                                HorizontalDivider()
+                                SettingsToggleRow(
+                                    icon = Icons.Filled.VisibilityOff,
+                                    label = DbStrings.cellSpoiler,
+                                    checked = cellSpoiler,
+                                    onCheckedChange = onSetCellSpoiler
                                 )
                             }
                         }

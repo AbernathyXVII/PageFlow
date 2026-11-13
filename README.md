@@ -1126,6 +1126,31 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.4 — 13/11/2026 · 18:47 — "Cell spoiler": cover any cell of a table
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1261 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"Cell spoiler"** in "Database
+  settings" (the button with the sliders at the right of the database bar),
+  for databases and simple databases in the table view: switched on, **a tap
+  (or a click) on any cell covers it with the same veil as the spoiler of the
+  text**, whatever is written in it (text, numbers, dates, coloured tags,
+  checkboxes, the name of the row…), and another tap uncovers it. While it is
+  on, a tap only covers or uncovers: it doesn't open the cell to write in it
+  (scrolling works as usual). Switched off, the table is as always (everything
+  visible, the cells open to write in them); the covered cells are remembered
+  and come back covered when it is switched on again
+- **[Project]** `CellSpoiler.kt` (`LocalCellSpoilers`, `Modifier.cellSpoiler`:
+  the tap taken before the cell, in the `Initial` pass; the right mouse button
+  doesn't count), `PageParagraph.cellSpoiler`/`coveredCells` ("row/column" of
+  the covered cells, on the page of the database: no change to the database of
+  the phone and of the PC), `PageRepository.updatePageParagraph` (read and
+  written in a transaction: quick taps on different cells don't cancel each
+  other), `DatabaseViewModel.setCellSpoiler`/`toggleCellCover`. Tests:
+  `DesktopDatabaseTableTest.cellSpoilerCoversAndUncoversACell` (a coloured tag
+  and a name covered, the tag picker not opened, uncovered, switched off),
+  `CellSpoilerTest` (on the phone: switched on from "Database settings", a tap
+  covers without opening the field, another uncovers)
+
 ### ✏️ v0.155.3 — 13/11/2026 · 18:16 — Room at the bottom of every page, and "Back" only far down
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1259 tests passed)*
 

@@ -89,7 +89,16 @@ data class PageParagraph(
      * quanto lo spazio, com'era. Sta qui, con le altre misure della pagina,
      * per non cambiare il database.
      */
-    val fullWidth: Boolean? = null
+    val fullWidth: Boolean? = null,
+    /**
+     * **"Cell spoiler"** di un database (dal 13/11/2026, chiesto
+     * dall'utente): acceso, un tocco su una cella della tabella la copre col
+     * velo dello spoiler. [coveredCells] = le celle coperte, "idRiga/colonna";
+     * restano anche a spento, per quando si riaccende. Qui, come
+     * [fullWidth], per non cambiare il database. Vedi `CellSpoiler.kt`.
+     */
+    val cellSpoiler: Boolean? = null,
+    val coveredCells: List<String>? = null
 ) {
     companion object {
         private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }

@@ -32,6 +32,7 @@ import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.DatabaseCellEntity
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
 import com.gabriele.notionlocal.data.entity.PageEntity
+import com.gabriele.notionlocal.data.entity.PageParagraph
 import com.gabriele.notionlocal.data.repository.PageRepository
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.platform.DesktopContext
@@ -432,6 +433,103 @@ class DesktopDatabaseTableTest {
             save(hovered, "database_name_hidden_open.png")
             val changed = (130 until 215).count { x -> hovered.getColor(x, firstRow) != table.getColor(x, firstRow) }
             assertTrue("OPEN nella cella di Voto: $changed punti cambiati", changed > 4)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **"Cell spoiler"** (dal 13/11/2026, chiesto dall'utente): acceso, un clic
+     * su una cella la copre col velo dello spoiler (un tag colorato, il nome) e
+     * non la apre; un altro clic la scopre. Spento, si vede tutto, ma le celle
+     * coperte si ricordano.
+     */
+    @Test
+    fun cellSpoilerCoversAndUncoversACell() {
+        val db = AppDatabase.getInstance(context)
+        val pages = PageRepository(db)
+        runBlocking {
+            db.databaseDao().insertColumn(
+                DatabaseColumnEntity(
+                    id = "giorno", pageId = "giochi", name = "Day", type = ColumnType.SELECT, orderIndex = -1,
+                    optionsJson = """[{"label":"Monday","color":"#E03E3E"}]"""
+                )
+            )
+            db.databaseDao().insertCell(DatabaseCellEntity(rowId = "r1", columnId = "giorno", value = "Monday"))
+            pages.updatePageParagraph("giochi") { it.copy(cellSpoiler = true) }
+        }
+        fun covered() = runBlocking { PageParagraph.parse(db.pageDao().getById("giochi")!!.paragraphJson).coveredCells.orEmpty() }
+        fun waitCovered(expected: List<String>) {
+            val end = System.currentTimeMillis() + 5_000
+            while (covered().sorted() != expected.sorted() && System.currentTimeMillis() < end) Thread.sleep(20)
+            assertEquals(expected.sorted(), covered().sorted())
+        }
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            DatabaseViewScreen(
+                                pageId = "giochi", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
+                                onOpenUpdates = {}, onOpenPage = {}, onOpenDatabase = {}
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun picture(): Bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+        fun save(bitmap: Bitmap, name: String) =
+            File("build/desktop-screenshots", name).apply { parentFile.mkdirs() }.writeBytes(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        // Il velo dello spoiler (`SpoilerCover`, tema chiaro o scuro), in quasi tutta la cella.
+        fun veiled(bitmap: Bitmap, fromX: Int, toX: Int, y: Int) =
+            (fromX until toX).count { x -> bitmap.getColor(x, y) == 0xFF4A4A4A.toInt() || bitmap.getColor(x, y) == 0xFFBDBDBA.toInt() } > (toX - fromX) * 0.8
+        try {
+            frames(40)
+            val before = picture()
+            val background = before.getColor(1100, before.height - 5)
+            val lines = (60 until before.height - 20).filter { y -> (1000..1100).all { x -> before.getColor(x, y) != background } }
+            val firstRow = (lines[0] + lines[1]) / 2
+            val secondRow = (lines[1] + lines[2]) / 2
+            // "Day" sta fra 266 e 416, Name fra 66 e 266.
+            assertTrue("prima del clic il tag si vede", !veiled(before, 280, 400, firstRow))
+            click(scene, Offset(330f, firstRow.toFloat()))
+            waitCovered(listOf("r1/giorno"))
+            frames(10)
+            val dayCovered = picture()
+            save(dayCovered, "cell_spoiler_day.png")
+            assertTrue("il tag è coperto dal velo", veiled(dayCovered, 280, 400, firstRow))
+            // Il clic non ha aperto la scelta dei tag (si aprirebbe sotto la cella).
+            val opened = (0 until 200 step 4).count { dy -> dayCovered.getColor(430, firstRow + 20 + dy) != before.getColor(430, firstRow + 20 + dy) }
+            assertTrue("niente scelta dei tag ($opened punti cambiati)", opened < 5)
+
+            // Anche il nome di una riga.
+            click(scene, Offset(126f, secondRow.toFloat()))
+            waitCovered(listOf("r1/giorno", "r2/$NAME_COLUMN_KEY"))
+            frames(10)
+            assertTrue("il nome di Zelda è coperto", veiled(picture(), 80, 250, secondRow))
+
+            // Un altro clic scopre il tag.
+            click(scene, Offset(330f, firstRow.toFloat()))
+            waitCovered(listOf("r2/$NAME_COLUMN_KEY"))
+            frames(10)
+            assertTrue("il tag si vede di nuovo", !veiled(picture(), 280, 400, firstRow))
+
+            // Spento: si vede tutto, ma la cella coperta si ricorda.
+            runBlocking { pages.updatePageParagraph("giochi") { it.copy(cellSpoiler = null) } }
+            frames(10)
+            val off = picture()
+            save(off, "cell_spoiler_off.png")
+            assertTrue("spento, il nome si vede", !veiled(off, 80, 250, secondRow))
+            assertEquals(listOf("r2/$NAME_COLUMN_KEY"), covered())
         } finally {
             onWindowThread { scene.close() }
         }

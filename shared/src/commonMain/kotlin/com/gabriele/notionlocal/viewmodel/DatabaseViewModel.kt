@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.viewmodel
 
+import com.gabriele.notionlocal.ui.screen.coverKey
 import com.gabriele.notionlocal.data.entity.withNameHidden
 import com.gabriele.notionlocal.data.entity.titleColumnId
 import com.gabriele.notionlocal.data.entity.nameColumnHidden
@@ -1611,6 +1612,24 @@ class DatabaseViewModel(
         val updated = current.copy(freezeFirstColumn = freeze)
         _page.value = updated
         viewModelScope.launch { pageRepository.updatePage(updated) }
+    }
+
+    /** **"Cell spoiler"** (dal 13/11/2026): acceso, un tocco su una cella la copre o la scopre (vedi `CellSpoiler.kt`). */
+    fun setCellSpoiler(on: Boolean) {
+        val pageId = _page.value?.id ?: return
+        viewModelScope.launch { pageRepository.updatePageParagraph(pageId) { it.copy(cellSpoiler = on.takeIf { on }) } }
+    }
+
+    /** Copre o scopre la cella [columnKey] della riga [rowId] (Name = `NAME_COLUMN_KEY`). */
+    fun toggleCellCover(rowId: String, columnKey: String) {
+        val pageId = _page.value?.id ?: return
+        val key = coverKey(rowId, columnKey)
+        viewModelScope.launch {
+            pageRepository.updatePageParagraph(pageId) {
+                val cells = it.coveredCells.orEmpty()
+                it.copy(coveredCells = (if (key in cells) cells - key else cells + key).ifEmpty { null })
+            }
+        }
     }
 
     /** **"Freeze first row"**: la riga dei titoli resta in cima, di questa vista. */

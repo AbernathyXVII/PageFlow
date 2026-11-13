@@ -3756,6 +3756,12 @@ class PageRepository(private val db: AppDatabase) {
     suspend fun setPageParagraph(pageId: String, paragraph: PageParagraph) =
         pageDao.setParagraph(pageId, PageParagraph.encode(paragraph))
 
+    /** Cambia il "Paragraph" letto dal database, in una transazione: due tocchi in fretta non si cancellano (il "Cell spoiler"). */
+    suspend fun updatePageParagraph(pageId: String, change: (PageParagraph) -> PageParagraph) = db.withTransaction {
+        val page = pageDao.getById(pageId) ?: return@withTransaction
+        pageDao.setParagraph(pageId, PageParagraph.encode(change(PageParagraph.parse(page.paragraphJson))))
+    }
+
     /**
      * Le voci di più blocchi insieme, **in una transazione sola**: chi
      * guarda la tabella viene avvisato una volta, non una per riga (vedi
