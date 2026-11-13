@@ -3048,6 +3048,32 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
     fun moveBlockBeside(block: BlockEntity, targetId: String, right: Boolean) =
         moveBlockBy(block) { repository.moveBlockBeside(block.id, targetId, right) }
 
+    /**
+     * **I file trascinati da fuori** (dal 13/11/2026): vedi
+     * `PageRepository.insertDroppedBlocks`. Un passo di Annulla; arrivati, il
+     * primo si illumina.
+     */
+    fun insertDroppedBlocks(blocks: List<NewBlock>, targetId: String?, beside: Boolean, after: Boolean) {
+        val pageId = currentPageId ?: return
+        if (blocks.isEmpty()) return
+        snapshotForStructuralChange()
+        viewModelScope.launch {
+            val first = structuralEdits.withLock { repository.insertDroppedBlocks(pageId, blocks, targetId, beside, after) } ?: return@launch
+            _externalChangeTick.value += 1
+            withTimeoutOrNull(FOCUS_HANDOFF_TIMEOUT_MS * 4) { _blocks.first { shown -> shown.any { it.id == first } } }
+            _movedBlock.value = MovedBlock(first, System.nanoTime() / 1_000_000)
+        }
+    }
+
+    /**
+     * **La larghezza delle colonne** trascinata col mouse (dal 13/11/2026,
+     * vedi `ColumnEdges.kt`): la parte di ogni colonna, in un passo di Annulla.
+     */
+    fun setColumnWeights(weights: List<Pair<String, Float>>) {
+        snapshotForStructuralChange()
+        viewModelScope.launch { weights.forEach { (id, part) -> repository.updateBlockAttrs(id) { it.copy(width = part) } } }
+    }
+
     /** Uno spostamento ([move]) che si può annullare: arrivato, il blocco si illumina. */
     private fun moveBlockBy(block: BlockEntity, move: suspend () -> Boolean) {
         snapshotForStructuralChange()

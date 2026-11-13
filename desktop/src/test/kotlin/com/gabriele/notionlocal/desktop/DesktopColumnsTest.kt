@@ -1,5 +1,15 @@
 package com.gabriele.notionlocal.desktop
 
+import com.gabriele.notionlocal.ui.screen.dropFor
+import com.gabriele.notionlocal.ui.screen.OUTSIDE_FILE
+import com.gabriele.notionlocal.ui.screen.DropPlace
+import com.gabriele.notionlocal.ui.screen.BlockBox
+import com.gabriele.notionlocal.platform.importOutsideFile
+import com.gabriele.notionlocal.data.entity.attrs
+import com.gabriele.notionlocal.data.entity.NewBlock
+import com.gabriele.notionlocal.data.entity.BlockAttrs
+import com.gabriele.notionlocal.data.PageImageStore
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
@@ -839,5 +849,162 @@ class DesktopColumnsTest {
             val changed = (0 until hovered.height).filter { y -> (0 until 85).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
             assertTrue("comparso qualcosa nel margine, alle altezze $changed", changed.isEmpty())
         }
+    }
+
+    // --- Le immagini (dal 13/11/2026, chieste dall'utente) ---
+
+    /** Un PNG di [w] x [h] tutto del colore [rgb], salvato nell'app: il nome del file. */
+    private fun png(w: Int, h: Int, rgb: Int): String = runBlocking {
+        val image = java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        image.createGraphics().apply {
+            color = java.awt.Color(rgb)
+            fillRect(0, 0, w, h)
+            dispose()
+        }
+        val bytes = java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(image, "png", it) }.toByteArray()
+        PageImageStore(context).saveImageBytes(bytes)!!
+    }
+
+    private fun imageBlock(block: BlockEntity, file: String) = block.copy(type = BlockType.IMAGE, textJson = "[]", attrsJson = BlockAttrs.encode(BlockAttrs(file = file, name = "$file.png")))
+
+    /** Dove sta sullo schermo il colore [rgb] (con un po' di tolleranza): le x e le y che tocca. */
+    private fun spanOf(bitmap: Bitmap, rgb: Int): Pair<IntRange, IntRange>? {
+        fun near(c: Int) = listOf(16, 8, 0).all { s -> kotlin.math.abs(((c shr s) and 0xFF) - ((rgb shr s) and 0xFF)) < 12 }
+        val xs = ArrayList<Int>()
+        val ys = ArrayList<Int>()
+        for (y in 0 until bitmap.height step 2) for (x in 0 until bitmap.width) if (near(bitmap.getColor(x, y))) {
+            xs += x
+            ys += y
+        }
+        return if (xs.isEmpty()) null else (xs.min()..xs.max()) to (ys.min()..ys.max())
+    }
+
+    /**
+     * **Un'immagine è larga quanto è davvero** (chiesto dall'utente il
+     * 13/11/2026: "se è un 512x512 non deve essere riempita tutta la
+     * pagina"): una rossa di 200 punti resta di 200, una verde di 2000 si
+     * ferma alla larghezza della pagina.
+     */
+    @Test
+    fun imagesKeepTheirOwnSize() {
+        runBlocking {
+            repo.saveBlock(imageBlock(childrenOf(null).single { it.id == "vuota" }, png(200, 80, 0xE53935)))
+            repo.saveBlock(imageBlock(childrenOf(null).single { it.id == "dopo" }, png(2000, 100, 0x43A047)))
+        }
+        withMouse { _, shot ->
+            val page = shot("images_own_size")
+            val (redX, _) = spanOf(page, 0xE53935) ?: error("l'immagine rossa non si vede")
+            val (greenX, _) = spanOf(page, 0x43A047) ?: error("l'immagine verde non si vede")
+            assertTrue("la rossa larga 200: ${redX.first}..${redX.last}", (redX.last - redX.first + 1) in 196..202)
+            assertTrue("la verde larga quanto la pagina: ${greenX.first}..${greenX.last}", (greenX.last - greenX.first + 1) in 700..780)
+        }
+    }
+
+    /**
+     * **Un'immagine accanto a un'altra** (chiesto dall'utente il 13/11/2026):
+     * coi sei puntini la verde, portata sul bordo destro della rossa, le fa
+     * diventare due colonne, una accanto all'altra.
+     */
+    @Test
+    fun anImageGoesBesideAnotherImage() {
+        runBlocking {
+            repo.saveBlock(imageBlock(childrenOf(null).single { it.id == "vuota" }, png(200, 80, 0xE53935)))
+            repo.saveBlock(imageBlock(childrenOf(null).single { it.id == "dopo" }, png(200, 80, 0x43A047)))
+        }
+        withMouse { mouse, shot ->
+            val before = shot("images_before_columns")
+            val (_, redY) = spanOf(before, 0xE53935) ?: error("la rossa")
+            val (greenX, greenY) = spanOf(before, 0x43A047) ?: error("la verde")
+            // I puntini di un'immagine stanno alla sua prima riga, in alto.
+            val fromY = greenY.first + 6f
+            dragLine(mouse, shot, textX = (greenX.first + greenX.last) / 2f, dotsX = 74f, fromY = fromY, toX = 800f, toY = (redY.first + redY.last) / 2f, name = "images_drag_beside")
+            // Nelle colonne le immagini si ricaricano: un attimo.
+            repeat(20) { mouse("move", 450f, 500f) }
+            val after = shot("images_in_columns")
+            val (redAfterX, redAfterY) = spanOf(after, 0xE53935) ?: error("la rossa dopo")
+            val (greenAfterX, greenAfterY) = spanOf(after, 0x43A047) ?: error("la verde dopo")
+            assertTrue("la verde a destra della rossa", greenAfterX.first > redAfterX.last)
+            assertTrue("alla stessa altezza", greenAfterY.first <= redAfterY.last && redAfterY.first <= greenAfterY.last)
+        }
+        val top = childrenOf(null)
+        assertEquals(listOf(BlockType.PARAGRAPH, BlockType.COLUMN_LIST), top.map { it.type })
+        assertEquals(listOf("vuota", "dopo"), childrenOf(top[1].id).map { childrenOf(it.id).single().id })
+        assertTidy()
+    }
+
+    /**
+     * **Il bordo fra due colonne si trascina** (chiesto dall'utente il
+     * 13/11/2026: "stessa cosa per i blocchi che si possono spostare tra le
+     * colonne"): col mouse sopra c'è la linea blu; portato 100 punti a destra,
+     * la prima colonna prende 484 punti dei 768 del gruppo, e restano salvati.
+     */
+    @Test
+    fun theEdgeBetweenTwoColumnsIsDragged() {
+        runBlocking {
+            repo.makeColumns("vuota", 2)
+            write("vuota", 0, "SINISTRA")
+            write("vuota", 1, "DESTRA")
+        }
+        withMouse { mouse, shot ->
+            // Il gruppo va da 66 a 834: il bordo a metà, a 450, all'altezza delle righe (213).
+            mouse("move", 300f, 213f)
+            mouse("move", 450f, 213f)
+            val hover = shot("columns_edge_hover")
+            fun blue(c: Int) = (c and 0xFF) > 180 && ((c shr 16) and 0xFF) < 80
+            assertTrue("la linea blu sul bordo", (446..454).any { x -> blue(hover.getColor(x, 213)) })
+            mouse("press", 450f, 213f)
+            for (step in 1..20) mouse("drag", 450f + 5f * step, 213f)
+            shot("columns_edge_drag")
+            mouse("release", 550f, 213f)
+            mouse("move", 300f, 500f)
+            val after = shot("columns_edge_after")
+            fun startOf(rgbBright: Bitmap): Int = (520 until 640).first { x -> (200..226).any { y -> rgbBright.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 150 && (c and 0xFF) > 150 } } }
+            // DESTRA ora comincia 100 punti più a destra di prima (470).
+            assertTrue("DESTRA si è spostata a destra: ${startOf(after)}", startOf(after) in 560..580)
+        }
+        val list = childrenOf(null).single { it.type == BlockType.COLUMN_LIST }
+        val parts = childrenOf(list.id).map { it.attrs.width }
+        assertEquals("le parti salvate: $parts", 484f / 768f, parts[0]!!, 0.01f)
+        assertEquals(284f / 768f, parts[1]!!, 0.01f)
+    }
+
+    /**
+     * **I file portati da fuori vanno dove dice la linea blu** (chiesto
+     * dall'utente il 13/11/2026): sul bordo destro di "PRIMA" la linea è
+     * verticale e il file le va accanto, in colonna; sotto "DOPO" due file
+     * vanno sotto, in fila. Un PNG diventa un'immagine, un .txt un file.
+     */
+    @Test
+    fun filesFromOutsideGoWhereTheBlueLineSays() {
+        val box = BlockBox(top = 180f, bottom = 200f, left = 86f, right = 814f)
+        val right = dropFor(OUTSIDE_FILE, "prima", Offset(800f, 190f), box, side = 60f, blocks = blocks())
+        assertEquals(DropPlace.RIGHT, right?.place)
+        val below = dropFor(OUTSIDE_FILE, "dopo", Offset(300f, 198f), box, side = 60f, blocks = blocks())
+        assertEquals(DropPlace.AFTER, below?.place)
+        val folder = Files.createTempDirectory("pageflow-outside").toFile()
+        val picture = File(folder, "foto.png").apply {
+            val image = java.awt.image.BufferedImage(30, 20, java.awt.image.BufferedImage.TYPE_INT_RGB)
+            javax.imageio.ImageIO.write(image, "png", this)
+        }
+        val note = File(folder, "nota.txt").apply { writeText("ciao") }
+        val store = PageImageStore(context)
+        val image = runBlocking { importOutsideFile(store, picture) }!!
+        val file = runBlocking { importOutsideFile(store, note) }!!
+        folder.deleteRecursively()
+        assertEquals(BlockType.IMAGE, image.first)
+        assertEquals("foto.png", image.second.name)
+        assertEquals(BlockType.FILE, file.first)
+        assertEquals(4L, file.second.size)
+        runBlocking {
+            repo.insertDroppedBlocks("colonne", listOf(NewBlock(type = image.first, attrs = image.second)), "prima", beside = true, after = true)
+            repo.insertDroppedBlocks("colonne", listOf(NewBlock(type = file.first, attrs = file.second), NewBlock(type = image.first, attrs = image.second)), "dopo", beside = false, after = true)
+        }
+        val top = childrenOf(null)
+        assertEquals(listOf(BlockType.COLUMN_LIST, BlockType.PARAGRAPH, BlockType.PARAGRAPH, BlockType.FILE, BlockType.IMAGE), top.map { it.type })
+        assertEquals(listOf("vuota", "dopo"), top.subList(1, 3).map { it.id })
+        val columns = childrenOf(top[0].id).map { childrenOf(it.id).single() }
+        assertEquals("prima", columns[0].id)
+        assertEquals(BlockType.IMAGE, columns[1].type)
+        assertTidy()
     }
 }

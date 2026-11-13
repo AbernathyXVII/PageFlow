@@ -1126,6 +1126,46 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.153.77 — 13/11/2026 · 10:06 — Columns resized with the mouse; files dragged in from outside; images at their own size
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1241 tests passed)*
+
+- **[Change]** **[💻 PC]** **The columns of a page are resized with the
+  mouse**, like the columns of a database: in the space between two columns
+  the pointer becomes the double arrow and a blue line appears; dragging it,
+  the two columns next to it get wider and narrower (none below a tenth of the
+  group), and the widths stay. Before, the columns were always the same width
+- **[Change]** **[💻 PC]** **Images side by side**: an image goes into a
+  column like any block, with its six dots (they are at the top of the
+  image) taken onto the left or right edge of another block, also of another
+  image. Now that an image keeps its own size (below), two fit one next to
+  the other
+- **[Change]** **[💻 PC]** **Files dragged in from outside**, as in Notion:
+  an image or a file taken from File Explorer and brought over a page shows
+  the same blue line as a block moved with the six dots — between two lines,
+  or vertical on the edge of a block to put it in a column — and where it is
+  dropped it becomes a block: an image, a video, an audio or a file (several
+  files, one under the other). Dropped below everything, it goes at the end
+  of the page. It can be undone
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **An image keeps its own size**:
+  one never resized is as wide as it really is, at most as wide as the page
+  (a 512 × 512 no longer fills the page). On the phone a pixel of the image
+  is a pixel of the screen; on the PC a point, which follows the zoom of
+  Windows and of PageFlow. "Original size" in the image menu brings it back
+  to that size; a width chosen with the handles stays, also the whole page
+- **[Project]** `ColumnEdges.kt` (`ColumnEdgeSpot`, `ColumnEdgeLayer` above
+  the page like the six dots, `columnWeights`, `movedColumnEdge`,
+  `MIN_COLUMN_SHARE`), `BlockAttrs.width` of a COLUMN block is its part;
+  `OutsideFileDrop.kt` (`outsideFileDrop`: on the PC Compose's
+  `dragAndDropTarget`, the point from the AWT event times the screen scale),
+  `OUTSIDE_FILE` in `dropFor`, `importOutsideFile`,
+  `PageRepository.insertDroppedBlocks`; `frameOf` with the natural width,
+  `withFrame` always keeps the width. Tests in `DesktopColumnsTest`: the
+  images keep their size (200 stays 200, 2000 stops at the page), a green
+  image dragged onto the right edge of a red one makes two columns side by
+  side, the edge between two columns dragged 100 points (the first column
+  484 of 768, saved), files from outside where the blue line says (beside:
+  columns; below: in a row; a PNG an image, a .txt a file)
+
 ### ✏️ v0.153.76 — 13/11/2026 · 09:18 — The right-click menu on the PC; database columns resized with the mouse
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1237 tests passed)*
 

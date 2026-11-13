@@ -73,7 +73,9 @@ data class BlockDrop(
  */
 fun dropFor(dragged: String, target: String, pointer: Offset, box: BlockBox, side: Float, blocks: List<BlockEntity>): BlockDrop? {
     val byId = blocks.associateBy { it.id }
-    val moving = byId[dragged] ?: return null
+    // Un file che arriva da fuori (vedi `OutsideFileDrop.kt`) non è nella pagina: va dove si vuole.
+    val moving = byId[dragged]
+    if (moving == null && dragged != OUTSIDE_FILE) return null
     // Dentro se stesso no: si risale dalla riga sotto il mouse.
     var up: BlockEntity? = byId[target]
     while (up != null) {
@@ -81,7 +83,7 @@ fun dropFor(dragged: String, target: String, pointer: Offset, box: BlockBox, sid
         up = up.parentBlockId?.let { byId[it] }
     }
     val holder = byId[target]?.parentBlockId?.let { byId[it] }
-    val groupMoving = moving.type == BlockType.COLUMN_LIST || moving.type == BlockType.COLUMN
+    val groupMoving = moving?.type == BlockType.COLUMN_LIST || moving?.type == BlockType.COLUMN
     if (groupMoving && holder?.type == BlockType.COLUMN) return null
     val textStart = box.left
     val textEnd = box.right
@@ -97,10 +99,12 @@ fun dropFor(dragged: String, target: String, pointer: Offset, box: BlockBox, sid
         }
     }
     val below = pointer.y > (box.top + box.bottom) / 2f
-    val siblings = blocks.filter { it.parentBlockId == moving.parentBlockId }.sortedBy { it.orderIndex }
-    val at = siblings.indexOfFirst { it.id == dragged }
-    val stays = if (below) siblings.getOrNull(at - 1)?.id == target else siblings.getOrNull(at + 1)?.id == target
-    if (stays) return null
+    if (moving != null) {
+        val siblings = blocks.filter { it.parentBlockId == moving.parentBlockId }.sortedBy { it.orderIndex }
+        val at = siblings.indexOfFirst { it.id == dragged }
+        val stays = if (below) siblings.getOrNull(at - 1)?.id == target else siblings.getOrNull(at + 1)?.id == target
+        if (stays) return null
+    }
     return BlockDrop(target, if (below) DropPlace.AFTER else DropPlace.BEFORE, textStart, if (below) box.bottom else box.top, textEnd - textStart, vertical = false)
 }
 

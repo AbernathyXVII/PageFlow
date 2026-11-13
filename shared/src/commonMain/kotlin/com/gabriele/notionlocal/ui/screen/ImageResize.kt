@@ -51,9 +51,17 @@ data class ImageFrame(val left: Float, val width: Float, val height: Float)
 /** Come ridimensionare un'immagine, scelto dal suo menu: le maniglie non si vedono finché non lo si chiede. */
 enum class ImageResizeMode { NONE, RESIZE, FULL }
 
-/** Il riquadro com'è salvato nel blocco, su una pagina larga `pageWidth`; `natural` è l'altezza dell'immagine diviso la larghezza. */
-fun frameOf(attrs: BlockAttrs, pageWidth: Float, natural: Float): ImageFrame {
-    val width = (attrs.width ?: 1f).coerceIn(0.01f, 1f) * pageWidth
+/**
+ * Il riquadro com'è salvato nel blocco, su una pagina larga `pageWidth`; `natural` è l'altezza
+ * dell'immagine diviso la larghezza, `naturalWidth` quanto è larga l'immagine vera, in pixel dello
+ * schermo (null se non si sa).
+ *
+ * **Senza una misura salvata l'immagine è larga quanto è davvero** (dal 13/11/2026, chiesto
+ * dall'utente: "se è un 512x512 non deve essere riempita tutta la pagina"), al massimo quanto la
+ * pagina. Prima riempiva sempre la pagina.
+ */
+fun frameOf(attrs: BlockAttrs, pageWidth: Float, natural: Float, naturalWidth: Float? = null): ImageFrame {
+    val width = attrs.width?.let { it.coerceIn(0.01f, 1f) * pageWidth } ?: minOf(naturalWidth ?: pageWidth, pageWidth)
     val left = attrs.left?.let { (it * pageWidth).coerceIn(0f, pageWidth - width) } ?: ((pageWidth - width) / 2f)
     return ImageFrame(left, width, width * (attrs.aspect ?: natural))
 }
@@ -103,13 +111,14 @@ fun BlockAttrs.withFrame(frame: ImageFrame, pageWidth: Float, full: Boolean): Bl
     val width = (frame.width / pageWidth).coerceIn(0.01f, 1f)
     val centered = abs(frame.left - (pageWidth - frame.width) / 2f) < 1f
     return copy(
-        width = width.takeIf { it < 0.999f },
+        // Anche larga tutta la pagina si ricorda: senza misura sarebbe larga quanto l'immagine vera.
+        width = width,
         left = if (centered) null else frame.left / pageWidth,
         aspect = if (full) frame.height / frame.width else aspect
     )
 }
 
-/** "Original size": la larghezza della pagina, al centro, con la sua forma. */
+/** "Original size": la sua misura vera (al massimo la pagina), al centro, con la sua forma. */
 fun BlockAttrs.withOriginalSize(): BlockAttrs = copy(width = null, left = null, aspect = null)
 
 /** Com'è fatta una maniglia: barretta in piedi (lati), coricata (sopra e sotto) o quadratino (angoli). */

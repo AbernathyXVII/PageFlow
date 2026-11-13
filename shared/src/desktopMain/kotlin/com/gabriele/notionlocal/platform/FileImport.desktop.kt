@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.platform
 
+import java.io.File
+import com.gabriele.notionlocal.data.entity.BlockType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -88,4 +90,34 @@ actual fun rememberSaveCopy(
             done(saved)
         }
     }
+}
+
+/**
+ * **Un file trascinato da fuori dentro la pagina** (dal 13/11/2026, vedi
+ * `OutsideFileDrop.kt`), copiato nell'app: il tipo di blocco che diventa e i
+ * suoi dati. Un'immagine che non si legge diventa un file. Null se non si
+ * riesce a copiarlo.
+ */
+suspend fun importOutsideFile(store: PageImageStore, file: File): Pair<BlockType, BlockAttrs>? {
+    if (!file.isFile) return null
+    val extension = file.extension.lowercase()
+    if (extension in IMAGES) {
+        val image = store.saveFromStream({ file.inputStream() }, mustBeImage = true, cannotOpen = EditorStrings.imageReadFailed).getOrNull()
+        if (image != null) return BlockType.IMAGE to BlockAttrs(file = image, name = file.name)
+    }
+    val saved = store.saveFromStream(
+        { file.inputStream() },
+        extension = store.cleanExtension(extension),
+        mustBeImage = false,
+        cannotOpen = BlockStrings.fileReadFailed
+    ).getOrNull() ?: return null
+    val mime = withContext(Dispatchers.IO) {
+        runCatching { Files.probeContentType(file.toPath()) }.getOrNull() ?: URLConnection.guessContentTypeFromName(file.name)
+    }
+    val type = when (extension) {
+        in VIDEOS -> BlockType.VIDEO
+        in AUDIOS -> BlockType.AUDIO
+        else -> BlockType.FILE
+    }
+    return type to BlockAttrs(file = saved, name = file.name, mime = mime, size = store.fileFor(saved).length())
 }

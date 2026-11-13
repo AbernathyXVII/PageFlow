@@ -57,6 +57,7 @@ import com.gabriele.notionlocal.viewmodel.MediaRequestKind
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 import kotlinx.coroutines.launch
 import com.gabriele.notionlocal.platform.showMessage
+import com.gabriele.notionlocal.platform.isPc
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.platform.rememberImageImporter
 import com.gabriele.notionlocal.data.ocr.PhotoTextRequests
@@ -234,12 +235,17 @@ fun ImageBlockContent(
         ) {
             val density = LocalDensity.current
             val pageWidth = constraints.maxWidth.toFloat()
-            val natural = remember(file) { store.imageSize(file)?.let { (w, h) -> h.toFloat() / w } } ?: DEFAULT_IMAGE_ASPECT
+            val size = remember(file) { store.imageSize(file) }
+            val natural = size?.let { (w, h) -> h.toFloat() / w } ?: DEFAULT_IMAGE_ASPECT
+            // Quanto è larga l'immagine vera sullo schermo: sul telefono un pixel dell'immagine è un
+            // pixel dello schermo (un 512x512 prende un terzo della larghezza); sul PC un punto, che
+            // segue l'ingrandimento di Windows e di PageFlow, come le immagini di Notion.
+            val naturalWidth = size?.let { (w, _) -> if (isPc) w * density.density else w.toFloat() }
             // **Uno stato solo, aggiornato.** Rifatto a ogni misura salvata,
             // le maniglie — che si tengono il primo — avrebbero scritto in
             // quello vecchio, e dal secondo trascinamento non si muoveva più.
-            var frame by remember(block.id) { mutableStateOf(frameOf(attrs, pageWidth, natural)) }
-            LaunchedEffect(attrs.width, attrs.left, attrs.aspect, pageWidth, natural) { frame = frameOf(attrs, pageWidth, natural) }
+            var frame by remember(block.id) { mutableStateOf(frameOf(attrs, pageWidth, natural, naturalWidth)) }
+            LaunchedEffect(attrs.width, attrs.left, attrs.aspect, pageWidth, natural, naturalWidth) { frame = frameOf(attrs, pageWidth, natural, naturalWidth) }
             val save: (Boolean) -> Unit = { full -> viewModel.updateBlockAttrs(block.id) { it.withFrame(frame, pageWidth, full) } }
             val minPx = with(density) { MIN_FRAME_SIDE.toPx() }
             Box(

@@ -47,8 +47,8 @@ class ImageFrameTest {
     @Test
     fun theFrameIsSavedOnlyWithWhatChanged() {
         val attrs = BlockAttrs(file = "a.jpg")
-        // A tutta pagina e al centro: niente da scrivere.
-        assertEquals(attrs, attrs.withFrame(ImageFrame(0f, 1000f, 500f), 1000f, full = false))
+        // A tutta pagina e al centro: si ricorda la larghezza (dal 13/11/2026: senza, sarebbe larga quanto l'immagine vera).
+        assertEquals(attrs.copy(width = 1f), attrs.withFrame(ImageFrame(0f, 1000f, 500f), 1000f, full = false))
         // "Resize": larghezza, al centro, la forma non si tocca.
         assertEquals(attrs.copy(width = 0.5f), attrs.withFrame(ImageFrame(250f, 500f, 250f), 1000f, full = false))
         // "Full resize": anche dove comincia e la forma.
@@ -58,5 +58,8 @@ class ImageFrameTest {
         // Riletto dal blocco, il riquadro è lo stesso.
         assertEquals(ImageFrame(100f, 400f, 200f), frameOf(attrs.copy(width = 0.4f, left = 0.1f, aspect = 0.5f), 1000f, natural = 0.75f))
         assertEquals(ImageFrame(250f, 500f, 375f), frameOf(attrs.copy(width = 0.5f), 1000f, natural = 0.75f))
+        // **Senza misura salvata, larga quanto l'immagine vera** (dal 13/11/2026), al centro, al massimo la pagina.
+        assertEquals(ImageFrame(400f, 200f, 150f), frameOf(attrs, 1000f, natural = 0.75f, naturalWidth = 200f))
+        assertEquals(ImageFrame(0f, 1000f, 750f), frameOf(attrs, 1000f, natural = 0.75f, naturalWidth = 3000f))
     }
 }

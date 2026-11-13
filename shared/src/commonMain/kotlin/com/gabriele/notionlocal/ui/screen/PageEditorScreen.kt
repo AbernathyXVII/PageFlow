@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.ocr.PhotoTextRequests
+import com.gabriele.notionlocal.data.entity.NewBlock
 import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
 import com.gabriele.notionlocal.ui.navigation.LocalPageOpener
 import com.gabriele.notionlocal.platform.emojiTransformation
@@ -2816,8 +2818,30 @@ private fun PageEditorContent(
                     }
                 }
             }
+            // Nel margine a sinistra: un clic apre il menu del blocco, trascinandoli si sposta (vedi `BlockDrag.kt`).
+            val dragDensity = LocalDensity.current
+            val blockDrag = remember(blockPicker, viewModel, dragDensity) {
+                BlockDrag(
+                    picker = blockPicker,
+                    blocks = { viewModel.blocks.value },
+                    side = { with(dragDensity) { DROP_SIDE_ZONE.toPx() } }
+                ) { id, drop ->
+                    blockSpot.value = null
+                    val moving = viewModel.blocks.value.firstOrNull { it.id == id } ?: return@BlockDrag
+                    when (drop.place) {
+                        DropPlace.BEFORE, DropPlace.AFTER -> viewModel.moveBlockNextTo(moving, drop.targetId, after = drop.place == DropPlace.AFTER)
+                        DropPlace.LEFT, DropPlace.RIGHT -> viewModel.moveBlockBeside(moving, drop.targetId, right = drop.place == DropPlace.RIGHT)
+                    }
+                }
+            }
+            // Sul PC, nello spazio fra due colonne, la striscia che le allarga (vedi `ColumnEdges.kt`).
+            val columnEdges = remember(pageId) { ColumnEdges() }
+            val pcEditing = isPc && !readOnlyPage && !drawingMode
             // Sul PC il tasto destro sulle righe apre il menu della pagina (vedi `PcContextMenu.kt`).
-            CompositionLocalProvider(LocalPageTextMenu provides pcMenuHost.takeIf { isPc && !readOnlyPage && !drawingMode }) {
+            CompositionLocalProvider(
+                LocalPageTextMenu provides pcMenuHost.takeIf { pcEditing },
+                LocalColumnEdges provides columnEdges.takeIf { pcEditing }
+            ) {
                 LazyColumn(
                     state = listState,
                     // Sul PC il margine in più a sinistra (vedi `PAGE_INSET`).
@@ -2841,6 +2865,44 @@ private fun PageEditorContent(
                                 if (!ids.isNullOrEmpty() && selectedBlocks.value.isEmpty()) focusManager.clearFocus()
                                 pageSelected = false
                                 selectedBlocks.value = ids.orEmpty()
+                            }
+                        )
+                        // Sul PC i file portati da Esplora risorse: la linea blu dei blocchi, e lì diventano blocchi (vedi `OutsideFileDrop.kt`).
+                        .then(
+                            if (!pcEditing) {
+                                Modifier
+                            } else {
+                                Modifier.outsideFileDrop(
+                                    store = imageStore,
+                                    onMove = { at ->
+                                        when {
+                                            at == null -> if (blockDrag.dragged == OUTSIDE_FILE) blockDrag.end(false)
+                                            blockDrag.dragged == null -> {
+                                                blockDrag.start(OUTSIDE_FILE, at)
+                                                blockDrag.moveTo(at)
+                                            }
+                                            blockDrag.dragged == OUTSIDE_FILE -> blockDrag.moveTo(at)
+                                        }
+                                    },
+                                    onDrop = { at ->
+                                        // Il posto si decide adesso: i file si copiano dopo, e intanto la pagina può cambiare.
+                                        val side = with(dragDensity) { DROP_SIDE_ZONE.toPx() }
+                                        val drop = blockPicker.blockAt(at)?.let { (target, box) -> dropFor(OUTSIDE_FILE, target, at, box, side, viewModel.blocks.value) }
+                                            ?: blockDrag.drop.takeIf { blockDrag.dragged == OUTSIDE_FILE }
+                                        if (blockDrag.dragged == OUTSIDE_FILE) blockDrag.end(false)
+                                        val place: (List<DroppedFile>) -> Unit = { files ->
+                                            viewModel.insertDroppedBlocks(
+                                                files.map { NewBlock(type = it.type, attrs = it.attrs) },
+                                                targetId = drop?.targetId,
+                                                beside = drop?.place == DropPlace.LEFT || drop?.place == DropPlace.RIGHT,
+                                                after = drop?.place == DropPlace.AFTER || drop?.place == DropPlace.RIGHT
+                                            )
+                                            // Il testo delle foto, per la ricerca.
+                                            if (files.any { it.type == BlockType.IMAGE }) PhotoTextRequests.request(delayMs = 1_000)
+                                        }
+                                        place
+                                    }
+                                )
                             }
                         )
                         // Sul PC i sei puntini accanto al blocco sotto il mouse (vedi `BlockHandle.kt`).
@@ -2882,22 +2944,6 @@ private fun PageEditorContent(
             }
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
-            // Nel margine a sinistra: un clic apre il menu del blocco, trascinandoli si sposta (vedi `BlockDrag.kt`).
-            val dragDensity = LocalDensity.current
-            val blockDrag = remember(blockPicker, viewModel, dragDensity) {
-                BlockDrag(
-                    picker = blockPicker,
-                    blocks = { viewModel.blocks.value },
-                    side = { with(dragDensity) { DROP_SIDE_ZONE.toPx() } }
-                ) { id, drop ->
-                    blockSpot.value = null
-                    val moving = viewModel.blocks.value.firstOrNull { it.id == id } ?: return@BlockDrag
-                    when (drop.place) {
-                        DropPlace.BEFORE, DropPlace.AFTER -> viewModel.moveBlockNextTo(moving, drop.targetId, after = drop.place == DropPlace.AFTER)
-                        DropPlace.LEFT, DropPlace.RIGHT -> viewModel.moveBlockBeside(moving, drop.targetId, right = drop.place == DropPlace.RIGHT)
-                    }
-                }
-            }
             if (isPc && !readOnlyPage && !drawingMode) {
                 // Le voci si spostano sotto il mouse fermo: i puntini con loro (vedi `FollowPageLayout`).
                 FollowPageLayout(
@@ -2909,6 +2955,10 @@ private fun PageEditorContent(
                     spot = blockSpot
                 )
                 BlockHandle(blockSpot, endsAt = pageInset + PAGE_SIDE_PADDING, drag = blockDrag) { id -> blockMenuFor = id }
+                ColumnEdgeLayer(columnEdges, { pageListCoordinates.get() }) { notches ->
+                    // Uno scatto, un ventesimo della pagina, come la rotella sulla pagina.
+                    listState.dispatchRawDelta(notches * (pageListCoordinates.get()?.size?.height ?: 0) / 20f)
+                }
                 pcMenu?.let { open ->
                     val local = pageListCoordinates.get()?.takeIf { it.isAttached }?.windowToLocal(open.at)
                     if (local != null) {
@@ -6696,10 +6746,46 @@ private fun BlockRow(
     if (block.type == BlockType.COLUMN_LIST) {
         val columns = allBlocks.filter { it.parentBlockId == block.id }.sortedBy { it.orderIndex }
         if (isPc) {
-            Row(Modifier.fillMaxWidth()) {
-                columns.forEach { column ->
+            // **Larghe quanto la loro parte** (dal 13/11/2026), che si cambia trascinando il bordo (vedi `ColumnEdges.kt`).
+            val edges = LocalColumnEdges.current
+            val weights = columnWeights(columns)
+            var draft by remember(block.id) { mutableStateOf<List<Float>?>(null) }
+            // Le parti salvate sono arrivate: quelle trascinate non servono più.
+            LaunchedEffect(weights) { draft = null }
+            val shown = draft?.takeIf { it.size == columns.size } ?: weights
+            val latestShown by rememberUpdatedState(shown)
+            val latestIds by rememberUpdatedState(columns.map { it.id })
+            val dragStart = remember(block.id) { arrayOfNulls<List<Float>>(1) }
+            DisposableEffect(block.id, edges) { onDispose { edges?.spots?.remove(block.id) } }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (edges == null) {
+                            Modifier
+                        } else {
+                            Modifier.onGloballyPositioned { coordinates ->
+                                edges.spots[block.id] = ColumnEdgeSpot(
+                                    coordinates = coordinates,
+                                    weights = { latestShown },
+                                    onStart = { dragStart[0] = latestShown },
+                                    onDrag = { index, dx ->
+                                        val start = dragStart[0]
+                                        val width = coordinates.size.width
+                                        if (start != null && width > 0) draft = movedColumnEdge(start, index, dx * start.sum() / width)
+                                    },
+                                    onEnd = {
+                                        dragStart[0] = null
+                                        draft?.let { parts -> viewModel.setColumnWeights(latestIds.zip(parts.map { it / parts.sum() })) }
+                                    }
+                                )
+                            }
+                        }
+                    )
+            ) {
+                columns.forEachIndexed { index, column ->
                     key(column.id) {
-                        Column(Modifier.weight(1f)) {
+                        Column(Modifier.weight(shown.getOrElse(index) { 1f })) {
                             ColumnLines(
                                 column, allBlocks, depth, viewModel, factory, focusRequestBlockId, formatRequest,
                                 onFocusChanged, onNavigateToPage, onNavigateToDatabase, onOpenBlockMenu

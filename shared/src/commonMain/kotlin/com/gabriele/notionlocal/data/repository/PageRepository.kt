@@ -2095,6 +2095,34 @@ class PageRepository(private val db: AppDatabase) {
             placed.id
         }
 
+    /**
+     * **I file lasciati sulla pagina da fuori** (dal 13/11/2026, vedi
+     * `OutsideFileDrop.kt`): un blocco per file. Il primo va dove dice la
+     * linea blu — prima o dopo [targetId] ([after]), o accanto ([beside], a
+     * destra con [after]: le colonne) — e gli altri sotto di lui; senza
+     * [targetId] in fondo alla pagina. Restituisce l'id del primo.
+     */
+    suspend fun insertDroppedBlocks(pageId: String, blocks: List<NewBlock>, targetId: String?, beside: Boolean, after: Boolean): String? {
+        if (blocks.isEmpty()) return null
+        val ids = db.withTransaction {
+            var order = (blockDao.lastOrderIndex(pageId) ?: -1) + 1
+            blocks.map { spec ->
+                BlockEntity(
+                    pageId = pageId,
+                    orderIndex = order++,
+                    type = spec.type,
+                    textJson = json.encodeToString(spec.spans),
+                    attrsJson = BlockAttrs.encode(spec.attrs)
+                ).also { blockDao.insert(it) }.id
+            }
+        }
+        if (targetId != null) {
+            if (beside) moveBlockBeside(ids.first(), targetId, right = after) else moveBlockNextTo(ids.first(), targetId, after)
+            ids.zipWithNext().forEach { (previous, next) -> moveBlockNextTo(next, previous, after = true) }
+        }
+        return ids.first()
+    }
+
     // --- I bottoni (dal 27/10/2026): vedi `data/buttons/Buttons.kt` ---
 
     /**
