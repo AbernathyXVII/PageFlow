@@ -281,6 +281,14 @@ fun TextFieldValue.withoutPastedLinks(): TextFieldValue {
 }
 
 /**
+ * **Gli a capo di Windows ("\r\n") diventano a capo e basta** (dal 16/11/2026,
+ * trovato dall'utente sul PC): il "\r" restava in fondo alle righe incollate,
+ * invisibile, e su una riga vuota il cursore si disegnava più a sinistra
+ * del testo. Un "\r" da solo è un a capo dei vecchi Mac.
+ */
+fun String.withoutCarriageReturns(): String = if ('\r' !in this) this else replace("\r\n", "\n").replace('\r', '\n')
+
+/**
  * **Gli appunti dell'editor** (vedi sopra): come quelli di sempre, ma il testo
  * incollato porta i suoi link e, a richiesta, il suo stile. Sul telefono
  * leggono gli appunti di Android, col loro HTML; sul PC, dal 10/11/2026,

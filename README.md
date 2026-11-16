@@ -1126,6 +1126,27 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.7.1 — 16/11/2026 · 20:36 — Lines in the column of a list: lined up, and the cursor where the text goes
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1273 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The lines that keep the place
+  of a numbered list line up with the text of its items also at the top of a
+  piece of the page** (under a title written bigger, or where a long page is
+  divided): their invisible number was counted only from the numbers above it
+  in the same text field, so there it was "1." and the line started further
+  left than the items. Now it is the number that comes next in the whole list
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The cursor on an empty line of
+  a list stands where the text goes**: the lines pasted from Windows kept the
+  invisible "\r" of its line ends, and on a line with only that the cursor was
+  drawn a few points further left, as in the user's screenshot. Now pasting
+  turns Windows line ends into plain ones, and the "\r" already in the pages
+  is ignored (it goes away when the line is edited). Found by the user;
+  reproduced in a test
+- **[Project]** `numberedOrdinals` gives the held paragraphs the next number
+  too (`numbersFrom` passes them to the fields); `withoutCarriageReturns` in
+  the `LinkClipboard` of PC and phone; `spansOf` without "\r". Test:
+  `DesktopListColumnTest` (failed before the fix)
+
 ### ✏️ v0.155.7 — 16/11/2026 · 20:08 — PC: left and right arrows past dividers and titles, Enter and Shift+Enter in lists
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1272 tests passed)*
 

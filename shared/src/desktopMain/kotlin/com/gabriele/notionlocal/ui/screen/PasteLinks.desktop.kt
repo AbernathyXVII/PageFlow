@@ -53,7 +53,8 @@ actual class LinkClipboard(
     private fun clipHtml(): String? = read(DataFlavor.allHtmlFlavor) ?: read(HTML_FLAVOR)
 
     /** Il testo che il campo incolla: quello degli appunti o, se c'è solo l'HTML, il suo testo. */
-    private fun clipText(): String? = read(DataFlavor.stringFlavor) ?: clipHtml()?.let { html -> parseClipHtml(html).joinToString("\n") { it.text }.trimEnd() }
+    private fun clipText(): String? = (read(DataFlavor.stringFlavor) ?: clipHtml()?.let { html -> parseClipHtml(html).joinToString("\n") { it.text }.trimEnd() })
+        ?.withoutCarriageReturns()
 
     override suspend fun getClipEntry(): ClipEntry? {
         val text = clipText() ?: return null

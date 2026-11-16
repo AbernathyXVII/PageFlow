@@ -2443,12 +2443,20 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
     fun numberedOrdinals(allBlocks: List<BlockEntity>): Map<String, Int> {
         val result = HashMap<String, Int>()
         allBlocks
-            .filter { it.type == BlockType.NUMBERED_LIST_ITEM }
+            .filter { it.type == BlockType.NUMBERED_LIST_ITEM || it.heldListType == BlockType.NUMBERED_LIST_ITEM }
             .groupBy { it.parentBlockId }
             .forEach { (_, siblings) ->
                 val counters = mutableListOf<Int>()
                 for (sibling in siblings.sortedBy { it.orderIndex }) {
                     val level = sibling.indentLevel.coerceIn(0, MAX_INDENT_LEVEL)
+                    // **Una riga che tiene il posto dell'elenco ha il numero che verrebbe dopo**
+                    // (dal 16/11/2026, trovato dall'utente sul PC): scritto invisibile davanti,
+                    // è largo come i numeri intorno anche in cima a un pezzo di pagina, dove
+                    // prima valeva "1." e la riga stava più a sinistra. Non conta per gli altri.
+                    if (sibling.type != BlockType.NUMBERED_LIST_ITEM) {
+                        result[sibling.id] = (counters.getOrNull(level) ?: 0) + 1
+                        continue
+                    }
                     while (counters.size < level) counters.add(1)
                     if (counters.size > level) {
                         while (counters.size > level + 1) counters.removeAt(counters.size - 1)
@@ -4497,6 +4505,10 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         synchronized(spansCache) { spansCache[textJson]?.let { return it } }
         val spans = try {
             json.decodeFromString<List<RichTextSpan>>(textJson)
+                // Il "\r" degli a capo di Windows incollati prima del 16/11/2026 non si
+                // vede ma sposta il cursore (vedi `withoutCarriageReturns`): qui non c'è,
+                // e la riga, riscritta, ne resta senza.
+                .map { span -> if ('\r' in span.text) span.copy(text = span.text.replace("\r", "")) else span }
         } catch (e: Exception) {
             listOf(RichTextSpan(text = ""))
         }

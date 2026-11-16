@@ -1351,10 +1351,11 @@ data class IslandContent(val block: BlockEntity, val scope: List<BlockEntity>)
 /** Come comincia la chiave di un pezzo che continua un gruppo: vedi `PageEditorViewModel.rechunk`. */
 private const val CHUNK_KEY_PREFIX = "chunk:"
 
-/** I numeri delle righe di elenco numerato di queste righe. */
+/** I numeri delle righe di elenco numerato di queste righe, e di quelle che ne tengono il posto (vedi `numberedOrdinals`). */
 private fun List<BlockEntity>.numbersFrom(ordinals: Map<String, Int>): Map<String, Int> {
-    if (none { it.type == BlockType.NUMBERED_LIST_ITEM }) return emptyMap()
-    return filter { it.type == BlockType.NUMBERED_LIST_ITEM }.associate { it.id to (ordinals[it.id] ?: 1) }
+    fun numbered(block: BlockEntity) = block.type == BlockType.NUMBERED_LIST_ITEM || block.heldListType == BlockType.NUMBERED_LIST_ITEM
+    if (none { numbered(it) }) return emptyMap()
+    return filter { numbered(it) }.associate { it.id to (ordinals[it.id] ?: 1) }
 }
 
 /** Il blocco e tutte le righe che ha dentro, a qualunque profondità. */
@@ -4950,7 +4951,8 @@ fun runPrefixes(
             // Il posto dell'elenco: lo stesso marcatore, invisibile.
             val ghost = when (held) {
                 BlockType.BULLET_LIST_ITEM -> bulletMarkerFor(indent) + "  "
-                else -> numberedMarkerFor(indent, (lastNumberAt[indent] ?: 0) + 1) + "  "
+                // Il numero che verrebbe dopo nell'elenco intero (vedi `numberedOrdinals`).
+                else -> numberedMarkerFor(indent, block?.let { ordinals[it.id] } ?: ((lastNumberAt[indent] ?: 0) + 1)) + "  "
             }
             return@map LinePrefix(indent = INDENT_SPACES.repeat(indent), marker = ghost, hidden = true, listType = held)
         }

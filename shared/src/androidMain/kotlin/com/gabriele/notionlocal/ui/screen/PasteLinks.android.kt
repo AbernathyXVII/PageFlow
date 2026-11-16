@@ -55,7 +55,7 @@ actual class LinkClipboard(
 
     /** Il testo che il campo incolla: quello degli appunti o, se c'è solo l'HTML, il suo testo. */
     private fun clipText(item: ClipData.Item): String? =
-        item.text?.toString() ?: item.htmlText?.let { htmlToSpanned(it).toString().trimEnd() }
+        (item.text?.toString() ?: item.htmlText?.let { htmlToSpanned(it).toString().trimEnd() })?.withoutCarriageReturns()
 
     // **Gli appunti dei campi di Compose 1.8 e dopo** (dal 03/11/2026): i
     // campi copiano e incollano da qui, non più da [getText] e [setText].
