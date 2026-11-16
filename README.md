@@ -1126,6 +1126,20 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.8.1 — 17/11/2026 · 00:34 — PC: the arrows of a database's pages also in the peek
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1277 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The two arrows to go to the page before and
+  after in a database are there also in Center peek and Side peek**, at the
+  top right next to the three dots, as at full page (v0.104): the page of the
+  other row takes the place of this one in the same peek, in the order of the
+  view the row was opened from. Before, in the peek they were missing. Found
+  by the user
+- **[Project]** `PeekContent` gives `PageEditorScreen` its
+  `onOpenSiblingRow` (`ensureRowPage`, then `PeekActions.replace`). Test:
+  `DesktopPeekRowArrowsTest` (the middle row in Center peek: down goes to the
+  third, up back to the second)
+
 ### ✏️ v0.155.8 — 16/11/2026 · 21:52 — PC: keyboard shortcuts for the selected text
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1276 tests passed)*
 

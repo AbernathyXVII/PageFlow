@@ -31,7 +31,9 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -153,6 +155,7 @@ private fun PeekContent(peek: PagePeek, factory: ViewModelFactory, actions: Peek
     val owner = remember(peek.pageId) { PeekStoreOwner() }
     DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
     val current by rememberUpdatedState(actions)
+    val scope = rememberCoroutineScope()
     // Dentro il peek una pagina toccata ne prende il posto; con un modo scelto da "Open as…" decide chi sta fuori.
     val opener = remember {
         PageOpener { id, isDatabase, mode ->
@@ -188,7 +191,13 @@ private fun PeekContent(peek: PagePeek, factory: ViewModelFactory, actions: Peek
                     onOpenSearch = actions.openSearch,
                     onOpenUpdates = actions.openUpdates,
                     onNavigateToPage = { id -> actions.replace(id, false) },
-                    onNavigateToDatabase = { id -> actions.replace(id, true) }
+                    onNavigateToDatabase = { id -> actions.replace(id, true) },
+                    // **Le frecce della pagina prima e dopo nel database anche nel peek** (dal
+                    // 17/11/2026, chiesto dall'utente): come a pagina intera (vedi `RowNavigation`),
+                    // la pagina della riga prende il posto di questa nello stesso peek.
+                    onOpenSiblingRow = { rowId ->
+                        scope.launch { factory.pageRepository.ensureRowPage(rowId)?.let { id -> current.replace(id, false) } }
+                    }
                 )
             }
         }
