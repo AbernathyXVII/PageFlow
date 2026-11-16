@@ -174,7 +174,9 @@ class DesktopCalendarTest {
             // da un margine all'altro della pagina, e sopra il numero di oggi c'è la riga dei giorni.
             val headerY = blue.minOf { it.second } - 20
             val background = first.getColor(first.width - 5, first.height - 5)
-            val tinted = (0 until first.width).filter { x -> first.getColor(x, headerY + 40) != background && first.getColor(x, headerY + 40).let { c -> ((c shr 16) and 0xFF) < 70 } }
+            // Fuori dalla colonna di oggi: i suoi eventi (di lunedì, la prima a sinistra) non sono il grigio.
+            val tinted = (0 until first.width).filter { x -> kotlin.math.abs(x - dayX) > first.width / 14 }
+                .filter { x -> first.getColor(x, headerY + 40) != background && first.getColor(x, headerY + 40).let { c -> ((c shr 16) and 0xFF) < 70 } }
             assertTrue("colonne grigie trovate", tinted.isNotEmpty())
             val calendarRight = tinted.max()
             val calendarLeftGuess = tinted.min()

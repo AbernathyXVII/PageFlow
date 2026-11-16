@@ -492,6 +492,26 @@ private fun arrowDirection(event: KeyEvent): Boolean? {
     }
 }
 
+/** Sul PC la freccia a destra (vero) o a sinistra (falso), senza Maiusc, Ctrl o Alt; null per gli altri tasti. */
+private fun sideArrowDirection(event: KeyEvent): Boolean? {
+    if (!isPc || event.type != KeyEventType.KeyDown || event.isShiftPressed || event.isCtrlPressed || event.isAltPressed) return null
+    return when (event.key) {
+        Key.DirectionRight -> true
+        Key.DirectionLeft -> false
+        else -> null
+    }
+}
+
+/**
+ * **Il cursore mai prima dell'a-capo nascosto** (dal 16/11/2026, trovato
+ * dall'utente sul PC: in una voce numerata sotto un titolo grande il cursore
+ * stava prima del numero, e da lì "sinistra" non portava da nessuna parte).
+ * Solo per un cursore che si sposta e basta: il Backspace a inizio campo
+ * toglie l'a-capo e lascia il cursore a zero, ed è così che lo si riconosce.
+ */
+private fun TextFieldValue.caretPastLead(): TextFieldValue =
+    if (selection.collapsed && selection.end < RUN_LEAD.length && text.startsWith(RUN_LEAD)) copy(selection = TextRange(RUN_LEAD.length)) else this
+
 /** Freccia su o giù con Maiusc sul PC (si allarga la selezione): true = giù; null per gli altri tasti. */
 private fun shiftArrowDirection(event: KeyEvent): Boolean? {
     if (!isPc || event.type != KeyEventType.KeyDown || !event.isShiftPressed || event.isCtrlPressed || event.isAltPressed) return null
@@ -549,6 +569,8 @@ private fun arrivalOffset(
     end: Int,
     arrow: PageEditorViewModel.ArrowCaret
 ): Int? {
+    // Con destra e sinistra: all'inizio o in fondo alla riga, e basta.
+    arrow.atEnd?.let { return if (it) end else start }
     if (!coords.isAttached) return null
     val length = layout.layoutInput.text.length
     val line = layout.getLineForOffset(mapping.originalToTransformed(if (arrow.fromAbove) start else end).coerceIn(0, length))
@@ -4889,9 +4911,19 @@ fun runPrefixes(
 
     return lines.indices.map { i ->
         val block = lineBlocks[i]
-        val type = block?.type ?: inheritedListType(carriedType)
+        // Una riga appena nata sotto una che tiene il posto di un elenco ne è
+        // una voce (Invio continua l'elenco); con Maiusc+Invio ne tiene il posto
+        // anche lei (vedi `PageEditorViewModel.writeRunChange`).
+        val heldBelow = block == null && i > 0 && lineBlocks[i - 1]?.id?.let { it == viewModel.pendingHeldAfter } == true
+        val carriedList = carriedType?.takeIf { it == BlockType.BULLET_LIST_ITEM || it == BlockType.NUMBERED_LIST_ITEM } ?: carriedHeld
+        val type = when {
+            block != null -> block.type
+            heldBelow && carriedList != null -> BlockType.PARAGRAPH
+            carriedHeld != null -> carriedHeld!!
+            else -> inheritedListType(carriedType)
+        }
         val indent = (block?.indentLevel ?: carriedIndent).coerceAtLeast(0)
-        val held = if (block != null) block.heldListType else carriedHeld.takeIf { type == BlockType.PARAGRAPH }
+        val held = if (block != null) block.heldListType else carriedList.takeIf { heldBelow }
         // A che numero è arrivata questa riga. Per una riga che il
         // database non conosce ancora — appena creata con un Invio — si
         // prevede: è quella dopo la riga sopra, se quella era un elenco
@@ -4900,6 +4932,7 @@ fun runPrefixes(
             when {
                 block != null -> ordinals[block.id] ?: 1
                 carriedOrdinal != null && carriedIndent == indent -> carriedOrdinal!! + 1
+                carriedHeld != null -> (lastNumberAt[indent] ?: 0) + 1
                 else -> 1
             }
         } else {
@@ -6222,6 +6255,39 @@ private fun MergedTextRunField(
         viewModel.arriveWithArrow(next.id, coords.localToWindow(Offset(layout.getHorizontalPosition(shown, true), 0f)).x, fromAbove = down)
         return true
     }
+    // **Destra e sinistra fuori dal campo** (dal 16/11/2026, trovato dall'utente sul PC: sopra
+    // un divisore, o in fondo a un titolo scritto più grande, "destra" non andava sotto): dal
+    // fondo dell'ultima riga alla riga dopo, dall'inizio della prima a quella prima. Dentro il
+    // campo ci pensa Compose.
+    fun sideKey(event: KeyEvent): Boolean {
+        val right = sideArrowDirection(event) ?: return false
+        if (!fieldValue.selection.collapsed) return false
+        val caret = fieldValue.selection.end
+        if (if (right) caret < fieldValue.text.length else caret > RUN_LEAD.length) return false
+        val here = (if (right) runBlocks.lastOrNull() else runBlocks.firstOrNull()) ?: return false
+        // In cima alla pagina "sinistra" non fa niente: prima del numero non si va.
+        val next = viewModel.lineNextTo(here.id, down = right) ?: return !right
+        viewModel.arriveAtEdge(next.id, atEnd = !right)
+        return true
+    }
+    // **Maiusc+Invio in un elenco** (dal 16/11/2026, chiesto dall'utente): la riga nuova sotto non
+    // ha il numero o il pallino ma ne tiene il posto, come quella che lascia il Backspace (vedi
+    // `BlockAttrs.listIndent`); Invio da lì continua l'elenco. Sulle altre righe è un Invio.
+    fun softEnter(event: KeyEvent): Boolean {
+        if (!isPc || pageLocked || event.type != KeyEventType.KeyDown || !event.isShiftPressed || event.isCtrlPressed || event.isAltPressed) return false
+        if (event.key != Key.Enter && event.key != Key.NumPadEnter) return false
+        val body = bodyOf(fieldValue.text)
+        val from = (fieldValue.selection.min - RUN_LEAD.length).coerceIn(0, body.length)
+        val to = (fieldValue.selection.max - RUN_LEAD.length).coerceIn(from, body.length)
+        val line = runBlocks.getOrNull(lineIndexAt(body, from)) ?: return false
+        if (line.type != BlockType.BULLET_LIST_ITEM && line.type != BlockType.NUMBERED_LIST_ITEM && line.heldListType == null) return false
+        val newBody = body.replaceRange(from, to, "\n")
+        val newText = RUN_LEAD + newBody
+        fieldValue = TextFieldValue(newText, TextRange(RUN_LEAD.length + from + 1))
+        pendingText = newText
+        viewModel.updateRun(runBlocks.map { it.id }, newBody.split('\n'), body.split('\n'), lineIndexAt(newBody, from + 1), holdNewLine = true)
+        return true
+    }
     val arrowCaret by viewModel.arrowCaret.collectAsStateWithLifecycle()
     LaunchedEffect(arrowCaret) {
         val arrow = arrowCaret ?: return@LaunchedEffect
@@ -6503,7 +6569,7 @@ private fun MergedTextRunField(
                             return@BasicTextField
                         }
                         fieldValue = if (shift == 0) {
-                            newValue
+                            if (moveOnly) newValue.caretPastLead() else newValue
                         } else {
                             TextFieldValue(
                                 normalizedText,
@@ -6644,7 +6710,7 @@ private fun MergedTextRunField(
                 // `TextLinks.kt`): prima del correttore, che così non apre
                 // il suo menu sopra il link.
                 .linkTaps(layout = { textLayout }, onLink = openLink)
-                .onPreviewKeyEvent { slashKey(it) || arrowKey(it) }
+                .onPreviewKeyEvent { slashKey(it) || arrowKey(it) || sideKey(it) || softEnter(it) }
                 .proofingTaps(enabled = proofing != null && !pageLocked, layout = { textLayout }) { word, at ->
                     proofMenu = word to at
                 }
@@ -7648,6 +7714,16 @@ private fun BlockRow(
             viewModel.arriveWithArrow(next.id, coords.localToWindow(Offset(layout.getHorizontalPosition(shown, true), 0f)).x, fromAbove = down)
             return true
         }
+        // Destra e sinistra fuori dal campo, come nel campo unito (vedi `sideKey`).
+        fun islandSideKey(event: KeyEvent): Boolean {
+            val right = sideArrowDirection(event) ?: return false
+            val value = editState.fieldValue
+            if (!value.selection.collapsed) return false
+            if (if (right) value.selection.end < value.text.length else value.selection.end > RUN_LEAD.length) return false
+            val next = viewModel.lineNextTo(block.id, down = right) ?: return !right
+            viewModel.arriveAtEdge(next.id, atEnd = !right)
+            return true
+        }
         val islandArrow by viewModel.arrowCaret.collectAsStateWithLifecycle()
         LaunchedEffect(islandArrow) {
             val arrow = islandArrow?.takeIf { it.blockId == block.id } ?: return@LaunchedEffect
@@ -7718,7 +7794,7 @@ private fun BlockRow(
                         // a-capo veniva preso per un Invio e il blocco si
                         // spezzava in due (visto sul telefono).
                         if (newText == oldText) {
-                            editState = editState.copy(fieldValue = newFieldValue)
+                            editState = editState.copy(fieldValue = newFieldValue.caretPastLead())
                             return@BasicTextField
                         }
                         lastSplit = null
@@ -7883,7 +7959,7 @@ private fun BlockRow(
                             viewModel.splitBlockAtMultiple(block, lines, pastedLines, lineKinds)
                         }
                     } else if (newText == oldText) {
-                        editState = editState.copy(fieldValue = newFieldValue)
+                        editState = editState.copy(fieldValue = newFieldValue.caretPastLead())
                     } else {
                         // **Da qui in poi non c'è più nessuna eco da
                         // aspettarsi.** L'eco della tastiera, se arriva,
@@ -8030,7 +8106,7 @@ private fun BlockRow(
                         proofMenu = word to at
                     }
                     .onGloballyPositioned { islandCoords[0] = it }
-                    .onPreviewKeyEvent { islandArrowKey(it) }
+                    .onPreviewKeyEvent { islandArrowKey(it) || islandSideKey(it) }
                     // Col tasto destro, come nel campo unito.
                     .rightClickCaret(
                         enabled = isPc && !pageLocked,

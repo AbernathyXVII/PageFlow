@@ -943,7 +943,8 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
      * nella riga [blockId], all'altezza [x] della finestra, sulla sua prima riga
      * se si viene dall'alto ([fromAbove]), se no sull'ultima.
      */
-    data class ArrowCaret(val blockId: String, val x: Float, val fromAbove: Boolean)
+    /** [atEnd]: arrivando con destra o sinistra, in fondo alla riga (vero) o all'inizio; null con su e giù. */
+    data class ArrowCaret(val blockId: String, val x: Float, val fromAbove: Boolean, val atEnd: Boolean? = null)
 
     private val _arrowCaret = MutableStateFlow<ArrowCaret?>(null)
     val arrowCaret: StateFlow<ArrowCaret?> = _arrowCaret
@@ -951,6 +952,16 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
     /** Il cursore va nella riga [blockId] col fuoco, dove dice [ArrowCaret]. */
     fun arriveWithArrow(blockId: String, x: Float, fromAbove: Boolean) {
         _arrowCaret.value = ArrowCaret(blockId, x, fromAbove)
+        _focusRequestBlockId.value = blockId
+    }
+
+    /**
+     * **Destra e sinistra da un campo all'altro** (dal 16/11/2026, trovato
+     * dall'utente sul PC): il cursore va in fondo alla riga [blockId] ([atEnd])
+     * o al suo inizio, come su e giù ([arriveWithArrow]).
+     */
+    fun arriveAtEdge(blockId: String, atEnd: Boolean) {
+        _arrowCaret.value = ArrowCaret(blockId, 0f, fromAbove = !atEnd, atEnd = atEnd)
         _focusRequestBlockId.value = blockId
     }
 
@@ -4061,6 +4072,14 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
     }
 
     /**
+     * La riga sotto la quale è appena nata, con Maiusc+Invio, una riga che tiene
+     * il posto dell'elenco: finché il database non la conosce, la schermata la
+     * disegna già così (vedi `runPrefixes`).
+     */
+    var pendingHeldAfter: String? = null
+        private set
+
+    /**
      * `linesBefore` è quello che c'era scritto **nel campo** un attimo
      * prima, cioè quello che l'utente vedeva. Non è un doppione dei
      * testi salvati: il salvataggio va a giro per il database e può
@@ -4097,10 +4116,13 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         // con l'a-capo): vedi `PasteLinks.kt`.
         links: List<LinkRange> = emptyList(),
         // Il resto di un incolla (dal 18/10/2026): stili e pezzi da ripulire.
-        paste: PasteFormat = PasteFormat()
+        paste: PasteFormat = PasteFormat(),
+        // Maiusc+Invio in un elenco: la riga nuova ne tiene il posto, senza marcatore (vedi `writeRunChange`).
+        holdNewLine: Boolean = false
     ) {
         // Si sta scrivendo: il campo col fuoco per un po' non si tocca (vedi `keepVisibleTogether`).
         if (newLines != linesBefore) lastTypedAt = System.currentTimeMillis()
+        pendingHeldAfter = if (holdNewLine) runBlockIds.getOrNull((caretLine ?: 0) - 1) else null
         // Qui, subito, solo quello che serve ad Annulla e alla cronologia:
         // guardano la modifica così come l'ha fatta l'utente.
         val shownRun = runOfField(runBlockIds, linesBefore) ?: resolveRun(runBlockIds) ?: return
@@ -4128,7 +4150,7 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                 val unsaved = placeholder?.takeIf { p -> p.pageId == pageId && fresh.none { it.id == p.id } }
                 val all = fresh + listOfNotNull(unsaved)
                 val runBlocks = runOfField(runBlockIds, linesBefore, all) ?: resolveRun(runBlockIds, all) ?: return@withLock
-                writeRunChange(pageId, runBlocks, unsaved, newLines, linesBefore, caretLine, paste.copy(links = paste.links + links))
+                writeRunChange(pageId, runBlocks, unsaved, newLines, linesBefore, caretLine, paste.copy(links = paste.links + links), holdNewLine)
             }
         }
     }
@@ -4219,7 +4241,8 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         newLines: List<String>,
         linesBefore: List<String>?,
         caretLine: Int?,
-        paste: PasteFormat = PasteFormat()
+        paste: PasteFormat = PasteFormat(),
+        holdNewLine: Boolean = false
     ) {
         val stored = runBlocks.map { plainTextOf(it) }
         if (stored == newLines) return
@@ -4251,18 +4274,34 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         // I titoli non si propagano: premere Invio dopo un titolo dà un
         // paragrafo normale, come in qualsiasi editor. Gli elenchi
         // invece sì, così continuare una lista crea altri elementi.
-        val inheritedType = when (referenceBlock?.type) {
-            BlockType.BULLET_LIST_ITEM,
-            BlockType.NUMBERED_LIST_ITEM,
-            // Andando a capo su una casella se ne ottiene un'altra, come
-            // su Notion: è una lista di cose da fare, non una riga sola.
-            // La nuova nasce **non spuntata**, ovviamente.
-            BlockType.CHECKBOX -> referenceBlock.type
-            else -> BlockType.PARAGRAPH
+        // L'elenco di cui la riga di riferimento è una voce, o di cui tiene il posto.
+        val listOfReference = referenceBlock?.type?.takeIf { it == BlockType.BULLET_LIST_ITEM || it == BlockType.NUMBERED_LIST_ITEM }
+            ?: referenceBlock?.heldListType
+        val inheritedType = when {
+            // Maiusc+Invio in un elenco: una riga che ne tiene il posto.
+            holdNewLine && listOfReference != null -> BlockType.PARAGRAPH
+            // **Invio da una riga che tiene il posto di un elenco continua
+            // l'elenco** (dal 16/11/2026, chiesto dall'utente sul PC: prima
+            // la riga nuova teneva il posto anche lei), col numero dopo.
+            referenceBlock?.heldListType != null -> referenceBlock.heldListType!!
+            else -> when (referenceBlock?.type) {
+                BlockType.BULLET_LIST_ITEM,
+                BlockType.NUMBERED_LIST_ITEM,
+                // Andando a capo su una casella se ne ottiene un'altra, come
+                // su Notion: è una lista di cose da fare, non una riga sola.
+                // La nuova nasce **non spuntata**, ovviamente.
+                BlockType.CHECKBOX -> referenceBlock.type
+                else -> BlockType.PARAGRAPH
+            }
         }
-        // Andando a capo da una riga che tiene il posto di un elenco, anche
-        // la nuova lo tiene: resta allineata, come su Word.
-        val inheritedAttrs = referenceBlock?.attrsForNewLine() ?: "{}"
+        val inheritedAttrs = referenceBlock?.attrsForNewLine()?.let { attrs ->
+            when {
+                holdNewLine && listOfReference != null ->
+                    BlockAttrs.encode(BlockAttrs.parse(attrs).copy(listIndent = listOfReference.name))
+                referenceBlock?.heldListType != null -> BlockAttrs.encode(BlockAttrs.parse(attrs).copy(listIndent = null))
+                else -> attrs
+            }
+        } ?: "{}"
 
         // **La formattazione sopravvive alla scrittura.**
         //

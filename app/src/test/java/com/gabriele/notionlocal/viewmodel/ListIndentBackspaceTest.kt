@@ -142,20 +142,38 @@ class ListIndentBackspaceTest {
     }
 
     @Test
-    fun aNewLineFromItKeepsThePlaceToo() {
+    fun enterFromItContinuesTheList() {
         val items = (0 until 3).map { item("A", it) }
         val ids = items.map { it.id }
         open(items)
         viewModel.backspaceAtLineStartDetailed(ids, 1)
         waitFor("senza numero") { shown(ids[1]).heldListType != null }
-        // Invio in fondo alla riga senza numero: anche la nuova resta allineata.
+        // Invio in fondo alla riga senza numero (dal 16/11/2026, chiesto dall'utente):
+        // la nuova è una voce dell'elenco, col numero dopo.
         viewModel.updateRun(ids, listOf("A", "A", "B", "A"), listOf("A", "A", "A"), caretLine = 2)
         waitFor("la riga nuova") { viewModel.blocks.value.size == 4 }
         val added = viewModel.blocks.value.single { it.id !in ids }
+        assertEquals(BlockType.NUMBERED_LIST_ITEM, added.type)
+        assertNull(added.heldListType)
+        assertEquals(2, viewModel.numberedListOrdinal(viewModel.blocks.value, added))
+        assertEquals(3, viewModel.numberedListOrdinal(viewModel.blocks.value, shown(ids[2])))
+        // Prima di arrivare al database la riga nuova si disegna già col suo numero.
+        val drawn = runPrefixes(listOf("A", "A", "B", "A"), viewModel.blocks.value.filter { it.id in ids }.sortedBy { it.orderIndex }, emptyMap(), viewModel)
+        assertEquals(numberedMarkerFor(0, 2) + "  ", drawn[2].marker)
+    }
+
+    @Test
+    fun shiftEnterMakesALineThatKeepsThePlace() {
+        val items = (0 until 2).map { item("A", it) }
+        val ids = items.map { it.id }
+        open(items)
+        // Maiusc+Invio in fondo alla prima voce: la riga nuova non ha numero ma resta allineata.
+        viewModel.updateRun(ids, listOf("A", "B", "A"), listOf("A", "A"), caretLine = 1, holdNewLine = true)
+        waitFor("la riga nuova") { viewModel.blocks.value.size == 3 }
+        val added = viewModel.blocks.value.single { it.id !in ids }
         assertEquals(BlockType.PARAGRAPH, added.type)
         assertEquals(BlockType.NUMBERED_LIST_ITEM, added.heldListType)
-        // E l'ultimo numero resta il 2.
-        assertEquals(2, viewModel.numberedListOrdinal(viewModel.blocks.value, shown(ids[2])))
+        assertEquals(2, viewModel.numberedListOrdinal(viewModel.blocks.value, shown(ids[1])))
     }
 
     @Test

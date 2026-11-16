@@ -1126,6 +1126,35 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.7 — 16/11/2026 · 20:08 — PC: left and right arrows past dividers and titles, Enter and Shift+Enter in lists
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1272 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The right and left arrows go on to the next or
+  previous line also past a divider, a title written bigger than 16 or
+  another block that is a field of its own** (a heading, a quote, a
+  toggle…): at the end of the last line right went nowhere, at the start of
+  the first line left neither, while up and down already went there. Now
+  right goes to the start of the line after and left to the end of the line
+  before, skipping what has no text (dividers, images), like up and down.
+  Found by the user; reproduced in a test (right at the end of the line
+  above a divider: the cursor stayed there)
+- **[Bug fix]** **[💻 PC]** **The cursor no longer ends up before the
+  number** (or the bullet) of the first line of a field, as in a numbered
+  item under a big title: from there left went nowhere. At the top of the
+  page left stays where it is
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Enter on a line that keeps the
+  place of a list continues the list** (the line Backspace leaves at the
+  start of an item, without number but aligned with the others): the new line
+  is an item, with the next number. Before it kept the place too
+- **[Change]** **[💻 PC]** **Shift+Enter in a list item, or in a line that
+  keeps its place, makes a new line without number or bullet** that keeps the
+  place of the list, as Backspace leaves it; Enter from there continues the
+  list. On the other lines Shift+Enter is an Enter, as before
+- **[Project]** `sideArrowDirection`, `sideKey` and `islandSideKey`,
+  `PageEditorViewModel.arriveAtEdge` (`ArrowCaret.atEnd`), `caretPastLead`;
+  `softEnter`, `updateRun(holdNewLine)` and `pendingHeldAfter` (the new line
+  is drawn right away in `runPrefixes`). Test: `DesktopListKeysTest`
+
 ### 🔧 v0.155.6.1 — 13/11/2026 · 23:45 — PC: up and down arrows go to the right line
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1270 tests passed)*
 
