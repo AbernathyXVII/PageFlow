@@ -1126,6 +1126,24 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.7.2 — 16/11/2026 · 21:20 — A bigger title no longer spreads out the lines around it
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1275 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **Changing the size of a line
+  from the Aa bar, the lines above and below keep their space.** A text
+  field has a single line height, that of its largest text: until the
+  enlarged title left the field of the normal lines, all of them took its
+  space, and it left only a moment later, one side at a time (v0.132). Now
+  it leaves right away, above and below together, before the new size is
+  drawn; the caret and the selection stay on the same letters of the title.
+  Found by the user; reproduced in a test (title from 16 to 32: the lines
+  around went from 20 and 17 pixels apart to 49 and 46)
+- **[Project]** `PageEditorViewModel.splitChangedLooks` (called by
+  `transformRun`: the piece is divided into its parts that look the same,
+  the one with the changed line keeps the key); `MergedTextRunField` puts
+  the caret back also when lines leave from both sides. Test:
+  `DesktopTitleSizeSpacingTest` (failed before the fix)
+
 ### 🔧 v0.155.7.1 — 16/11/2026 · 20:36 — Lines in the column of a list: lined up, and the cursor where the text goes
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1273 tests passed)*
 

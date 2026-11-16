@@ -1376,7 +1376,76 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
             updates.add(block.copy(textJson = json.encodeToString(newSpans)))
             _externalSpans.tryEmit(block.id to newSpans)
         }
+        splitChangedLooks(updates)
         viewModelScope.launch { updates.forEach { repository.saveBlock(it) } }
+    }
+
+    /**
+     * **Una riga che cambia aspetto dalla barra Aa esce subito dal suo pezzo**
+     * (dal 16/11/2026, trovato dall'utente sul PC: "quando cambio il font size
+     * di un titolo, mi rifà il bug dello spacing tra i blocchi sopra e sotto").
+     * Un campo ha un'altezza di riga sola (vedi [lineLookOf]): finché il titolo
+     * ingrandito restava nel campo delle righe normali, tutte prendevano il suo
+     * spazio, e [keepVisibleTogether] lo faceva uscire solo al giro dopo, un
+     * lato per volta. Qui il pezzo si divide nelle sue parti che appaiono
+     * uguali, sopra e sotto insieme, **prima** che il corpo nuovo arrivi dal
+     * database. La parte con la riga cambiata tiene la chiave del pezzo, così il
+     * suo campo resta lui col fuoco, e rimette il cursore sulle stesse lettere
+     * (vedi `MergedTextRunField`).
+     */
+    private fun splitChangedLooks(updated: List<BlockEntity>) {
+        if (updated.isEmpty()) return
+        val current = _blocks.value.associateBy { it.id }
+        val changed = updated.filter { u -> current[u.id]?.let { lineLookOf(it) != lineLookOf(u) } == true }.mapTo(HashSet()) { it.id }
+        if (changed.isEmpty()) return
+        val replaced = updated.associateBy { it.id }
+        val top = _blocks.value.filter { it.parentBlockId == null }.map { replaced[it.id] ?: it }
+        val starts = chunkStartsOf(top)
+        val byId = top.associateBy { it.id }
+        class Piece(val key: String?, val ids: MutableList<String>)
+        class Group(val key: String, val pieces: MutableList<Piece>)
+        val groups = mutableListOf<Group>()
+        var group: Group? = null
+        var islandAbove: BlockEntity? = null
+        for (block in top) {
+            if (!isFlowingTextType(block.type)) {
+                group = null
+                islandAbove = block
+                continue
+            }
+            val g = group ?: Group(runGroupKey(islandAbove, block), mutableListOf()).also {
+                groups += it
+                group = it
+            }
+            val key = starts[block.id]
+            if (g.pieces.isEmpty() || key != null) g.pieces += Piece(key, mutableListOf(block.id)) else g.pieces.last().ids += block.id
+        }
+        var split = false
+        for (g in groups) {
+            val pieces = g.pieces.toList()
+            g.pieces.clear()
+            for (piece in pieces) {
+                val keeper = piece.ids.firstOrNull { it in changed }
+                // Le parti che appaiono uguali, nell'ordine.
+                val parts = mutableListOf<MutableList<String>>()
+                for (id in piece.ids) {
+                    val last = parts.lastOrNull()
+                    if (last != null && lineLookOf(byId.getValue(last.last())) == lineLookOf(byId.getValue(id))) last += id else parts += mutableListOf(id)
+                }
+                if (keeper == null || parts.size == 1) {
+                    g.pieces += piece
+                    continue
+                }
+                split = true
+                for (part in parts) g.pieces += Piece(if (keeper in part) piece.key ?: g.key else "look:" + part.first(), part)
+            }
+        }
+        if (!split) return
+        chunkMembers = buildMap {
+            for (g in groups) for (piece in g.pieces) piece.key?.let { put(it, piece.ids.toList()) }
+        }
+        _chunkVersion.value++
+        if (!editing) scheduleRechunk()
     }
 
     /**

@@ -5823,6 +5823,31 @@ private fun MergedTextRunField(
             )
         }
     }
+    // **E ne escono da tutte e due le parti** (dal 16/11/2026): la riga a cui
+    // la barra Aa cambia aspetto si stacca da quelle sopra e sotto in un colpo
+    // solo (vedi `PageEditorViewModel.splitChangedLooks`). Le righe rimaste sono
+    // le stesse, con lo stesso testo: il cursore e la selezione tornano indietro
+    // di quanto erano lunghe quelle uscite sopra.
+    val shownIds = remember(runKey) { arrayOf(runBlocks.map { it.id }) }
+    if (pendingText == null && officialNow != fieldValue.text) {
+        val before = shownIds[0]
+        val now = runBlocks.map { it.id }
+        val at = before.indexOf(now.first())
+        val oldLines = bodyOf(fieldValue.text).split('\n')
+        if (at >= 0 && oldLines.size == before.size && at + now.size <= before.size &&
+            before.subList(at, at + now.size) == now &&
+            oldLines.subList(at, at + now.size).joinToString("\n") == bodyOf(officialNow)
+        ) {
+            val shift = oldLines.take(at).sumOf { it.length + 1 }
+            val sel = fieldValue.selection
+            val end = officialNow.length
+            fieldValue = TextFieldValue(
+                officialNow,
+                TextRange((sel.start - shift).coerceIn(RUN_LEAD.length, end), (sel.end - shift).coerceIn(RUN_LEAD.length, end))
+            )
+        }
+    }
+    shownIds[0] = runBlocks.map { it.id }
     shownFirstLine[0] = runBlocks.first().id
 
     // **Il testo di un link cambiato dalla sua finestrella** (dal 27/10/2026,
