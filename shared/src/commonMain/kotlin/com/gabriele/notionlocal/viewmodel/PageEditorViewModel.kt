@@ -1132,6 +1132,9 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         return touched
     }
 
+    /** Vero se nel campo col cursore c'è del testo selezionato adesso (vedi `SelectionShortcuts`). */
+    fun hasLiveSelection(): Boolean = liveSelection?.let { it.start < it.end } == true
+
     /** Vero se c'è davvero del testo selezionato da colorare. */
     fun hasCapturedSelection(): Boolean =
         capturedSelection?.let { it.start < it.end } == true

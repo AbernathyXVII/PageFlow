@@ -44,17 +44,19 @@ fun zoomKeyOf(event: KeyEvent): Boolean? {
 /**
  * La rotella con Ctrl premuto fa lo zoom e non scorre la pagina: va sul
  * riquadro più esterno della finestra, che la vede prima di tutti. Uno scatto
- * per ogni tacca (il touchpad manda tanti pezzetti: si sommano).
+ * per ogni tacca (il touchpad manda tanti pezzetti: si sommano). Prima chiede
+ * a [selectionFirst] (dal 16/11/2026): con del testo selezionato in una pagina
+ * la rotella ne cambia il corpo, e lo zoom resta com'è.
  */
-fun Modifier.ctrlWheelZoom(): Modifier = pointerInput(Unit) {
+fun Modifier.ctrlWheelZoom(selectionFirst: (bigger: Boolean) -> Boolean = { false }): Modifier = pointerInput(Unit) {
     var pending = 0f
     awaitPointerEventScope {
         while (true) {
             val event = awaitPointerEvent(PointerEventPass.Initial)
             if (event.type != PointerEventType.Scroll || !event.keyboardModifiers.isCtrlPressed) continue
             pending += event.changes.sumOf { it.scrollDelta.y.toDouble() }.toFloat()
-            while (pending <= -1f) { PcZoom.step(bigger = true); pending += 1f }
-            while (pending >= 1f) { PcZoom.step(bigger = false); pending -= 1f }
+            while (pending <= -1f) { if (!selectionFirst(true)) PcZoom.step(bigger = true); pending += 1f }
+            while (pending >= 1f) { if (!selectionFirst(false)) PcZoom.step(bigger = false); pending -= 1f }
             event.changes.forEach { it.consume() }
         }
     }

@@ -13,9 +13,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
-import com.gabriele.notionlocal.ui.theme.zoomKeyOf
 import com.gabriele.notionlocal.ui.theme.ctrlWheelZoom
-import com.gabriele.notionlocal.ui.theme.PcZoom
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
@@ -23,11 +21,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.window.Window
@@ -136,25 +129,7 @@ fun main() {
             icon = icon,
             state = pcWindow.state,
             // Le scorciatoie da tastiera (vedi `AppShortcuts`): la finestra le riceve anche senza un cursore.
-            onPreviewKeyEvent = { event ->
-                // Lo zoom come nei browser: Ctrl + e Ctrl − (vedi `PcZoom`).
-                zoomKeyOf(event)?.let { bigger ->
-                    PcZoom.step(bigger)
-                    return@Window true
-                }
-                val shortcuts = pcWindow.shortcuts
-                val shortcut = when {
-                    event.type != KeyEventType.KeyDown || !event.isCtrlPressed -> null
-                    event.key == Key.F -> shortcuts.openSearch
-                    event.key == Key.N -> shortcuts.newPage
-                    // Le schede, come nei browser (vedi `PcTabs`).
-                    event.key == Key.T -> shortcuts.newTab
-                    event.key == Key.W -> shortcuts.closeTab
-                    else -> null
-                }
-                shortcut?.invoke()
-                shortcut != null
-            }
+            onPreviewKeyEvent = { event -> pcWindow.shortcuts.windowKey(event) }
         ) {
             // Cliccando una notifica la finestra torna davanti, anche se era ridotta a icona.
             if (pcWindow.state === windowState) {
@@ -191,7 +166,7 @@ fun main() {
                     // Tutta la finestra, come Notion (chiesto dall'utente il 09/11/2026): la barra
                     // laterale attaccata al bordo sinistro, la pagina larga quanto lo spazio che resta.
                     // I clic segnati: le finestrelle si aprono lì accanto (vedi `PcPanel.desktop.kt`).
-                    Surface(modifier = Modifier.fillMaxSize().notePresses().ctrlWheelZoom()) {
+                    Surface(modifier = Modifier.fillMaxSize().notePresses().ctrlWheelZoom { bigger -> pcWindow.shortcuts.resizeSelection(bigger) }) {
                         AppNavHost(factory = factory, windowTabs = pcWindow.tabs)
                     }
                 }

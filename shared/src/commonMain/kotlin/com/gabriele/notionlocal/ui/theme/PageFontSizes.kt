@@ -9,6 +9,13 @@ const val DEFAULT_PAGE_FONT_SIZE = 16
 const val MIN_PAGE_FONT_SIZE = 5
 const val MAX_PAGE_FONT_SIZE = 72
 
+/** Gli scatti di Ctrl + e Ctrl − sul testo selezionato, come in Word (dal 16/11/2026). */
+private val FONT_SIZE_STEPS = listOf(5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36, 40, 48, 56, 64, 72)
+
+/** Il corpo dopo uno scatto da [current], più grande ([bigger]) o più piccolo; ai capi resta [current]. */
+fun nextFontSize(current: Int, bigger: Boolean): Int =
+    if (bigger) FONT_SIZE_STEPS.firstOrNull { it > current } ?: current else FONT_SIZE_STEPS.lastOrNull { it < current } ?: current
+
 /**
  * **Sul PC il testo è grande come in Notion** (dal 11/11/2026, chiesto
  * dall'utente con una foto di Notion accanto a PageFlow, misurata pixel per

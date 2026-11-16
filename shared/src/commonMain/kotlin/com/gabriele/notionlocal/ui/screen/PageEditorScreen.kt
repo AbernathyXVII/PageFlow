@@ -74,6 +74,9 @@ import com.gabriele.notionlocal.ui.theme.lookalike
 import com.gabriele.notionlocal.ui.theme.group
 import com.gabriele.notionlocal.ui.theme.fontFamily
 import com.gabriele.notionlocal.ui.theme.DEFAULT_PAGE_FONT_SIZE
+import com.gabriele.notionlocal.ui.theme.nextFontSize
+import com.gabriele.notionlocal.ui.navigation.LocalShortcuts
+import com.gabriele.notionlocal.ui.navigation.SelectionShortcuts
 import androidx.compose.material3.OutlinedButton
 import com.gabriele.notionlocal.ui.theme.MIN_PAGE_FONT_SIZE
 import com.gabriele.notionlocal.ui.theme.MAX_PAGE_FONT_SIZE
@@ -1884,6 +1887,38 @@ private fun PageEditorContent(
     // I pezzi delle pagine lunghe si ridividono solo quando non si scrive:
     // vedi `PageEditorViewModel.chunkMembers`.
     LaunchedEffect(focusedBlockId) { viewModel.setEditing(focusedBlockId != null) }
+
+    // **Le scorciatoie del testo selezionato** (dal 16/11/2026, chiesto dall'utente sul PC):
+    // Ctrl+B, I, U, S, Maiusc+S e il corpo con Ctrl +/− o la rotella. La finestra le chiede
+    // qui (vedi `SelectionShortcuts`); lo stile passa per la stessa strada dei pulsanti della
+    // barra Aa, il corpo per quella della finestrella. Senza testo selezionato: niente.
+    val windowShortcuts = LocalShortcuts.current
+    val focusedNow by rememberUpdatedState(focusedBlockId)
+    val selectionShortcuts = remember(viewModel) {
+        object : SelectionShortcuts {
+            override fun format(type: FormatType): Boolean {
+                val id = focusedNow ?: return false
+                if (!viewModel.hasLiveSelection()) return false
+                viewModel.requestFormat(id, type)
+                return true
+            }
+
+            override fun resize(bigger: Boolean): Boolean {
+                if (focusedNow == null || !viewModel.hasLiveSelection()) return false
+                val now = viewModel.selectionTypography.value.size ?: DEFAULT_PAGE_FONT_SIZE
+                val next = nextFontSize(now, bigger)
+                if (next != now) {
+                    viewModel.captureSelection()
+                    viewModel.applySizeToCapturedSelection(next)
+                }
+                return true
+            }
+        }
+    }
+    DisposableEffect(windowShortcuts, selectionShortcuts) {
+        windowShortcuts.selection += selectionShortcuts
+        onDispose { windowShortcuts.selection -= selectionShortcuts }
+    }
 
     // Chiusa la tastiera, il cursore si spegne.
     //

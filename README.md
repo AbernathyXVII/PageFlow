@@ -1126,6 +1126,24 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.8 — 16/11/2026 · 21:52 — PC: keyboard shortcuts for the selected text
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1276 tests passed)*
+
+- **[Change]** **[💻 PC]** **Shortcuts on the selected text of a page**:
+  Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+S strikethrough and
+  Ctrl+Shift+S spoiler, as the buttons of the Aa bar. Without selected text
+  they do nothing
+- **[Change]** **[💻 PC]** **Ctrl + and Ctrl −, or the wheel with Ctrl,
+  change the size of the selected text**, by the steps of Word (… 14, 16,
+  18, 20, 22, 24 …, from 5 to 72), and the zoom stays as it is. Without
+  selected text they are still the zoom of the whole app
+- **[Project]** `SelectionShortcuts` in `AppShortcuts.kt` (every open page
+  says whether it has selected text, and changes it), `Shortcuts.windowKey`
+  (the keys of the PC window, now in the common code), `ctrlWheelZoom`
+  asks the page first, `nextFontSize`. Test:
+  `DesktopSelectionShortcutsTest` (the five styles, Ctrl + twice and Ctrl −
+  once, the wheel; without a selection Ctrl+B does nothing and Ctrl + zooms)
+
 ### 🔧 v0.155.7.2 — 16/11/2026 · 21:20 — A bigger title no longer spreads out the lines around it
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1275 tests passed)*
 
