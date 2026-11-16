@@ -110,7 +110,16 @@ data class PageParagraph(
     val pcCoverHeight: Float? = null,
     val pcCoverScale: Float? = null,
     val pcCoverOffsetX: Float? = null,
-    val pcCoverOffsetY: Float? = null
+    val pcCoverOffsetY: Float? = null,
+    /**
+     * **La copertina intera** (dal 16/11/2026, chiesto dall'utente per le
+     * pagine di un suo database): `true` = nella striscia della pagina
+     * l'immagine si vede tutta, ridotta per starci e al centro, invece di
+     * riempirla tagliando sopra e sotto (sul PC la striscia è molto più larga
+     * che alta). Senza voce nei menu: la mette uno script sulle pagine che la
+     * vogliono.
+     */
+    val coverFit: Boolean? = null
 ) {
     companion object {
         private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
@@ -159,7 +168,7 @@ data class ParagraphLook(
     /** Vero se nessun livello cambia niente: la pagina si disegna come prima. */
     val isPlain: Boolean
         // La larghezza della pagina non cambia gli spazi fra i blocchi.
-        get() = page.copy(fullWidth = null) == PageParagraph() && appSpacing == 0 && appGaps.of(BlockType.NUMBERED_LIST_ITEM) == null &&
+        get() = page.copy(fullWidth = null, coverFit = null) == PageParagraph() && appSpacing == 0 && appGaps.of(BlockType.NUMBERED_LIST_ITEM) == null &&
             appGaps.of(BlockType.BULLET_LIST_ITEM) == null && appGaps.of(BlockType.CHECKBOX) == null
 }
 

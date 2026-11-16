@@ -15,6 +15,7 @@ import com.gabriele.notionlocal.ui.theme.DarkSurface
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -272,7 +273,9 @@ fun CoverImage(
     offsetFraction: Offset,
     onImageSize: (IntSize) -> Unit,
     modifier: Modifier = Modifier,
-    clampOffset: Boolean = false
+    clampOffset: Boolean = false,
+    // L'immagine intera, ridotta per starci, al centro: vedi `PageParagraph.coverFit`.
+    whole: Boolean = false
 ) {
     var box by remember { mutableStateOf(IntSize.Zero) }
     var bitmap by remember(fileName) { mutableStateOf<ImageBitmap?>(null) }
@@ -298,10 +301,16 @@ fun CoverImage(
             Box(modifier = Modifier.matchParentSize().background(DarkSurface))
         } else {
             val density = LocalDensity.current
-            val fit = coverFitFactor(box, image.width, image.height) * scale
+            val fit = if (whole) {
+                min(box.width.toFloat() / image.width, box.height.toFloat() / image.height)
+            } else {
+                coverFitFactor(box, image.width, image.height) * scale
+            }
             val drawnWidth = image.width * fit
             val drawnHeight = image.height * fit
-            val limit = if (clampOffset) {
+            val limit = if (whole) {
+                Offset.Zero
+            } else if (clampOffset) {
                 coverPanLimit(box, image.width, image.height, scale)
             } else {
                 null

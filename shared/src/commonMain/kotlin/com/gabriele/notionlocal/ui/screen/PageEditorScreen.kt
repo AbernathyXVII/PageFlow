@@ -2568,6 +2568,8 @@ private fun PageEditorContent(
                             onImageSize = { coverImageSize = it },
                             // Sul PC la striscia cambia altezza: l'immagine non deve lasciare bordi vuoti.
                             clampOffset = isPc,
+                            // Mentre la si sposta, l'inquadratura di sempre.
+                            whole = page?.paragraph?.coverFit == true && !movingCover,
                             modifier = Modifier
                                 .matchParentSize()
                                 .then(

@@ -560,6 +560,42 @@ class DesktopBlockSelectionTest {
     }
 
     /**
+     * **La copertina intera, se la pagina lo chiede** (16/11/2026, chiesto
+     * dall'utente per le pagine di un suo database): con `coverFit` si vedono
+     * la riga rossa in cima all'immagine e quella blu in fondo; senza, la
+     * striscia larga e bassa del PC le taglia via tutte e due.
+     */
+    @Test
+    fun theWholeCoverWhenThePageAsksForIt() {
+        runBlocking {
+            val bitmap = Bitmap().apply { allocN32Pixels(1300, 540) }
+            val canvas = org.jetbrains.skia.Canvas(bitmap)
+            canvas.clear(0xFF22AA44.toInt())
+            canvas.drawRect(org.jetbrains.skia.Rect.makeXYWH(0f, 0f, 1300f, 40f), org.jetbrains.skia.Paint().apply { color = 0xFFCC2233.toInt() })
+            canvas.drawRect(org.jetbrains.skia.Rect.makeXYWH(0f, 500f, 1300f, 40f), org.jetbrains.skia.Paint().apply { color = 0xFF2233CC.toInt() })
+            PageImageStore(context).fileFor("intera.png")
+                .writeBytes(org.jetbrains.skia.Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "intera", title = "Intera", coverImage = "intera.png", paragraphJson = """{"coverFit":true}"""))
+            repo.createPage(PageEntity(id = "tagliata", title = "Tagliata", coverImage = "intera.png"))
+        }
+        fun colors(page: Bitmap): Pair<Boolean, Boolean> {
+            fun red(c: Int) = ((c shr 16) and 0xFF) > 150 && ((c shr 8) and 0xFF) < 90 && (c and 0xFF) < 90
+            fun blue(c: Int) = (c and 0xFF) > 150 && ((c shr 16) and 0xFF) < 90
+            val strip = (0 until 200).flatMap { y -> (0 until page.width step 5).map { x -> page.getColor(x, y) } }
+            return strip.any { red(it) } to strip.any { blue(it) }
+        }
+        withPage("intera") { _, frames, picture ->
+            frames(20)
+            assertEquals("intera: rosso in cima e blu in fondo", true to true, colors(picture()))
+        }
+        withPage("tagliata") { _, frames, picture ->
+            frames(20)
+            assertEquals("tagliata: né rosso né blu", false to false, colors(picture()))
+        }
+    }
+
+    /**
      * **La copertina si allunga trascinandone il bordo di sotto** (13/11/2026,
      * chiesto dall'utente, solo sul PC): 100 punti più giù la striscia è più
      * alta di 100, l'altezza si salva fra quelle del PC e l'inquadratura del
