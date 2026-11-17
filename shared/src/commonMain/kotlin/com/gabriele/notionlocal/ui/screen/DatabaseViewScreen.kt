@@ -1658,7 +1658,16 @@ private fun DatabaseViewBody(
         // viste, e tutte dentro una pagina, sono come prima (vedi `RowLimits`).
         val lazyBody = if (!embedded && layout in LAZY_FULL_PAGE_LAYOUTS) LazyBody(newRowTick, newRowsButton) else null
 
-        CompositionLocalProvider(LocalStickyViewport provides (if (embedded) LocalStickyViewport.current else ownViewport)) {
+        // **Le righe si spostano trascinandole col mouse** (dal 17/11/2026, vedi `RowDrag`): sul
+        // PC, nella tabella e nell'elenco, quando nessun ordinamento decide il loro posto e il
+        // database non è bloccato — le regole di "Move up" e "Move down".
+        val rowsSorted = page?.sortRules().orEmpty().existingIn(state.columns).isNotEmpty()
+        val rowDrag = remember(viewModel) { RowDrag { row, target, before -> viewModel.moveRowNextTo(row, target, before) } }
+            .takeIf { isPc && !rowsSorted && !contentLocked }
+        CompositionLocalProvider(
+            LocalStickyViewport provides (if (embedded) LocalStickyViewport.current else ownViewport),
+            LocalRowDrag provides rowDrag
+        ) {
         Column(
             modifier = if (embedded) {
                 Modifier.fillMaxWidth()
@@ -2460,7 +2469,8 @@ private fun TableLayout(
                 onMoveOptions = onMoveOptions,
                 onSetOptionSecondColor = onSetOptionSecondColor,
                 onTitleEditing = onTitleEditing,
-                namePlace = namePlace
+                namePlace = namePlace,
+                group = place.path
             )
             HorizontalDivider(modifier = Modifier.width(tableWidth))
         }
@@ -2684,7 +2694,8 @@ private fun TableLayout(
                     onMoveOptions = onMoveOptions,
                     onSetOptionSecondColor = onSetOptionSecondColor,
                     onTitleEditing = onTitleEditing,
-                    namePlace = namePlace
+                    namePlace = namePlace,
+                    group = place.path
                 )
                 HorizontalDivider(modifier = Modifier.width(tableWidth))
                 }
@@ -3469,11 +3480,14 @@ private fun TableBodyRow(
     onSetOptionSecondColor: (String, String, String?, Boolean) -> Unit,
     onTitleEditing: (Boolean) -> Unit = {},
     /** Dove sta Name fra `columns` (vedi `TableHeaderRow`). */
-    namePlace: Int = 0
+    namePlace: Int = 0,
+    /** Il gruppo in cui sta (le chiavi, dal primo livello): si trascina solo fra le sue righe (vedi `RowDrag`). */
+    group: List<String> = emptyList()
 ) {
     // **"Wrap cells"**: la riga è alta quanto la sua cella più alta, e
     // tutte le celle (e le linee fra loro) si allungano fin lì.
     val wrap = LocalWrapCells.current
+    RowDragBox(row, group) {
     Row(modifier = Modifier.foundInside(row.id).then(if (wrap) Modifier.height(IntrinsicSize.Min) else Modifier)) {
         TableSlots(
             columns = columns,
@@ -3517,6 +3531,7 @@ private fun TableBodyRow(
             CellSeparator(column.id, stretch = wrap)
         }
         Box(modifier = Modifier.width(ADD_PROPERTY_WIDTH).height(ROW_HEIGHT))
+    }
     }
 }
 
@@ -5053,6 +5068,7 @@ private fun ListRow(
     onOpenRow: (DatabaseRowEntity) -> Unit,
     onRowLongPress: (DatabaseRowEntity) -> Unit
 ) {
+    RowDragBox(row, emptyList()) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -5090,6 +5106,7 @@ private fun ListRow(
                 CardPropertyValue(column, value, linkLabel = state.linkLabels[row.id to column.id])
             }
         }
+    }
     }
     // Niente linea fra una riga e l'altra (tolta il 05/10/2026,
     // chiesto dall'utente): come su Notion, le righe si separano

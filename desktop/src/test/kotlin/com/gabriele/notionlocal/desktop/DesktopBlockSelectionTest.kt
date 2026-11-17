@@ -761,7 +761,8 @@ class DesktopBlockSelectionTest {
             val middle = rows[rows.size - 4]
             onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, middle.center()), pressed = false) }
             frames(5)
-            val fromRow = dotsRows(picture(), clean)
+            // Senza la maniglia della riga sotto il mouse (v0.155.9: le righe si trascinano, la maniglia sta nella stessa colonna).
+            val fromRow = dotsRows(picture(), clean).filter { abs(it - middle.center()) > 14 }
             // A metà di una riga vera, sopra l'elenco (il titolo del database), non accanto alla riga del mouse.
             val title = rows.firstOrNull { abs(fromRow.average() - it.center()) <= 2 }
             assertTrue("puntini $fromRow, righe $rows (mouse sulla riga $middle)", fromRow.isNotEmpty() && title != null && title.last < middle.first - 100)
@@ -819,7 +820,8 @@ class DesktopBlockSelectionTest {
             fun hover(y: Float): List<Int> {
                 onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, y), pressed = false) }
                 frames(5)
-                return dotsRows(picture(), clean)
+                // Senza la maniglia della riga sotto il mouse (v0.155.9).
+                return dotsRows(picture(), clean).filter { abs(it - y) > 14 }
             }
             val firstTitle = rows.first { it.first > pageTitle.last + 40 }
             val checks = rows.filter { it.first > firstTitle.last + 40 && it.last < 650 }.map { band ->

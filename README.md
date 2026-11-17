@@ -1126,6 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.9 — 17/11/2026 · 08:41 — PC: a database's rows move by dragging them with the mouse
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1278 tests passed)*
+
+- **[Change]** **[💻 PC]** **A database's rows move by dragging them**, in
+  the table and list views: with the mouse over a row, the handle ⋮⋮ appears
+  in its left margin; held and dragged, the row turns pale and a blue line
+  shows where it will go; released, it goes there. The same rules as "Move
+  up" and "Move down": only when no Sort decides the order of the rows (with
+  one the handle isn't there) and the database isn't locked, and only among
+  the rows of the same group and level (a sub-row among its sisters)
+- **[Project]** `RowDrag.kt` (`RowDrag`: where the rows on the screen are,
+  the row dragged and where it will go; `RowDragBox` around the rows of
+  `TableBodyRow` and `ListRow`; `LocalRowDrag` given by `DatabaseViewBody`
+  only when moving is allowed), then `moveRowNextTo` as for "Move up".
+  Test: `DesktopRowDragTest` (the first of four rows dragged below the
+  third; with a Sort by name no handle); `DesktopBlockSelectionTest` and
+  `DesktopColumnsTest` skip the handle of the row under the mouse when they
+  look for the dots of the block
+
 ### 🔧 v0.155.8.1 — 17/11/2026 · 00:34 — PC: the arrows of a database's pages also in the peek
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1277 tests passed)*
 

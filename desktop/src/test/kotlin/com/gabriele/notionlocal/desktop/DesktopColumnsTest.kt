@@ -825,7 +825,8 @@ class DesktopColumnsTest {
             mouse("move", 300f, title.last + 111f)
             val hovered = shot("columns_databases_dots")
             val titleLeft = (0 until 400).first { x -> (title.first..title.last).any { y -> bright(x, y) } }
-            val dots = (0 until hovered.height).filter { y -> (titleLeft - 30 until titleLeft - 2).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
+            // Senza la maniglia della riga sotto il mouse (v0.155.9).
+            val dots = (0 until hovered.height).filter { y -> abs(y - (title.last + 110)) > 20 && (titleLeft - 30 until titleLeft - 2).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
             val center = (title.first + title.last) / 2f
             assertTrue("puntini $dots, titolo $title", dots.isNotEmpty() && abs(dots.average() - center) <= 2.0)
         }

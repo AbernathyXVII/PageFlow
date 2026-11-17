@@ -374,6 +374,8 @@ object DbStrings {
     val center get() = t("Center", "Centra", "Zentrieren", "Centrer", "Centrar", "居中", "가운데 정렬", "中央揃え")
     val alignRight get() = t("Align right", "Allinea a destra", "Rechtsbündig", "Aligner à droite", "Alinear a la derecha", "右对齐", "오른쪽 정렬", "右揃え")
     val hide get() = t("Hide", "Nascondi", "Ausblenden", "Masquer", "Ocultar", "隐藏", "숨기기", "非表示")
+    /** La maniglia per trascinare una riga (vedi `RowDrag`). */
+    val moveRow get() = t("Drag to move", "Trascina per spostare", "Zum Verschieben ziehen", "Faire glisser pour déplacer", "Arrastra para mover", "拖动以移动", "끌어서 이동", "ドラッグして移動")
     val rowsFollowSort get() = t(
         "The rows follow the sort: remove it to move them by hand.",
         "Le righe seguono l'ordinamento: toglilo per spostarle a mano.",
