@@ -55,6 +55,19 @@ class LineBlocksTest {
         assertEquals(1, aligned.removedAt)
     }
 
+    /**
+     * Fra righe vuote tutte uguali ogni riga tiene il suo blocco, come farà il database (dal
+     * 17/11/2026): le nuove dopo quelle che c'erano, la riga unita via è quella sotto.
+     */
+    @Test
+    fun amongEmptyLinesEachLineKeepsItsOwnBlock() {
+        val blocks = listOf(block("Uno")) + (1..3).map { block("") }
+        // L'ultima unita a quella sopra: le altre restano le loro.
+        assertEquals(blocks.take(3), blocksOfLines(listOf("Uno", "", ""), blocks, ::textOf).blocks)
+        // Due Invio in fondo, il database ancora indietro: le nuove sono le ultime.
+        assertEquals(blocks + listOf(null, null), blocksOfLines(listOf("Uno", "", "", "", "", ""), blocks, ::textOf).blocks)
+    }
+
     @Test
     fun withTheSameNumberOfLinesEachLineHasTheBlockInItsPlace() {
         val blocks = listOf(block("a"), block("b"))

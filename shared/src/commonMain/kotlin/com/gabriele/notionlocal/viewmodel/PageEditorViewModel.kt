@@ -3683,6 +3683,20 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
      * riporterebbe indietro anche il testo, se la copia in memoria
      * fosse più vecchia di quello che si sta scrivendo.
      */
+    /**
+     * Invio su una riga **vuota** che tiene il posto di un elenco (dal 17/11/2026, trovato
+     * dall'utente): la riga torna una voce, col suo pallino o il numero, e nessuna riga nuova.
+     * Prima la voce nuova nasceva sotto e questa restava lì, invisibile. False se non è il caso.
+     */
+    fun resumeHeldLine(runBlockIds: List<String>, lineIndex: Int): Boolean {
+        val block = resolveRun(runBlockIds)?.getOrNull(lineIndex) ?: return false
+        val list = block.heldListType ?: return false
+        if (plainTextOf(block).isNotEmpty()) return false
+        snapshotForStructuralChange()
+        viewModelScope.launch { blocksDb.setBlockType(block.id, list) }
+        return true
+    }
+
     fun backspaceAtLineStart(runBlockIds: List<String>, lineIndex: Int): Boolean =
         backspaceAtLineStartDetailed(runBlockIds, lineIndex) != BackspaceOutcome.NOTHING
 

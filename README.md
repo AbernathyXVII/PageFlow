@@ -1126,6 +1126,30 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.19.1 — 17/11/2026 · 20:16 — Enter on an empty line of a list, and Backspace on its last item
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1298 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **Enter on an empty line that
+  keeps the place of a list makes it an item again**: on the line Backspace
+  leaves at the start of an item (no bullet, but aligned with the others),
+  empty, Enter made the new item on the line below and this one stayed
+  there, an invisible bullet under the sub-list. Now the line itself gets
+  its bullet (or its number) back, at its level, and no line is added. A
+  line with text still continues the list below, as before. Found by the
+  user; reproduced in a test (from B: Enter, Backspace, Enter gave four
+  lines, one of them invisible)
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **Backspace on the last of many
+  empty items no longer makes the list jump**: while the database was a
+  moment behind, every empty line took the block of the line below, so the
+  item above the removed one lost its number for an instant and the cursor
+  jumped to the left. Now the lines keep their own blocks, as the database
+  will have them; the same holds for the new lines of Enter pressed fast.
+  Found by the user; reproduced in a test frame by frame (7 numbers, then 6,
+  then 7 again)
+- **[Project]** `blocksOfLines` matches from the start first, then from the
+  end; `enteredOnEmptyLine` and `PageEditorViewModel.resumeHeldLine`. Tests:
+  `DesktopHeldEnterTest` (both failed before the fix), `LineBlocksTest`
+
 ### ✏️ v0.155.19 — 17/11/2026 · 19:42 — Still numbers with Enter pressed fast, and "- " starts a bulleted list
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1293 tests passed)*
 

@@ -1316,6 +1316,15 @@ private fun spoilerJustClosed(oldBody: String, newBody: String, caret: Int): Spo
     return SpoilerMarkup(open = open, contentStart = open + 2, contentEnd = caret - 2)
 }
 
+/** La riga vuota su cui si è appena premuto Invio, o -1. */
+private fun enteredOnEmptyLine(oldBody: String, newBody: String, caret: Int): Int {
+    val at = caret - 1
+    if (newBody.length != oldBody.length + 1 || at < 0 || at >= newBody.length || newBody[at] != '\n') return -1
+    if (newBody.removeRange(at, at + 1) != oldBody) return -1
+    val empty = (at == 0 || oldBody[at - 1] == '\n') && (at == oldBody.length || oldBody[at] == '\n')
+    return if (empty) oldBody.take(at).count { it == '\n' } else -1
+}
+
 private fun backspacedLineStart(oldBody: String, newBody: String, caret: Int): Int {
     if (newBody.length != oldBody.length - 1) return -1
     if (caret < 0 || caret >= oldBody.length) return -1
@@ -4904,10 +4913,10 @@ class LineBlocks(val blocks: List<BlockEntity?>, val insertedAt: Int, val remove
  * la loro formattazione, e si vedevano **scattare** (trovato dall'utente il
  * 26/09/2026, andando a capo in cima alla pagina principale).
  *
- * Si cerca **prima dalla fine**: le righe in fondo che combaciano ancora
- * coi loro blocchi dicono quante ce ne sono dopo quelle nate o sparite.
- * Dall'inizio da solo non funziona, perché andando a capo anche la riga
- * divisa cambia testo. Poi dall'inizio, fin dove si può; in mezzo restano
+ * Si cerca dall'inizio, fin dove le righe combaciano coi loro blocchi, poi
+ * dalla fine: le righe in fondo che combaciano ancora dicono quante ce ne
+ * sono dopo quelle nate o sparite (andando a capo la riga divisa cambia
+ * testo, e lì l'inizio si ferma). In mezzo restano
  * le righe cambiate, che prendono i blocchi di mezzo nell'ordine, e quelle
  * in più sono nuove. Vale anche con più righe di differenza — Invio premuti
  * in fretta, che il database scrive uno alla volta.
@@ -4920,11 +4929,15 @@ fun blocksOfLines(
     val n = lines.size
     val m = runBlocks.size
     if (n == m) return LineBlocks(runBlocks, -1, -1)
-    var tail = 0
-    while (tail < n && tail < m && lines[n - 1 - tail] == textOf(runBlocks[m - 1 - tail])) tail++
+    // **Prima dall'inizio** (dal 17/11/2026): fra righe vuote tutte uguali, è dove il database mette
+    // le nuove (dopo quelle che c'erano) e toglie quelle unite (la riga sotto). Dalla fine, ogni
+    // riga prendeva il blocco di quella sotto: col Backspace sull'ultima di tante voci vuote la
+    // riga sopra perdeva il numero per un fotogramma (trovato dall'utente: "la lista mi scatta").
     var head = 0
-    val maxHead = minOf(n, m) - tail
-    while (head < maxHead && lines[head] == textOf(runBlocks[head])) head++
+    while (head < n && head < m && lines[head] == textOf(runBlocks[head])) head++
+    var tail = 0
+    val maxTail = minOf(n, m) - head
+    while (tail < maxTail && lines[n - 1 - tail] == textOf(runBlocks[m - 1 - tail])) tail++
     val blocks = lines.indices.map { i ->
         when {
             i < head -> runBlocks[i]
@@ -6701,6 +6714,10 @@ private fun MergedTextRunField(
                             runBlocks.map { it.id },
                             backspacedLine
                         ) != BackspaceOutcome.NOTHING
+                    // **Invio su una riga vuota che tiene il posto di un elenco** (dal 17/11/2026, trovato
+                    // dall'utente): la riga torna una voce, invece di restare lì invisibile sopra la nuova.
+                    val enteredLine = if (stepUndone) -1 else enteredOnEmptyLine(oldBody, newBody, caret)
+                    val heldResumed = enteredLine >= 0 && viewModel.resumeHeldLine(runBlocks.map { it.id }, enteredLine)
 
                     if (spoilerBody != null) {
                         val spoilerText = RUN_LEAD + spoilerBody
@@ -6736,6 +6753,8 @@ private fun MergedTextRunField(
                         var caretAtLineStart = 1
                         for (i in 0 until backspacedLine) caretAtLineStart += oldLines[i].length + 1
                         fieldValue = TextFieldValue(oldText, TextRange(caretAtLineStart))
+                    } else if (heldResumed) {
+                        fieldValue = TextFieldValue(oldText, TextRange(RUN_LEAD.length + caret - 1))
                     } else {
                         // Il cursore va dove lo si mette, anche sulle righe vuote in
                         // fondo (dal 17/11/2026: prima tornava sulla prima di loro, vedi
