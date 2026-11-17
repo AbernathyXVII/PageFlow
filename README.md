@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### 🔧 v0.155.16.1 — 17/11/2026 · 12:39 — The empty lines at the bottom of a page can be reached again
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1288 tests passed)*
+*(Claude Code on the PC; tested by the user on 17/11/2026; installed on the phone; 1288 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The empty lines at the bottom
   of a page can be reached**: with several empty lines after the last text,
