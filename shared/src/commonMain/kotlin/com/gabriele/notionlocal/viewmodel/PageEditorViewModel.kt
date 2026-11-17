@@ -4089,9 +4089,9 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
      * titolo, non si converte niente. Restituisce true se ha convertito,
      * così il campo sa che deve togliere il testo digitato.
      */
-    fun startNumberedListAtLine(runBlockIds: List<String>, lineIndex: Int, startNumber: Int): Boolean {
+    fun startNumberedListAtLine(runBlockIds: List<String>, lineIndex: Int, startNumber: Int, bullet: Boolean = false): Boolean {
         val block = resolveRun(runBlockIds)?.getOrNull(lineIndex) ?: return false
-        return startNumberedList(block, startNumber)
+        return startNumberedList(block, startNumber, bullet)
     }
 
     /**
@@ -4110,19 +4110,20 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
      * nel testo condiviso — e l'utente ha trovato che dentro un toggle
      * "le Numbered list non vengono attivate".
      */
-    fun startNumberedListInBlock(blockId: String, startNumber: Int): Boolean {
+    fun startNumberedListInBlock(blockId: String, startNumber: Int, bullet: Boolean = false): Boolean {
         val block = _blocks.value.find { it.id == blockId } ?: return false
-        return startNumberedList(block, startNumber)
+        return startNumberedList(block, startNumber, bullet)
     }
 
-    private fun startNumberedList(block: BlockEntity, startNumber: Int): Boolean {
+    /** "5." fa un elenco numerato che parte da 5; con [bullet] ("- ", dal 17/11/2026) un elenco puntato. */
+    private fun startNumberedList(block: BlockEntity, startNumber: Int, bullet: Boolean = false): Boolean {
         if (block.type != BlockType.PARAGRAPH) return false
         snapshotForStructuralChange()
         viewModelScope.launch {
             repository.saveBlock(
                 block.copy(
-                    type = BlockType.NUMBERED_LIST_ITEM,
-                    numberStartsAt = startNumber,
+                    type = if (bullet) BlockType.BULLET_LIST_ITEM else BlockType.NUMBERED_LIST_ITEM,
+                    numberStartsAt = if (bullet) null else startNumber,
                     textJson = json.encodeToString(listOf(RichTextSpan(text = "")))
                 )
             )

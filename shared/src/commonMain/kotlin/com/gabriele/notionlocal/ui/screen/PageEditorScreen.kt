@@ -1197,8 +1197,11 @@ private fun bodyOf(fieldText: String): String =
  * essere fusa con quella sopra, o -1 se il cambiamento è un altro
  * qualsiasi.
  */
-/** Dove comincia la riga e da che numero deve partire l'elenco appena richiesto scrivendo "5.". */
-private data class NumberedListPrefix(val lineIndex: Int, val startNumber: Int, val lineStart: Int)
+/**
+ * Dove comincia la riga e da che numero deve partire l'elenco appena
+ * richiesto scrivendo "5."; con [bullet] un elenco puntato, chiesto con "- ".
+ */
+private data class NumberedListPrefix(val lineIndex: Int, val startNumber: Int, val lineStart: Int, val bullet: Boolean = false)
 
 /**
  * Riconosce "ho appena digitato il punto di un `5.` a inizio blocco".
@@ -1212,6 +1215,15 @@ private data class NumberedListPrefix(val lineIndex: Int, val startNumber: Int, 
 private fun numberedListPrefixJustTyped(oldBody: String, newBody: String, caret: Int): NumberedListPrefix? {
     if (newBody.length != oldBody.length + 1) return null
     if (caret < 2 || caret > newBody.length) return null
+    // **"- " fa un elenco puntato** (dal 17/11/2026, chiesto dall'utente, come su Notion): lo
+    // spazio appena scritto dopo un trattino che è tutto quello che c'è nella riga.
+    if (newBody[caret - 1] == ' ') {
+        val lineStart = newBody.lastIndexOf('\n', caret - 2) + 1
+        val lineEnd = newBody.indexOf('\n', caret).let { if (it < 0) newBody.length else it }
+        if (caret != lineEnd || newBody.substring(lineStart, lineEnd) != "- ") return null
+        if (newBody.removeRange(caret - 1, caret) != oldBody) return null
+        return NumberedListPrefix(lineIndex = newBody.take(lineStart).count { it == '\n' }, startNumber = 0, lineStart = lineStart, bullet = true)
+    }
     if (newBody[caret - 1] != '.') return null
     // Dopo il punto la riga deve finire: il numero dev'essere tutto
     // quello che c'è scritto.
@@ -5005,10 +5017,17 @@ fun runPrefixes(
         // database non conosce ancora — appena creata con un Invio — si
         // prevede: è quella dopo la riga sopra, se quella era un elenco
         // numerato allo stesso rientro.
+        // **Dopo una voce numerata allo stesso rientro, il numero dopo** (dal 17/11/2026, trovato
+        // dall'utente: premendo Invio in fretta "i numeri scattano"). Coi blocchi del database
+        // indietro di qualche Invio, le righe vuote nuove sono tutte uguali e il blocco salvato
+        // finiva abbinato all'ultima: "1. 2. 2." e poi "1. 2. 3.". È la stessa regola del conto
+        // salvato (`numberedOrdinals`), che solo un numero di partenza scelto a mano cambia.
+        val follows = carriedOrdinal != null && carriedIndent == indent
         val ordinal = if (type == BlockType.NUMBERED_LIST_ITEM) {
             when {
-                block != null -> ordinals[block.id] ?: 1
-                carriedOrdinal != null && carriedIndent == indent -> carriedOrdinal!! + 1
+                block != null && block.numberStartsAt == null && follows -> carriedOrdinal!! + 1
+                block != null -> ordinals[block.id] ?: block.numberStartsAt ?: (if (follows) carriedOrdinal!! + 1 else 1)
+                follows -> carriedOrdinal!! + 1
                 carriedHeld != null -> (lastNumberAt[indent] ?: 0) + 1
                 else -> 1
             }
@@ -6659,7 +6678,8 @@ private fun MergedTextRunField(
                         viewModel.startNumberedListAtLine(
                             runBlocks.map { it.id },
                             listPrefix.lineIndex,
-                            listPrefix.startNumber
+                            listPrefix.startNumber,
+                            bullet = listPrefix.bullet
                         )
 
                     // **"---" da solo in una riga di testo fa un divisore**
@@ -8140,7 +8160,7 @@ private fun BlockRow(
                             null
                         }
                         if (listPrefix != null &&
-                            viewModel.startNumberedListInBlock(block.id, listPrefix.startNumber)
+                            viewModel.startNumberedListInBlock(block.id, listPrefix.startNumber, bullet = listPrefix.bullet)
                         ) {
                             val stripped = newText.removeRange(listPrefix.lineStart, caretInBody)
                             editState = BlockEditState(

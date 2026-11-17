@@ -1126,6 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.19 — 17/11/2026 · 19:42 — Still numbers with Enter pressed fast, and "- " starts a bulleted list
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1293 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The numbers of a list no longer
+  jump with Enter pressed fast**: while the database was still behind by a
+  few Enters, the new empty lines were all alike and the saved one was
+  matched with the last of them, so for an instant the numbers were wrong
+  ("1. 2. 2.") and then jumped to the right ones ("1. 2. 3."). Now an item
+  that follows another at the same indent is that one plus one, as the saved
+  count says (only a starting number chosen by hand, "5.", changes it), and
+  an item the count doesn't know yet gets the number it will have, not "1."
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"- " starts a bulleted list**,
+  as on Notion: a dash and a space written alone at the start of a line of
+  text make it an item of a bulleted list, and the "- " goes away (as "5."
+  starts a numbered list). Also in the lines inside a toggle
+- **[Project]** `runPrefixes`: the number of a numbered line after another
+  at the same indent; `numberedListPrefixJustTyped` also knows "- "
+  (`NumberedListPrefix.bullet`), and `startNumberedList` makes a
+  `BULLET_LIST_ITEM` with it. Test: `DesktopListShortcutsTest` (the numbers
+  with the database one line behind, with an unknown block and with "5.";
+  "- " typed in an empty line, then "x")
+
 ### ✏️ v0.155.18 — 17/11/2026 · 18:49 — PC: a blue box to choose the blocks, as on the desktop
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1291 tests passed)*
 
