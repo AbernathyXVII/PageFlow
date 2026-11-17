@@ -45,6 +45,7 @@ import com.gabriele.notionlocal.ui.screen.BlockDrop
 import com.gabriele.notionlocal.ui.screen.BlockBox
 import com.gabriele.notionlocal.ui.screen.DropPlace
 import com.gabriele.notionlocal.ui.screen.dropFor
+import com.gabriele.notionlocal.ui.screen.blockDotsAlwaysShown
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
@@ -83,6 +84,8 @@ class DesktopBlockSelectionTest {
 
     @Before
     fun setUp() = runBlocking {
+        // Questi test cercano dove stanno i puntini: si vedono col mouse sul blocco, come prima del 17/11/2026.
+        blockDotsAlwaysShown = true
         AppSettings.init(context)
         val repo = PageRepository(AppDatabase.getInstance(context))
         if (AppDatabase.getInstance(context).pageDao().getById("blocchi") == null) repo.createPage(PageEntity(id = "blocchi", title = "Blocchi"))
@@ -95,6 +98,7 @@ class DesktopBlockSelectionTest {
 
     @After
     fun tearDown() {
+        blockDotsAlwaysShown = false
         AppDatabase.closeInstance()
         dir.deleteRecursively()
     }
@@ -262,6 +266,25 @@ class DesktopBlockSelectionTest {
     /** Le altezze dove il margine a sinistra del testo (x 60–84) è diverso da [clean]: dove sono i sei puntini. */
     private fun dotsRows(bitmap: Bitmap, clean: Bitmap): List<Int> =
         (0 until bitmap.height).filter { y -> (DOTS_X).any { x -> bitmap.getColor(x, y) != clean.getColor(x, y) } }
+
+    /**
+     * **I sei puntini si vedono solo col mouse sopra di loro** (dal 17/11/2026,
+     * chiesto dall'utente): col mouse sulla riga ci sono ma non si vedono;
+     * spostato a sinistra, dove stanno, compaiono a metà della riga.
+     */
+    @Test
+    fun theSixDotsShowOnlyWithTheMouseOnThem() = withPage { scene, frames, picture ->
+        blockDotsAlwaysShown = false
+        val clean = picture()
+        val rows = textRows(clean)
+        onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, rows[5].center()), pressed = false) }
+        frames(5)
+        assertEquals("col mouse sulla riga i puntini non si vedono", emptyList<Int>(), dotsRows(picture(), clean))
+        onWindowThread { mouse(scene, PointerEventType.Move, Offset(41f, rows[5].center()), pressed = false) }
+        frames(5)
+        val shown = dotsRows(picture(), clean)
+        assertTrue("col mouse sopra di loro si vedono, a metà di \"Seconda riga\": $shown, riga ${rows[5]}", shown.isNotEmpty() && abs(shown.average() - rows[5].center()) < 6)
+    }
 
     /**
      * **I sei puntini accanto al blocco sotto il mouse** (chiesto dall'utente
@@ -761,8 +784,7 @@ class DesktopBlockSelectionTest {
             val middle = rows[rows.size - 4]
             onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, middle.center()), pressed = false) }
             frames(5)
-            // Senza la maniglia della riga sotto il mouse (v0.155.9: le righe si trascinano, la maniglia sta nella stessa colonna).
-            val fromRow = dotsRows(picture(), clean).filter { abs(it - middle.center()) > 14 }
+            val fromRow = dotsRows(picture(), clean)
             // A metà di una riga vera, sopra l'elenco (il titolo del database), non accanto alla riga del mouse.
             val title = rows.firstOrNull { abs(fromRow.average() - it.center()) <= 2 }
             assertTrue("puntini $fromRow, righe $rows (mouse sulla riga $middle)", fromRow.isNotEmpty() && title != null && title.last < middle.first - 100)
@@ -820,8 +842,7 @@ class DesktopBlockSelectionTest {
             fun hover(y: Float): List<Int> {
                 onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, y), pressed = false) }
                 frames(5)
-                // Senza la maniglia della riga sotto il mouse (v0.155.9).
-                return dotsRows(picture(), clean).filter { abs(it - y) > 14 }
+                return dotsRows(picture(), clean)
             }
             val firstTitle = rows.first { it.first > pageTitle.last + 40 }
             val checks = rows.filter { it.first > firstTitle.last + 40 && it.last < 650 }.map { band ->

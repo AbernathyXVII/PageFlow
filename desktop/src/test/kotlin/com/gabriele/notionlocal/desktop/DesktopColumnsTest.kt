@@ -4,6 +4,7 @@ import com.gabriele.notionlocal.ui.screen.dropFor
 import com.gabriele.notionlocal.ui.screen.OUTSIDE_FILE
 import com.gabriele.notionlocal.ui.screen.DropPlace
 import com.gabriele.notionlocal.ui.screen.BlockBox
+import com.gabriele.notionlocal.ui.screen.blockDotsAlwaysShown
 import com.gabriele.notionlocal.platform.importOutsideFile
 import com.gabriele.notionlocal.data.entity.attrs
 import com.gabriele.notionlocal.data.entity.NewBlock
@@ -82,6 +83,8 @@ class DesktopColumnsTest {
 
     @Before
     fun setUp() = runBlocking {
+        // Questi test cercano dove stanno i puntini: si vedono col mouse sul blocco, come prima del 17/11/2026.
+        blockDotsAlwaysShown = true
         AppSettings.init(context)
         db = AppDatabase.getInstance(context)
         repo = PageRepository(db)
@@ -93,6 +96,7 @@ class DesktopColumnsTest {
 
     @After
     fun tearDown() {
+        blockDotsAlwaysShown = false
         AppDatabase.closeInstance()
         dir.deleteRecursively()
     }
@@ -825,8 +829,7 @@ class DesktopColumnsTest {
             mouse("move", 300f, title.last + 111f)
             val hovered = shot("columns_databases_dots")
             val titleLeft = (0 until 400).first { x -> (title.first..title.last).any { y -> bright(x, y) } }
-            // Senza la maniglia della riga sotto il mouse (v0.155.9).
-            val dots = (0 until hovered.height).filter { y -> abs(y - (title.last + 110)) > 20 && (titleLeft - 30 until titleLeft - 2).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
+            val dots = (0 until hovered.height).filter { y -> (titleLeft - 30 until titleLeft - 2).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
             val center = (title.first + title.last) / 2f
             assertTrue("puntini $dots, titolo $title", dots.isNotEmpty() && abs(dots.average() - center) <= 2.0)
         }

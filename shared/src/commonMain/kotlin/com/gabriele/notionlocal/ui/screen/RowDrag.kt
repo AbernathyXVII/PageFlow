@@ -1,6 +1,11 @@
 package com.gabriele.notionlocal.ui.screen
 
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
@@ -36,7 +41,8 @@ import com.gabriele.notionlocal.ui.theme.NotionGray400
  * 17/11/2026, chiesto dall'utente: "quando in un database non c'è un ordine
  * selezionato con Sort, permettimi di spostare le pagine semplicemente
  * draggandole con il mouse"). Sul PC, nella tabella e nell'elenco: passando
- * sopra una riga, nel suo margine sinistro compare la maniglia ⋮⋮; tenuta e
+ * sopra una riga, nel suo margine sinistro c'è la maniglia ⋮⋮ (che si vede
+ * solo col mouse sopra di lei, dal 17/11/2026); tenuta e
  * trascinata, la riga si fa chiara e una linea dice dove andrà; lasciata, va
  * lì ([onMove], lo stesso spostamento di "Move up" e "Move down").
  *
@@ -159,10 +165,15 @@ fun RowDragBox(
         content()
         if (hovered || drag.dragging == row.id) {
             val at = remember { arrayOfNulls<LayoutCoordinates>(1) }
+            // Invisibile finché il mouse non è sopra di lei (dal 17/11/2026, come i sei puntini dei blocchi).
+            val hover = remember { MutableInteractionSource() }
+            val overHandle by hover.collectIsHoveredAsState()
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .size(width = ROW_HANDLE_WIDTH, height = ROW_HANDLE_HEIGHT)
+                    .hoverable(hover)
+                    .semantics { contentDescription = DbStrings.moveRow }
                     .onGloballyPositioned { at[0] = it }
                     .pointerInput(row.id) {
                         detectDragGestures(
@@ -179,7 +190,9 @@ fun RowDragBox(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.DragIndicator, contentDescription = DbStrings.moveRow, tint = NotionGray400, modifier = Modifier.size(14.dp))
+                if (overHandle || drag.dragging == row.id) {
+                    Icon(Icons.Filled.DragIndicator, contentDescription = null, tint = NotionGray400, modifier = Modifier.size(14.dp))
+                }
             }
         }
     }

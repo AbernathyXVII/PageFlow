@@ -9,6 +9,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -147,6 +151,10 @@ fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, drag: BlockDrag? = nul
     val spot = spotState.value ?: return
     val color = MaterialTheme.colorScheme.onSurfaceVariant
     val place = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    // **Si vedono solo col mouse sopra di loro** (dal 17/11/2026, chiesto dall'utente): col mouse
+    // sul blocco ci sono, si cliccano e si trascinano, ma invisibili finché non ci si arriva.
+    val hover = remember { MutableInteractionSource() }
+    val overDots by hover.collectIsHoveredAsState()
     // Se i puntini se ne vanno mentre si trascina, il blocco resta dov'era.
     DisposableEffect(drag) { onDispose { drag?.end(place = false) } }
     Box(
@@ -187,11 +195,15 @@ fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, drag: BlockDrag? = nul
                     )
                 }
             )
+            .hoverable(hover)
             .semantics { contentDescription = EditorStrings.blockOptions }
             .clickable { onClick(spot.blockId) }
-            .drawBehind { drawSixDots(color) }
+            .drawBehind { if (overDots || drag?.dragged != null || blockDotsAlwaysShown) drawSixDots(color) }
     )
 }
+
+/** Vero: i sei puntini si vedono appena il mouse è sul blocco, come prima del 17/11/2026 (per i test che cercano dove stanno). */
+var blockDotsAlwaysShown = false
 
 /** Due colonne di tre puntini tondi, nel mezzo, ognuno sugli stessi pixel degli altri. */
 private fun DrawScope.drawSixDots(color: Color) {

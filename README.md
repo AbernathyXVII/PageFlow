@@ -1126,6 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.10 — 17/11/2026 · 09:19 — PC: the six dots show only with the mouse on them
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1279 tests passed)*
+
+- **[Change]** **[💻 PC]** **The six dots show only with the mouse on
+  them**: with the mouse on a block of the page, its six dots are still there
+  on the left, and can be clicked and dragged as before, but they can't be
+  seen until the mouse reaches them. The same for the handle ⋮⋮ of a
+  database's rows (v0.155.9): with the mouse on the row it's invisible, on it
+  it shows. While dragging they stay visible
+- **[Project]** `BlockHandle`: `hoverable` on the dots, drawn only with the
+  mouse on them, while a block is dragged, or with `blockDotsAlwaysShown`
+  (for the tests that look for where they are, like
+  `DesktopBlockSelectionTest` and `DesktopColumnsTest`). `RowDragBox`: the
+  same for the icon of the row's handle. Tests:
+  `DesktopBlockSelectionTest.theSixDotsShowOnlyWithTheMouseOnThem` (on the
+  line no dots, on their place they show), `DesktopRowDragTest` (on the row
+  no handle, on it the handle); the three tests changed in v0.155.9 are back
+  as before, since the hidden handle no longer gets in the way
+
 ### ✏️ v0.155.9 — 17/11/2026 · 08:41 — PC: a database's rows move by dragging them with the mouse
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1278 tests passed)*
 

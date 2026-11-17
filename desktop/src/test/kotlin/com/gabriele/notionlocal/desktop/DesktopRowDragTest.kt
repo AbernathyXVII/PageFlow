@@ -135,13 +135,15 @@ class DesktopRowDragTest {
             // La maniglia: nel margine della prima cella (x da 66 a 78), solo col mouse sopra la riga.
             fun handleShown(bitmap: Bitmap, y: Float) = (66 until 78).count { x -> bitmap.getColor(x, y.toInt()) != background } > 1
             assertFalse("senza mouse niente maniglia", handleShown(table, rowCenter(0)))
+            // Col mouse sulla riga la maniglia c'è ma non si vede; col mouse sopra di lei sì (dal 17/11/2026).
             mouse(PointerEventType.Move, Offset(200f, rowCenter(0)), pressed = false)
             frames(4)
-            assertTrue("col mouse sopra la riga c'è la maniglia", handleShown(picture("rowdrag_hover.png"), rowCenter(0)))
-            // La maniglia di "Uno", tirata giù fin sotto la metà di "Tre": va dopo "Tre".
+            assertFalse("col mouse sulla riga la maniglia non si vede", handleShown(picture("rowdrag_hover.png"), rowCenter(0)))
             val handle = Offset(72f, rowCenter(0))
             mouse(PointerEventType.Move, handle, pressed = false)
-            frames(2)
+            frames(4)
+            assertTrue("col mouse sopra la maniglia si vede", handleShown(picture("rowdrag_handle.png"), rowCenter(0)))
+            // La maniglia di "Uno", tirata giù fin sotto la metà di "Tre": va dopo "Tre".
             mouse(PointerEventType.Press, handle, pressed = true)
             frames(2)
             var y = handle.y
@@ -165,6 +167,8 @@ class DesktopRowDragTest {
             mouse(PointerEventType.Move, Offset(300f, rowCenter(1)), pressed = false)
             frames(2)
             mouse(PointerEventType.Move, Offset(200f, rowCenter(0)), pressed = false)
+            frames(2)
+            mouse(PointerEventType.Move, Offset(72f, rowCenter(0)), pressed = false)
             frames(4)
             assertFalse("con un ordinamento niente maniglia", handleShown(picture("rowdrag_sorted.png"), rowCenter(0)))
         } finally {
