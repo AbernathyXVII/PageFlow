@@ -9,7 +9,7 @@ import kotlin.math.roundToInt
 // che OneNote, Word o un browser mettono negli appunti si ricavano le righe,
 // gli elenchi puntati e numerati col loro rientro, le tabelle (cella per
 // cella) e, pezzo per pezzo, grassetto, corsivo, sottolineato, barrato,
-// collegamenti e **grandezza**. Vedi `LinkClipboard.sourceFormatted`.
+// collegamenti, **grandezza** e (dal 17/11/2026) **colori**. Vedi `sourceFormatted`.
 // ---------------------------------------------------------------------------
 
 /** Un pezzo di testo copiato col suo stile; [sizePt] è la grandezza nella fonte, in punti (null: non detta). */
@@ -20,7 +20,10 @@ data class ClipRun(
     val underline: Boolean = false,
     val strikethrough: Boolean = false,
     val sizePt: Float? = null,
-    val link: String? = null
+    val link: String? = null,
+    /** Colore del testo e dietro al testo nella fonte, `#RRGGBB` (vedi [cssColor]); null: quello di sempre. */
+    val color: String? = null,
+    val background: String? = null
 )
 
 /** Una riga copiata: il testo a pezzi, il tipo e il rientro; per una tabella, le celle riga per riga. */
@@ -110,7 +113,10 @@ private data class Frame(
     val underline: Boolean,
     val strike: Boolean,
     val sizePt: Float?,
-    val link: String?
+    val link: String?,
+    /** Null: non ne parla; "": torna quello di sempre (vedi [cssColor]). */
+    val color: String? = null,
+    val background: String? = null
 )
 
 private class ClipParser {
@@ -134,6 +140,8 @@ private class ClipParser {
     private val strike get() = frames.any { it.strike }
     private val sizePt get() = frames.lastOrNull { it.sizePt != null }?.sizePt
     private val link get() = frames.lastOrNull { it.link != null }?.link
+    private val color get() = frames.lastOrNull { it.color != null }?.color?.ifEmpty { null }
+    private val background get() = frames.lastOrNull { it.background != null }?.background?.ifEmpty { null }
 
     fun text(raw: String) {
         if (tableDepth > 0) {
@@ -148,7 +156,7 @@ private class ClipParser {
         piece = piece.replace('\u00A0', ' ')
         if (runs.isEmpty() || runs.all { it.text.isBlank() }) piece = piece.trimStart()
         if (piece.isEmpty()) return
-        val run = ClipRun(piece, bold, italic, underline, strike, sizePt, link)
+        val run = ClipRun(piece, bold, italic, underline, strike, sizePt, link, color, background)
         val last = runs.lastOrNull()
         if (last != null && last.copy(text = "") == run.copy(text = "")) {
             runs[runs.lastIndex] = last.copy(text = last.text + piece)
@@ -281,6 +289,7 @@ private class ClipParser {
         } else {
             null
         }
+        val (color, background) = cssColorsOf(tag, attrs, style)
         return Frame(
             tag = tag,
             bold = when {
@@ -292,7 +301,9 @@ private class ClipParser {
             underline = tag == "u" || "underline" in decoration,
             strike = tag == "s" || tag == "strike" || tag == "del" || "line-through" in decoration,
             sizePt = size,
-            link = href
+            link = href,
+            color = color,
+            background = background
         )
     }
 
@@ -316,4 +327,73 @@ private class ClipParser {
     /** `<font size="5">`, la grandezza dei vecchi siti. */
     private fun fontTagSize(attrs: String): Float? =
         Regex("size\\s*=\\s*[\"']?([1-7])\\b").find(attrs)?.groupValues?.get(1)?.toIntOrNull()?.let { FONT_TAG_SIZES[it] }
+}
+
+// ---------------------------------------------------------------------------
+// **I colori del testo copiato** (dal 17/11/2026, chiesto dall'utente: "quando
+// copio qualcosa da una fonte che abbia dei colori e li incollo, non li
+// prende"): il colore del testo e quello dietro al testo (l'evidenziato di
+// Word e OneNote, lo sfondo di uno `<span>`), come `#RRGGBB`.
+// ---------------------------------------------------------------------------
+
+/** I tag dentro una riga: solo loro evidenziano; lo sfondo di un `<div>` o di una cella è la pagina, non il testo. */
+private val INLINE_TAGS = setOf("span", "font", "mark", "b", "strong", "i", "em", "u", "s", "strike", "del", "ins", "a", "sub", "sup", "code", "small", "big")
+
+/**
+ * Il colore del testo e quello dietro di un elemento, da `style`
+ * ([style] già in minuscolo) o da `<font color>`: null se non ne dice
+ * niente, "" se torna a quello di sempre (vedi [cssColor]).
+ */
+internal fun cssColorsOf(tag: String, attrs: String, style: String): Pair<String?, String?> {
+    val color = Regex("(?:^|[;\\s\"'])color\\s*:\\s*([^;\"']+)").find(style)?.groupValues?.get(1)?.let { cssColor(it) }
+        ?: if (tag == "font") Regex("color\\s*=\\s*[\"']?([#a-zA-Z0-9]+)", RegexOption.IGNORE_CASE).find(attrs)?.groupValues?.get(1)?.let { cssColor(it) } else null
+    if (tag !in INLINE_TAGS) return color to null
+    // Word scrive l'evidenziato due volte ("background:yellow;mso-highlight:yellow"); "background" può avere altro intorno.
+    val background = listOf("background-color", "mso-highlight", "background").firstNotNullOfOrNull { name ->
+        Regex("(?:^|[;\\s\"'])$name\\s*:\\s*([^;\"']+)").find(style)?.groupValues?.get(1)?.let { value ->
+            Regex("#[0-9a-f]{3,8}\\b|rgba?\\([^)]*\\)|[a-z]+").findAll(value).firstNotNullOfOrNull { cssColor(it.value) }
+        }
+    }
+    return color to background
+}
+
+/**
+ * Un colore dei CSS ("#c00000", "#f00", "rgb(255, 0, 0)", "red") come
+ * `#RRGGBB`. "" per il trasparente e per i **grigi molto scuri o molto
+ * chiari**: sono il testo e la pagina di sempre di chi l'ha copiato (il nero
+ * di Word, il grigio scuro dei siti, il bianco dietro a tutto), che qui col
+ * tema scuro sparirebbero o coprirebbero il testo. Null se non è un colore.
+ */
+internal fun cssColor(value: String): String? {
+    val v = value.trim().lowercase().removeSuffix("!important").trim()
+    if (v in setOf("transparent", "none", "auto", "windowtext", "window", "initial", "unset")) return ""
+    val rgba: List<Float> = when {
+        v.startsWith("#") -> {
+            val hex = v.substring(1).takeIf { h -> h.all { it in "0123456789abcdef" } } ?: return null
+            when (hex.length) {
+                3, 4 -> hex.map { (it.digitToInt(16) * 17).toFloat() }
+                6, 8 -> hex.chunked(2).map { it.toInt(16).toFloat() }
+                else -> return null
+            }.let { if (it.size == 4) it.take(3) + it[3] / 255f else it }
+        }
+        v.startsWith("rgb") -> Regex("[0-9.]+%?").findAll(v.substringAfter('(')).map { it.value }.toList().mapIndexed { i, n ->
+            val number = n.removeSuffix("%").toFloatOrNull() ?: return null
+            when {
+                i == 3 -> if (n.endsWith("%")) number / 100f else number
+                n.endsWith("%") -> number * 2.55f
+                else -> number
+            }
+        }
+        else -> runCatching { parseColorString(v) }.getOrNull()?.let { argb ->
+            listOf((argb shr 16 and 0xFF).toFloat(), (argb shr 8 and 0xFF).toFloat(), (argb and 0xFF).toFloat())
+        } ?: return null
+    }
+    if (rgba.size < 3) return null
+    if (rgba.size > 3 && rgba[3] <= 0f) return ""
+    val (r, g, b) = rgba.take(3).map { it.roundToInt().coerceIn(0, 255) }
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val lightness = (max + min) / 510f
+    if (max - min <= 24 && (lightness < 0.35f || lightness > 0.8f)) return ""
+    return "#%02X%02X%02X".format(r, g, b)
 }

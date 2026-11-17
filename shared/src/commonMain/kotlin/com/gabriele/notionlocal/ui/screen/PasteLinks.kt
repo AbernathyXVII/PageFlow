@@ -93,18 +93,72 @@ internal fun copiedLineOf(entry: String): CopiedLine? {
     return CopiedLine(type, parts[1] == "1", parts[2].toIntOrNull()?.coerceIn(0, 10) ?: 0)
 }
 
-internal fun RichTextSpan.hasStyle(): Boolean = bold || italic || underline || strikethrough || link != null
+internal fun RichTextSpan.hasStyle(): Boolean = bold || italic || underline || strikethrough || link != null || color != null || background != null
 
+/** Lo stile nell'etichetta dell'incolla: "bius", "z24" la grandezza, "k#RRGGBB" il colore e "h#RRGGBB" lo sfondo. */
 internal fun styleCode(style: StyleRange): String = buildString {
     if (style.bold) append('b')
     if (style.italic) append('i')
     if (style.underline) append('u')
     if (style.strikethrough) append('s')
     style.size?.let { append('z').append(it) }
+    style.color?.let { append('k').append(it) }
+    style.background?.let { append('h').append(it) }
 }
 
 /** La grandezza nel codice di uno stile ("bz24"), o null. */
 internal fun sizeOfCode(code: String): Int? = Regex("z(\\d+)").find(code)?.groupValues?.get(1)?.toIntOrNull()
+
+/** Lo stile dal suo codice (vedi [styleCode]), da [start] a [end]. */
+internal fun styleOfCode(code: String, start: Int, end: Int): StyleRange {
+    // Senza i colori, le cui cifre (maiuscole) non si confondono con le lettere degli stili.
+    val flags = code.replace(Regex("[kh]#[0-9A-F]{6}"), "")
+    return StyleRange(
+        start, end, 'b' in flags, 'i' in flags, 'u' in flags, 's' in flags, sizeOfCode(flags),
+        color = Regex("k(#[0-9A-F]{6})").find(code)?.groupValues?.get(1),
+        background = Regex("h(#[0-9A-F]{6})").find(code)?.groupValues?.get(1)
+    )
+}
+
+/** Uno stile che dice qualcosa: altrimenti nell'incolla non serve. */
+internal val StyleRange.isStyled: Boolean
+    get() = bold || italic || underline || strikethrough || size != null || color != null || background != null
+
+/**
+ * **Il testo copiato com'era nella fonte** (sul telefono e sul PC, vedi
+ * `ClipHtml.kt`): le righe una sotto l'altra, e sopra gli stili (con la
+ * grandezza in punti di PageFlow, vedi `noteSizes`, e i colori), i
+ * collegamenti, il tipo delle righe (solo se c'è un elenco o una tabella:
+ * altrimenti le righe nuove fanno come sempre) e le celle delle tabelle.
+ */
+internal fun sourceFormatted(lines: List<ClipLine>): AnnotatedString {
+    val sizeOf = noteSizes(lines)
+    val plain = lines.joinToString("\n") { it.text }
+    val builder = AnnotatedString.Builder(plain)
+    if (plain.isNotEmpty()) builder.addStringAnnotation(PASTED_PLAIN_TAG, "", 0, plain.length)
+    var lineStart = 0
+    for (line in lines) {
+        var at = lineStart
+        for (run in line.runs) {
+            val end = at + run.text.length
+            if (end > at && line.table == null) {
+                val style = StyleRange(at, end, run.bold, run.italic, run.underline, run.strikethrough, sizeOf(run.sizePt), run.color, run.background)
+                if (style.isStyled) builder.addStringAnnotation(PASTED_STYLE_TAG, styleCode(style), at, end)
+                run.link?.let { builder.addStringAnnotation(PASTED_LINK_TAG, it.trim(), at, end) }
+            }
+            at = end
+        }
+        val length = line.text.length
+        if (line.table != null && length > 0) {
+            builder.addStringAnnotation(PASTED_TABLE_TAG, encodeTable(line.table), lineStart, lineStart + length)
+        }
+        lineStart += length + 1
+    }
+    if (plain.isNotEmpty() && lines.any { it.type != BlockType.PARAGRAPH }) {
+        builder.addStringAnnotation(PASTED_LINES_TAG, lines.joinToString(";") { "${it.type.name},0,${it.indent}" }, 0, plain.length)
+    }
+    return builder.toAnnotatedString()
+}
 
 /** Le celle di una tabella nell'etichetta dell'incolla, e ritorno. */
 internal fun encodeTable(cells: List<List<String>>): String =
@@ -134,8 +188,16 @@ fun matchAnchors(anchors: List<Pair<String, String>>, plain: String): List<LinkR
     }
 }
 
-/** Un pezzo di testo dell'HTML con uno stile. */
-data class StyledRun(val text: String, val bold: Boolean, val italic: Boolean, val underline: Boolean, val strikethrough: Boolean)
+/** Un pezzo di testo dell'HTML con uno stile (e, dal 17/11/2026, i colori: vedi `cssColor`). */
+data class StyledRun(
+    val text: String,
+    val bold: Boolean,
+    val italic: Boolean,
+    val underline: Boolean,
+    val strikethrough: Boolean,
+    val color: String? = null,
+    val background: String? = null
+)
 
 /** Gli stessi pezzi ritrovati nel testo semplice, in ordine (come `matchAnchors`). */
 fun matchStyles(runs: List<StyledRun>, plain: String): List<StyleRange> {
@@ -147,7 +209,7 @@ fun matchStyles(runs: List<StyledRun>, plain: String): List<StyleRange> {
         val at = haystack.indexOf(needle, from)
         if (at < 0) return@mapNotNull null
         from = at + needle.length
-        StyleRange(at, at + needle.length, run.bold, run.italic, run.underline, run.strikethrough)
+        StyleRange(at, at + needle.length, run.bold, run.italic, run.underline, run.strikethrough, color = run.color, background = run.background)
     }
 }
 
@@ -160,7 +222,7 @@ fun matchStyles(runs: List<StyledRun>, plain: String): List<StyleRange> {
  */
 fun htmlStyleRuns(html: String): List<StyledRun> {
     // Il grassetto lo decide il più interno che ne dice qualcosa (null: non ne parla).
-    data class Open(val tag: String, val bold: Boolean?, val italic: Boolean, val underline: Boolean, val strike: Boolean)
+    data class Open(val tag: String, val bold: Boolean?, val italic: Boolean, val underline: Boolean, val strike: Boolean, val color: String?, val background: String?)
     val stack = mutableListOf<Open>()
     val runs = mutableListOf<StyledRun>()
     // Il frammento copiato, se c'è: il resto (la testa del documento) non è testo.
@@ -179,8 +241,10 @@ fun htmlStyleRuns(html: String): List<StyledRun> {
             val italic = stack.any { it.italic }
             val underline = stack.any { it.underline }
             val strike = stack.any { it.strike }
-            if ((bold || italic || underline || strike) && decoded.isNotBlank()) {
-                runs += StyledRun(decoded.trim(), bold, italic, underline, strike)
+            val color = stack.lastOrNull { it.color != null }?.color?.ifEmpty { null }
+            val background = stack.lastOrNull { it.background != null }?.background?.ifEmpty { null }
+            if ((bold || italic || underline || strike || color != null || background != null) && decoded.isNotBlank()) {
+                runs += StyledRun(decoded.trim(), bold, italic, underline, strike, color, background)
             }
             continue
         }
@@ -201,6 +265,7 @@ fun htmlStyleRuns(html: String): List<StyledRun> {
         // "font-weight:normal" spegne il grassetto di chi lo contiene: è il
         // caso di Google Docs, che avvolge tutto in un <b> "normale".
         val normal = weight == "normal" || weight == "400" || weight == "lighter"
+        val (color, background) = cssColorsOf(tag, attrs, style)
         stack += Open(
             tag = tag,
             bold = when {
@@ -210,13 +275,15 @@ fun htmlStyleRuns(html: String): List<StyledRun> {
             },
             italic = tag == "i" || tag == "em" || italicStyle,
             underline = tag == "u" || "underline" in decoration,
-            strike = tag == "s" || tag == "strike" || tag == "del" || "line-through" in decoration
+            strike = tag == "s" || tag == "strike" || tag == "del" || "line-through" in decoration,
+            color = color,
+            background = background
         )
     }
     return runs
 }
 
-/** Il testo con la sua formattazione in HTML, per gli appunti: grassetto, corsivo, sottolineato, barrato, link. */
+/** Il testo con la sua formattazione in HTML, per gli appunti: grassetto, corsivo, sottolineato, barrato, colori, link. */
 fun spansToHtml(spans: List<RichTextSpan>): String = buildString {
     spans.forEach { span ->
         var piece = span.text
@@ -226,6 +293,8 @@ fun spansToHtml(spans: List<RichTextSpan>): String = buildString {
         if (span.italic) piece = "<i>$piece</i>"
         if (span.underline) piece = "<u>$piece</u>"
         if (span.strikethrough) piece = "<s>$piece</s>"
+        val colors = listOfNotNull(span.color?.let { "color:$it" }, span.background?.let { "background-color:$it" })
+        if (colors.isNotEmpty()) piece = "<span style=\"${colors.joinToString(";")}\">$piece</span>"
         span.link?.let { piece = "<a href=\"${it.replace("\"", "&quot;")}\">$piece</a>" }
         append(piece)
     }
@@ -242,7 +311,7 @@ fun TextFieldValue.pastedFormat(lead: Int): PasteFormat {
         .map { LinkRange(it.start - lead, it.end - lead, it.item) }
         .filter { it.start >= 0 && it.end > it.start }
     val styles = all.getStringAnnotations(PASTED_STYLE_TAG, 0, text.length)
-        .map { StyleRange(it.start - lead, it.end - lead, 'b' in it.item, 'i' in it.item, 'u' in it.item, 's' in it.item, sizeOfCode(it.item)) }
+        .map { styleOfCode(it.item, it.start - lead, it.end - lead) }
         .filter { it.start >= 0 && it.end > it.start }
     // Le celle delle tabelle incollate, per dove comincia la loro riga.
     val tables = all.getStringAnnotations(PASTED_TABLE_TAG, 0, text.length).associate { (it.start - lead) to decodeTable(it.item) }

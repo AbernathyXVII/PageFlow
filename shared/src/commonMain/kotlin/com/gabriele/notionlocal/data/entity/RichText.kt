@@ -451,7 +451,10 @@ data class StyleRange(
      * Formatting"), già in punti di notE (vedi `RichTextSpan.size`); null =
      * quella normale.
      */
-    val size: Int? = null
+    val size: Int? = null,
+    /** **I colori della fonte** (dal 17/11/2026), `#RRGGBB` come [RichTextSpan.color]; null = quelli di sempre. */
+    val color: String? = null,
+    val background: String? = null
 )
 
 /**
@@ -529,7 +532,9 @@ fun applyPaste(spans: List<RichTextSpan>, format: PasteFormat): List<RichTextSpa
                     italic = it.italic || style.italic,
                     underline = it.underline || style.underline,
                     strikethrough = it.strikethrough || style.strikethrough,
-                    size = style.size ?: it.size
+                    size = style.size ?: it.size,
+                    color = style.color ?: it.color,
+                    background = style.background ?: it.background
                 )
             }
         } ?: current

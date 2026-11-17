@@ -5,6 +5,8 @@ import android.content.Context
 import android.graphics.Typeface
 import android.text.Html
 import android.text.Spanned
+import android.text.style.BackgroundColorSpan
+import android.text.style.ForegroundColorSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.URLSpan
@@ -162,43 +164,6 @@ actual class LinkClipboard(
         clipboard.setPrimaryClip(ClipData.newHtmlText("PageFlow", text, html))
     }
 
-    /**
-     * Il testo copiato com'era nella fonte: le righe una sotto l'altra, e
-     * sopra gli stili (con la grandezza in punti di notE, vedi `noteSizes`), i
-     * collegamenti, il tipo delle righe (solo se c'è un elenco o una tabella:
-     * altrimenti le righe nuove fanno come sempre) e le celle delle tabelle.
-     */
-    private fun sourceFormatted(lines: List<ClipLine>): AnnotatedString {
-        val sizeOf = noteSizes(lines)
-        val plain = lines.joinToString("\n") { it.text }
-        val builder = AnnotatedString.Builder(plain)
-        if (plain.isNotEmpty()) builder.addStringAnnotation(PASTED_PLAIN_TAG, "", 0, plain.length)
-        var lineStart = 0
-        for (line in lines) {
-            var at = lineStart
-            for (run in line.runs) {
-                val end = at + run.text.length
-                if (end > at && line.table == null) {
-                    val style = StyleRange(at, end, run.bold, run.italic, run.underline, run.strikethrough, sizeOf(run.sizePt))
-                    if (style.bold || style.italic || style.underline || style.strikethrough || style.size != null) {
-                        builder.addStringAnnotation(PASTED_STYLE_TAG, styleCode(style), at, end)
-                    }
-                    run.link?.let { builder.addStringAnnotation(PASTED_LINK_TAG, it.trim(), at, end) }
-                }
-                at = end
-            }
-            val length = line.text.length
-            if (line.table != null && length > 0) {
-                builder.addStringAnnotation(PASTED_TABLE_TAG, encodeTable(line.table), lineStart, lineStart + length)
-            }
-            lineStart += length + 1
-        }
-        if (plain.isNotEmpty() && lines.any { it.type != BlockType.PARAGRAPH }) {
-            builder.addStringAnnotation(PASTED_LINES_TAG, lines.joinToString(";") { "${it.type.name},0,${it.indent}" }, 0, plain.length)
-        }
-        return builder.toAnnotatedString()
-    }
-
     /** I link di un elemento degli appunti, nelle posizioni di [plain]. */
     private fun clipLinks(item: ClipData.Item, plain: String): List<LinkRange> {
         // Un testo coi link dentro: le posizioni sono già quelle giuste.
@@ -248,10 +213,16 @@ internal fun stylesOfSpanned(spanned: Spanned): List<StyleRange> {
             )
             is UnderlineSpan -> result += StyleRange(start, end, underline = true)
             is StrikethroughSpan -> result += StyleRange(start, end, strikethrough = true)
+            // I colori (dal 17/11/2026), con le stesse regole dell'HTML (vedi `cssColor`).
+            is ForegroundColorSpan -> result += StyleRange(start, end, color = cssColor(argbCss(span.foregroundColor))?.ifEmpty { null })
+            is BackgroundColorSpan -> result += StyleRange(start, end, background = cssColor(argbCss(span.backgroundColor))?.ifEmpty { null })
         }
     }
-    return result.filter { it.bold || it.italic || it.underline || it.strikethrough }
+    return result.filter { it.isStyled }
 }
+
+/** Un colore di Android come "rgba(…)" dei CSS, per [cssColor]. */
+private fun argbCss(argb: Int): String = "rgba(${argb shr 16 and 0xFF}, ${argb shr 8 and 0xFF}, ${argb and 0xFF}, ${(argb ushr 24) / 255f})"
 
 /**
  * **Ctrl + un tasto**, mandato al campo che ha il fuoco come da una tastiera

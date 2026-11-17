@@ -1126,6 +1126,33 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.11 — 17/11/2026 · 09:49 — Pasting with "Keep Source Formatting" keeps the colors too
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1282 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The colors of the copied text
+  come along**: pasting with "Keep Source Formatting" (the paste button of the
+  bar on the phone, the right-click menu on the PC), the text keeps the color
+  of its letters and the color behind them (the highlight of Word and
+  OneNote, the background of a word on a web page), as well as bold, italic,
+  sizes and links. The usual colors of the source don't come: its black or
+  dark gray text and its white page would vanish or cover the text in the
+  dark theme of PageFlow; nor the background of a whole paragraph or cell,
+  which is the page of the source and not a highlight. Copied from PageFlow,
+  the colors now go into the clipboard too, so they come back when pasting
+  here or in another app
+- **[Project]** `ClipHtml.kt`: `cssColorsOf` and `cssColor` read "color",
+  "background-color", "background", "mso-highlight" and `<font color>`
+  (hex, rgb/rgba, names) into `ClipRun.color`/`background`; the same in
+  `htmlStyleRuns` (`StyledRun`) and, on the phone, from the color spans of a
+  formatted text (`stylesOfSpanned`). `StyleRange` has `color`/`background`,
+  in the code of the paste as "k#RRGGBB" and "h#RRGGBB" (`styleCode`,
+  `styleOfCode`), and `applyPaste` puts them on the text. `sourceFormatted`,
+  the same on the phone and the PC, is now one in `PasteLinks.kt`;
+  `spansToHtml` writes the colors in a `<span style>`. Test:
+  `PasteColorsTest` (a red, a Word highlight and a blue `<font>` pasted, the
+  dark gray and white of the page left out; copied from PageFlow the colors
+  come back)
+
 ### ✏️ v0.155.10 — 17/11/2026 · 09:19 — PC: the six dots show only with the mouse on them
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1279 tests passed)*
 

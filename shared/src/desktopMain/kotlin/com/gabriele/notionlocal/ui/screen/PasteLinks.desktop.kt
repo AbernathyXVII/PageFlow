@@ -16,7 +16,6 @@ import com.gabriele.notionlocal.data.entity.BlockType
 import com.gabriele.notionlocal.data.entity.CopiedLine
 import com.gabriele.notionlocal.data.entity.LinkRange
 import com.gabriele.notionlocal.data.entity.RichTextSpan
-import com.gabriele.notionlocal.data.entity.StyleRange
 import com.gabriele.notionlocal.data.entity.plainText
 import com.gabriele.notionlocal.platform.HtmlSelection
 import java.awt.Toolkit
@@ -128,38 +127,6 @@ actual class LinkClipboard(
         }
         val html = spansToHtml(rich ?: listOf(RichTextSpan(text = text))) + (lines?.let { linesMarker(it) } ?: "")
         system.setContents(HtmlSelection(text, html), null)
-    }
-
-    /** Il testo com'era nella fonte (come sul telefono, `sourceFormatted`). */
-    private fun sourceFormatted(lines: List<ClipLine>): AnnotatedString {
-        val sizeOf = noteSizes(lines)
-        val plain = lines.joinToString("\n") { it.text }
-        val builder = AnnotatedString.Builder(plain)
-        if (plain.isNotEmpty()) builder.addStringAnnotation(PASTED_PLAIN_TAG, "", 0, plain.length)
-        var lineStart = 0
-        for (line in lines) {
-            var at = lineStart
-            for (run in line.runs) {
-                val end = at + run.text.length
-                if (end > at && line.table == null) {
-                    val style = StyleRange(at, end, run.bold, run.italic, run.underline, run.strikethrough, sizeOf(run.sizePt))
-                    if (style.bold || style.italic || style.underline || style.strikethrough || style.size != null) {
-                        builder.addStringAnnotation(PASTED_STYLE_TAG, styleCode(style), at, end)
-                    }
-                    run.link?.let { builder.addStringAnnotation(PASTED_LINK_TAG, it.trim(), at, end) }
-                }
-                at = end
-            }
-            val length = line.text.length
-            if (line.table != null && length > 0) {
-                builder.addStringAnnotation(PASTED_TABLE_TAG, encodeTable(line.table), lineStart, lineStart + length)
-            }
-            lineStart += length + 1
-        }
-        if (plain.isNotEmpty() && lines.any { it.type != BlockType.PARAGRAPH }) {
-            builder.addStringAnnotation(PASTED_LINES_TAG, lines.joinToString(";") { "${it.type.name},0,${it.indent}" }, 0, plain.length)
-        }
-        return builder.toAnnotatedString()
     }
 
     /** I link dell'HTML, ritrovati in ordine nelle parole di [plain]. */
