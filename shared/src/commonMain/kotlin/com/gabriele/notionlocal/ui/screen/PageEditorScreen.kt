@@ -1696,6 +1696,8 @@ private fun PageEditorContent(
     var pageSelected by remember(pageId) { mutableStateOf(false) }
     // **I blocchi selezionati col mouse** (dal 10/11/2026, vedi `BlockSelection.kt`).
     val selectedBlocks = remember(pageId) { mutableStateOf<Set<String>>(emptySet()) }
+    // Scelti con Maiusc e le frecce (dal 17/11/2026, vedi `LocalBlockExtend`): da dove a dove, per allargarli ancora.
+    var blockEnds by remember(pageId) { mutableStateOf<Pair<String, String>?>(null) }
     val blockPicker = remember(pageId) { BlockPicker() }
     val pageListCoordinates = remember { AtomicReference<LayoutCoordinates?>(null) }
     val selectionKeys = remember { FocusRequester() }
@@ -2528,7 +2530,24 @@ private fun PageEditorContent(
             // "Select all" nel menu del testo seleziona tutta la pagina (vedi `PageSelection.kt`).
             val baseTextToolbar = LocalTextToolbar.current
             val wholePageToolbar = remember(baseTextToolbar, selectWholePage) { WholePageTextToolbar(baseTextToolbar, selectWholePage) }
+            // Maiusc+freccia in cima o in fondo a un campo: i blocchi interi (vedi `LocalBlockExtend`).
+            val blockOrder = rememberUpdatedState(renderItems)
+            val extendToBlocks: (String, String, Boolean) -> Boolean = { anchor, edge, down ->
+                val order = blockOrder.value.flatMap { renderItemBlockIds(it) }
+                val at = order.indexOf(edge)
+                val target = if (at < 0 || anchor !in order) null else order.getOrNull(if (down) at + 1 else at - 1)
+                if (target == null) {
+                    false
+                } else {
+                    focusManager.clearFocus()
+                    pageSelected = false
+                    blockEnds = anchor to target
+                    selectedBlocks.value = blockRange(order, anchor, target)
+                    true
+                }
+            }
             CompositionLocalProvider(
+                LocalBlockExtend provides extendToBlocks.takeIf { isPc && !readOnlyPage },
                 LocalTextToolbar provides wholePageToolbar,
                 LocalStickyViewport provides stickyViewport,
                 LocalFocusPark provides focusPark,
@@ -3131,6 +3150,7 @@ private fun PageEditorContent(
                             onSelect = { ids ->
                                 if (!ids.isNullOrEmpty() && selectedBlocks.value.isEmpty()) focusManager.clearFocus()
                                 pageSelected = false
+                                blockEnds = null
                                 selectedBlocks.value = ids.orEmpty()
                             }
                         )
@@ -3278,6 +3298,7 @@ private fun PageEditorContent(
             val anySelection = pageSelected || chosenBlocks != null
             fun endSelection() {
                 pageSelected = false
+                blockEnds = null
                 selectedBlocks.value = emptySet()
             }
             fun copySelection(thenDelete: Boolean) {
@@ -3304,6 +3325,20 @@ private fun PageEditorContent(
                     .onKeyEvent { event ->
                         if (pageKey(event)) return@onKeyEvent true
                         if (!anySelection) return@onKeyEvent false
+                        // Maiusc+su e giù allargano o stringono i blocchi scelti con le frecce (vedi `LocalBlockExtend`).
+                        val ends = blockEnds
+                        if (chosenBlocks != null && ends != null && event.type == KeyEventType.KeyDown && event.isShiftPressed &&
+                            (event.key == Key.DirectionUp || event.key == Key.DirectionDown)
+                        ) {
+                            val order = latestRenderItems.value.flatMap { renderItemBlockIds(it) }
+                            val at = order.indexOf(ends.second)
+                            val next = if (at < 0) null else order.getOrNull(if (event.key == Key.DirectionDown) at + 1 else at - 1)
+                            if (next != null) {
+                                blockEnds = ends.first to next
+                                selectedBlocks.value = blockRange(order, ends.first, next)
+                            }
+                            return@onKeyEvent true
+                        }
                         when (selectionKeyOf(event)) {
                             SelectionKey.DELETE -> if (!readOnlyPage) deleteSelection()
                             SelectionKey.COPY -> copySelection(thenDelete = false)
@@ -6303,6 +6338,7 @@ private fun MergedTextRunField(
     )
     // **Le frecce su e giù fuori dal campo** (dal 13/11/2026, vedi `PageEditorViewModel.lineNextTo`).
     val fieldCoords = remember(runKey) { arrayOfNulls<LayoutCoordinates>(1) }
+    val extendToBlocks = LocalBlockExtend.current
     val vertical = remember(runKey) { VerticalColumn() }
     fun arrowKey(event: KeyEvent): Boolean {
         val extend = shiftArrowDirection(event)
@@ -6326,8 +6362,17 @@ private fun MergedTextRunField(
             }
             return true
         }
-        // Con Maiusc sulla prima o sull'ultima riga: allarga fin lì, come prima.
-        if (extend != null) return false
+        // Con Maiusc sulla prima o sull'ultima riga: allarga fin lì, come prima; già lì, si passa ai
+        // blocchi interi, come in Notion (dal 17/11/2026, trovato dall'utente: "non posso andare giù o
+        // su perché il titolone bugga tutto", vedi `LocalBlockExtend`).
+        if (extend != null) {
+            val atEdge = if (down) fieldValue.selection.end >= fieldValue.text.length else fieldValue.selection.end <= RUN_LEAD.length
+            val toBlocks = extendToBlocks
+            if (!atEdge || toBlocks == null) return false
+            val anchor = runBlocks.getOrNull(lineIndexAt(bodyOf(fieldValue.text), (fieldValue.selection.start - RUN_LEAD.length).coerceAtLeast(0))) ?: return false
+            val edge = (if (down) runBlocks.lastOrNull() else runBlocks.firstOrNull()) ?: return false
+            return toBlocks(anchor.id, edge.id, down)
+        }
         val here = runBlocks.getOrNull(lineIndexAt(bodyOf(fieldValue.text), fieldValue.selection.end - 1)) ?: return false
         val next = viewModel.lineNextTo(here.id, down) ?: return false
         viewModel.arriveWithArrow(next.id, coords.localToWindow(Offset(layout.getHorizontalPosition(shown, true), 0f)).x, fromAbove = down)

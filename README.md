@@ -1126,6 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.16.3 — 17/11/2026 · 14:43 — PC: Shift and the arrows go past a big title, choosing whole blocks
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1290 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **Shift+Up and Shift+Down no longer stop at a big
+  title**: a line written bigger lives in a text field of its own, and the
+  selection of the text could not leave its field. Now, as in Notion, Shift
+  and the arrow take the selection to the top (or the bottom) of the field,
+  and pressed again pass to **whole blocks**: from the line where the
+  selection began to the next block (the title); more Shift+Up or Shift+Down
+  take one block more or one less. The chosen blocks are veiled as with the
+  mouse, with Copy, Cut, Delete and Cancel below, and Ctrl+C, Ctrl+X, Del
+  and Esc
+- **[Project]** `LocalBlockExtend` and `blockRange` (`BlockSelection.kt`): the
+  page gives the field the passage to the blocks and keeps where they begin
+  and end (`blockEnds`), to make them longer or shorter with Shift and the
+  arrows; in `MergedTextRunField` `arrowKey` uses it when the selection is
+  already at the edge of the field. Test: `DesktopShiftArrowBlocksTest`
+  (from "Tre", under a big title: Shift+Up to the top of the field, then the
+  title and "Tre", then also "Due", one back and again; Del takes them away);
+  `DesktopPasteSpacingTest` looks only at the start of the lines, where the
+  blinking cursor doesn't pass (in the whole suite it joined two lines)
+
 ### 🔧 v0.155.16.2 — 17/11/2026 · 13:47 — The lines pasted from OneNote are close together at once
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1289 tests passed)*
 

@@ -193,6 +193,26 @@ val LocalBlockPicker = staticCompositionLocalOf<BlockPicker?> { null }
 val LocalBlockSelection = staticCompositionLocalOf<BlockSelectionLook?> { null }
 
 /**
+ * **Maiusc+freccia oltre il campo: i blocchi interi** (dal 17/11/2026,
+ * trovato dall'utente sul PC: selezionando con Maiusc e le frecce "non posso
+ * andare giù o su perché il titolone bugga tutto"): un titolo più grande sta
+ * in un campo suo, e la selezione del testo non esce da un campo. Arrivati in
+ * cima o in fondo al campo, come in Notion si passa ai blocchi interi: dalla
+ * riga [anchor] (dove è cominciata la selezione) a quella dopo (o prima, con
+ * [down] falso) di [edge], l'ultima (o la prima) del campo. Vero se è
+ * successo; null dove non si può.
+ */
+val LocalBlockExtend = staticCompositionLocalOf<((anchor: String, edge: String, down: Boolean) -> Boolean)?> { null }
+
+/** I blocchi di [order] da [a] a [b] compresi, in qualunque verso; vuoto se uno dei due non c'è. */
+fun blockRange(order: List<String>, a: String, b: String): Set<String> {
+    val from = order.indexOf(a)
+    val to = order.indexOf(b)
+    if (from < 0 || to < 0) return emptySet()
+    return order.subList(minOf(from, to), maxOf(from, to) + 1).toSet()
+}
+
+/**
  * Il gesto del mouse sulla pagina, guardato prima di tutti e preso solo
  * quando diventa una selezione di blocchi: trascinando fuori dal campo
  * dov'è cominciato, [onSelect] riceve i blocchi dal primo a quello sotto il

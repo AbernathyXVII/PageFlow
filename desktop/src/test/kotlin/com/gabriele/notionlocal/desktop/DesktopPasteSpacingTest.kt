@@ -154,9 +154,9 @@ class DesktopPasteSpacingTest {
             File("build/desktop-screenshots", "$name.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(it).encodeToData(EncodedImageFormat.PNG)!!.bytes)
         }
         fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
-        /** I centri delle righe con del testo sotto il titolo della pagina. */
+        /** I centri delle righe con del testo sotto il titolo della pagina: solo l'inizio delle righe, dove non passa il cursore che lampeggia. */
         fun lineCenters(bitmap: Bitmap): List<Float> {
-            val rows = (170 until bitmap.height).filter { y -> (40 until 600).any { x -> bright(bitmap.getColor(x, y)) } }
+            val rows = (170 until bitmap.height).filter { y -> (40 until 75).any { x -> bright(bitmap.getColor(x, y)) } }
             val bands = ArrayList<IntRange>()
             for (y in rows) {
                 val last = bands.lastOrNull()
