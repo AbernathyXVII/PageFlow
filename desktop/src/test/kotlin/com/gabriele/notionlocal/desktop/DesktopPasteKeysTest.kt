@@ -193,12 +193,9 @@ class DesktopPasteKeysTest {
             frames(6)
             assertEquals("giù da \"Seconda riga\": ${page()}", 2, blockWith('Q'))
             assertEquals("Uno" + "Q", page()[2].second)
-            // Le due prime righe: dall'inizio della prima, Maiusc+giù e Maiusc+Fine, Ctrl+C.
-            click(Offset(54f, center(0)))
-            key(Key.MoveHome)
-            key(Key.DirectionDown, shift = true)
-            key(Key.MoveEnd, shift = true)
-            key(Key.C, ctrl = true)
+            // Le due prime righe negli appunti, come copiate da un'altra app (dal 17/11/2026 Maiusc+giù
+            // da una riga passa ai blocchi interi, che Ctrl+C copia negli appunti veri di Windows).
+            system.setContents(java.awt.datatransfer.StringSelection("Prima riga\nSeconda riga"), null)
             // In fondo a "Tre", a capo (un "4." nuovo) e Ctrl+V.
             click(Offset(400f, center(4)))
             key(Key.MoveEnd)

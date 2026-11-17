@@ -6347,6 +6347,30 @@ private fun MergedTextRunField(
         val coords = fieldCoords[0]?.takeIf { it.isAttached } ?: return false
         val mapping = mergedTransformation.filter(fieldValue.annotatedString).offsetMapping
         val shown = mapping.originalToTransformed(fieldValue.selection.end).coerceIn(0, layout.layoutInput.text.length)
+        // **Maiusc+su e giù come in Notion** (dal 17/11/2026, scelto dall'utente): il testo si seleziona
+        // dentro la sua riga, fino al suo inizio o alla sua fine; premuti ancora si passa ai blocchi
+        // interi, uno in più a ogni pressione (vedi `LocalBlockExtend`). Prima il testo andava fino al
+        // bordo del campo, e un titolo grande, che sta in un campo suo, fermava tutto.
+        val toBlocks = extendToBlocks
+        if (extend != null && toBlocks != null) {
+            val body = bodyOf(fieldValue.text)
+            val end = (fieldValue.selection.end - RUN_LEAD.length).coerceIn(0, body.length)
+            val lineStart = body.lastIndexOf('\n', end - 1) + 1
+            val lineEnd = body.indexOf('\n', end).let { if (it < 0) body.length else it }
+            val edge = if (down) lineEnd else lineStart
+            val edgeShown = mapping.originalToTransformed(RUN_LEAD.length + edge).coerceIn(0, layout.layoutInput.text.length)
+            // Una riga lunga che va a capo: dentro di lei si sale e si scende come sempre (qui sotto).
+            if (layout.getLineForOffset(shown) == layout.getLineForOffset(edgeShown)) {
+                if (end != edge) {
+                    fieldValue = fieldValue.copy(selection = TextRange(fieldValue.selection.start, RUN_LEAD.length + edge))
+                    return true
+                }
+                val anchor = runBlocks.getOrNull(lineIndexAt(body, (fieldValue.selection.start - RUN_LEAD.length).coerceIn(0, body.length)))
+                val here = runBlocks.getOrNull(lineIndexAt(body, end))
+                if (anchor != null && here != null) toBlocks(anchor.id, here.id, down)
+                return true
+            }
+        }
         if (!onEdgeLine(layout, shown, down)) {
             // Dentro il campo: la riga sopra o sotto la trova la pagina (vedi `verticalTarget`).
             if (vertical.at != fieldValue.selection.end) vertical.x = layout.getCursorRect(shown).left
@@ -6362,17 +6386,8 @@ private fun MergedTextRunField(
             }
             return true
         }
-        // Con Maiusc sulla prima o sull'ultima riga: allarga fin lì, come prima; già lì, si passa ai
-        // blocchi interi, come in Notion (dal 17/11/2026, trovato dall'utente: "non posso andare giù o
-        // su perché il titolone bugga tutto", vedi `LocalBlockExtend`).
-        if (extend != null) {
-            val atEdge = if (down) fieldValue.selection.end >= fieldValue.text.length else fieldValue.selection.end <= RUN_LEAD.length
-            val toBlocks = extendToBlocks
-            if (!atEdge || toBlocks == null) return false
-            val anchor = runBlocks.getOrNull(lineIndexAt(bodyOf(fieldValue.text), (fieldValue.selection.start - RUN_LEAD.length).coerceAtLeast(0))) ?: return false
-            val edge = (if (down) runBlocks.lastOrNull() else runBlocks.firstOrNull()) ?: return false
-            return toBlocks(anchor.id, edge.id, down)
-        }
+        // Con Maiusc sulla prima o sull'ultima riga (dove non si passa ai blocchi, sul telefono): allarga fin lì, come prima.
+        if (extend != null) return false
         val here = runBlocks.getOrNull(lineIndexAt(bodyOf(fieldValue.text), fieldValue.selection.end - 1)) ?: return false
         val next = viewModel.lineNextTo(here.id, down) ?: return false
         viewModel.arriveWithArrow(next.id, coords.localToWindow(Offset(layout.getHorizontalPosition(shown, true), 0f)).x, fromAbove = down)

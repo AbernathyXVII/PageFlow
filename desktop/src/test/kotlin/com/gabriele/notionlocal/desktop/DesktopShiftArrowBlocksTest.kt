@@ -48,11 +48,13 @@ import java.io.File
 import java.nio.file.Files
 
 /**
- * **Maiusc+frecce oltre un titolo grande** (17/11/2026, trovato dall'utente:
- * "non posso andare giù o su perché il titolone bugga tutto"): da "Tre",
- * sotto il titolo, Maiusc+su porta la selezione in cima al suo campo e poi
- * passa ai blocchi interi, il titolo e "Tre"; un'altra Maiusc+su prende anche
- * "Due", Maiusc+giù la riporta indietro di uno, e Canc toglie quelli scelti.
+ * **Maiusc+frecce e trascinamento come in Notion** (17/11/2026, trovato
+ * dall'utente: "non posso andare giù o su perché il titolone bugga tutto", poi
+ * scelto "come Notion"): il testo si seleziona dentro la sua riga, poi si
+ * passa ai blocchi interi, anche fra due righe dello stesso campo. Da "Uno"
+ * Maiusc+giù due volte: "Uno" e "Due". Da "Quattro", sotto il titolo,
+ * Maiusc+su due volte: "Tre" e "Quattro"; ancora su anche il titolo, giù
+ * uno in meno, su di nuovo. Col mouse, da "Uno" a "Due": i due blocchi.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 class DesktopShiftArrowBlocksTest {
@@ -77,7 +79,8 @@ class DesktopShiftArrowBlocksTest {
             BlockEntity(id = "due", pageId = "maiusc", type = BlockType.BULLET_LIST_ITEM, textJson = """[{"text":"Due"}]"""),
             BlockEntity(id = "titolo", pageId = "maiusc", type = BlockType.PARAGRAPH, textJson = """[{"text":"Generali","bold":true,"size":29}]"""),
             BlockEntity(id = "tre", pageId = "maiusc", type = BlockType.BULLET_LIST_ITEM, textJson = """[{"text":"Tre"}]"""),
-            BlockEntity(id = "quattro", pageId = "maiusc", type = BlockType.BULLET_LIST_ITEM, textJson = """[{"text":"Quattro"}]""")
+            BlockEntity(id = "quattro", pageId = "maiusc", type = BlockType.BULLET_LIST_ITEM, textJson = """[{"text":"Quattro"}]"""),
+            BlockEntity(id = "cinque", pageId = "maiusc", type = BlockType.PARAGRAPH, textJson = """[{"text":"Cinque"}]""")
         )
         blocks.forEachIndexed { i, block -> repo.saveBlock(block.copy(orderIndex = i)) }
     }
@@ -128,36 +131,78 @@ class DesktopShiftArrowBlocksTest {
             frames(6)
         }
         fun bright(c: Int) = ((c shr 16) and 0xFF) > 150 && ((c shr 8) and 0xFF) > 150 && (c and 0xFF) > 150
-        try {
-            frames(40)
-            val start = shot("shiftblocks_start")
-            val rows = (60 until start.height).filter { y -> (40 until 800).any { x -> bright(start.getColor(x, y)) } }
-            val bands = ArrayList<IntRange>()
+        fun bands(bitmap: Bitmap): List<IntRange> {
+            val rows = (60 until bitmap.height).filter { y -> (40 until 800).any { x -> bright(bitmap.getColor(x, y)) } }
+            val result = ArrayList<IntRange>()
             for (y in rows) {
-                val last = bands.lastOrNull()
-                if (last != null && y <= last.last + 3) bands[bands.lastIndex] = last.first..y else bands += y..y
+                val last = result.lastOrNull()
+                if (last != null && y <= last.last + 3) result[result.lastIndex] = last.first..y else result += y..y
             }
-            // Le ultime cinque: "Uno", "Due", il titolo, "Tre", "Quattro".
-            val (_, _, _, tre, _) = bands.takeLast(5)
+            return result
+        }
+        fun center(band: IntRange) = (band.first + band.last) / 2f
+        fun click(y: Float) {
             onWindowThread {
-                val at = Offset(400f, (tre.first + tre.last) / 2f)
+                val at = Offset(400f, y)
                 scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse)
                 scene.sendPointerEvent(PointerEventType.Press, at, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
                 scene.sendPointerEvent(PointerEventType.Release, at, type = PointerType.Mouse, buttons = PointerButtons(), button = PointerButton.Primary)
             }
             frames(6)
+        }
+        try {
+            frames(40)
+            // Le ultime sei: "Uno", "Due", il titolo, "Tre", "Quattro", "Cinque".
+            val uno = bands(shot("shiftblocks_start")).takeLast(6).first()
+            // Da "Uno", nello stesso campo di "Due": prima la fine della riga, poi i blocchi.
+            click(center(uno))
+            key(Key.MoveHome)
+            key(Key.DirectionDown, shift = true)
+            key(Key.DirectionDown, shift = true)
+            shot("shiftblocks_same_field")
+            key(Key.Delete)
+            frames(10)
+            assertEquals("tolti \"Uno\" e \"Due\"", listOf("titolo", "tre", "quattro", "cinque"), ids())
+
+            // Da "Quattro", sotto il titolo: in cima alla riga, poi "Tre" e "Quattro", poi anche il titolo;
+            // giù uno in meno, su di nuovo il titolo.
+            val (_, _, quattro, _) = bands(shot("shiftblocks_after_first")).takeLast(4)
+            click(center(quattro))
             key(Key.MoveEnd)
-            // In cima al campo di "Tre", poi oltre: il titolo e "Tre".
             key(Key.DirectionUp, shift = true)
             key(Key.DirectionUp, shift = true)
-            // Ancora su: anche "Due"; giù: di nuovo solo il titolo e "Tre"; su: "Due" con loro.
             key(Key.DirectionUp, shift = true)
             key(Key.DirectionDown, shift = true)
             key(Key.DirectionUp, shift = true)
             shot("shiftblocks_chosen")
+            key(Key.Escape)
+            frames(6)
+            assertEquals("Esc non toglie niente", listOf("titolo", "tre", "quattro", "cinque"), ids())
+
+            // Col mouse, trascinando dal testo di "Tre" a quello di "Quattro" (lo stesso campo): i due blocchi.
+            val (_, tre, quattroAgain, _) = bands(shot("shiftblocks_before_mouse")).takeLast(4)
+            val from = Offset(80f, center(tre))
+            val to = Offset(80f, center(quattroAgain))
+            onWindowThread {
+                scene.sendPointerEvent(PointerEventType.Move, from, type = PointerType.Mouse)
+                scene.sendPointerEvent(PointerEventType.Press, from, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
+            }
+            frames(3)
+            for (step in 1..6) {
+                onWindowThread {
+                    scene.sendPointerEvent(
+                        PointerEventType.Move, Offset(80f, from.y + (to.y - from.y) * step / 6f), type = PointerType.Mouse,
+                        buttons = PointerButtons(isPrimaryPressed = true)
+                    )
+                }
+                frames(1)
+            }
+            onWindowThread { scene.sendPointerEvent(PointerEventType.Release, to, type = PointerType.Mouse, buttons = PointerButtons(), button = PointerButton.Primary) }
+            frames(6)
+            shot("shiftblocks_mouse")
             key(Key.Delete)
             frames(10)
-            assertEquals("restano \"Uno\" e \"Quattro\"", listOf("uno", "quattro"), ids())
+            assertEquals("tolti \"Tre\" e \"Quattro\"", listOf("titolo", "cinque"), ids())
         } finally {
             onWindowThread { scene.close() }
         }

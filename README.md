@@ -1126,6 +1126,32 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.17 — 17/11/2026 · 18:26 — PC: selecting across lines works as in Notion
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1290 tests passed)*
+
+- **[Change]** **[💻 PC]** **Selecting across lines works as in Notion,
+  always**: with the mouse or with Shift and the arrows, the text is selected
+  inside the line where you start; as soon as you go to another line, also
+  in the same text field and with no big title around, the selection passes
+  to **whole blocks**, from the starting one to the one under the mouse (or
+  one more at every Shift+Up or Shift+Down), and stays on blocks until you
+  let go. Before, the text went on to the edge of the text field and only a
+  big title, which lives in a field of its own, switched to blocks halfway:
+  two ways mixed. Holding the mouse button and rolling the wheel, the page
+  scrolls and the selection follows the mouse onto the lines that arrive
+  under it; near the edge of the window the page still scrolls by itself
+- **[Project]** `mouseBlockSelection.follow` compares the line under the
+  pointer (not the text field) with the starting one, and also runs after a
+  wheel step; in `MergedTextRunField` `arrowKey` takes Shift+Up/Down to the
+  start or the end of the line, then calls `LocalBlockExtend` with that line.
+  Tests: `DesktopShiftArrowBlocksTest` (Shift+Down twice from "Uno" chooses
+  "Uno" and "Due" of the same field; from under the big title up and down
+  block by block; the mouse from "Tre" to "Quattro" chooses the two blocks),
+  `DesktopPasteKeysTest` puts its two lines in the clipboard itself. In one
+  run of the whole suite `DesktopBlockSelectionTest.draggingToTheBottomEdgeScrollsThePage`
+  failed inside Compose ("performMeasureAndLayout called during measure
+  layout"); the class run twice more passed all its 24 tests
+
 ### 🔧 v0.155.16.3 — 17/11/2026 · 14:43 — PC: Shift and the arrows go past a big title, choosing whole blocks
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1290 tests passed)*
 

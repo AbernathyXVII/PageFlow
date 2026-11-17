@@ -249,14 +249,15 @@ fun Modifier.mouseBlockSelection(
             var moved = false
 
             /**
-             * Sotto il puntatore: nel campo dov'è cominciato si seleziona il testo, fuori i blocchi.
-             * Con [scrolling] (la pagina che scorre da sola sotto il puntatore fermo) anche un'altra
-             * riga dello stesso campo: il testo selezionato non seguirebbe la pagina. Vero se ora si scelgono blocchi.
+             * Sotto il puntatore: nella riga dov'è cominciato si seleziona il testo, appena fuori i
+             * blocchi interi, **come in Notion** (dal 17/11/2026, scelto dall'utente: prima il testo
+             * continuava fino al bordo del campo, e un titolo grande, che sta in un campo suo, faceva
+             * passare ai blocchi a metà strada). Poi si resta sui blocchi. Vero se ora si scelgono blocchi.
              */
-            fun follow(position: Offset, scrolling: Boolean = false): Boolean {
+            fun follow(position: Offset): Boolean {
                 if (start == null) return false
                 val now = hit(position) ?: return blocks
-                if (!blocks && now.first == start.first && !(scrolling && now.second != start.second)) return false
+                if (!blocks && now.second == start.second) return false
                 blocks = true
                 val ids = order()
                 val from = ids.indexOf(start.second)
@@ -271,8 +272,15 @@ fun Modifier.mouseBlockSelection(
             try {
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
-                    // La rotella mentre si seleziona fa scorrere la pagina: non è un trascinamento.
-                    if (event.type == PointerEventType.Scroll) continue
+                    // La rotella mentre si seleziona fa scorrere la pagina: non è un trascinamento, ma
+                    // sotto il puntatore fermo arrivano altre righe, e la selezione le segue (dal 17/11/2026).
+                    if (event.type == PointerEventType.Scroll) {
+                        launch {
+                            delay(EDGE_FRAME_MS * 2)
+                            follow(pointer)
+                        }
+                        continue
+                    }
                     val change = event.changes.firstOrNull { it.id == down.id } ?: break
                     if (!change.pressed) {
                         if (!blocks) {
@@ -295,7 +303,7 @@ fun Modifier.mouseBlockSelection(
                                 val step = edgeSpeed(pointer.y)
                                 if (step == 0f) break
                                 scrollBy(step)
-                                follow(pointer, scrolling = true)
+                                follow(pointer)
                                 delay(EDGE_FRAME_MS)
                             }
                         }
