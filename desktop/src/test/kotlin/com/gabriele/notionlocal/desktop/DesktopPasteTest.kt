@@ -5,9 +5,12 @@ import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.NativeClipboard
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.TextFieldValue
 import com.gabriele.notionlocal.data.entity.RichTextSpan
+import com.gabriele.notionlocal.data.entity.StyleRange
 import com.gabriele.notionlocal.platform.HtmlSelection
 import com.gabriele.notionlocal.ui.screen.LinkClipboard
+import com.gabriele.notionlocal.ui.screen.pastedFormat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -42,6 +45,26 @@ class DesktopPasteTest {
         val link = pasted.getStringAnnotations(0, pasted.length).single { it.tag == "pasted-link" }
         assertEquals("https://www.notion.so", link.item)
         assertEquals("Notion", pasted.text.substring(link.start, link.end))
+    }
+
+    /**
+     * **Ctrl+V tiene la formattazione della fonte** (dal 17/11/2026, chiesto
+     * dall'utente): senza scegliere niente arrivano grassetto e colori, come
+     * con "Keep Source Formatting".
+     */
+    @Test
+    fun ctrlVKeepsTheStylesAndColorsOfTheSource() {
+        val html = "<html><body><!--StartFragment--><p><b>Forte</b> e <span style=\"color:#C00000\">rosso</span></p><!--EndFragment--></body></html>"
+        system.setContents(HtmlSelection("Forte e rosso", html), null)
+        val pasted = LinkClipboard(base, compose, system = system).getText()!!
+        assertEquals("Forte e rosso", pasted.text)
+        assertEquals(
+            listOf(StyleRange(0, 5, bold = true), StyleRange(8, 13, color = "#C00000")),
+            TextFieldValue(pasted).pastedFormat(0).styles
+        )
+        // Un testo semplice (dal Blocco note) prende lo stile di dove arriva: niente da ripulire.
+        system.setContents(java.awt.datatransfer.StringSelection("solo testo"), null)
+        assertTrue(TextFieldValue(LinkClipboard(base, compose, system = system).getText()!!).pastedFormat(0).isEmpty)
     }
 
     @Test

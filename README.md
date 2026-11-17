@@ -1126,6 +1126,21 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.12 — 17/11/2026 · 10:06 — PC: Ctrl+V keeps the formatting of the source
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1283 tests passed)*
+
+- **[Change]** **[💻 PC]** **Ctrl+V pastes like "Keep Source Formatting"**:
+  the text copied from Word, OneNote, a web page or PageFlow arrives with its
+  bold, italic, sizes, colors and links, as with the click on "Paste" of the
+  right-click menu (before, Ctrl+V took only the links, and the rest took the
+  formatting of where it landed). A text with no formatting (from Notepad, or
+  a plain word copied from PageFlow) still takes the formatting of where it
+  lands. "Match Destination Formatting" and "Keep Text Only" stay in the menu
+- **[Project]** `PasteLinks.desktop.kt`: `nextPasteMode` starts and goes back
+  to `KEEP_SOURCE`; without HTML the paste isn't cleaned (`PASTED_PLAIN_TAG`
+  only with HTML or "Keep Text Only"). Test:
+  `DesktopPasteTest.ctrlVKeepsTheStylesAndColorsOfTheSource`
+
 ### ✏️ v0.155.11 — 17/11/2026 · 09:49 — Pasting with "Keep Source Formatting" keeps the colors too
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1282 tests passed)*
 

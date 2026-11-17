@@ -41,7 +41,9 @@ actual class LinkClipboard(
     private val selectedLines: () -> List<CopiedLine?>? = { null },
     private val system: java.awt.datatransfer.Clipboard = Toolkit.getDefaultToolkit().systemClipboard
 ) : ClipboardManager by base, Clipboard by clipboard {
-    actual var nextPasteMode: PasteMode = PasteMode.LINKS_ONLY
+    // **Ctrl+V tiene la formattazione della fonte** (dal 17/11/2026, chiesto dall'utente: "sì,
+    // anche Ctrl+V"): stili, grandezze, colori e link, come il clic su "Paste" del menu.
+    actual var nextPasteMode: PasteMode = PasteMode.KEEP_SOURCE
 
     override val nativeClipboard: NativeClipboard get() = clipboard.nativeClipboard
 
@@ -85,7 +87,7 @@ actual class LinkClipboard(
 
     override fun getText(): AnnotatedString? {
         val mode = nextPasteMode
-        nextPasteMode = PasteMode.LINKS_ONLY
+        nextPasteMode = PasteMode.KEEP_SOURCE
         val html = clipHtml()
         // Com'era fatto nella fonte: da un'altra app con l'HTML (da PageFlow il tipo delle righe c'è già, nel commento).
         if (mode == PasteMode.KEEP_SOURCE && html != null && linesMarkerOf(html) == null) {
@@ -94,7 +96,8 @@ actual class LinkClipboard(
         }
         val plain = clipText() ?: return base.getText()
         val builder = AnnotatedString.Builder(plain)
-        if (mode == PasteMode.KEEP_SOURCE || mode == PasteMode.TEXT_ONLY) {
+        // Un testo senza formattazione (senza HTML) prende quella di dove arriva, come Ctrl+V prima del 17/11/2026.
+        if ((mode == PasteMode.KEEP_SOURCE && html != null) || mode == PasteMode.TEXT_ONLY) {
             builder.addStringAnnotation(PASTED_PLAIN_TAG, "", 0, plain.length)
         }
         if (html != null && (mode == PasteMode.KEEP_SOURCE || mode == PasteMode.LINKS_ONLY)) {
