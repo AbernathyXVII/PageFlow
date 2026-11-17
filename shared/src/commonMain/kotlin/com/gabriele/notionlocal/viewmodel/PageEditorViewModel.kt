@@ -1402,7 +1402,33 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         val changed = updated.filter { u -> current[u.id]?.let { lineLookOf(it) != lineLookOf(u) } == true }.mapTo(HashSet()) { it.id }
         if (changed.isEmpty()) return
         val replaced = updated.associateBy { it.id }
-        val top = _blocks.value.filter { it.parentBlockId == null }.map { replaced[it.id] ?: it }
+        splitPiecesByLook(_blocks.value.filter { it.parentBlockId == null }.map { replaced[it.id] ?: it }, changed)
+    }
+
+    /**
+     * **Le righe che appaiono diverse escono dal campo appena è in pari** (dal
+     * 17/11/2026, trovato dall'utente: incollato da OneNote un elenco con un
+     * titolo grande in mezzo, tutte le righe prendevano lo spazio del titolo e
+     * si sistemavano solo dopo un paio di secondi, quelle sopra il titolo solo
+     * selezionando tutto). Le righe incollate restano nel pezzo in cui si
+     * scrive; il campo lo chiede quando il database gli ha restituito il suo
+     * testo: prima, perdendo righe, le riscriverebbe come nuove. Come per la
+     * barra Aa ([splitChangedLooks]), la parte con [lineId] (la riga del
+     * cursore) resta il campo col fuoco.
+     */
+    fun splitMixedLooks(runLines: List<BlockEntity>, lineId: String) {
+        if (runLines.map { lineLookOf(it) }.distinct().size < 2) return
+        splitPiecesByLook(_blocks.value.filter { it.parentBlockId == null }, setOf(lineId))
+    }
+
+    /**
+     * I pezzi delle righe [top] (quelle in cima alla pagina, nell'ordine) che
+     * contengono una delle righe [changed] e righe che appaiono diverse si
+     * dividono nelle parti che appaiono uguali; quella col primo di [changed]
+     * tiene la chiave del pezzo, cioè il campo col fuoco. Vedi
+     * [splitChangedLooks].
+     */
+    private fun splitPiecesByLook(top: List<BlockEntity>, changed: Set<String>) {
         val starts = chunkStartsOf(top)
         val byId = top.associateBy { it.id }
         class Piece(val key: String?, val ids: MutableList<String>)

@@ -5904,8 +5904,14 @@ private fun MergedTextRunField(
         val official = runFieldText(runBlocks, viewModel)
         when {
             // È arrivato indietro esattamente ciò che avevamo inviato:
-            // siamo allineati, non c'è più nulla in sospeso.
-            official == pendingText -> pendingText = null
+            // siamo allineati, non c'è più nulla in sospeso. Righe che
+            // appaiono diverse (un titolo grande incollato) adesso possono
+            // uscire dal campo (vedi `splitMixedLooks`).
+            official == pendingText -> {
+                pendingText = null
+                val caretLine = bodyOf(fieldValue.text).take((fieldValue.selection.end - RUN_LEAD.length).coerceAtLeast(0)).count { it == '\n' }
+                runBlocks.getOrNull(caretLine)?.let { viewModel.splitMixedLooks(runBlocks, it.id) }
+            }
             // C'è ancora una nostra modifica in viaggio e il database
             // non la riflette: quello che è arrivato è vecchio, ignoralo.
             pendingText != null -> {}

@@ -1126,6 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.16.2 — 17/11/2026 · 13:47 — The lines pasted from OneNote are close together at once
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1289 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The lines pasted with a big
+  title among them are close together at once**: pasting from OneNote a list
+  with a title in the middle, all the pasted lines stayed in the text field
+  where the cursor was, with the title: a field has one line height, and they
+  all took the one of the title, far apart. The lines under the title went
+  back after a couple of seconds, those above only selecting everything. Now,
+  as soon as the paste is saved, the lines that look different leave the
+  field (as when the Aa bar makes a line bigger), and nothing moves after
+- **[Project]** `splitMixedLooks` (from `MergedTextRunField`, when the
+  database gives back the pasted text: earlier, losing lines, the field would
+  write them again as new ones, and they came out twice) and
+  `splitPiecesByLook`, the part of `splitChangedLooks` that splits a piece by
+  look. Test: `DesktopPasteSpacingTest` (a list with a title pasted from
+  OneNote's HTML: right after Ctrl+V the lines are a line apart, the same as
+  later, and in the database they are there once)
+
 ### 🔧 v0.155.16.1 — 17/11/2026 · 12:39 — The empty lines at the bottom of a page can be reached again
 *(Claude Code on the PC; tested by the user on 17/11/2026; installed on the phone; 1288 tests passed)*
 
