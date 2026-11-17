@@ -485,6 +485,8 @@ private fun EventBlock(
                     color = content.copy(alpha = 0.85f),
                     maxLines = 1
                 )
+                // Le proprietà di Property visibility (dal 17/11/2026), finché c'è posto nel blocco.
+                CalendarPropertyLines(block.row.id, content)
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {

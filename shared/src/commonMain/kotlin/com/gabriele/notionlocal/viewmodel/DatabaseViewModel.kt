@@ -238,6 +238,18 @@ data class DatabaseTableState(
     }
 }
 
+/**
+ * L'ordine [keys] con le chiavi di [shown] rimesse, nell'ordine di [shown],
+ * nei posti che occupavano (le altre, le nascoste, non si muovono); null se
+ * [shown] non sono proprio quelle di [keys]. Vedi `reorderShownColumns`.
+ */
+fun orderWithShown(keys: List<String>, shown: List<String>): List<String>? {
+    val slots = keys.filter { it in shown }
+    if (slots.size != shown.size || slots.toSet() != shown.toSet()) return null
+    val next = shown.iterator()
+    return keys.map { if (it in shown) next.next() else it }
+}
+
 /** Le proprietà in cui cerca la lente: quelle il cui valore salvato è il testo che si legge. */
 private val SEARCHABLE_COLUMN_TYPES = setOf(
     ColumnType.TEXT,
@@ -2335,6 +2347,25 @@ class DatabaseViewModel(
         val state = _tableState.value
         val data = _dataPage.value ?: return
         val order = state.orderAfterMove(key, delta, data.nameColumnOrder, _page.value?.nameColumnHidden() == true) ?: return
+        saveColumnOrder(order, data)
+    }
+
+    /**
+     * **L'ordine deciso in Property visibility** (dal 17/11/2026, chiesto
+     * dall'utente per il calendario, "in ordine manuale che si può decidere
+     * sempre dentro Property visibility"): [shown] sono le proprietà che si
+     * vedono (Name con [NAME_COLUMN_KEY]) nell'ordine nuovo; le nascoste
+     * restano ai loro posti. È lo stesso ordine delle colonne della tabella.
+     */
+    fun reorderShownColumns(shown: List<String>) {
+        val data = _dataPage.value ?: return
+        val keys = tableKeys(_tableState.value.columns, data.nameColumnOrder)
+        val order = orderWithShown(keys, shown) ?: return
+        if (order != keys) saveColumnOrder(order, data)
+    }
+
+    /** Le colonne e Name nell'ordine [order], da sinistra a destra (vedi `moveColumn`). */
+    private fun saveColumnOrder(order: List<String>, data: PageEntity) {
         val columnIds = order.filterNot { it == NAME_COLUMN_KEY }
         // Dalle colonne vere: quelle dello stato, in una vista collegata,
         // hanno il "nascosto" della vista (vedi `rawColumns`).

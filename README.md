@@ -1126,6 +1126,36 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.15 — 17/11/2026 · 11:23 — The calendar shows the properties of the events, in the order of Property visibility
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1288 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The calendar shows the values of
+  the properties under the name of each event**, as on Notion: in the month,
+  in the week and (as long as there's room in the block) in the day, one line
+  per property that Property visibility shows and that has a value; the
+  empty ones take no room. The events with properties are taller, and so is
+  their week. The date that places the event on the calendar isn't repeated
+  under it, as the property of the columns on the cards of a board
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Property visibility puts the
+  properties in order by dragging them**: the shown ones have the three lines
+  on the right, to hold and drag up or down; the new order is the one of the
+  events in the calendar, of the cards and of the columns of the table. Name
+  is in its place among them (before it was always at the top of the list);
+  the hidden ones keep their place
+- **[Project]** `CalendarProperties` and `LocalCalendarProperties` (the
+  visible columns without the date column), `CalendarPropertyLines` under the
+  name in `CalendarBar` and in `EventBlock` of the day; the rows of a week are
+  as tall as their event with the most properties (`calendarLaneHeight`,
+  `CompactWeek.laneHeight`, `weekViewHeight`). `CardPropertyValue` takes a
+  style, a color and the size of the image. Property visibility uses
+  `ReorderList` (the one of the tags and of the groups) and
+  `reorderShownColumns`, which puts the new order of the shown ones in their
+  places (`orderWithShown`) and saves it as "Move left/right"
+  (`saveColumnOrder`). Test: `DesktopCalendarPropertiesTest` (an event with
+  Luogo and Note under its name; Note hidden, Luogo stays; Note dragged above
+  Luogo in Property visibility, the order changes in the database and on the
+  event)
+
 ### ✏️ v0.155.14 — 17/11/2026 · 10:54 — PC: no gray box under the mouse anywhere, submenus next to their entry
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1286 tests passed)*
 

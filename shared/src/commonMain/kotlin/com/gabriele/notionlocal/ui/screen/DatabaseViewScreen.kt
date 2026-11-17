@@ -47,6 +47,7 @@ import com.gabriele.notionlocal.data.entity.calculate
 import com.gabriele.notionlocal.data.entity.NumberSettings
 import com.gabriele.notionlocal.data.entity.NumberDisplay
 import com.gabriele.notionlocal.data.entity.NAME_CALCULATION_KEY
+import com.gabriele.notionlocal.data.entity.tableKeys
 import com.gabriele.notionlocal.data.entity.Calculation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
@@ -1950,6 +1951,8 @@ private fun DatabaseViewBody(
             nameLabel = dataPage?.nameColumnTitle ?: DbStrings.name,
             nameHidden = page?.nameColumnHidden() == true,
             onSetNameHidden = if (viewLocked) null else { hidden -> viewModel.setNameHidden(hidden) },
+            nameOrder = dataPage?.nameColumnOrder ?: -1,
+            onReorderShown = if (viewLocked) null else { shown -> viewModel.reorderShownColumns(shown) },
             filterColumn = viewModel.filterColumn(),
             filterValue = page?.filterValue.orEmpty(),
             onOpenFilter = {
@@ -4178,6 +4181,15 @@ private fun CalendarLayout(
     // smisurato un database con moltissime pagine datate.
     val reservedRows = rowIndexes.size.coerceAtMost(CALENDAR_MAX_ROWS)
 
+    // **Le proprietà sotto il nome degli eventi** (dal 17/11/2026, vedi `CalendarProperties`).
+    val properties = remember(state, dateColumn?.id) { CalendarProperties(state, dateColumn?.id) }
+    // Nella settimana ogni pagina ha la sua riga in tutte le settimane: alta quanto le proprietà della più lunga che ci sta.
+    val laneLines = remember(rowIndexes, properties) {
+        rowIndexes.entries.groupBy({ it.value }, { properties.count(it.key) }).mapValues { (_, counts) -> counts.max() }
+    }
+    val weekLane: (Int) -> Dp = { calendarLaneHeight(laneLines[it] ?: 0) }
+
+    CompositionLocalProvider(LocalCalendarProperties provides properties) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -4317,6 +4329,7 @@ private fun CalendarLayout(
                 dated = dated,
                 rowIndexes = rowIndexes,
                 reservedRows = reservedRows,
+                laneHeight = weekLane,
                 onOpenRow = onOpenRow,
                 onRowLongPress = onRowLongPress,
                 onAddRowOnDate = onAddOnDate,
@@ -4341,7 +4354,8 @@ private fun CalendarLayout(
                 val compact = CompactWeek(
                     placed = remember(weekSegments, rowIndexes) { packWeek(weekSegments, rowIndexes) },
                     expanded = weekStart in openWeeks,
-                    onToggle = { openWeeks = if (weekStart in openWeeks) openWeeks - weekStart else openWeeks + weekStart }
+                    onToggle = { openWeeks = if (weekStart in openWeeks) openWeeks - weekStart else openWeeks + weekStart },
+                    linesOf = properties::count
                 )
                 CalendarWeekRow(
                     weekStart = weekStart,
@@ -4351,6 +4365,7 @@ private fun CalendarLayout(
                     rowIndexes = rowIndexes,
                     maxRows = CALENDAR_MAX_ROWS,
                     height = compact.height(),
+                    laneHeight = compact::laneHeight,
                     onOpenRow = onOpenRow,
                     onRowLongPress = onRowLongPress,
                     onAddRowOnDate = onAddOnDate,
@@ -4396,6 +4411,53 @@ private fun CalendarLayout(
             }
         }
     }
+    }
+}
+
+/**
+ * **Le proprietà sugli eventi del calendario** (dal 17/11/2026, chiesto
+ * dall'utente: "fai come fa Notion, che nella vista Calendar posso vedere i
+ * valori delle proprietà, in ordine manuale che si può decidere sempre dentro
+ * Property visibility"): quelle che Property visibility mostra, nel suo
+ * ordine, una riga ciascuna sotto il nome dell'evento; quelle vuote no.
+ * Non la data del calendario ([dateColumnId]): come la proprietà delle
+ * colonne sulle schede della bacheca, dice dove sta l'evento e basta.
+ */
+internal class CalendarProperties(val state: DatabaseTableState, dateColumnId: String? = null) {
+    private val columns = state.visibleColumns.filter { it.id != dateColumnId }
+
+    /** Le proprietà con un valore della riga [rowId], dall'alto in basso. */
+    fun of(rowId: String): List<DatabaseColumnEntity> = columns.filter { !state.cellValues[rowId to it.id].isNullOrBlank() }
+
+    fun count(rowId: String): Int = columns.count { !state.cellValues[rowId to it.id].isNullOrBlank() }
+}
+
+/** Le proprietà della vista calendario (vedi [CalendarProperties]); null fuori dal calendario. */
+internal val LocalCalendarProperties = compositionLocalOf<CalendarProperties?> { null }
+
+/** Una riga del calendario con un evento che ha [lines] proprietà da mostrare. */
+internal fun calendarLaneHeight(lines: Int): Dp = CALENDAR_BAR_HEIGHT + CALENDAR_PROPERTY_LINE * lines
+
+/** Quanto è alta la riga di una proprietà sotto il nome di un evento. */
+internal val CALENDAR_PROPERTY_LINE = 16.dp
+
+/** Le proprietà di [rowId] sotto il nome del suo evento, del colore [color]: una per riga, tagliate se lunghe. */
+@Composable
+internal fun CalendarPropertyLines(rowId: String, color: Color) {
+    val properties = LocalCalendarProperties.current ?: return
+    properties.of(rowId).forEach { column ->
+        Box(modifier = Modifier.fillMaxWidth().height(CALENDAR_PROPERTY_LINE).clipToBounds(), contentAlignment = Alignment.CenterStart) {
+            CardPropertyValue(
+                column = column,
+                value = properties.state.cellValues[rowId to column.id].orEmpty(),
+                overflow = TextOverflow.Ellipsis,
+                linkLabel = properties.state.linkLabels[rowId to column.id],
+                style = MaterialTheme.typography.labelSmall,
+                textColor = color.copy(alpha = 0.8f),
+                imageSize = 14.dp
+            )
+        }
+    }
 }
 
 /**
@@ -4407,16 +4469,24 @@ private fun CalendarLayout(
 internal class CompactWeek(
     val placed: List<Pair<Int, CalendarSegment>>,
     val expanded: Boolean,
-    val onToggle: () -> Unit
+    val onToggle: () -> Unit,
+    /** Quante proprietà ha sotto il nome l'evento di una riga (vedi `CalendarProperties`). */
+    linesOf: (String) -> Int = { 0 }
 ) {
     /** Quante righe servono per vedere tutto. */
     val rows: Int = (placed.maxOfOrNull { it.first } ?: -1) + 1
+
+    private val lines: Map<Int, Int> = placed.groupBy({ it.first }, { linesOf(it.second.row.id) }).mapValues { (_, counts) -> counts.max() }
+
+    /** Una riga è alta quanto l'evento con più proprietà che ci sta. */
+    fun laneHeight(index: Int): Dp = calendarLaneHeight(lines[index] ?: 0)
 
     /** Alta quanto le righe che si vedono, più quella di "Show more" o "Show less", mai meno di prima. */
     fun height(): Dp {
         val shown = if (expanded) rows else minOf(rows, CALENDAR_COMPACT_ROWS)
         val more = if (rows > CALENDAR_COMPACT_ROWS) CALENDAR_BAR_HEIGHT else 0.dp
-        return (CALENDAR_WEEK_HEADER + CALENDAR_BAR_HEIGHT * shown + more).coerceAtLeast(CALENDAR_MONTH_WEEK_HEIGHT)
+        val lanes = (0 until shown).fold(0.dp) { sum, index -> sum + laneHeight(index) }
+        return (CALENDAR_WEEK_HEADER + lanes + more).coerceAtLeast(CALENDAR_MONTH_WEEK_HEIGHT)
     }
 }
 
@@ -4452,9 +4522,9 @@ private fun startOfWeek(date: LocalDate, firstDayOfWeek: DayOfWeek): LocalDate {
     return date.minusDays(shift.toLong())
 }
 
-/** Quanto è alta una settimana quando è l'unica cosa sullo schermo. */
-private fun weekViewHeight(barCount: Int): Dp =
-    (CALENDAR_WEEK_HEADER + CALENDAR_BAR_HEIGHT * barCount)
+/** Quanto è alta una settimana quando è l'unica cosa sullo schermo: [laneHeight] di ognuna delle sue righe. */
+private fun weekViewHeight(barCount: Int, laneHeight: (Int) -> Dp): Dp =
+    (CALENDAR_WEEK_HEADER + (0 until barCount).fold(0.dp) { sum, index -> sum + laneHeight(index) })
         .coerceAtLeast(CALENDAR_WEEK_MIN_HEIGHT)
 
 /**
@@ -4483,6 +4553,7 @@ private fun CalendarWeekSwiper(
     dated: List<Pair<DatabaseRowEntity, DateRange>>,
     rowIndexes: Map<String, Int>,
     reservedRows: Int,
+    laneHeight: (Int) -> Dp,
     onOpenRow: (DatabaseRowEntity) -> Unit,
     onRowLongPress: (DatabaseRowEntity) -> Unit,
     onAddRowOnDate: (LocalDate) -> Unit,
@@ -4522,7 +4593,7 @@ private fun CalendarWeekSwiper(
     // rimpicciolirsi. L'altezza tiene conto delle righe **riservate**,
     // non di quante barre ci sono davvero in una settimana: una riga
     // lasciata vuota da una pagina finita occupa spazio come le altre.
-    val height = weekViewHeight(reservedRows)
+    val height = weekViewHeight(reservedRows, laneHeight)
 
     HorizontalPager(
         state = pagerState,
@@ -4549,6 +4620,7 @@ private fun CalendarWeekSwiper(
             rowIndexes = rowIndexes,
             maxRows = reservedRows,
             height = height,
+            laneHeight = laneHeight,
             onOpenRow = onOpenRow,
             onRowLongPress = onRowLongPress,
             onAddRowOnDate = onAddRowOnDate
@@ -4815,10 +4887,11 @@ private fun calendarRowIndexes(
 @Composable
 private fun CalendarBarRow(
     segments: List<CalendarSegment>,
+    height: Dp,
     onOpenRow: (DatabaseRowEntity) -> Unit,
     onRowLongPress: (DatabaseRowEntity) -> Unit
 ) {
-    Row(modifier = Modifier.fillMaxWidth().height(CALENDAR_BAR_HEIGHT)) {
+    Row(modifier = Modifier.fillMaxWidth().height(height)) {
         var column = 0
         segments.sortedBy { it.startColumn }.forEach { segment ->
             val start = maxOf(segment.startColumn, column)
@@ -4855,7 +4928,7 @@ private fun CalendarBar(
     val round = 4.dp
     val flat = 0.dp
     val eventColor = segment.row.eventColor
-    Box(
+    Column(
         modifier = modifier
             .fillMaxHeight()
             .padding(horizontal = 1.dp, vertical = 1.dp)
@@ -4875,10 +4948,9 @@ private fun CalendarBar(
             .pointerInput(segment.row.id) {
                 detectTapGestures(onTap = { onOpen() }, onLongPress = { onLongPress() })
             }
-            .padding(horizontal = 4.dp),
-        contentAlignment = Alignment.CenterStart
+            .padding(horizontal = 4.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.height(CALENDAR_BAR_HEIGHT - 2.dp), verticalAlignment = Alignment.CenterVertically) {
             RowIconBadge(segment.row.id, BAR_ICON_SIZE)
             Text(
                 text = highlightedTitle(segment.row.title),
@@ -4887,6 +4959,8 @@ private fun CalendarBar(
                 maxLines = 1
             )
         }
+        // Sotto il nome le proprietà che Property visibility mostra (dal 17/11/2026).
+        CalendarPropertyLines(segment.row.id, eventContentColor(eventColor))
     }
 }
 
@@ -4907,6 +4981,8 @@ private fun CalendarWeekRow(
     rowIndexes: Map<String, Int>,
     maxRows: Int,
     height: Dp,
+    /** Quanto è alta ogni riga di barre, con le proprietà sotto i nomi (vedi `CalendarProperties`). */
+    laneHeight: (Int) -> Dp,
     onOpenRow: (DatabaseRowEntity) -> Unit,
     onRowLongPress: (DatabaseRowEntity) -> Unit,
     onAddRowOnDate: (LocalDate) -> Unit,
@@ -4978,11 +5054,12 @@ private fun CalendarWeekRow(
                 if (rowSegments != null) {
                     CalendarBarRow(
                         segments = rowSegments,
+                        height = laneHeight(rowIndex),
                         onOpenRow = onOpenRow,
                         onRowLongPress = onRowLongPress
                     )
                 } else {
-                    Spacer(modifier = Modifier.height(CALENDAR_BAR_HEIGHT))
+                    Spacer(modifier = Modifier.height(laneHeight(rowIndex)))
                 }
             }
             if (compact != null) {
@@ -8647,8 +8724,14 @@ private fun CardPropertyValue(
     value: String,
     overflow: TextOverflow = TextOverflow.Clip,
     /** Di una cella URL, la scritta scelta con "Show as…" (dal 27/10/2026). */
-    linkLabel: LinkLabel? = null
+    linkLabel: LinkLabel? = null,
+    /** Nel calendario (dal 17/11/2026) più piccoli e del colore dell'evento: vedi `CalendarPropertyLines`. */
+    style: ComposeTextStyle? = null,
+    textColor: Color? = null,
+    imageSize: Dp = 28.dp
 ) {
+    val textStyle = style ?: MaterialTheme.typography.bodySmall
+    val inkColor = textColor ?: MaterialTheme.colorScheme.onSurfaceVariant
     // "Image": la miniatura, intera.
     if (column.type == ColumnType.IMAGE) {
         val context = LocalPlatformContext.current
@@ -8659,7 +8742,7 @@ private fun CardPropertyValue(
             contentDescription = DbStrings.columnName(column.name),
             contentScale = ContentScale.Fit,
             placeholder = false,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(imageSize)
         )
         return
     }
@@ -8668,8 +8751,8 @@ private fun CardPropertyValue(
         val related = LocalRelated.current
         Text(
             text = relationCardText(value, column.relationConfig()?.let { related[it.database] }),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = textStyle,
+            color = inkColor,
             maxLines = 1,
             overflow = overflow
         )
@@ -8680,8 +8763,8 @@ private fun CardPropertyValue(
         val page = LocalLinkedPages.current[value]
         Text(
             text = page?.let { "↗ " + it.title.ifBlank { Strings.untitled } } ?: DbStrings.pageNotFound,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = textStyle,
+            color = inkColor,
             maxLines = 1,
             overflow = overflow
         )
@@ -8690,8 +8773,8 @@ private fun CardPropertyValue(
     if (column.type != ColumnType.COLOR) {
         Text(
             text = linkLabel?.takeIf { column.type == ColumnType.URL }?.text ?: listCellLabel(column, value),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = textStyle,
+            color = inkColor,
             maxLines = 1,
             overflow = overflow
         )
@@ -8703,8 +8786,8 @@ private fun CardPropertyValue(
         if (cell.text.isNotEmpty()) {
             Text(
                 text = cell.text,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = textStyle,
+                color = inkColor,
                 maxLines = 1,
                 overflow = overflow
             )
@@ -8722,7 +8805,7 @@ private fun CardPropertyValue(
         if (cell.text.isNotEmpty()) {
             Text(
                 text = cell.text,
-                style = MaterialTheme.typography.bodySmall,
+                style = textStyle,
                 color = if (darkTextOn(cell.color!!)) Color.Black else Color.White,
                 maxLines = 1,
                 overflow = overflow
@@ -10365,6 +10448,10 @@ private fun SettingsSheet(
     nameLabel: String = DbStrings.name,
     nameHidden: Boolean = false,
     onSetNameHidden: ((Boolean) -> Unit)? = null,
+    /** Dove sta Name fra le colonne (vedi `namePosition`). */
+    nameOrder: Int = -1,
+    /** Property visibility: le proprietà che si vedono nell'ordine nuovo (dal 17/11/2026); null: non si spostano. */
+    onReorderShown: ((List<String>) -> Unit)? = null,
     /** Il filtro attivo, da riassumere; toccarlo apre la sua finestra. */
     filterColumn: DatabaseColumnEntity? = null,
     filterValue: String = "",
@@ -10846,7 +10933,10 @@ private fun SettingsSheet(
                 SettingsPage.PROPERTY_VISIBILITY -> {
                     // Name come le altre (dal 13/11/2026): in cima, nascosta o no.
                     val nameEntry = DatabaseColumnEntity(id = NAME_COLUMN_KEY, pageId = "", name = nameLabel, type = ColumnType.TEXT, orderIndex = -1, hidden = nameHidden)
-                    val listed = if (onSetNameHidden != null) listOf(nameEntry) + columns else columns
+                    // Nell'ordine delle colonne, Name al suo posto (dal 17/11/2026: prima sempre in cima).
+                    val listed = tableKeys(columns, nameOrder).mapNotNull { key ->
+                        if (key == NAME_COLUMN_KEY) nameEntry.takeIf { onSetNameHidden != null } else columns.find { it.id == key }
+                    }
                     val shown = listed.filterNot { it.hidden }
                     val hidden = listed.filter { it.hidden }
                     fun toggle(column: DatabaseColumnEntity, hide: Boolean) {
@@ -10870,14 +10960,30 @@ private fun SettingsSheet(
                             action = DbStrings.hideAll,
                             onAction = { onSetAllColumnsHidden(true) }
                         )
-                        SheetGroup {
-                            shown.forEachIndexed { index, column ->
-                                if (index > 0) HorizontalDivider()
-                                PropertyVisibilityRow(
-                                    column = column,
-                                    hidden = false,
-                                    onToggle = { toggle(column, true) }
-                                )
+                        // **Si riordinano trascinando le tre lineette** (dal 17/11/2026, chiesto dall'utente:
+                        // "in ordine manuale che si può decidere sempre dentro Property visibility"): è
+                        // l'ordine delle colonne della tabella e delle proprietà su schede ed eventi.
+                        if (onReorderShown != null && shown.size >= 2) {
+                            ReorderList(
+                                keys = shown.map { it.id },
+                                onMove = onReorderShown,
+                                scrollState = sheetScroll,
+                                viewport = { sheetViewport }
+                            ) { key ->
+                                shown.find { it.id == key }?.let { column ->
+                                    PropertyVisibilityRow(column = column, hidden = false, onToggle = { toggle(column, true) })
+                                }
+                            }
+                        } else {
+                            SheetGroup {
+                                shown.forEachIndexed { index, column ->
+                                    if (index > 0) HorizontalDivider()
+                                    PropertyVisibilityRow(
+                                        column = column,
+                                        hidden = false,
+                                        onToggle = { toggle(column, true) }
+                                    )
+                                }
                             }
                         }
                     }
