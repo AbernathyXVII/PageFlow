@@ -218,8 +218,11 @@ class DesktopPcMenuTest {
         // Il bordo destro del menu, alla riga sotto Aa: lì comincia il sottomenu.
         val probe = aaTop + 45
         val right = (200 until open.width).first { open.getColor(it, probe) == MENU_BORDER }
+        // Il sottomenu è centrato sulla sua voce (dal 17/11/2026): si parte dal suo bordo in alto.
+        val subTop = (0 until open.height).first { open.getColor(right + 60, it) == MENU_BORDER }
+        assertTrue("il sottomenu copre Aa: comincia a $subTop", subTop <= aaTop)
         // Font, Font size, una riga, Bold.
-        val bold = aaTop + 60 + 9 + 15
+        val bold = subTop + 8 + 60 + 9 + 15
         move(right + 60f, aaTop + 15f)
         move(right + 60f, bold.toFloat())
         shot("pcmenu_bold")

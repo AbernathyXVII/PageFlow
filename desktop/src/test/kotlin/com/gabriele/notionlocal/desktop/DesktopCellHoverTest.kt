@@ -47,8 +47,9 @@ import java.nio.file.Files
  * **Nei database niente riquadro grigio col mouse sopra** (17/11/2026,
  * chiesto dall'utente: "quando metto la puntina del mouse sopra una casella o
  * sopra qualsiasi cosa che consente di farlo apparire, viene fuori un
- * rettangolino o quadratino in grigio chiaro […] Toglili"): passando sopra
- * una cella e sopra l'intestazione di una colonna, la foto non cambia.
+ * rettangolino o quadratino in grigio chiaro […] Toglili"; poi "anche in
+ * tutte le altre parti dell'app"): passando sopra una cella, l'intestazione di
+ * una colonna, il pulsante delle viste e la lente, la foto non cambia.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 class DesktopCellHoverTest {
@@ -131,6 +132,12 @@ class DesktopCellHoverTest {
             val headerY = (lines[0] - 16)
             hover(Offset((voto.first + voto.last) / 2f, headerY.toFloat()))
             assertEquals("pixel cambiati nell'intestazione", 0, changed(picture("cellhover_header.png"), voto, lines[0] - 30 until lines[0] - 1))
+            // Sopra il pulsante delle viste ("Table", sopra la tabella) e la lente della ricerca: nemmeno lì (tutta l'app, dal 17/11/2026).
+            val bar = lines[0] - 70 until lines[0] - 38
+            hover(Offset(120f, lines[0] - 54f))
+            assertEquals("pixel cambiati nella barra delle viste", 0, changed(picture("cellhover_views.png"), 70 until 400, bar))
+            hover(Offset(1075f, lines[0] - 54f))
+            assertEquals("pixel cambiati attorno alla lente", 0, changed(picture("cellhover_search.png"), 1000 until 1150, bar))
         } finally {
             onWindowThread { scene.close() }
         }

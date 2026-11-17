@@ -355,7 +355,8 @@ private fun TabItem(tab: PcTab, active: Boolean, tabs: PcTabs, repository: PageR
             modifier = Modifier
                 .then(if (tab.pinned) Modifier.size(32.dp, 26.dp) else Modifier.widthIn(min = 80.dp, max = 200.dp).height(26.dp))
                 .clip(RoundedCornerShape(6.dp))
-                .background(if (active) DarkBackground else if (hovered) DarkBackground.copy(alpha = 0.5f) else SidebarBackground)
+                // Niente grigio sulla scheda sotto il mouse (dal 17/11/2026, chiesto dall'utente): la "x" compare e basta.
+                .background(if (active) DarkBackground else SidebarBackground)
                 .hoverable(interaction)
                 .onRightClick { menu = true }
                 .clickable { tabs.select(tab.id) }

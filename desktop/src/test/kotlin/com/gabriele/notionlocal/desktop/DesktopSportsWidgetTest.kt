@@ -49,7 +49,7 @@ import java.time.LocalDate
  * **Il widget dello sport sul PC** (dal 11/11/2026, chiesto dall'utente):
  * sotto il nome della competizione le frecce fra le giornate con "Today" in
  * mezzo, e "Standings" e "Players"; la giornata intera non si illumina più
- * col mouse sopra (solo la partita). Con la giornata vera della Serie A
+ * col mouse sopra (e dal 17/11/2026 nemmeno la partita). Con la giornata vera della Serie A
  * salvata per i test del telefono, senza rete.
  */
 @OptIn(ExperimentalComposeUiApi::class)
@@ -160,15 +160,15 @@ class DesktopSportsWidgetTest {
             fun center(group: IntRange) = Offset((group.first + group.last) / 2f, (bar.first + bar.last) / 2f)
             fun same(a: Bitmap, b: Bitmap, band: IntRange) = band.all { y -> (8 until 292).all { x -> a.getColor(x, y) == b.getColor(x, y) } }
 
-            // Col mouse sopra una partita si illumina lei, non la giornata intera.
+            // Col mouse sopra una partita non si illumina niente, né lei né la giornata (dal 17/11/2026,
+            // chiesto dall'utente: niente riquadri grigi col mouse sopra, "dappertutto").
             val match = bands.first { it.first > title.last }
             mouse(PointerEventType.Move, Offset(200f, (match.first + match.last) / 2f))
             frames(5)
             val hovered = picture()
             save(hovered, "sports_widget_hover.png")
             assertTrue("il titolo della giornata resta com'era", same(start, hovered, title))
-            assertTrue("la partita sotto il mouse si illumina", (title.last + 4 until match.first).any { y -> hovered.getColor(60, y) != start.getColor(60, y) } ||
-                hovered.getColor(60, match.first) != start.getColor(60, match.first))
+            assertTrue("la partita sotto il mouse non si illumina", same(start, hovered, title.last + 4..match.last))
 
             // La freccia a destra passa alla giornata dopo, quella a sinistra torna indietro.
             click(center(words[2]))

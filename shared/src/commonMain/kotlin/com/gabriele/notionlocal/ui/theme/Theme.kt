@@ -2,6 +2,10 @@ package com.gabriele.notionlocal.ui.theme
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalRippleConfiguration
+import androidx.compose.material3.RippleConfiguration
+import androidx.compose.material.ripple.RippleAlpha
 import com.gabriele.notionlocal.platform.isPc
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.platform.LocalDensity
@@ -12,6 +16,15 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import com.gabriele.notionlocal.data.settings.AppSettings
+
+/**
+ * **Sul PC niente riquadro grigio col mouse sopra** (dal 17/11/2026, chiesto
+ * dall'utente, prima nei database e poi "dappertutto": celle, pulsante delle
+ * viste, barra laterale…): il velo di Material per il mouse sopra e per il
+ * fuoco è a zero; il lampo del clic resta.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+private val NO_HOVER_RIPPLE = RippleConfiguration(rippleAlpha = RippleAlpha(draggedAlpha = 0.16f, focusedAlpha = 0f, hoveredAlpha = 0f, pressedAlpha = 0.1f))
 
 /**
  * Scuro coi grigi di Notion, chiaro coi suoi bianchi sporchi, o come il
@@ -62,7 +75,8 @@ fun NotionLocalTheme(content: @Composable () -> Unit) {
         LocalDensity provides if (scaled) Density(density.density * AppSettings.zoom / 100f, density.fontScale * PC_TEXT_SCALE) else density,
         LocalTextScaled provides (LocalTextScaled.current || scaled),
         // Sul PC i pulsanti di Material non si allargano a 48 per il dito (fase 2, come Notion).
-        LocalMinimumInteractiveComponentSize provides if (isPc) Dp.Unspecified else LocalMinimumInteractiveComponentSize.current
+        LocalMinimumInteractiveComponentSize provides if (isPc) Dp.Unspecified else LocalMinimumInteractiveComponentSize.current,
+        LocalRippleConfiguration provides if (isPc) NO_HOVER_RIPPLE else LocalRippleConfiguration.current
     ) {
         MaterialTheme(
             colorScheme = colors,

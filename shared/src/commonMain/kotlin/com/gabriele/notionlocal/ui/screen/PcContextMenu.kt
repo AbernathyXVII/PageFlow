@@ -46,9 +46,18 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.material3.Surface
 
 /**
  * **Il menu del tasto destro sul PC** (dal 13/11/2026, chiesto dall'utente):
@@ -98,7 +107,6 @@ fun PcContextMenu(
     /** Scelta una voce (anche di un sottomenu): chiude tutto il menu. */
     onPicked: () -> Unit = onDismiss
 ) {
-    var openSubmenu by remember(entries) { mutableStateOf<Int?>(null) }
     DropdownMenu(
         expanded = true,
         onDismissRequest = onDismiss,
@@ -110,30 +118,37 @@ fun PcContextMenu(
         shadowElevation = 8.dp,
         border = BorderStroke(1.dp, PcMenuBorder)
     ) {
-        entries.forEachIndexed { index, entry ->
-            when (entry) {
-                PcMenuSeparator -> HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    thickness = 1.dp,
-                    color = PcMenuBorder
-                )
-                is PcMenuItem -> PcMenuRow(
-                    item = entry,
-                    submenuOpen = openSubmenu == index,
-                    onHover = { openSubmenu = if (entry.submenu.isNotEmpty()) index else null },
-                    onPick = {
-                        val action = entry.onClick
-                        if (action != null) {
-                            onPicked()
-                            action()
-                        } else if (entry.submenu.isNotEmpty()) {
-                            openSubmenu = index
-                        }
-                    },
-                    onCloseSubmenu = { openSubmenu = null },
-                    onDismissAll = onPicked
-                )
-            }
+        PcMenuEntries(entries, onPicked)
+    }
+}
+
+/** Le voci di un menu (o di un sottomenu), coi separatori; passando sopra una voce col sottomenu, si apre. */
+@Composable
+private fun PcMenuEntries(entries: List<PcMenuEntry>, onPicked: () -> Unit) {
+    var openSubmenu by remember(entries) { mutableStateOf<Int?>(null) }
+    entries.forEachIndexed { index, entry ->
+        when (entry) {
+            PcMenuSeparator -> HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                thickness = 1.dp,
+                color = PcMenuBorder
+            )
+            is PcMenuItem -> PcMenuRow(
+                item = entry,
+                submenuOpen = openSubmenu == index,
+                onHover = { openSubmenu = if (entry.submenu.isNotEmpty()) index else null },
+                onPick = {
+                    val action = entry.onClick
+                    if (action != null) {
+                        onPicked()
+                        action()
+                    } else if (entry.submenu.isNotEmpty()) {
+                        openSubmenu = index
+                    }
+                },
+                onCloseSubmenu = { openSubmenu = null },
+                onDismissAll = onPicked
+            )
         }
     }
 }
@@ -180,11 +195,30 @@ private fun PcMenuRow(
             }
         }
         if (submenuOpen && item.submenu.isNotEmpty()) {
-            // Il sottomenu parte dal bordo destro della voce, alla sua altezza.
-            Box(modifier = Modifier.align(Alignment.TopEnd).size(0.dp)) {
-                PcContextMenu(item.submenu, onDismiss = onCloseSubmenu, offset = DpOffset(0.dp, (-8).dp), onPicked = onDismissAll)
+            // **Il sottomenu accanto alla sua voce** (dal 17/11/2026, trovato dall'utente: in fondo alla
+            // finestra "la finestra di destra è completamente staccata", e andandoci col mouse si chiudeva).
+            Popup(popupPositionProvider = SubmenuBesideItem, onDismissRequest = onCloseSubmenu, properties = PopupProperties(focusable = false)) {
+                Surface(shape = PcMenuShape, color = PcMenuBackground, border = BorderStroke(1.dp, PcMenuBorder), shadowElevation = 8.dp) {
+                    Column(modifier = Modifier.padding(vertical = 8.dp).width(IntrinsicSize.Max)) {
+                        PcMenuEntries(item.submenu, onDismissAll)
+                    }
+                }
             }
         }
+    }
+}
+
+/**
+ * Il sottomenu a destra del menu (a sinistra se di là non ci sta), **centrato
+ * in altezza sulla sua voce** e dentro la finestra: il mouse ci va dritto.
+ * [calculatePosition] riceve la voce come `anchorBounds`.
+ */
+object SubmenuBesideItem : PopupPositionProvider {
+    override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset {
+        val x = if (anchorBounds.right + popupContentSize.width <= windowSize.width) anchorBounds.right
+        else (anchorBounds.left - popupContentSize.width).coerceAtLeast(0)
+        val y = (anchorBounds.center.y - popupContentSize.height / 2).coerceIn(0, (windowSize.height - popupContentSize.height).coerceAtLeast(0))
+        return IntOffset(x, y)
     }
 }
 

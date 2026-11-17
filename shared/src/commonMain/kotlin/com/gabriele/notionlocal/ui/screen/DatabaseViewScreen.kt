@@ -202,9 +202,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LocalRippleConfiguration
-import androidx.compose.material3.RippleConfiguration
-import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -1669,8 +1666,7 @@ private fun DatabaseViewBody(
             .takeIf { isPc && !rowsSorted && !contentLocked }
         CompositionLocalProvider(
             LocalStickyViewport provides (if (embedded) LocalStickyViewport.current else ownViewport),
-            LocalRowDrag provides rowDrag,
-            LocalRippleConfiguration provides (if (isPc) NO_HOVER_RIPPLE else LocalRippleConfiguration.current)
+            LocalRowDrag provides rowDrag
         ) {
         Column(
             modifier = if (embedded) {
@@ -5856,14 +5852,6 @@ fun Modifier.foundInside(rowId: String, shape: Shape = RectangleShape): Modifier
 // Sul PC come la riga della vista di Notion (vedi `pcOr`).
 private val TOOLBAR_ICON_SIZE: Dp get() = pcOr(16.dp, 20.dp)
 private val TOOLBAR_BUTTON_SIZE: Dp get() = pcOr(28.dp, 36.dp)
-
-/**
- * **Sul PC, nei database, niente riquadro grigio col mouse sopra** (dal
- * 17/11/2026, chiesto dall'utente: celle, intestazioni, pulsanti): il velo di
- * Material per il mouse sopra e per il fuoco è a zero; il lampo del clic resta.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-private val NO_HOVER_RIPPLE = RippleConfiguration(rippleAlpha = RippleAlpha(draggedAlpha = 0.16f, focusedAlpha = 0f, hoveredAlpha = 0f, pressedAlpha = 0.1f))
 
 /** Un'icona della barra della vista. Vedi `TOOLBAR_ICON_SIZE`. */
 @Composable

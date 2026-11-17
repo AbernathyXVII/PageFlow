@@ -1126,6 +1126,31 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.14 — 17/11/2026 · 10:54 — PC: no gray box under the mouse anywhere, submenus next to their entry
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1286 tests passed)*
+
+- **[Change]** **[💻 PC]** **No more light gray box under the mouse,
+  anywhere in the app** (in v0.155.13 only in databases): the button of the
+  views, the sidebar, the buttons of the bars, the menus of Material, the
+  pages… nothing lights up anymore when the mouse passes over; the quick
+  flash of the click stays. Also the tabs at the top no longer turn gray
+  under the mouse (the "x" to close one still appears). The right-click menu
+  keeps the highlight of the entry under the mouse, and the pin of the
+  sidebar its circle
+- **[Bug fix]** **[💻 PC]** **The submenu of the right-click menu opens next
+  to its entry**: with the menu low in the window, "Text formatting" opened
+  its submenu all above the entry, detached, and going there with the mouse
+  closed it. Now it's centered in height on its entry, always inside the
+  window, on the right of the menu (on the left if it doesn't fit there)
+- **[Project]** `NO_HOVER_RIPPLE` moved from `DatabaseViewBody` to
+  `NotionLocalTheme` (the whole app, on the PC); `TabItem` without the hover
+  background. `PcContextMenu`: the entries in `PcMenuEntries`, the submenu in
+  a `Popup` of its own with `SubmenuBesideItem` (a `PopupPositionProvider`)
+  instead of a `DropdownMenu`, which put it below or above its anchor. Tests:
+  `DesktopCellHoverTest` (also the button of the views and the search),
+  `DesktopSubmenuTest` (the position, and a menu at the bottom of the window
+  whose submenu covers its entry)
+
 ### ✏️ v0.155.13 — 17/11/2026 · 10:33 — PC: no gray box under the mouse in databases
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1284 tests passed)*
 
