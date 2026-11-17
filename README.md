@@ -1126,6 +1126,21 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.13 — 17/11/2026 · 10:33 — PC: no gray box under the mouse in databases
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1284 tests passed)*
+
+- **[Change]** **[💻 PC]** **No more light gray box under the mouse in a
+  database**: passing over a cell, the header of a property, a button of the
+  bar or anything else that can be clicked in a database (also one inside a
+  page, and the menus that open from it), nothing lights up anymore; the
+  quick flash of the click stays. The right-click menus of PageFlow keep
+  their own highlight
+- **[Project]** `DatabaseViewBody` gives `LocalRippleConfiguration` =
+  `NO_HOVER_RIPPLE` on the PC: the ripple of Material with the "hovered" and
+  "focused" layers at zero. Test: `DesktopCellHoverTest` (over a cell and the
+  header of "Voto" the picture doesn't change; before, the header turned
+  lighter)
+
 ### ✏️ v0.155.12 — 17/11/2026 · 10:06 — PC: Ctrl+V keeps the formatting of the source
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1283 tests passed)*
 
