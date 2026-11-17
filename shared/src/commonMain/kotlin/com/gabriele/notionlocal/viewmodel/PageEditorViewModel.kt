@@ -3420,21 +3420,23 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
      * di quello che si intende toccando sotto.
      */
     fun focusLastBlock() {
-        // **Con righe vuote in fondo, sulla prima di loro** (dal 30/09/2026):
-        // in una pagina vuota o nuova è la prima riga della pagina, non
-        // l'ultima con tutto il vuoto sopra ("non ci sia uno spazio vuoto
-        // sopra inutilissimo"). Vedi `trailingBlankLines`.
-        trailingBlankLines().firstOrNull()?.let { first ->
+        val topLevel = _blocks.value
+            .filter { it.parentBlockId == null }
+            .sortedBy { it.orderIndex }
+        // **In una pagina vuota o nuova, sulla prima riga** (dal 30/09/2026):
+        // non l'ultima con tutto il vuoto sopra ("non ci sia uno spazio vuoto
+        // sopra inutilissimo"). Con del testo, l'ultima riga anche se vuota
+        // (dal 17/11/2026, trovato dall'utente: "non mi permette proprio di
+        // selezionare l'ultimo blocco scrivibile"). Vedi `trailingBlankLines`.
+        val blank = trailingBlankLines()
+        if (blank.isNotEmpty() && blank.size == topLevel.size) {
             viewModelScope.launch {
                 delay(IME_SETTLE_DELAY_MS)
-                _focusRequestBlockId.value = first.id
+                _focusRequestBlockId.value = blank.first().id
             }
             return
         }
 
-        val topLevel = _blocks.value
-            .filter { it.parentBlockId == null }
-            .sortedBy { it.orderIndex }
         val last = topLevel.lastOrNull()
 
         // Sotto un riquadro, una citazione o del codice si scrive su una riga
@@ -3469,38 +3471,23 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
     /**
      * **Le righe vuote in fondo alla pagina**: i paragrafi senza testo (e
      * senza niente dentro) dopo l'ultimo blocco che ha qualcosa. In una
-     * pagina vuota o nuova sono tutte le sue righe. `localText` dà il testo
-     * delle righe che il campo ha appena cambiato e il database non ancora.
+     * pagina vuota o nuova sono tutte le sue righe.
+     *
+     * Fino al 17/11/2026 un tocco o una freccia su una di loro riportava il
+     * cursore sulla prima: così le altre non si raggiungevano più ("lì non
+     * posso usare la freccetta destra per andare giù"), e Canc le toglieva
+     * senza che si potessero scegliere. Ora il cursore va dove lo si mette.
      */
-    fun trailingBlankLines(localText: Map<String, String> = emptyMap()): List<BlockEntity> {
+    fun trailingBlankLines(): List<BlockEntity> {
         val all = _blocks.value
         return all
             .filter { it.parentBlockId == null }
             .sortedBy { it.orderIndex }
             .takeLastWhile { block ->
                 block.type == BlockType.PARAGRAPH &&
-                    (localText[block.id] ?: plainTextOf(block)).isEmpty() &&
+                    plainTextOf(block).isEmpty() &&
                     all.none { it.parentBlockId == block.id }
             }
-    }
-
-    /**
-     * **Un tocco su una riga vuota in fondo alla pagina** (dal 30/09/2026,
-     * "in un campo vuoto o nuovo, se premo in un punto a caso della pagina
-     * il text cursor mi vada al primissimo blocco"): il cursore va sulla
-     * prima delle righe vuote in fondo, così sopra non resta del vuoto. È
-     * l'indice di quella riga fra `runBlockIds` (le righe del campo, coi
-     * loro testi di adesso in `lines`), o null se il tocco va bene dov'è:
-     * sulla prima di loro, su una riga col testo, o su una riga vuota in
-     * mezzo al testo, che è uno spazio voluto.
-     */
-    fun trailingBlankRedirect(runBlockIds: List<String>, lines: List<String>, lineIndex: Int): Int? {
-        val tapped = runBlockIds.getOrNull(lineIndex) ?: return null
-        val localText = if (lines.size == runBlockIds.size) runBlockIds.zip(lines).toMap() else emptyMap()
-        val trailing = trailingBlankLines(localText)
-        val first = trailing.firstOrNull() ?: return null
-        if (tapped == first.id || trailing.none { it.id == tapped }) return null
-        return runBlockIds.indexOf(first.id).takeIf { it >= 0 }
     }
 
     /**

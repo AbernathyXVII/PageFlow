@@ -12,7 +12,6 @@ import com.gabriele.notionlocal.data.repository.PageRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
@@ -25,8 +24,9 @@ import java.time.Duration
 /**
  * **Un tocco nel vuoto di una pagina vuota** (30/09/2026): "in un campo
  * vuoto o nuovo, se premo in un punto a caso della pagina il text cursor mi
- * vada al primissimo blocco". Sulle righe vuote in fondo alla pagina il
- * cursore va sulla prima di loro.
+ * vada al primissimo blocco". Con del testo nella pagina, dal 17/11/2026 il
+ * tocco sotto va sull'ultima riga anche se vuota ("non mi permette proprio di
+ * selezionare l'ultimo blocco scrivibile").
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -81,36 +81,11 @@ class BlankTapTest {
     }
 
     @Test
-    fun onAnEmptyPageATapOnALowerLineGoesToTheFirst() {
-        val lines = (0 until 5).map { line("", it) }
-        open(*lines.toTypedArray())
-        val ids = lines.map { it.id }
-        assertEquals(0, viewModel.trailingBlankRedirect(ids, List(5) { "" }, 3))
-        // Già sulla prima: resta.
-        assertNull(viewModel.trailingBlankRedirect(ids, List(5) { "" }, 0))
-    }
-
-    @Test
-    fun afterTheTextItIsTheFirstEmptyLineBelowIt() {
+    fun afterTheTextATapBelowGoesToTheLastLine() {
         val lines = listOf(line("Testo", 0), line("", 1), line("", 2), line("", 3))
         open(*lines.toTypedArray())
-        val ids = lines.map { it.id }
-        assertEquals(1, viewModel.trailingBlankRedirect(ids, listOf("Testo", "", "", ""), 3))
         viewModel.focusLastBlock()
-        waitFor("il cursore sotto il testo") { viewModel.focusRequestBlockId.value == lines[1].id }
-        // Appena scritto nella prima riga vuota (il database non lo sa ancora): si va a quella dopo.
-        assertEquals(2, viewModel.trailingBlankRedirect(ids, listOf("Testo", "Ciao", "", ""), 3))
-    }
-
-    @Test
-    fun anEmptyLineBetweenTheTextStaysTappable() {
-        val lines = listOf(line("A", 0), line("", 1), line("B", 2), line("", 3))
-        open(*lines.toTypedArray())
-        val ids = lines.map { it.id }
-        assertNull(viewModel.trailingBlankRedirect(ids, listOf("A", "", "B", ""), 1))
-        assertNull(viewModel.trailingBlankRedirect(ids, listOf("A", "", "B", ""), 2))
-        // Una sola riga vuota in fondo: niente da spostare.
-        assertNull(viewModel.trailingBlankRedirect(ids, listOf("A", "", "B", ""), 3))
+        waitFor("il cursore sull'ultima riga") { viewModel.focusRequestBlockId.value == lines[3].id }
     }
 
     @Test

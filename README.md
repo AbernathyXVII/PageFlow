@@ -1126,6 +1126,27 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.16.1 — 17/11/2026 · 12:39 — The empty lines at the bottom of a page can be reached again
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1288 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The empty lines at the bottom
+  of a page can be reached**: with several empty lines after the last text,
+  the cursor always went back to the first of them, with the right arrow and
+  with a click or a tap, so the others could not be chosen (only the up and
+  down arrows got there) and Del took them away without seeing them. It was
+  the rule of 30/09/2026 for empty pages ("if I press at a random point of
+  the page the cursor goes to the very first block"), which acted on every
+  move of the cursor. Now the cursor goes where it's put; touching under the
+  last line goes to the last line, empty or not; on a page with nothing
+  written, touching under still goes to the first line
+- **[Project]** `trailingBlankRedirect` removed (and its use in
+  `MergedTextRunField`); `focusLastBlock` goes to the first empty line only
+  when all the lines of the page are empty. Tests:
+  `DesktopTrailingBlankTest` (under two lines of text four empty ones: two
+  times right from the end of the text and the letter goes in the second,
+  a click on the last and the letter goes there), `BlankTapTest` updated
+  (with text, a tap below goes to the last line)
+
 ### ✏️ v0.155.16 — 17/11/2026 · 11:55 — PC: a real Tab in the text, Tab and Shift+Tab move list items
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1289 tests passed)*
 

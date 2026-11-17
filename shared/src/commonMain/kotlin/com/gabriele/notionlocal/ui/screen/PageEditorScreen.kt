@@ -6647,30 +6647,11 @@ private fun MergedTextRunField(
                         for (i in 0 until backspacedLine) caretAtLineStart += oldLines[i].length + 1
                         fieldValue = TextFieldValue(oldText, TextRange(caretAtLineStart))
                     } else {
-                        // **Un tocco sulle righe vuote in fondo alla pagina**
-                        // (dal 30/09/2026): il cursore va sulla prima di loro
-                        // — in una pagina vuota, sulla prima riga — e non dove
-                        // cade il dito, col vuoto sopra. Solo quando si sposta
-                        // il cursore e basta: l'Invio, che cambia il testo, fa
-                        // lo spazio che si vuole. Vedi `trailingBlankRedirect`.
+                        // Il cursore va dove lo si mette, anche sulle righe vuote in
+                        // fondo (dal 17/11/2026: prima tornava sulla prima di loro, vedi
+                        // `trailingBlankLines`).
                         val moveOnly = newText == oldText && newValue.selection.collapsed &&
                             newValue.selection != fieldValue.selection
-                        val redirectLine = if (moveOnly) {
-                            viewModel.trailingBlankRedirect(runBlocks.map { it.id }, newBody.split('\n'), lineIndexAt(newBody, caret))
-                        } else {
-                            null
-                        }
-                        if (redirectLine != null) {
-                            val lineStart = newBody.split('\n').take(redirectLine).sumOf { it.length + 1 }
-                            fieldValue = newValue.copy(selection = TextRange(RUN_LEAD.length + lineStart))
-                            val redirectedId = runBlocks[redirectLine].id
-                            if (redirectedId != lastLineBlockId) {
-                                lastLineBlockId?.let { onFocusChanged(it, false) }
-                                onFocusChanged(redirectedId, true)
-                                lastLineBlockId = redirectedId
-                            }
-                            return@BasicTextField
-                        }
                         fieldValue = if (shift == 0) {
                             if (moveOnly) newValue.caretPastLead() else newValue
                         } else {
