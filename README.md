@@ -1126,6 +1126,29 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.16 — 17/11/2026 · 11:55 — PC: a real Tab in the text, Tab and Shift+Tab move list items
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1289 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **A Tab is as wide as in Word
+  and OneNote**: a tab in the text reaches the next tab stop, one every three
+  times the size of the text from the start of the line (like the 1.27 cm of
+  Word), so the words after a Tab line up from one line to the next. Before
+  it was as narrow as a space. Also the tabs pasted from OneNote or Word
+- **[Change]** **[💻 PC]** **Tab and Shift+Tab as in Word**: in a normal line
+  Tab writes a Tab, and Shift+Tab takes away the one just before the cursor.
+  In an item of a bulleted or numbered list, with the cursor at the start of
+  the item, Tab moves the whole item to the right (a sub-list) and Shift+Tab
+  back to the left; with several items selected from the start of one, all
+  of them. In the middle of an item Tab writes a Tab in the text
+- **[Project]** `TabStops.kt` (`TabStops.widen`: the line before each Tab
+  measured with a `TextMeasurer`, and the missing space as `letterSpacing` on
+  the Tab), at the end of `MergedRunVisualTransformation`; `tabKey` among the
+  keys of `MergedTextRunField`, with `indentBlock` and `outdentBlock` (the
+  same as "Indent" and "Outdent" of the right-click menu). Test:
+  `DesktopTabKeyTest` (after "A" and after "AB" the letters line up; Shift+Tab
+  takes away the Tab before the cursor and not a letter; at the start of a
+  list item Tab and Shift+Tab move it, in the middle they write a Tab)
+
 ### ✏️ v0.155.15 — 17/11/2026 · 11:23 — The calendar shows the properties of the events, in the order of Property visibility
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1288 tests passed)*
 

@@ -5063,7 +5063,9 @@ private class MergedRunVisualTransformation(
     /** Dove finisce quello che si è appena scritto, nel testo vero: la parola lì non si segna ancora. */
     private val typingAt: Int? = null,
     /** Lo spazio dopo i marcatori degli elenchi ("Paragraph"): vedi `MarkerGapScale`. Null = come sempre. */
-    private val gapScale: MarkerGapScale? = null
+    private val gapScale: MarkerGapScale? = null,
+    /** I Tab larghi fino al prossimo punto di tabulazione (dal 17/11/2026, vedi `TabStops`). */
+    private val tabStops: TabStops? = null
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val hasLead = text.text.startsWith(RUN_LEAD)
@@ -5251,8 +5253,9 @@ private class MergedRunVisualTransformation(
             lineBodyStart += line.length + 1
             if (i < lines.size - 1) builder.append("\n")
         }
+        val shown = builder.toAnnotatedString().withEmojiFont()
         return TransformedText(
-            builder.toAnnotatedString().withEmojiFont(),
+            tabStops?.widen(shown) ?: shown,
             MergedRunOffsetMapping(lineLengths, prefixLengths, if (hasLead) 1 else 0)
         )
     }
@@ -6271,6 +6274,10 @@ private fun MergedTextRunField(
     ) {
     // Il campo incolla il testo e basta: `formatPaste` ci rimette link e stili (vedi `PasteLinks.kt`).
     val linkClipboard = LocalClipboard.current as? LinkClipboard
+    val tabMeasurer = rememberTextMeasurer()
+    val tabStyle = MaterialTheme.typography.bodyLarge
+    val tabDensity = LocalDensity.current
+    val tabStops = remember(tabMeasurer, tabStyle, tabDensity) { TabStops(tabMeasurer, tabStyle, tabDensity) }
     val mergedTransformation = MergedRunVisualTransformation(
         runBlocks,
         ordinals,
@@ -6285,7 +6292,8 @@ private fun MergedTextRunField(
         },
         proof = proofing?.let { { line: String -> misspellings[line].orEmpty() } },
         typingAt = if (fieldFocused) proofTyping else null,
-        gapScale = gapScale
+        gapScale = gapScale,
+        tabStops = tabStops
     )
     // **Le frecce su e giù fuori dal campo** (dal 13/11/2026, vedi `PageEditorViewModel.lineNextTo`).
     val fieldCoords = remember(runKey) { arrayOfNulls<LayoutCoordinates>(1) }
@@ -6350,6 +6358,37 @@ private fun MergedTextRunField(
         fieldValue = TextFieldValue(newText, TextRange(RUN_LEAD.length + from + 1))
         pendingText = newText
         viewModel.updateRun(runBlocks.map { it.id }, newBody.split('\n'), body.split('\n'), lineIndexAt(newBody, from + 1), holdNewLine = true)
+        return true
+    }
+    // **Tab e Maiusc+Tab** (dal 17/11/2026, chiesto dall'utente, come in Word e OneNote): in una
+    // voce di un elenco puntato o numerato, col cursore all'inizio, spostano il blocco a destra e a
+    // sinistra (una sotto-lista; con più voci scelte, tutte). Altrove Tab mette nel testo un Tab
+    // vero, largo fino al prossimo punto (vedi `TabStops`), e Maiusc+Tab toglie quello subito prima
+    // del cursore.
+    fun tabKey(event: KeyEvent): Boolean {
+        if (!isPc || pageLocked || event.key != Key.Tab || event.isCtrlPressed || event.isAltPressed) return false
+        if (event.type != KeyEventType.KeyDown) return false
+        val body = bodyOf(fieldValue.text)
+        val from = (fieldValue.selection.min - RUN_LEAD.length).coerceIn(0, body.length)
+        val to = (fieldValue.selection.max - RUN_LEAD.length).coerceIn(from, body.length)
+        val first = lineIndexAt(body, from)
+        val lineStart = body.lastIndexOf('\n', from - 1) + 1
+        fun isList(block: BlockEntity) = block.type == BlockType.BULLET_LIST_ITEM || block.type == BlockType.NUMBERED_LIST_ITEM
+        val here = runBlocks.getOrNull(first) ?: return false
+        if (isList(here) && from == lineStart) {
+            (first..lineIndexAt(body, to)).mapNotNull { runBlocks.getOrNull(it) }.filter(::isList).forEach {
+                if (event.isShiftPressed) viewModel.outdentBlock(it) else viewModel.indentBlock(it)
+            }
+            return true
+        }
+        // Il Tab lo scrive il campo, come una lettera.
+        if (!event.isShiftPressed) return false
+        if (from != to || from == lineStart || body[from - 1] != '\t') return true
+        val newBody = body.removeRange(from - 1, from)
+        val newText = RUN_LEAD + newBody
+        fieldValue = TextFieldValue(newText, TextRange(RUN_LEAD.length + from - 1))
+        pendingText = newText
+        viewModel.updateRun(runBlocks.map { it.id }, newBody.split('\n'), body.split('\n'), lineIndexAt(newBody, from - 1))
         return true
     }
     val arrowCaret by viewModel.arrowCaret.collectAsStateWithLifecycle()
@@ -6774,7 +6813,7 @@ private fun MergedTextRunField(
                 // `TextLinks.kt`): prima del correttore, che così non apre
                 // il suo menu sopra il link.
                 .linkTaps(layout = { textLayout }, onLink = openLink)
-                .onPreviewKeyEvent { slashKey(it) || arrowKey(it) || sideKey(it) || softEnter(it) }
+                .onPreviewKeyEvent { slashKey(it) || arrowKey(it) || sideKey(it) || softEnter(it) || tabKey(it) }
                 .proofingTaps(enabled = proofing != null && !pageLocked, layout = { textLayout }) { word, at ->
                     proofMenu = word to at
                 }
