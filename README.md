@@ -1126,8 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.18 — 17/11/2026 · 18:49 — PC: a blue box to choose the blocks, as on the desktop
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1291 tests passed)*
+
+- **[Change]** **[💻 PC]** **A blue box chooses the blocks**, as the files on
+  the desktop of Windows and of the Mac: pressing the mouse outside the text
+  (in the margins on the left or on the right, or under the last block) and
+  dragging, a light blue box with its border follows the mouse, and the
+  blocks it touches are chosen, with the usual veil and Copy, Cut, Delete,
+  Cancel. The box holds on to the first block it touches: near the edge of
+  the window, or rolling the wheel, the page scrolls and the box grows with
+  it. Pressing on the text, it selects the text as before
+- **[Project]** `mouseBlockSelection` with `marquee` (the box in the
+  coordinates of the page, drawn by `drawMarquee` over the list), the box
+  starting where `BlockPicker.pageExtent` says there is no text, and
+  `BlockPicker.boundsOf` to follow the first block touched; the choice is
+  from that block to the one under (or toward) the mouse, in the order of
+  the page. Test: `DesktopMarqueeTest` (from the left margin beside "Due" to
+  "Quattro": the box is drawn and the three blocks are chosen; from under
+  the last block up to the one above it: the last two)
+
 ### ✏️ v0.155.17 — 17/11/2026 · 18:26 — PC: selecting across lines works as in Notion
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1290 tests passed)*
+*(Claude Code on the PC; tested by the user on 17/11/2026; installed on the phone; 1290 tests passed)*
 
 - **[Change]** **[💻 PC]** **Selecting across lines works as in Notion,
   always**: with the mouse or with Shift and the arrows, the text is selected

@@ -6,6 +6,10 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.MutableState
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -142,6 +146,39 @@ class BlockPicker {
         val origin = c.localToWindow(Offset.Zero)
         return id to BlockBox(origin.y + box.top, origin.y + box.bottom, origin.x + entry.textInset, origin.x + c.size.width - entry.textInset)
     }
+
+    /** Dove sta adesso, dall'alto al basso nella finestra, il blocco [id]; null se non si vede (vedi [blockAt]). */
+    fun boundsOf(id: String): LineBounds? {
+        for (entry in entries.values) {
+            val c = entry.coordinates
+            if (entry.nested || !c.isAttached) continue
+            val box = entry.extentOf?.invoke(id, c) ?: if (entry.extentOf == null && entry.blockAt(0f) == id) LineBounds(0f, c.size.height.toFloat()) else null
+            if (box != null) {
+                val origin = c.localToWindow(Offset.Zero)
+                return LineBounds(origin.y + box.top, origin.y + box.bottom)
+            }
+        }
+        return null
+    }
+
+    /**
+     * Le voci della pagina nella finestra: da sinistra a destra dove sta il
+     * loro testo, e dove finisce in basso l'ultima che si vede. Null senza voci.
+     */
+    fun pageExtent(): Triple<Float, Float, Float>? {
+        var left = Float.MAX_VALUE
+        var right = -Float.MAX_VALUE
+        var bottom = -Float.MAX_VALUE
+        for (entry in entries.values) {
+            val c = entry.coordinates
+            if (entry.nested || !c.isAttached) continue
+            val origin = c.localToWindow(Offset.Zero)
+            left = minOf(left, origin.x + entry.textInset)
+            right = maxOf(right, origin.x + c.size.width - entry.textInset)
+            bottom = maxOf(bottom, origin.y + c.size.height)
+        }
+        return if (left == Float.MAX_VALUE) null else Triple(left, right, bottom)
+    }
 }
 
 /** Dove sta un blocco nella finestra, da [top] a [bottom] e da [left] a [right] (vedi `BlockPicker.blockAt`). */
@@ -234,6 +271,8 @@ fun Modifier.mouseBlockSelection(
     selectsOnClick: (String) -> Boolean,
     selected: () -> Boolean,
     scrollBy: suspend (Float) -> Unit,
+    /** Il rettangolo azzurro, nelle coordinate della pagina (vedi [drawMarquee]); null: niente rettangolo. */
+    marquee: MutableState<Rect?>? = null,
     onSelect: (Set<String>?) -> Unit
 ): Modifier = pointerInput(picker) {
     coroutineScope {
@@ -247,6 +286,49 @@ fun Modifier.mouseBlockSelection(
             var blocks = false
             var pointer = down.position
             var moved = false
+
+            // **Il rettangolo azzurro, come sul desktop di Windows e del Mac** (dal 17/11/2026, chiesto
+            // dall'utente: "selezionare i blocchi di una pagina già ancora da prima di toccarli"): premuto
+            // fuori dal testo (nei margini ai lati, o sotto l'ultimo blocco) e trascinando, i blocchi che
+            // il rettangolo tocca sono scelti. Si aggancia al primo blocco che tocca, e lo segue mentre la
+            // pagina scorre (al bordo o con la rotella): la scelta va da lui a quello verso il puntatore.
+            val boxing = marquee != null && runCatching {
+                val at = page.localToWindow(down.position)
+                val (left, right, bottom) = picker.pageExtent() ?: return@runCatching false
+                at.x < left || at.x > right || (start == null && at.y > bottom)
+            }.getOrDefault(false)
+            var anchor: String? = null
+            var anchorDy = 0f
+            var startY = down.position.y
+            fun topOf(id: String): Float? = runCatching { picker.boundsOf(id) }.getOrNull()?.let { page.windowToLocal(Offset(0f, it.top)).y }
+            /** Il primo blocco andando da [fromY] verso [towardY], o null se in mezzo non ce n'è. */
+            fun nearest(fromY: Float, towardY: Float): String? {
+                val step = if (towardY >= fromY) 4f else -4f
+                var y = fromY
+                while (if (step > 0) y <= towardY else y >= towardY) {
+                    hit(Offset(down.position.x, y))?.let { return it.second }
+                    y += step
+                }
+                return null
+            }
+            fun followBox(position: Offset) {
+                val id = anchor
+                if (id == null) {
+                    anchor = nearest(startY, position.y)
+                    anchor?.let { found -> topOf(found)?.let { anchorDy = startY - it } }
+                } else {
+                    // Il blocco di partenza si è spostato con la pagina; fuori dallo schermo, il rettangolo parte dal bordo.
+                    startY = topOf(id)?.let { it + anchorDy } ?: if (startY < position.y) 0f else size.height.toFloat()
+                }
+                marquee?.value = Rect(
+                    minOf(down.position.x, position.x), minOf(startY, position.y),
+                    maxOf(down.position.x, position.x), maxOf(startY, position.y)
+                )
+                val from = anchor
+                val to = hit(position)?.second ?: nearest(position.y, startY)
+                val ids = order()
+                onSelect(if (from != null && to != null) blockRange(ids, from, to) else emptySet())
+            }
 
             /**
              * Sotto il puntatore: nella riga dov'è cominciato si seleziona il testo, appena fuori i
@@ -277,12 +359,18 @@ fun Modifier.mouseBlockSelection(
                     if (event.type == PointerEventType.Scroll) {
                         launch {
                             delay(EDGE_FRAME_MS * 2)
-                            follow(pointer)
+                            if (boxing) {
+                                if (moved) followBox(pointer)
+                            } else {
+                                follow(pointer)
+                            }
                         }
                         continue
                     }
                     val change = event.changes.firstOrNull { it.id == down.id } ?: break
                     if (!change.pressed) {
+                        // Lasciato il rettangolo: i blocchi restano scelti, e il clic non arriva alla pagina.
+                        if (boxing && moved) change.consume()
                         if (!blocks) {
                             when {
                                 !moved && start != null && selectsOnClick(start.second) -> {
@@ -296,14 +384,22 @@ fun Modifier.mouseBlockSelection(
                     }
                     pointer = change.position
                     if ((pointer - down.position).getDistance() > viewConfiguration.touchSlop) moved = true
-                    if (follow(pointer)) change.consume()
+                    if (boxing) {
+                        if (moved) {
+                            blocks = true
+                            followBox(pointer)
+                            change.consume()
+                        }
+                    } else if (follow(pointer)) {
+                        change.consume()
+                    }
                     if (moved && edge?.isActive != true && edgeSpeed(pointer.y) != 0f) {
                         edge = launch {
                             while (true) {
                                 val step = edgeSpeed(pointer.y)
                                 if (step == 0f) break
                                 scrollBy(step)
-                                follow(pointer)
+                                if (boxing) followBox(pointer) else follow(pointer)
                                 delay(EDGE_FRAME_MS)
                             }
                         }
@@ -311,9 +407,18 @@ fun Modifier.mouseBlockSelection(
                 }
             } finally {
                 edge?.cancel()
+                marquee?.value = null
             }
         }
     }
+}
+
+/** Il rettangolo azzurro di [mouseBlockSelection], sopra la pagina: un velo di [color] e il suo bordo. */
+fun Modifier.drawMarquee(marquee: State<Rect?>, color: Color): Modifier = drawWithContent {
+    drawContent()
+    val box = marquee.value ?: return@drawWithContent
+    drawRect(color.copy(alpha = 0.15f), topLeft = box.topLeft, size = box.size)
+    drawRect(color.copy(alpha = 0.7f), topLeft = box.topLeft, size = box.size, style = Stroke(width = 1.dp.toPx()))
 }
 
 /**

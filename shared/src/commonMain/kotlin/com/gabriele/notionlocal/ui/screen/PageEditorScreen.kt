@@ -1698,6 +1698,8 @@ private fun PageEditorContent(
     val selectedBlocks = remember(pageId) { mutableStateOf<Set<String>>(emptySet()) }
     // Scelti con Maiusc e le frecce (dal 17/11/2026, vedi `LocalBlockExtend`): da dove a dove, per allargarli ancora.
     var blockEnds by remember(pageId) { mutableStateOf<Pair<String, String>?>(null) }
+    // Il rettangolo azzurro mentre si trascina fuori dal testo (dal 17/11/2026, vedi `mouseBlockSelection`).
+    val marquee = remember(pageId) { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     val blockPicker = remember(pageId) { BlockPicker() }
     val pageListCoordinates = remember { AtomicReference<LayoutCoordinates?>(null) }
     val selectionKeys = remember { FocusRequester() }
@@ -3140,6 +3142,7 @@ private fun PageEditorContent(
                         .tapToEndPageSelection(pageSelected) { pageSelected = false }
                         // Col mouse: più blocchi trascinando, un divisore con un clic (vedi `BlockSelection.kt`).
                         .onGloballyPositioned { pageListCoordinates.set(it) }
+                        .drawMarquee(marquee, AccentBlue)
                         .mouseBlockSelection(
                             picker = blockPicker,
                             coordinates = { pageListCoordinates.get() },
@@ -3147,6 +3150,7 @@ private fun PageEditorContent(
                             selectsOnClick = { id -> viewModel.blocks.value.firstOrNull { it.id == id }?.type == BlockType.DIVIDER },
                             selected = { selectedBlocks.value.isNotEmpty() },
                             scrollBy = { listState.scrollBy(it) },
+                            marquee = marquee.takeIf { pcEditing },
                             onSelect = { ids ->
                                 if (!ids.isNullOrEmpty() && selectedBlocks.value.isEmpty()) focusManager.clearFocus()
                                 pageSelected = false
