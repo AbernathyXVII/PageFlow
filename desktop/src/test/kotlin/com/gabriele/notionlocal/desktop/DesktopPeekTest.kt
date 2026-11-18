@@ -143,6 +143,98 @@ class DesktopPeekTest {
         }
     }
 
+    /**
+     * **Col Side peek la pagina sotto scorre di lato** (18/11/2026, chiesto dall'utente: "se apro una
+     * finestra in Side peek, tutta la pagina originale può essere spostata orizzontalmente… quando la
+     * chiudo, ritorno normalmente alla pagina"): trascinata la barra, il collegamento a sinistra se ne
+     * va oltre il bordo; chiuso il pannello, tutto torna com'era.
+     */
+    @Test
+    fun withTheSidePeekThePageUnderScrollsSideways() {
+        AppSettings.init(context)
+        AppSettings.sidebarPinned = false
+        AppSettings.lastVisitedRoute = null
+        AppSettings.openPagesAs = OpenMode.SIDE_PEEK
+        // Le schede lasciate dalle altre prove spingerebbero giù la pagina.
+        AppSettings.pcTabs = null
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = PageEntity.ROOT_PAGE_ID, title = "My Space"))
+            repo.createPage(PageEntity(id = "target", title = "Target"))
+            repo.saveBlock(BlockEntity(id = "link", pageId = PageEntity.ROOT_PAGE_ID, type = BlockType.PAGE_LINK, linkedPageId = "target", orderIndex = 0))
+        }
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 700, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme { Surface(modifier = Modifier.fillMaxSize()) { AppNavHost(factory = factory) } }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int, sleep: Long = 20) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 50_000_000L
+            Thread.sleep(sleep)
+        }
+        fun shot(name: String): Bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }.also {
+            File("build/desktop-screenshots", "$name.png").apply { parentFile.mkdirs() }.writeBytes(Image.makeFromBitmap(it).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        }
+        fun mouse(type: PointerEventType, at: Offset, pressed: Boolean = false, button: PointerButton? = null) = onWindowThread {
+            scene.sendPointerEvent(type, at, type = PointerType.Mouse, buttons = if (pressed) PointerButtons(isPrimaryPressed = true) else PointerButtons(), button = button)
+        }
+        fun bright(c: Int) = ((c shr 16) and 0xFF) > 140 && ((c shr 8) and 0xFF) > 140 && (c and 0xFF) > 140
+        fun linkText(picture: Bitmap) = (LINK_Y.toInt() - 8..LINK_Y.toInt() + 8).sumOf { y -> (80..300).count { x -> bright(picture.getColor(x, y)) } }
+        try {
+            frames(40)
+            val home = shot("sidepeek_scroll_home")
+            assertTrue("il collegamento a sinistra", linkText(home) > 30)
+            mouse(PointerEventType.Move, Offset(128f, LINK_Y))
+            mouse(PointerEventType.Press, Offset(128f, LINK_Y), pressed = true, button = PointerButton.Primary)
+            mouse(PointerEventType.Release, Offset(128f, LINK_Y), button = PointerButton.Primary)
+            frames(30)
+            shot("sidepeek_scroll_open")
+            // Maiusc + rotella sulla pagina a sinistra: va di lato, e torna.
+            fun shiftWheel(dy: Float) = onWindowThread {
+                scene.sendPointerEvent(
+                    PointerEventType.Scroll, Offset(300f, 400f), scrollDelta = Offset(0f, dy), type = PointerType.Mouse,
+                    keyboardModifiers = androidx.compose.ui.input.pointer.PointerKeyboardModifiers(isShiftPressed = true)
+                )
+            }
+            repeat(10) { shiftWheel(3f); frames(1, sleep = 5) }
+            frames(5)
+            assertTrue("Maiusc + rotella: la pagina è scorsa (${linkText(shot("sidepeek_scroll_wheel"))})", linkText(shot("sidepeek_scroll_wheel")) < 5)
+            repeat(20) { shiftWheel(-3f); frames(1, sleep = 5) }
+            frames(5)
+            assertEquals("Maiusc + rotella indietro: di nuovo all'inizio", linkText(home), linkText(shot("sidepeek_scroll_back")))
+            // Il mouse sulla pagina a sinistra: la barra in fondo; trascinata a destra, la pagina va a sinistra.
+            mouse(PointerEventType.Move, Offset(300f, 400f))
+            frames(5, sleep = 5)
+            val barY = 700f - 4f
+            val from = Offset(100f, barY)
+            mouse(PointerEventType.Move, from)
+            mouse(PointerEventType.Press, from, pressed = true, button = PointerButton.Primary)
+            for (step in 1..10) {
+                mouse(PointerEventType.Move, from + Offset(step * 30f, 0f), pressed = true)
+                frames(1, sleep = 5)
+            }
+            mouse(PointerEventType.Release, from + Offset(300f, 0f), button = PointerButton.Primary)
+            frames(10)
+            val moved = shot("sidepeek_scroll_moved")
+            assertTrue("la pagina è scorsa a sinistra: il collegamento non è più lì (${linkText(moved)})", linkText(moved) < 5)
+            // Chiuso il pannello (» in alto a sinistra del pannello), la pagina torna com'era.
+            mouse(PointerEventType.Move, Offset(626f, 20f))
+            mouse(PointerEventType.Press, Offset(626f, 20f), pressed = true, button = PointerButton.Primary)
+            mouse(PointerEventType.Release, Offset(626f, 20f), button = PointerButton.Primary)
+            frames(30)
+            val closed = shot("sidepeek_scroll_closed")
+            assertEquals("chiuso, il collegamento al suo posto", linkText(home), linkText(closed))
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
     /** Le schede: aprirle, fissarle (vanno a sinistra), chiuderle, e ritrovarle alla volta dopo. */
     @Test
     fun theTabsKeepTheirOrderAndComeBack() {

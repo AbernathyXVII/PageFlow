@@ -29,6 +29,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -115,11 +116,17 @@ fun CenterPeekLayer(peek: PagePeek, factory: ViewModelFactory, actions: PeekActi
  * resta lì e si usa. Si chiude con » o con Esc.
  */
 @Composable
-fun SidePeekLayer(peek: PagePeek, factory: ViewModelFactory, actions: PeekActions) {
+fun SidePeekLayer(
+    peek: PagePeek,
+    factory: ViewModelFactory,
+    actions: PeekActions,
+    /** Quanto è largo il pannello, in percento: lo sa anche la pagina sotto (vedi `AppNavHost`). */
+    percentState: MutableFloatState = remember { mutableFloatStateOf(AppSettings.sidePeekPercent.toFloat()) }
+) {
     BackHandler(enabled = true) { actions.close() }
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val total = maxWidth
-        var percent by remember { mutableFloatStateOf(AppSettings.sidePeekPercent.toFloat()) }
+        var percent by percentState
         val density = LocalDensity.current
         Row(modifier = Modifier.align(Alignment.CenterEnd).width(total * (percent / 100f)).fillMaxHeight()) {
             // Il bordo: trascinato a sinistra allarga il pannello, a destra lo stringe.

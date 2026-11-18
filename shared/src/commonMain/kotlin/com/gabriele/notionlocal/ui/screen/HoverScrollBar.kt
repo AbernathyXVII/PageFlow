@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.gabriele.notionlocal.platform.isPc
@@ -62,8 +63,21 @@ fun Modifier.hoverScrollBar(scroll: ScrollState): Modifier = if (!isPc) this els
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
                     val change = event.changes.firstOrNull() ?: continue
+                    // **Maiusc + rotella scorre di lato** (dal 18/11/2026), come nei browser: la rotella
+                    // su e giù diventa destra e sinistra, e la pagina sotto non scorre in verticale.
+                    if (event.type == PointerEventType.Scroll && event.keyboardModifiers.isShiftPressed && scroll.maxValue > 0 &&
+                        change.scrollDelta.x == 0f && change.scrollDelta.y != 0f && !change.isConsumed
+                    ) {
+                        scroll.dispatchRawDelta(change.scrollDelta.y * 40.dp.toPx())
+                        change.consume()
+                        pokes++
+                        continue
+                    }
                     when (event.type) {
-                        PointerEventType.Enter, PointerEventType.Move, PointerEventType.Scroll, PointerEventType.Exit -> pokes++
+                        // Solo se c'è da scorrere: sopra tutta la finestra (la pagina col Side peek) ogni
+                        // movimento del mouse rifarebbe la barra per niente.
+                        PointerEventType.Enter, PointerEventType.Move, PointerEventType.Scroll, PointerEventType.Exit ->
+                            if (scroll.maxValue > 0 || shown) pokes++
                         PointerEventType.Press -> {
                             // Premuto sulla barra, mentre si vede: la si trascina.
                             val thumb = hoverBarThumb(size.width.toFloat(), scroll.value, scroll.maxValue)

@@ -1126,6 +1126,29 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.31 — 18/11/2026 · 15:38 — PC: with a Side peek open, the page under it scrolls sideways
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1312 tests passed)*
+
+- **[Change]** **[💻 PC]** **With a Side peek open, the page under it
+  scrolls sideways**: the panel on the right covered part of the page (for
+  example the database of the page opened in it). Now the page keeps its
+  width but is seen up to the panel, and it can be moved to the left to see
+  what was behind it: with the bar that appears at its bottom with the
+  mouse (as for the databases, v0.155.29), with Shift and the mouse wheel,
+  or with the touchpad. Closing the panel the page goes back as it was. The
+  width of the panel, dragged from its edge, is the part one can scroll
+- **[Change]** **[💻 PC]** **Shift and the mouse wheel scroll sideways**,
+  as in a browser: on a table or a board wider than the screen, and on the
+  page under a Side peek
+- **[Project]** In `AppNavHost` the pages are in a `horizontalScroll` as
+  wide as the space left of the Side peek, with inside the page as wide as
+  all the space; the percent of the panel (`SidePeekLayer`'s
+  `percentState`) is shared. `hoverScrollBar` counts the mouse movements
+  only when there is something to scroll, and turns Shift + wheel into a
+  sideways scroll. Test: `DesktopPeekTest` (with the Side peek open, Shift +
+  wheel and the bar dragged take the link on the left out of sight; closed
+  with », it is back)
+
 ### ✏️ v0.155.30 — 18/11/2026 · 14:48 — PC: the bar of the databases goes away after half a second
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1311 tests passed)*
 

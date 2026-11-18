@@ -29,6 +29,10 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.gabriele.notionlocal.ui.screen.hoverScrollBar
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -279,6 +283,8 @@ private fun AppTab(
     // partenza Center peek) o in quello scelto da "Open as…". Il peek è di
     // questa finestra: si chiude cambiando pagina.
     var peek by remember { mutableStateOf<PagePeek?>(null) }
+    // Quanto è largo il Side peek, in percento: lo usa anche la pagina sotto, che scorre di lato.
+    val sidePeekPercent = remember { mutableFloatStateOf(AppSettings.sidePeekPercent.toFloat()) }
     fun openWith(pageId: String, isDatabase: Boolean, mode: OpenMode) {
         when (mode) {
             OpenMode.SIDE_PEEK, OpenMode.CENTER_PEEK -> {
@@ -667,18 +673,37 @@ private fun AppTab(
                         onDragStopped = { AppSettings.sidebarWidth = width.roundToInt() }
                     )
                 }
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    AppRoutes(
-                        navController = navController,
-                        factory = factory,
-                        animations = animations,
-                        onOpenSidebar = ::openSidebar,
-                        onOpenRowPage = { rowId, then ->
-                            scope.launch { factory.pageRepository.ensureRowPage(rowId)?.let(then) }
+                BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    // **Col Side peek la pagina sotto scorre di lato** (dal 18/11/2026, chiesto
+                    // dall'utente: "non riesco a vedere quello che la finestra nasconde"): resta larga
+                    // com'era, ma si vede solo fino al pannello, e la si sposta per vedere quello che
+                    // c'è dietro (la barra che compare col mouse, il touchpad). Chiuso il pannello, lo
+                    // spazio in più non c'è più e la pagina torna dov'era.
+                    val full = maxWidth
+                    val sideOpen = peek?.mode == OpenMode.SIDE_PEEK
+                    val covered = if (sideOpen) full * (sidePeekPercent.floatValue / 100f) else 0.dp
+                    val pageScroll = rememberScrollState()
+                    Box(
+                        modifier = Modifier
+                            .width(full - covered)
+                            .fillMaxHeight()
+                            .hoverScrollBar(pageScroll)
+                            .horizontalScroll(pageScroll, enabled = sideOpen)
+                    ) {
+                        Box(modifier = Modifier.width(full).fillMaxHeight()) {
+                            AppRoutes(
+                                navController = navController,
+                                factory = factory,
+                                animations = animations,
+                                onOpenSidebar = ::openSidebar,
+                                onOpenRowPage = { rowId, then ->
+                                    scope.launch { factory.pageRepository.ensureRowPage(rowId)?.let(then) }
+                                }
+                            )
                         }
-                    )
+                    }
                     // Side peek: sopra la pagina, a destra; la barra laterale resta libera.
-                    peek?.takeIf { it.mode == OpenMode.SIDE_PEEK }?.let { SidePeekLayer(it, factory, peekActions) }
+                    peek?.takeIf { it.mode == OpenMode.SIDE_PEEK }?.let { SidePeekLayer(it, factory, peekActions, sidePeekPercent) }
                 }
             }
             // Center peek: sopra tutta la finestra, barra laterale compresa.
