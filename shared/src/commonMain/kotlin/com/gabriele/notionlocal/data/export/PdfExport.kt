@@ -3,6 +3,8 @@ package com.gabriele.notionlocal.data.export
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
 import com.gabriele.notionlocal.data.entity.DividerStyle
+import com.gabriele.notionlocal.data.entity.IMAGE_CENTER
+import com.gabriele.notionlocal.data.entity.IMAGE_RIGHT
 import com.gabriele.notionlocal.data.entity.dividerStyle
 import com.gabriele.notionlocal.data.entity.InkStrokeEntity
 import com.gabriele.notionlocal.data.entity.InkTool
@@ -370,10 +372,14 @@ class PdfExport(
                 }
             }
             BlockType.IMAGE -> {
-                val file = block.attrs.file?.let(fileOf)
-                if (file == null || !image(sheets, file, left, width, block.attrs.width)) {
-                    paragraph(sheets, "🖼 " + (block.attrs.name ?: block.attrs.url ?: ""), mutedPaint, left, width)
+                val attrs = block.attrs
+                // Il titolo sopra e la didascalia sotto (dal 18/11/2026, vedi `ImageTextField`).
+                attrs.imageTitle?.takeIf { it.isNotBlank() }?.let { paragraph(sheets, it, bodyPaint, left, width) }
+                val file = attrs.file?.let(fileOf)
+                if (file == null || !image(sheets, file, left, width, attrs.width, attrs.align)) {
+                    paragraph(sheets, "🖼 " + (attrs.name ?: attrs.url ?: ""), mutedPaint, left, width)
                 }
+                attrs.caption?.takeIf { it.isNotBlank() }?.let { paragraph(sheets, it, mutedPaint, left, width) }
             }
             BlockType.VIDEO, BlockType.AUDIO, BlockType.FILE, BlockType.BOOKMARK -> {
                 val attrs = block.attrs
@@ -581,7 +587,7 @@ class PdfExport(
     }
 
     /** L'immagine larga quanto nella pagina (`BlockAttrs.width`), mai più del foglio; false se il file non si legge. */
-    private fun image(sheets: Sheets, file: File, left: Float, width: Float, fraction: Float?): Boolean {
+    private fun image(sheets: Sheets, file: File, left: Float, width: Float, fraction: Float?, align: String? = null): Boolean {
         val (outWidth, outHeight) = backend.imageSize(file) ?: return false
         if (outWidth <= 0 || outHeight <= 0) return false
         var w = width * (fraction?.takeIf { it > 0f }?.coerceAtMost(1f) ?: 1f)
@@ -595,7 +601,13 @@ class PdfExport(
         sheets.ensure(h)
         val top = sheets.y
         val pixels = (w * IMAGE_PIXELS_PER_POINT).toInt()
-        sheets.draw { canvas -> canvas.drawImage(file, left, top, left + w, top + h, pixels) }
+        // Al centro o a destra solo se scelto dal suo menu; se no a sinistra, come prima.
+        val x = when (align) {
+            IMAGE_CENTER -> left + (width - w) / 2f
+            IMAGE_RIGHT -> left + width - w
+            else -> left
+        }
+        sheets.draw { canvas -> canvas.drawImage(file, x, top, x + w, top + h, pixels) }
         sheets.y += h
         return true
     }

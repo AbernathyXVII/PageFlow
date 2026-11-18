@@ -3160,6 +3160,12 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         viewModelScope.launch { repository.updateBlockAttrs(blockId, change) }
     }
 
+    /** La didascalia o il titolo di un'immagine mentre si scrive (dal 18/11/2026): l'Annulla come per il testo, non una lettera alla volta. */
+    fun updateImageText(blockId: String, change: (BlockAttrs) -> BlockAttrs) {
+        snapshotForTextEdit(blockId)
+        viewModelScope.launch { repository.updateBlockAttrs(blockId, change) }
+    }
+
     /**
      * **Il pin di una riga**, dal menu dei sei puntini (dal 20/10/2026): la
      * riga diventa un punto di arrivo dei collegamenti dentro la pagina (vedi
@@ -5249,7 +5255,7 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
  * Cosa fare con un blocco-file. `RESIZE` e `FULL_RESIZE` (dal 20/10/2026, per le
  * immagini): le maniglie compaiono solo quando le si chiede dal menu.
  */
-enum class MediaRequestKind { PICK, VIEW, DOWNLOAD, OPEN_ELSEWHERE, RESIZE, FULL_RESIZE, RECORD }
+enum class MediaRequestKind { PICK, VIEW, DOWNLOAD, OPEN_ELSEWHERE, RESIZE, FULL_RESIZE, RECORD, CAPTION, TITLE }
 
 data class MediaRequest(val blockId: String, val kind: MediaRequestKind)
 

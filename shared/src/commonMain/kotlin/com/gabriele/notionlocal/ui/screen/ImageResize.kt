@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.IMAGE_LEFT
+import com.gabriele.notionlocal.data.entity.IMAGE_CENTER
+import com.gabriele.notionlocal.data.entity.IMAGE_RIGHT
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,7 +65,13 @@ enum class ImageResizeMode { NONE, RESIZE, FULL }
  */
 fun frameOf(attrs: BlockAttrs, pageWidth: Float, natural: Float, naturalWidth: Float? = null): ImageFrame {
     val width = attrs.width?.let { it.coerceIn(0.01f, 1f) * pageWidth } ?: minOf(naturalWidth ?: pageWidth, pageWidth)
-    val left = attrs.left?.let { (it * pageWidth).coerceIn(0f, pageWidth - width) } ?: ((pageWidth - width) / 2f)
+    // A sinistra, al centro o a destra (dal 18/11/2026, vedi `BlockAttrs.align`): vince su dove l'aveva messa "Full resize".
+    val left = when (attrs.align) {
+        IMAGE_LEFT -> 0f
+        IMAGE_RIGHT -> pageWidth - width
+        IMAGE_CENTER -> (pageWidth - width) / 2f
+        else -> attrs.left?.let { (it * pageWidth).coerceIn(0f, pageWidth - width) } ?: ((pageWidth - width) / 2f)
+    }
     return ImageFrame(left, width, width * (attrs.aspect ?: natural))
 }
 
@@ -70,11 +79,16 @@ fun frameOf(attrs: BlockAttrs, pageWidth: Float, natural: Float, naturalWidth: F
  * **"Resize"**: le due maniglie ai lati. La larghezza cambia di due volte lo
  * spostamento del dito (l'immagine tiene il suo centro, come prima) e
  * l'altezza la segue, con la forma che ha. `side` -1 sinistra, 1 destra.
+ * Un'immagine allineata a sinistra o a destra ([anchor] -1 o 1, dal
+ * 18/11/2026) tiene fermo quel bordo e cambia di quanto si muove il dito.
  */
-fun ImageFrame.widened(side: Int, dx: Float, pageWidth: Float, minWidth: Float): ImageFrame {
-    val center = left + width / 2f
-    val newWidth = (width + 2f * dx * side).coerceIn(minWidth.coerceAtMost(pageWidth), pageWidth)
-    val newLeft = (center - newWidth / 2f).coerceIn(0f, pageWidth - newWidth)
+fun ImageFrame.widened(side: Int, dx: Float, pageWidth: Float, minWidth: Float, anchor: Int = 0): ImageFrame {
+    val newWidth = (width + (if (anchor == 0) 2f else 1f) * dx * side).coerceIn(minWidth.coerceAtMost(pageWidth), pageWidth)
+    val newLeft = when (anchor) {
+        -1 -> left
+        1 -> left + width - newWidth
+        else -> left + width / 2f - newWidth / 2f
+    }.coerceIn(0f, pageWidth - newWidth)
     return ImageFrame(newLeft, newWidth, newWidth * (height / width))
 }
 
@@ -114,7 +128,9 @@ fun BlockAttrs.withFrame(frame: ImageFrame, pageWidth: Float, full: Boolean): Bl
         // Anche larga tutta la pagina si ricorda: senza misura sarebbe larga quanto l'immagine vera.
         width = width,
         left = if (centered) null else frame.left / pageWidth,
-        aspect = if (full) frame.height / frame.width else aspect
+        aspect = if (full) frame.height / frame.width else aspect,
+        // "Full resize" la mette dove la si porta: lì non c'è più un allineamento.
+        align = if (full) null else align
     )
 }
 

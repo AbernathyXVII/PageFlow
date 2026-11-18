@@ -233,7 +233,7 @@ fun HandleFileRequests(
             MediaRequestKind.RECORD -> if (!locked) onRecord()
             MediaRequestKind.DOWNLOAD -> actions.saveCopy()
             MediaRequestKind.OPEN_ELSEWHERE -> actions.openElsewhere()
-            MediaRequestKind.VIEW, MediaRequestKind.RESIZE, MediaRequestKind.FULL_RESIZE -> Unit
+            MediaRequestKind.VIEW, MediaRequestKind.RESIZE, MediaRequestKind.FULL_RESIZE, MediaRequestKind.CAPTION, MediaRequestKind.TITLE -> Unit
         }
     }
 }

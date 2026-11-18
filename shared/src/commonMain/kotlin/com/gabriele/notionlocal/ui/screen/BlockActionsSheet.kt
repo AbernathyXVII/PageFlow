@@ -1,5 +1,8 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.IMAGE_LEFT
+import com.gabriele.notionlocal.data.entity.IMAGE_CENTER
+import com.gabriele.notionlocal.data.entity.IMAGE_RIGHT
 import com.gabriele.notionlocal.ui.navigation.LocalPageOpener
 import com.gabriele.notionlocal.data.settings.OpenMode
 import com.gabriele.notionlocal.platform.isPc
@@ -61,6 +64,11 @@ import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.PhotoSizeSelectLarge
 import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
+import androidx.compose.material.icons.automirrored.filled.FormatAlignRight
+import androidx.compose.material.icons.automirrored.filled.ShortText
+import androidx.compose.material.icons.filled.FormatAlignCenter
+import androidx.compose.material.icons.filled.Title
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -295,6 +303,10 @@ fun BlockActionsHost(
                         onDismiss()
                         viewModel.requestMedia(block.id, kind)
                     }
+                    fun align(side: String) {
+                        onDismiss()
+                        viewModel.updateBlockAttrs(block.id) { it.copy(align = side, left = null) }
+                    }
                     ObjectBlockMenu(
                         title = media.name ?: media.url?.let { linkHost(it) } ?: EditorStrings.blockType(mediaTypeLabel(block.type)),
                         onMoveUp = onMoveUp,
@@ -309,6 +321,13 @@ fun BlockActionsHost(
                                 ObjectAction(Icons.Filled.PhotoSizeSelectLarge, BlockStrings.resizeImage) { ask(MediaRequestKind.RESIZE) },
                                 ObjectAction(Icons.Filled.CropFree, BlockStrings.fullResize) { ask(MediaRequestKind.FULL_RESIZE) },
                                 ObjectAction(Icons.Filled.OpenInFull, BlockStrings.view) { ask(MediaRequestKind.VIEW) },
+                                // **A sinistra, al centro, a destra; didascalia e titolo** (dal 18/11/2026,
+                                // chiesto dall'utente "sotto View", come su Notion).
+                                ObjectAction(Icons.AutoMirrored.Filled.FormatAlignLeft, BlockStrings.alignLeft) { align(IMAGE_LEFT) },
+                                ObjectAction(Icons.Filled.FormatAlignCenter, BlockStrings.alignCenter) { align(IMAGE_CENTER) },
+                                ObjectAction(Icons.AutoMirrored.Filled.FormatAlignRight, BlockStrings.alignRight) { align(IMAGE_RIGHT) },
+                                ObjectAction(Icons.AutoMirrored.Filled.ShortText, BlockStrings.caption) { ask(MediaRequestKind.CAPTION) },
+                                ObjectAction(Icons.Filled.Title, BlockStrings.imageTitle) { ask(MediaRequestKind.TITLE) },
                                 ObjectAction(Icons.Filled.Download, BlockStrings.download) { ask(MediaRequestKind.DOWNLOAD) },
                                 ObjectAction(Icons.Filled.Autorenew, BlockStrings.replace) { ask(MediaRequestKind.PICK) },
                                 ObjectAction(Icons.Filled.DriveFileMove, Strings.moveTo) { step = BlockMenuStep.MOVE_BLOCK }

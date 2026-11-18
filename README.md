@@ -1126,6 +1126,33 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.26 — 18/11/2026 · 11:41 — Images on the left, in the center or on the right, with a caption and a title
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1307 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **An image goes on the left, in
+  the center or on the right**, as on Notion: in its menu, right under
+  "View", "Align left", "Center" and "Align right". It keeps its size; with
+  "Resize" the side it is aligned to stays still, and "Full resize" puts it
+  where it is dragged, as before
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **A caption and a title for an
+  image**, under "View" too: "Caption" opens an empty line under the image
+  with the cursor in it ("Write a caption…"), "Title" one above it ("Write a
+  title…"), and they are written right there. Both are as wide as the image
+  and follow its alignment: on the left, in the center or on the right with
+  it. The caption is small and grey, the title bigger and bold. Left empty,
+  leaving them they go away. In the PDF the title goes above the image and
+  the caption under it, and the image goes in the center or on the right
+  when it was chosen
+- **[Project]** `BlockAttrs.align` (`IMAGE_LEFT`, `IMAGE_CENTER`,
+  `IMAGE_RIGHT`), `caption` and `imageTitle`, in the entries of the block (no
+  database change); `frameOf` places the image by its alignment and
+  `widened` keeps the aligned side still; `ImageTextField` (`ImageTexts.kt`),
+  saved by `PageEditorViewModel.updateImageText`; `MediaRequestKind.CAPTION`
+  and `TITLE` from the menu. Test: `DesktopImageAlignTest` (a red image 200
+  wide on the left, on the right and in the center; the caption and the
+  title written from the menu, on the right and in the center with it; the
+  empty caption goes away)
+
 ### ✏️ v0.155.25 — 18/11/2026 · 11:14 — The dividers of Word: double, thick, dotted and wavy
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1306 tests passed)*
 

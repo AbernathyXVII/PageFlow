@@ -111,7 +111,16 @@ data class BlockAttrs(
      * sottile di sempre ("---"), poi [DividerStyle] per nome ("===" doppia, "___" spessa, "***" a
      * puntini, "~~~" a onda).
      */
-    val divider: String? = null
+    val divider: String? = null,
+    /**
+     * **L'immagine a sinistra, al centro o a destra** (dal 18/11/2026, chiesto dall'utente, come su
+     * Notion): "LEFT", "CENTER" o "RIGHT"; null = com'era (al centro, o dove l'ha messa "Full resize").
+     */
+    val align: String? = null,
+    /** La didascalia sotto l'immagine, che ne segue l'allineamento; null = nessuna. */
+    val caption: String? = null,
+    /** Il titolo sopra l'immagine, che ne segue l'allineamento; null = nessuno. */
+    val imageTitle: String? = null
 ) {
     /** L'elenco di cui questo paragrafo tiene il posto, o null. */
     val listIndentType: BlockType?
@@ -135,6 +144,11 @@ data class BlockAttrs(
 
 /** Le voci in più di un blocco: vedi `BlockAttrs`. */
 val BlockEntity.attrs: BlockAttrs get() = BlockAttrs.parse(attrsJson)
+
+/** I valori di `BlockAttrs.align`. */
+const val IMAGE_LEFT = "LEFT"
+const val IMAGE_CENTER = "CENTER"
+const val IMAGE_RIGHT = "RIGHT"
 
 /** Gli stili dei divisori, coi tre caratteri che scritti da soli in una riga li fanno (vedi `BlockAttrs.divider`). */
 enum class DividerStyle(val shortcut: String) { SINGLE("---"), DOUBLE("==="), THICK("___"), DOTTED("***"), WAVY("~~~") }

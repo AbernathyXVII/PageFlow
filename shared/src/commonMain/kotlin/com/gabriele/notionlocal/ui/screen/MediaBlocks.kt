@@ -1,5 +1,7 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.IMAGE_LEFT
+import com.gabriele.notionlocal.data.entity.IMAGE_RIGHT
 import com.gabriele.notionlocal.platform.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -11,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -176,6 +180,8 @@ fun ImageBlockContent(
     var viewing by remember(block.id) { mutableStateOf(false) }
     // Le maniglie si vedono solo dopo "Resize" o "Full resize" dal menu (dal 20/10/2026).
     var resizing by remember(block.id) { mutableStateOf(ImageResizeMode.NONE) }
+    // La didascalia o il titolo appena scelti dal menu: lì va il cursore.
+    var focusText by remember(block.id) { mutableStateOf<MediaRequestKind?>(null) }
     val request by viewModel.mediaRequest.collectAsStateWithLifecycle()
 
     val pick = rememberImageImporter(store, onStart = { busy = true }) { result ->
@@ -212,6 +218,15 @@ fun ImageBlockContent(
             MediaRequestKind.FULL_RESIZE -> if (!locked && attrs.file != null) resizing = ImageResizeMode.FULL
             // Si registra solo nei blocchi audio.
             MediaRequestKind.RECORD -> Unit
+            // La didascalia o il titolo: il campo c'è (vuoto, se non c'era) e il cursore ci va dentro.
+            MediaRequestKind.CAPTION -> if (!locked) {
+                if (attrs.caption == null) viewModel.updateBlockAttrs(block.id) { it.copy(caption = "") }
+                focusText = MediaRequestKind.CAPTION
+            }
+            MediaRequestKind.TITLE -> if (!locked) {
+                if (attrs.imageTitle == null) viewModel.updateBlockAttrs(block.id) { it.copy(imageTitle = "") }
+                focusText = MediaRequestKind.TITLE
+            }
         }
     }
     // Il gesto indietro chiude il ridimensionamento, invece di uscire dalla pagina.
@@ -245,12 +260,41 @@ fun ImageBlockContent(
             // le maniglie — che si tengono il primo — avrebbero scritto in
             // quello vecchio, e dal secondo trascinamento non si muoveva più.
             var frame by remember(block.id) { mutableStateOf(frameOf(attrs, pageWidth, natural, naturalWidth)) }
-            LaunchedEffect(attrs.width, attrs.left, attrs.aspect, pageWidth, natural, naturalWidth) { frame = frameOf(attrs, pageWidth, natural, naturalWidth) }
+            LaunchedEffect(attrs.width, attrs.left, attrs.aspect, attrs.align, pageWidth, natural, naturalWidth) { frame = frameOf(attrs, pageWidth, natural, naturalWidth) }
             val save: (Boolean) -> Unit = { full -> viewModel.updateBlockAttrs(block.id) { it.withFrame(frame, pageWidth, full) } }
             val minPx = with(density) { MIN_FRAME_SIDE.toPx() }
-            Box(
+            // Allineata a sinistra o a destra, "Resize" tiene fermo quel bordo.
+            val anchor = when (attrs.align) {
+                IMAGE_LEFT -> -1
+                IMAGE_RIGHT -> 1
+                else -> 0
+            }
+            // Titolo e didascalia, larghi quanto l'immagine e allineati come lei (dal 18/11/2026).
+            @Composable
+            fun imageText(kind: MediaRequestKind, text: String?) {
+                if (text == null || (locked && text.isBlank())) return
+                val caption = kind == MediaRequestKind.CAPTION
+                ImageTextField(
+                    text = text,
+                    hint = if (caption) BlockStrings.captionHint else BlockStrings.imageTitleHint,
+                    style = if (caption) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = if (caption) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    align = imageTextAlign(attrs.align),
+                    locked = locked,
+                    focus = focusText == kind,
+                    onFocused = { focusText = null },
+                    onChange = { new -> viewModel.updateImageText(block.id) { if (caption) it.copy(caption = new) else it.copy(imageTitle = new) } },
+                    onLeftEmpty = { viewModel.updateBlockAttrs(block.id) { if (caption) it.copy(caption = null) else it.copy(imageTitle = null) } }
+                )
+            }
+            Column(
                 modifier = Modifier
                     .offset { IntOffset(frame.left.roundToInt(), 0) }
+                    .width(with(density) { frame.width.toDp() })
+            ) {
+            imageText(MediaRequestKind.TITLE, attrs.imageTitle)
+            Box(
+                modifier = Modifier
                     .size(with(density) { frame.width.toDp() }, with(density) { frame.height.toDp() })
             ) {
                 WholeImage(
@@ -275,7 +319,7 @@ fun ImageBlockContent(
                             ResizeHandle(
                                 shape = HandleShape.VERTICAL,
                                 modifier = Modifier.align(side),
-                                onDrag = { delta -> frame = frame.widened(sign, delta.x, pageWidth, MIN_IMAGE_WIDTH * pageWidth) },
+                                onDrag = { delta -> frame = frame.widened(sign, delta.x, pageWidth, MIN_IMAGE_WIDTH * pageWidth, anchor) },
                                 onDragEnd = { save(false) }
                             )
                         }
@@ -300,6 +344,8 @@ fun ImageBlockContent(
                         modifier = Modifier.align(Alignment.TopCenter).padding(top = 36.dp)
                     )
                 }
+            }
+            imageText(MediaRequestKind.CAPTION, attrs.caption)
             }
         }
     }

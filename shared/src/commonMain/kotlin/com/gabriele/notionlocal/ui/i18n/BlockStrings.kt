@@ -40,6 +40,13 @@ object BlockStrings {
 
     val addImage get() = t("Add an image", "Aggiungi un'immagine", "Bild hinzufügen", "Ajouter une image", "Añadir una imagen", "添加图片", "이미지 추가", "画像を追加")
     val view get() = t("View", "Guarda", "Ansehen", "Voir", "Ver", "查看", "보기", "表示")
+    val alignLeft get() = t("Align left", "Allinea a sinistra", "Linksbündig", "Aligner à gauche", "Alinear a la izquierda", "左对齐", "왼쪽 정렬", "左揃え")
+    val alignCenter get() = t("Center", "Al centro", "Zentriert", "Centrer", "Centrar", "居中", "가운데 정렬", "中央揃え")
+    val alignRight get() = t("Align right", "Allinea a destra", "Rechtsbündig", "Aligner à droite", "Alinear a la derecha", "右对齐", "오른쪽 정렬", "右揃え")
+    val caption get() = t("Caption", "Didascalia", "Bildunterschrift", "Légende", "Leyenda", "说明文字", "캡션", "キャプション")
+    val imageTitle get() = t("Title", "Titolo", "Titel", "Titre", "Título", "标题", "제목", "タイトル")
+    val captionHint get() = t("Write a caption…", "Scrivi una didascalia…", "Bildunterschrift schreiben…", "Écrire une légende…", "Escribe una leyenda…", "写一段说明…", "캡션 쓰기…", "キャプションを書く…")
+    val imageTitleHint get() = t("Write a title…", "Scrivi un titolo…", "Titel schreiben…", "Écrire un titre…", "Escribe un título…", "写一个标题…", "제목 쓰기…", "タイトルを書く…")
     val download get() = t("Download", "Scarica", "Herunterladen", "Télécharger", "Descargar", "下载", "다운로드", "ダウンロード")
     val replace get() = t("Replace", "Sostituisci", "Ersetzen", "Remplacer", "Reemplazar", "替换", "바꾸기", "置き換え")
     val imageSaved get() = t("Saved in Pictures/PageFlow", "Salvata in Immagini/PageFlow", "In Bilder/PageFlow gespeichert", "Enregistrée dans Images/PageFlow", "Guardada en Imágenes/PageFlow", "已保存到 图片/PageFlow", "사진/PageFlow에 저장했습니다", "ピクチャ/PageFlow に保存しました")
