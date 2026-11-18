@@ -6041,18 +6041,27 @@ private fun MergedTextRunField(
         }
     }
 
+    // **Le righe che appaiono diverse escono dal campo appena non c'è niente in sospeso** (vedi
+    // `splitMixedLooks`), in qualunque modo ci si arrivi: col testo tornato dal database, ma anche
+    // dopo un incolla con immagini o tabelle, che azzera l'attesa da fuori (`externalChangeTick`).
+    // Dal 18/11/2026, trovato dall'utente: incollato da OneNote con un'immagine, i titoli grandi
+    // restavano nel campo dei paragrafi, tutte le righe prendevano il loro spazio e si
+    // sistemavano solo selezionando col mouse.
+    val nothingPending = pendingText == null
+    LaunchedEffect(runBlocks, nothingPending) {
+        if (!nothingPending) return@LaunchedEffect
+        val caretLine = bodyOf(fieldValue.text).take((fieldValue.selection.end - RUN_LEAD.length).coerceAtLeast(0)).count { it == '\n' }
+        viewModel.splitMixedLooks(runBlocks, runBlocks[caretLine.coerceIn(0, runBlocks.lastIndex)].id)
+    }
+
     LaunchedEffect(runBlocks) {
         val official = runFieldText(runBlocks, viewModel)
         when {
             // È arrivato indietro esattamente ciò che avevamo inviato:
             // siamo allineati, non c'è più nulla in sospeso. Righe che
             // appaiono diverse (un titolo grande incollato) adesso possono
-            // uscire dal campo (vedi `splitMixedLooks`).
-            official == pendingText -> {
-                pendingText = null
-                val caretLine = bodyOf(fieldValue.text).take((fieldValue.selection.end - RUN_LEAD.length).coerceAtLeast(0)).count { it == '\n' }
-                runBlocks.getOrNull(caretLine)?.let { viewModel.splitMixedLooks(runBlocks, it.id) }
-            }
+            // uscire dal campo (l'effetto qui sopra).
+            official == pendingText -> pendingText = null
             // C'è ancora una nostra modifica in viaggio e il database
             // non la riflette: quello che è arrivato è vecchio, ignoralo.
             pendingText != null -> {}

@@ -1126,6 +1126,24 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.38.1 — 18/11/2026 · 21:59 — Pasted from OneNote with images, the lines are close at once
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1327 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **[📱 Mobile]** **Pasting from OneNote text with
+  big titles and an image (or a table), the lines have their usual spacing
+  at once**: all the pasted lines took the height of the biggest title, and
+  went back to normal only selecting some text with the mouse. A text field
+  has one line height for all its lines, so the lines that look different
+  (a title bigger than 16) leave it as soon as nothing is pending; since
+  v0.155.36 a paste with images or tables took another way, where that step
+  was skipped
+- **[Project]** In `MergedTextRunField` the split by look
+  (`splitMixedLooks`) runs in its own effect whenever nothing is pending
+  (`pendingText` null), whichever way the field got there, no longer only
+  when the database gives back the same text. Test: `DesktopPasteHeadingsTest`
+  (a long OneNote-like copy with titles at 20, 16 and 15 points and an
+  image: the step between the normal lines right after Ctrl+V and later)
+
 ### ✏️ v0.155.38 — 18/11/2026 · 19:36 — The People property
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1326 tests passed)*
 
