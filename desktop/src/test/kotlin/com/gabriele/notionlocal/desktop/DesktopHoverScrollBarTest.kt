@@ -51,7 +51,7 @@ import java.nio.file.Files
 /**
  * **La barra per scorrere di lato un database** (18/11/2026, chiesto dall'utente: "quando ho la
  * puntina del mouse su un database fai sì che ci sia la piccola barra orizzontale… se tolgo la
- * puntina del mouse, fai sì che scompaia dopo due secondi").
+ * puntina del mouse, fai sì che scompaia dopo due secondi"; dal 18/11/2026 mezzo secondo: "Lasciamela solo per mezzo secondo").
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 class DesktopHoverScrollBarTest {
@@ -90,7 +90,7 @@ class DesktopHoverScrollBarTest {
     }
 
     @Test
-    fun theBarShowsWithTheMouseAndGoesAwayAfterTwoSeconds() {
+    fun theBarShowsWithTheMouseAndGoesAwayAfterHalfASecond() {
         val factory = ViewModelFactory(context)
         val owner = ScreenOwner()
         val scene = onWindowThread {
@@ -129,7 +129,8 @@ class DesktopHoverScrollBarTest {
             val before = barXs(clean, barY)
             // Il mouse sulla tabella: la barra compare in fondo, a sinistra (si è all'inizio).
             mouse(PointerEventType.Move, Offset(450f, 300f))
-            frames(8)
+            // Il tempo della comparsa (0,2 s) passa nei fotogrammi; quello vero resta sotto il mezzo secondo.
+            frames(5, sleep = 5)
             val shown = shot("hoverbar_shown")
             val bar = barXs(shown, barY) - before.toSet()
             assertTrue("la barra si vede: ${bar.size} punti", bar.size > 100)
@@ -143,16 +144,16 @@ class DesktopHoverScrollBarTest {
                 frames(1)
             }
             mouse(PointerEventType.Release, from + Offset(300f, 0f), button = PointerButton.Primary)
-            frames(5)
+            frames(2, sleep = 20)
             val dragged = shot("hoverbar_dragged")
             val moved = barXs(dragged, barY) - before.toSet()
             assertTrue("la maniglia è andata a destra: ${moved.min()}", moved.min() > bar.min() + 150)
             val header = 600 / 2
             assertNotEquals("la tabella è scorsa", (0 until 900).map { clean.getColor(it, header) }, (0 until 900).map { dragged.getColor(it, header) })
-            // Fermi, dopo due secondi la barra se ne va.
-            frames(30, sleep = 90)
+            // Fermi, dopo mezzo secondo la barra se ne va.
+            frames(12, sleep = 80)
             val gone = barXs(shot("hoverbar_gone"), barY) - before.toSet()
-            assertTrue("dopo due secondi la barra non c'è più: ${gone.size}", gone.size < 20)
+            assertTrue("dopo mezzo secondo la barra non c'è più: ${gone.size}", gone.size < 20)
         } finally {
             onWindowThread { scene.close() }
         }

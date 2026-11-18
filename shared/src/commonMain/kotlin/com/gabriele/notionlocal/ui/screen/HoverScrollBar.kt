@@ -24,7 +24,8 @@ import com.gabriele.notionlocal.platform.isPc
 import kotlinx.coroutines.delay
 
 /** Quanto resta la barra dopo l'ultimo movimento del mouse sul database, o dopo che è uscito. */
-private const val HOVER_BAR_MS = 2_000L
+// Mezzo secondo dal 18/11/2026 (chiesto dall'utente; prima 2 secondi).
+private const val HOVER_BAR_MS = 500L
 
 /**
  * Dove sta la maniglia della barra larga [width]: (inizio, larghezza), con [value] dello
@@ -39,7 +40,7 @@ fun hoverBarThumb(width: Float, value: Int, max: Int): Pair<Float, Float>? {
 /**
  * **La barra per scorrere di lato un database, sul PC** (dal 18/11/2026, chiesto dall'utente):
  * quando la tabella (o la bacheca) è più larga di quanto si vede, col mouse sopra compare in fondo una
- * barra sottile, da trascinare; se ne va da sola 2 secondi dopo che il mouse si è fermato o è uscito.
+ * barra sottile, da trascinare; se ne va da sola mezzo secondo dopo che il mouse si è fermato o è uscito.
  * Disegnata sopra il database, senza spostare niente. Va messa prima di `horizontalScroll([scroll])`:
  * così misura la parte che si vede.
  */

@@ -1126,6 +1126,15 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.30 — 18/11/2026 · 14:48 — PC: the bar of the databases goes away after half a second
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1311 tests passed)*
+
+- **[Change]** **[💻 PC]** **Half a second, no longer 2**: the bar to
+  scroll a database sideways goes away half a second after the mouse stops
+  or leaves the database (v0.155.29). While it is dragged it stays
+- **[Project]** `HOVER_BAR_MS` 500 in `HoverScrollBar.kt`. Test:
+  `DesktopHoverScrollBarTest` (gone half a second after the mouse stopped)
+
 ### ✏️ v0.155.29 — 18/11/2026 · 14:28 — PC: the bar to scroll a database sideways
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1311 tests passed)*
 
