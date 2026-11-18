@@ -256,6 +256,7 @@ import com.gabriele.notionlocal.ui.i18n.BlockStrings
 import com.gabriele.notionlocal.ui.theme.CalloutBackground
 import com.gabriele.notionlocal.data.entity.BlockType
 import com.gabriele.notionlocal.data.entity.DividerStyle
+import com.gabriele.notionlocal.data.entity.LinkTarget
 import com.gabriele.notionlocal.data.entity.dividerStyle
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.entity.RichTextSpan
@@ -3270,6 +3271,46 @@ private fun PageEditorContent(
             }
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
+            // **L'indice a destra** (dal 18/11/2026, sul PC, vedi `PageContentsRail`): i punti di
+            // "Link → In this page", rifatti quando si smette di scrivere (leggerli vuol dire leggere
+            // tutte le righe).
+            if (isPc) {
+                val contents by produceState(emptyList<LinkTarget>(), blocks) {
+                    delay(300)
+                    value = viewModel.linkTargets()
+                }
+                if (contents.isNotEmpty()) {
+                    val reachedPx = with(inkDensity) { (PC_TOP_BAR + 100.dp).toPx() }
+                    // Il punto a cui si è arrivati: l'ultimo salito sopra la cima della pagina, più un po'.
+                    val current by remember(contents) {
+                        derivedStateOf {
+                            val first = listState.firstVisibleItemIndex
+                            listState.firstVisibleItemScrollOffset
+                            val byId = latestBlocks.value.associateBy { it.id }
+                            val top = (pageListCoordinates.get()?.takeIf { it.isAttached }?.localToWindow(Offset.Zero)?.y ?: 0f) + reachedPx
+                            // In fondo alla pagina gli ultimi punti non salgono più fin lassù: lì basta vederli.
+                            val atEnd = !listState.canScrollForward
+                            var reached: String? = null
+                            for (target in contents) {
+                                var anchor = byId[target.blockId]
+                                while (anchor?.parentBlockId != null) anchor = byId[anchor.parentBlockId]
+                                val item = anchor?.let { a -> latestRenderItems.value.indexOfFirst { a.id in renderItemBlockIds(it) } } ?: -1
+                                if (item < 0) continue
+                                val above = item + HEADER_ITEM_COUNT < first ||
+                                    blockPicker.boundsOf(target.blockId)?.let { it.top <= top || atEnd } == true
+                                if (above) reached = target.blockId else if (item + HEADER_ITEM_COUNT > first) break
+                            }
+                            reached
+                        }
+                    }
+                    PageContentsRail(
+                        targets = contents,
+                        current = current,
+                        onJump = jumpToBlock,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(top = PC_TOP_BAR + 96.dp, end = 14.dp)
+                    )
+                }
+            }
             if (isPc && !readOnlyPage && !drawingMode) {
                 // Le voci si spostano sotto il mouse fermo: i puntini con loro (vedi `FollowPageLayout`).
                 FollowPageLayout(

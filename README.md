@@ -1126,6 +1126,27 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.28 — 18/11/2026 · 14:11 — PC: the table of contents on the right of the page
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1309 tests passed)*
+
+- **[Change]** **[💻 PC]** **The table of contents on the right of the
+  page**, as on Notion: in the right margin of a page (also in the Center
+  and Side peek) a short line for every point that "Link → In this page"
+  offers, in the order of the page: the lines with the pin and those written
+  all in big letters. A line inside a toggle or indented is shorter. The line
+  of the point one has read up to is brighter, and it follows the scrolling.
+  With the mouse over the lines the list with their names opens; a click
+  takes there, as a link to that point does. A page without such points has
+  no lines
+- **[Project]** `PageContentsRail` (`PageContents.kt`), in
+  `PageEditorScreen` beside the scroll bar; the points from
+  `PageEditorViewModel.linkTargets` (`linkTargetsOf`), read again 0.3 s
+  after the last change; the point reached from the list positions and
+  `BlockPicker.boundsOf`; the jump is `jumpToBlock`. Test:
+  `DesktopPageContentsTest` (three pinned lines in a long page: three
+  lines, none bright at the top; the list on hover; a click on the second
+  brightens the second; at the end of the page the third)
+
 ### ✏️ v0.155.27 — 18/11/2026 · 13:49 — Today circled in white in the calendars
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1308 tests passed)*
 
