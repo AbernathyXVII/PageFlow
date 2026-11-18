@@ -3157,6 +3157,8 @@ private fun PageEditorContent(
                     contentPadding = PaddingValues(start = pageLeftInset, end = pageRightInset, top = if (isPc) PC_TOP_BAR else 0.dp, bottom = PAGE_BOTTOM_SPACE),
                     modifier = Modifier
                         .fillMaxSize()
+                        // Sul PC il tasto centrale del mouse, come nei browser (vedi `Autoscroll.kt`).
+                        .middleClickAutoscroll(enabled = isPc) { listState.scrollBy(it) }
                         // Il verso del dito, per "Back" quando si è scesi molto (`BackToTop.kt`).
                         .nestedScroll(backToTop.connection)
                         // Con tutta la pagina selezionata, un tocco la lascia (vedi `PageSelection.kt`).

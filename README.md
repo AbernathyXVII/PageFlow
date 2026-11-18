@@ -1126,6 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.21 — 18/11/2026 · 09:33 — PC: the middle mouse button scrolls the page, as in a browser
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1301 tests passed)*
+
+- **[Change]** **[💻 PC]** **The middle mouse button scrolls the page, as
+  in a browser**: a click with the middle button (the wheel pressed) leaves
+  there the round icon with the two arrows, and the page scrolls up or down
+  the faster the further the mouse goes above or below it; close to the icon
+  it stays still. Another click (of any button), the wheel or Esc stops it,
+  and that click does nothing else (the cursor doesn't jump into the text);
+  while writing, any other key stops it too and is typed as usual. Holding the middle button down and moving the mouse works too: the
+  page stops when the button is let go. The middle click never reaches the
+  text under it. In the pages; not yet in a database open on its own
+- **[Project]** `Modifier.middleClickAutoscroll` and `autoscrollSpeed`
+  (`Autoscroll.kt`): the events are taken before everything inside
+  (`PointerEventPass.Initial`), the page scrolls once per frame with
+  `LazyListState.scrollBy`, the icon is drawn over the list. Test:
+  `DesktopAutoscrollTest` (the icon where the middle click was, the page
+  still near it and going down with the mouse 150 points below; a left
+  click on the text stops it without a caret; held and moved up it goes up,
+  and stops when let go; the wheel and Esc stop it; the speed growing with
+  the distance)
+
 ### ✏️ v0.155.20 — 18/11/2026 · 01:50 — PC: the views of a database in a row
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1299 tests passed)*
 
