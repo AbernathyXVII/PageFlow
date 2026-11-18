@@ -107,7 +107,6 @@ import com.gabriele.notionlocal.data.widgets.selectableZoneIds
 import com.gabriele.notionlocal.data.widgets.sortedWestToEast
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.ui.format.Formats
-import androidx.compose.material3.Switch
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState

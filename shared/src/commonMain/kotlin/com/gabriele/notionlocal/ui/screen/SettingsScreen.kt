@@ -7,7 +7,6 @@ import androidx.compose.material.icons.filled.Spellcheck
 import com.gabriele.notionlocal.ui.i18n.ProofingStrings
 import com.gabriele.notionlocal.ui.i18n.ParagraphStrings
 import androidx.compose.material.icons.filled.FormatLineSpacing
-import androidx.compose.material3.Switch
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Alignment
 import com.gabriele.notionlocal.data.AppDatabase

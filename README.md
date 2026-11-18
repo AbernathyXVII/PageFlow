@@ -1126,6 +1126,22 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.23 — 18/11/2026 · 10:09 — PC: no halo around the knob of a switch
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1303 tests passed)*
+
+- **[Change]** **[💻 PC]** **No halo around the knob of a switch**: clicking
+  a switch, such as "Full width", a bigger light and transparent circle
+  appeared around its knob (the "wave" of Material). Now on the PC it is
+  gone, from all the switches of the app and from the round choices
+  (radio buttons) too. On the phone it stays: under the finger it tells
+  that the touch arrived
+- **[Project]** `Switch` and `RadioButton` of the app (`Toggles.kt`), with
+  the names of the Material ones: in the package of the screens they take
+  their place (the imports of the Material ones are gone), and on the PC
+  they have no ripple (`LocalRippleConfiguration` null). Test:
+  `DesktopSwitchHaloTest` (with the mouse pressed, the Material switch has
+  the circle around the knob, the one of the app not)
+
 ### ✏️ v0.155.22 — 18/11/2026 · 09:50 — PC: in the Center peek the margins don't change with Full width
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1302 tests passed)*
 

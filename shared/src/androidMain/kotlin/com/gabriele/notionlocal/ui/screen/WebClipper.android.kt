@@ -86,7 +86,6 @@ import com.gabriele.notionlocal.data.webclip.imageSources
 import com.gabriele.notionlocal.data.webclip.isPicture
 import com.gabriele.notionlocal.data.settings.AppSettings
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material3.Switch
 import com.gabriele.notionlocal.data.webclip.WebClipImage
 import com.gabriele.notionlocal.data.webclip.WebClipMode
 import com.gabriele.notionlocal.data.webclip.WebClipRequest
