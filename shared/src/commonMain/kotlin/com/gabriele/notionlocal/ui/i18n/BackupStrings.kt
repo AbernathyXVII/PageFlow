@@ -1,8 +1,8 @@
 package com.gabriele.notionlocal.ui.i18n
 
 /**
- * Le scritte dei backup (dal 28/10/2026): la pagina Backup, "Carica su
- * Proton Drive", il ripristino e il promemoria. Stessa regola di `Strings`:
+ * Le scritte dei backup (dal 28/10/2026): la pagina Backup, il ripristino e
+ * il promemoria ("Carica su Proton Drive" tolto il 18/11/2026). Stessa regola di `Strings`:
  * ogni voce con le sue otto traduzioni.
  */
 object BackupStrings {
@@ -14,8 +14,6 @@ object BackupStrings {
 
     val lastBackup get() = t("Last backup", "Ultimo backup", "Letzte Sicherung", "Dernière sauvegarde", "Última copia", "上次备份", "마지막 백업", "前回のバックアップ")
     val noBackupYet get() = t("No backup yet", "Ancora nessun backup", "Noch keine Sicherung", "Aucune sauvegarde", "Aún no hay copias", "还没有备份", "아직 백업이 없어요", "まだバックアップはありません")
-    val lastUpload get() = t("Last upload to Proton Drive", "Ultimo caricamento su Proton Drive", "Letzter Upload zu Proton Drive", "Dernier envoi sur Proton Drive", "Última subida a Proton Drive", "上次上传到 Proton Drive", "Proton Drive 마지막 업로드", "Proton Drive への前回のアップロード")
-    val neverUploaded get() = t("Never", "Mai", "Nie", "Jamais", "Nunca", "从未", "없음", "なし")
     fun todayAt(time: String) = t("Today at $time", "Oggi alle $time", "Heute um $time", "Aujourd'hui à $time", "Hoy a las $time", "今天 $time", "오늘 $time", "今日 $time")
     fun yesterdayAt(time: String) = t("Yesterday at $time", "Ieri alle $time", "Gestern um $time", "Hier à $time", "Ayer a las $time", "昨天 $time", "어제 $time", "昨日 $time")
 
@@ -25,20 +23,6 @@ object BackupStrings {
     val backingUp get() = t("Backing up…", "Backup in corso…", "Sicherung läuft…", "Sauvegarde…", "Haciendo copia…", "正在备份…", "백업 중…", "バックアップ中…")
     val backupDone get() = t("Backup saved", "Backup salvato", "Sicherung gespeichert", "Sauvegarde enregistrée", "Copia guardada", "备份已保存", "백업을 저장했어요", "バックアップを保存しました")
     val backupFailed get() = t("The backup didn't work", "Il backup non è riuscito", "Die Sicherung ist fehlgeschlagen", "La sauvegarde a échoué", "La copia no se pudo hacer", "备份失败", "백업하지 못했어요", "バックアップできませんでした")
-    val uploadToProton get() = t("Upload to Proton Drive", "Carica su Proton Drive", "Zu Proton Drive hochladen", "Envoyer sur Proton Drive", "Subir a Proton Drive", "上传到 Proton Drive", "Proton Drive에 업로드", "Proton Drive にアップロード")
-    val uploading get() = t("Uploading…", "Caricamento…", "Wird hochgeladen…", "Envoi…", "Subiendo…", "正在上传…", "업로드 중…", "アップロード中…")
-    val uploaded get() = t("Backup uploaded", "Backup caricato", "Sicherung hochgeladen", "Sauvegarde envoyée", "Copia subida", "备份已上传", "백업을 업로드했어요", "バックアップをアップロードしました")
-    val uploadFailed get() = t("The upload didn't work", "Il caricamento non è riuscito", "Der Upload ist fehlgeschlagen", "L'envoi a échoué", "No se pudo subir", "上传失败", "업로드하지 못했어요", "アップロードできませんでした")
-    val protonNote get() = t(
-        "Proton Drive doesn't let apps save on their own: in the window that opens, choose the folder the first time, then just tap Save.",
-        "Proton Drive non lascia salvare le app da sole: nella finestra che si apre scegli la cartella la prima volta, poi basta toccare Salva.",
-        "Proton Drive lässt Apps nicht selbst speichern: Wähle im Fenster beim ersten Mal den Ordner, danach einfach auf Speichern tippen.",
-        "Proton Drive ne laisse pas les applis enregistrer seules : dans la fenêtre, choisissez le dossier la première fois, puis touchez Enregistrer.",
-        "Proton Drive no deja que las apps guarden solas: en la ventana elige la carpeta la primera vez, luego solo toca Guardar.",
-        "Proton Drive 不允许应用自行保存：第一次在弹出的窗口中选择文件夹，之后只需点按“保存”。",
-        "Proton Drive는 앱이 직접 저장하지 못하게 해요. 처음에 열리는 창에서 폴더를 고르면, 다음부터는 저장만 누르면 돼요.",
-        "Proton Drive はアプリによる自動保存を許可していません。初回は開いた画面でフォルダーを選び、次からは「保存」をタップするだけです。"
-    )
 
     // --- Ogni giorno e il promemoria ---
 
@@ -54,31 +38,31 @@ object BackupStrings {
         "하루에 한 번, 앱을 나갈 때요. 최근 7개를 남겨요.",
         "1日1回、アプリを離れるときに。最新の7件を残します。"
     )
-    val reminder get() = t("Upload reminder", "Promemoria per caricare", "Upload-Erinnerung", "Rappel d'envoi", "Recordatorio de subida", "上传提醒", "업로드 알림", "アップロードのリマインダー")
+    val reminder get() = t("Backup reminder", "Promemoria del backup", "Sicherungs-Erinnerung", "Rappel de sauvegarde", "Recordatorio de copia", "备份提醒", "백업 알림", "バックアップのリマインダー")
     fun afterDays(days: Int) = t("After $days days", "Dopo $days giorni", "Nach $days Tagen", "Après $days jours", "Después de $days días", "$days 天后", "${days}일 후", "${days}日後")
     val never get() = t("Never", "Mai", "Nie", "Jamais", "Nunca", "从不", "안 함", "しない")
-    val reminderTitle get() = t("Upload a backup to Proton Drive", "Carica un backup su Proton Drive", "Lade eine Sicherung zu Proton Drive hoch", "Envoyez une sauvegarde sur Proton Drive", "Sube una copia a Proton Drive", "将备份上传到 Proton Drive", "Proton Drive에 백업을 업로드하세요", "Proton Drive にバックアップをアップロード")
+    val reminderTitle get() = t("Make a backup", "Fai un backup", "Erstelle eine Sicherung", "Faites une sauvegarde", "Haz una copia", "做个备份", "백업하세요", "バックアップを作成")
     fun reminderText(days: Long?): String = if (days == null) {
         t(
-            "You haven't uploaded one yet: tap to do it.",
-            "Non ne hai ancora caricato nessuno: tocca per farlo.",
-            "Du hast noch keine hochgeladen: Tippe hier.",
-            "Vous n'en avez encore envoyé aucune : touchez pour le faire.",
-            "Aún no has subido ninguna: toca para hacerlo.",
-            "你还没有上传过备份：点按即可上传。",
-            "아직 업로드한 백업이 없어요. 눌러서 업로드하세요.",
-            "まだアップロードしていません。タップしてアップロードしてください。"
+            "You haven't made one yet: tap to do it.",
+            "Non ne hai ancora fatto nessuno: tocca per farlo.",
+            "Du hast noch keine erstellt: Tippe hier.",
+            "Vous n'en avez encore fait aucune : touchez pour le faire.",
+            "Aún no has hecho ninguna: toca para hacerlo.",
+            "你还没有做过备份：点按即可备份。",
+            "아직 백업이 없어요. 눌러서 백업하세요.",
+            "まだバックアップがありません。タップして作成してください。"
         )
     } else {
         t(
-            "The last one is from $days days ago: tap to upload a new one.",
-            "L'ultimo è di $days giorni fa: tocca per caricarne uno nuovo.",
-            "Die letzte ist $days Tage alt: Tippe, um eine neue hochzuladen.",
-            "La dernière date de $days jours : touchez pour en envoyer une nouvelle.",
-            "La última es de hace $days días: toca para subir una nueva.",
-            "上一次是 $days 天前：点按上传新的备份。",
-            "마지막 업로드는 ${days}일 전이에요. 눌러서 새로 업로드하세요.",
-            "前回は${days}日前です。タップして新しいものをアップロードしてください。"
+            "The last one is from $days days ago: tap to make a new one.",
+            "L'ultimo è di $days giorni fa: tocca per farne uno nuovo.",
+            "Die letzte ist $days Tage alt: Tippe, um eine neue zu erstellen.",
+            "La dernière date de $days jours : touchez pour en faire une nouvelle.",
+            "La última es de hace $days días: toca para hacer una nueva.",
+            "上一次是 $days 天前：点按做一个新的备份。",
+            "마지막 백업은 ${days}일 전이에요. 눌러서 새로 백업하세요.",
+            "前回は${days}日前です。タップして新しく作成してください。"
         )
     }
 
@@ -130,16 +114,6 @@ object BackupStrings {
         "每天一次，在 PageFlow 打开期间。保留最近 7 份。",
         "PageFlow가 열려 있는 동안 하루에 한 번요. 최근 7개를 남겨요.",
         "PageFlow を開いている間に1日1回。最新の7件を残します。"
-    )
-    val uploadNoteOnPc get() = t(
-        "In the window that opens, choose the Proton Drive folder (or a USB stick) the first time: next time it opens there.",
-        "Nella finestra che si apre scegli la cartella di Proton Drive (o una chiavetta) la prima volta: la volta dopo si apre lì.",
-        "Wähle im Fenster beim ersten Mal den Proton-Drive-Ordner (oder einen USB-Stick): Beim nächsten Mal öffnet es sich dort.",
-        "Dans la fenêtre, choisissez la première fois le dossier Proton Drive (ou une clé USB) : la fois suivante, elle s'ouvre là.",
-        "En la ventana elige la primera vez la carpeta de Proton Drive (o un USB): la próxima vez se abre ahí.",
-        "第一次在弹出的窗口中选择 Proton Drive 文件夹（或 U 盘），下次会直接在那里打开。",
-        "처음에 열리는 창에서 Proton Drive 폴더(또는 USB)를 고르면, 다음부터는 거기서 열려요.",
-        "初回は開いた画面で Proton Drive のフォルダー（または USB メモリ）を選んでください。次回からはそこで開きます。"
     )
 
     // --- Il ripristino ---

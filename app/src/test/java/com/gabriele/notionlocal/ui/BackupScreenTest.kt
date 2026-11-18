@@ -104,7 +104,8 @@ class BackupScreenTest {
     fun withoutBackupsItSaysSoAndBackUpNowMakesOne() {
         open()
         assertTrue(shown("No backup yet"))
-        assertTrue(shown("Never"))
+        // Dal 18/11/2026 niente più caricamento su Proton Drive: basta "Back up now".
+        assertFalse(shown("Upload to Proton Drive"))
         assertTrue(shown("There are no backups on this phone yet."))
         compose.onNodeWithText("Back up now").performClick()
         waitFor("il backup") { Backups.list().size == 1 }
@@ -116,7 +117,7 @@ class BackupScreenTest {
     fun theReminderAndTheDailyBackupAreChosenHere() {
         open()
         assertTrue(shown("After 7 days"))
-        compose.onNodeWithText("Upload reminder").performClick()
+        compose.onNodeWithText("Backup reminder").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("After 14 days").performClick()
         compose.waitForIdle()
@@ -129,44 +130,6 @@ class BackupScreenTest {
         Backups.init(context)
         assertEquals(14, Backups.remindDays)
         assertFalse(Backups.autoBackup)
-    }
-
-    @Test
-    fun uploadOpensSaveAsWithTheNameAndThenRemembersWhere() {
-        val latest = runBlocking { Backups.backupNow(BackupReason.DAILY) }
-        open()
-        compose.onNodeWithText("Upload to Proton Drive").performClick()
-        compose.waitForIdle()
-        val asked = shadowOf(compose.activity).nextStartedActivityForResult.intent
-        assertEquals(Intent.ACTION_CREATE_DOCUMENT, asked.action)
-        assertEquals("application/zip", asked.type)
-        assertEquals(latest.name, asked.getStringExtra(Intent.EXTRA_TITLE))
-        // La prima volta non c'è un posto da cui partire.
-        assertFalse(asked.hasExtra(DocumentsContract.EXTRA_INITIAL_URI))
-
-        // Scelto Proton Drive e toccato "Salva": il backup va lì.
-        val target = Uri.parse("content://me.proton.android.drive.documents/document/backup")
-        val received = ByteArrayOutputStream()
-        shadowOf(context.contentResolver).registerOutputStream(target, received)
-        shadowOf(compose.activity).receiveResult(asked, Activity.RESULT_OK, Intent().setData(target))
-        waitFor("il caricamento") { Backups.lastUploadAt > 0 }
-        assertEquals(File(folder, latest.name).length().toInt(), received.size())
-        waitFor("la data del caricamento") { !shown("Never") }
-
-        // La seconda volta "Salva come" parte da lì.
-        compose.onNodeWithText("Upload to Proton Drive").performClick()
-        compose.waitForIdle()
-        val again = shadowOf(compose.activity).nextStartedActivityForResult.intent
-        assertEquals(target, again.getParcelableExtra(DocumentsContract.EXTRA_INITIAL_URI, Uri::class.java))
-    }
-
-    @Test
-    fun uploadWithoutABackupMakesOneFirst() {
-        open()
-        compose.onNodeWithText("Upload to Proton Drive").performClick()
-        waitFor("il backup") { Backups.list().size == 1 }
-        waitFor("Salva come") { shadowOf(compose.activity).peekNextStartedActivityForResult() != null }
-        assertEquals(Backups.list().single().name, shadowOf(compose.activity).nextStartedActivityForResult.intent.getStringExtra(Intent.EXTRA_TITLE))
     }
 
     @Test

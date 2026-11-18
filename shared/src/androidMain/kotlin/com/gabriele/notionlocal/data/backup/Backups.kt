@@ -84,15 +84,10 @@ actual object Backups {
         private set
     actual var lastBackupAt by mutableLongStateOf(0L)
         private set
-    actual var lastUploadAt by mutableLongStateOf(0L)
-        private set
 
     actual var changes by mutableIntStateOf(0)
         private set
 
-    /** Dove si è salvato l'ultima volta con "Carica su Proton Drive": lì si riapre "Salva come". */
-    var lastUploadUri: String? = null
-        private set
     private var firstBackupAt = 0L
     private var lastReminderAt = 0L
 
@@ -104,8 +99,6 @@ actual object Backups {
         autoBackup = p.getBoolean("auto", true)
         remindDays = p.getInt("remindDays", 7)
         lastBackupAt = p.getLong("lastBackupAt", 0L)
-        lastUploadAt = p.getLong("lastUploadAt", 0L)
-        lastUploadUri = p.getString("lastUploadUri", null)
         firstBackupAt = p.getLong("firstBackupAt", 0L)
         lastReminderAt = p.getLong("lastReminderAt", 0L)
     }
@@ -115,8 +108,6 @@ actual object Backups {
             ?.putBoolean("auto", autoBackup)
             ?.putInt("remindDays", remindDays)
             ?.putLong("lastBackupAt", lastBackupAt)
-            ?.putLong("lastUploadAt", lastUploadAt)
-            ?.putString("lastUploadUri", lastUploadUri)
             ?.putLong("firstBackupAt", firstBackupAt)
             ?.putLong("lastReminderAt", lastReminderAt)
             ?.apply()
@@ -234,31 +225,10 @@ actual object Backups {
 
     // --- Caricare e il promemoria ---
 
-    /**
-     * Copia [file] in [target], il file scelto con "Salva come" (su Proton
-     * Drive, o dove si vuole). Riuscito, conta come caricato adesso.
-     */
-    suspend fun upload(file: BackupFile, target: Uri): Boolean = withContext(Dispatchers.IO) {
-        val ctx = context()
-        val ok = runCatching {
-            storage.open(file).use { input ->
-                (ctx.contentResolver.openOutputStream(target, "w") ?: error("Non si apre $target")).use { input.copyTo(it) }
-            }
-        }.isSuccess
-        if (ok) {
-            lastUploadAt = clock()
-            lastUploadUri = target.toString()
-            lastReminderAt = 0L
-            save()
-            changes++
-        }
-        ok
-    }
-
     private fun remindIfDue() {
         val now = clock()
-        if (!isUploadReminderDue(now, remindDays, lastUploadAt, firstBackupAt, lastReminderAt)) return
-        if (Notifier.postBackupReminder(context(), daysSince(lastUploadAt, now))) {
+        if (!isBackupReminderDue(now, remindDays, lastBackupAt, firstBackupAt, lastReminderAt)) return
+        if (Notifier.postBackupReminder(context(), daysSince(lastBackupAt, now))) {
             lastReminderAt = now
             save()
         }

@@ -1126,6 +1126,26 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.33 — 18/11/2026 · 17:11 — Backup: no more "Upload to Proton Drive"
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1310 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The Backup page without "Upload
+  to Proton Drive"**: the big button, the line "Last upload to Proton Drive",
+  the note about Proton Drive and the item in the ⋮ of every backup are
+  gone; "Back up now" is now the main button. The backups are still made by
+  hand and every day, kept, restored and deleted as before
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The reminder says "Make a
+  backup"** ("Backup reminder"), counted from the last backup, no longer
+  from the last upload (there isn't one any more, and it would have come
+  forever): after the chosen days without a backup the notification asks to
+  make one. With the daily backup on it doesn't come
+- **[Project]** Gone: `rememberBackupUpload`, `uploadNote`, `Backups.upload`,
+  `lastUploadAt` and where the last upload went, the strings of the upload;
+  `isBackupReminderDue` with `lastBackupAt`. Tests: `BackupScreenTest` (no
+  "Upload to Proton Drive"; "Backup reminder"), `BackupTest` (the reminder
+  from the last backup, "Make a backup" with the daily backup off); the two
+  tests of the upload are gone with it
+
 ### ✏️ v0.155.32 — 18/11/2026 · 16:52 — The line reached with a link stays lit one second more
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1313 tests passed)*
 

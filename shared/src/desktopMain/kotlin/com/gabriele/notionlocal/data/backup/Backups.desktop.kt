@@ -72,14 +72,9 @@ actual object Backups {
         private set
     actual var lastBackupAt by mutableLongStateOf(0L)
         private set
-    actual var lastUploadAt by mutableLongStateOf(0L)
-        private set
     actual var changes by mutableIntStateOf(0)
         private set
 
-    /** La cartella dove si è caricato l'ultima volta: lì si riapre la finestra. */
-    var lastUploadDir: String? = null
-        private set
     private var firstBackupAt = 0L
     private var lastReminderAt = 0L
 
@@ -103,8 +98,6 @@ actual object Backups {
         autoBackup = p.getBoolean("auto", true)
         remindDays = p.getInt("remindDays", 7)
         lastBackupAt = p.getLong("lastBackupAt", 0L)
-        lastUploadAt = p.getLong("lastUploadAt", 0L)
-        lastUploadDir = p.getString("lastUploadDir", null)
         firstBackupAt = p.getLong("firstBackupAt", 0L)
         lastReminderAt = p.getLong("lastReminderAt", 0L)
     }
@@ -114,8 +107,6 @@ actual object Backups {
             ?.putBoolean("auto", autoBackup)
             ?.putInt("remindDays", remindDays)
             ?.putLong("lastBackupAt", lastBackupAt)
-            ?.putLong("lastUploadAt", lastUploadAt)
-            ?.putString("lastUploadDir", lastUploadDir)
             ?.putLong("firstBackupAt", firstBackupAt)
             ?.putLong("lastReminderAt", lastReminderAt)
             ?.apply()
@@ -224,28 +215,15 @@ actual object Backups {
     }
 
     private fun remindIfDue(now: Long) {
-        if (!isUploadReminderDue(now, remindDays, lastUploadAt, firstBackupAt, lastReminderAt)) return
+        if (!isBackupReminderDue(now, remindDays, lastBackupAt, firstBackupAt, lastReminderAt)) return
         val shown = !DesktopNotifications.muted &&
-            DesktopNotifications.show(BackupStrings.reminderTitle, BackupStrings.reminderText(daysSince(lastUploadAt, now))) {
+            DesktopNotifications.show(BackupStrings.reminderTitle, BackupStrings.reminderText(daysSince(lastBackupAt, now))) {
                 NotificationTarget.openBackup.value = true
             }
         if (shown) {
             lastReminderAt = now
             save()
         }
-    }
-
-    /** Copia [file] in [target] (scelto con "Salva come"); riuscito, conta come caricato adesso. */
-    suspend fun upload(file: BackupFile, target: File): Boolean = withContext(Dispatchers.IO) {
-        val ok = runCatching { file.file.copyTo(target, overwrite = true) }.isSuccess
-        if (ok) {
-            lastUploadAt = System.currentTimeMillis()
-            lastUploadDir = target.parent
-            lastReminderAt = 0L
-            save()
-            changes++
-        }
-        ok
     }
 
     // --- Il ripristino ---

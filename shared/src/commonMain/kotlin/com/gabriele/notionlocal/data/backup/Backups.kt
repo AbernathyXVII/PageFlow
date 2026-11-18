@@ -19,15 +19,13 @@ expect class BackupFile {
  * l'ha ogni sistema per sé.
  */
 expect object Backups {
-    /** Dopo quanti giorni senza caricare arriva il promemoria; 0 = mai. */
+    /** Dopo quanti giorni senza un backup arriva il promemoria; 0 = mai. */
     val REMIND_CHOICES: List<Int>
     var autoBackup: Boolean
         private set
     var remindDays: Int
         private set
     var lastBackupAt: Long
-        private set
-    var lastUploadAt: Long
         private set
 
     /** Cresce a ogni backup nuovo, caricato o cancellato: la pagina Backup rilegge l'elenco. */
@@ -82,16 +80,17 @@ fun isBackupDue(lastBackupAt: Long, now: Long, zone: ZoneId): Boolean =
 private const val DAY = 24L * 60 * 60 * 1000
 
 /**
- * Se è ora del promemoria per caricare: passati [remindDays] giorni
- * dall'ultimo caricamento (o dal primo backup, se non se n'è mai caricato
- * uno), e non più di uno al giorno.
+ * Se è ora del promemoria: passati [remindDays] giorni dall'ultimo backup (o
+ * dal primo), e non più di uno al giorno. **Dal 18/11/2026 conta dall'ultimo
+ * backup** (chiesto dall'utente: niente più "Upload to Proton Drive", basta
+ * "Back up now"); prima dall'ultimo caricamento.
  */
-fun isUploadReminderDue(now: Long, remindDays: Int, lastUploadAt: Long, firstBackupAt: Long, lastReminderAt: Long): Boolean {
+fun isBackupReminderDue(now: Long, remindDays: Int, lastBackupAt: Long, firstBackupAt: Long, lastReminderAt: Long): Boolean {
     if (remindDays <= 0 || firstBackupAt <= 0) return false
-    val since = maxOf(lastUploadAt, firstBackupAt)
+    val since = maxOf(lastBackupAt, firstBackupAt)
     if (now - since < remindDays * DAY) return false
     return now - lastReminderAt >= DAY
 }
 
-/** I giorni interi passati dall'ultimo caricamento, o null se non se n'è mai fatto uno. */
-fun daysSince(lastUploadAt: Long, now: Long): Long? = lastUploadAt.takeIf { it > 0 }?.let { (now - it) / DAY }
+/** I giorni interi passati dall'ultimo backup, o null se non se n'è mai fatto uno. */
+fun daysSince(lastBackupAt: Long, now: Long): Long? = lastBackupAt.takeIf { it > 0 }?.let { (now - it) / DAY }

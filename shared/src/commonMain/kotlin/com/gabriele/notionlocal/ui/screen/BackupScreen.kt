@@ -15,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -81,9 +80,10 @@ private class RestoreChoice(val label: String, val open: () -> InputStream)
 
 /**
  * **La pagina Backup** (dal 28/10/2026, dalla barra laterale): com'è
- * l'ultimo backup e l'ultimo caricamento su Proton Drive, "Carica su Proton
- * Drive", "Fai un backup adesso", il backup di ogni giorno e il promemoria,
- * i backup sul telefono, e il ripristino. [onRestart]: riapre l'app dopo un
+ * l'ultimo backup, "Fai un backup adesso", il backup di ogni giorno e il
+ * promemoria, i backup sul telefono, e il ripristino. **Senza "Carica su
+ * Proton Drive" dal 18/11/2026** (chiesto dall'utente: "Back up now sarà
+ * sufficiente"). [onRestart]: riapre l'app dopo un
  * ripristino preparato (i test lo sostituiscono).
  *
  * Dal 09/11/2026 è la stessa sul PC: cambiano dove stanno i backup, le
@@ -106,24 +106,12 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (PlatformContext) -> Unit = ::re
         scope.launch(Dispatchers.Main) { showMessage(context, text, long = true) }
     }
 
-    val upload = rememberBackupUpload(
-        onStart = { busy = BackupStrings.uploading },
-        onDone = { ok ->
-            busy = null
-            toast(if (ok) BackupStrings.uploaded else BackupStrings.uploadFailed)
-        }
-    )
-
-    fun backupNow(thenUpload: Boolean) {
+    fun backupNow() {
         scope.launch {
             busy = BackupStrings.backingUp
             val made = runCatching { Backups.backupNow(BackupReason.MANUAL) }.getOrNull()
             busy = null
-            when {
-                made == null -> toast(BackupStrings.backupFailed)
-                thenUpload -> upload(made)
-                else -> toast(BackupStrings.backupDone)
-            }
+            toast(if (made == null) BackupStrings.backupFailed else BackupStrings.backupDone)
         }
     }
 
@@ -141,7 +129,6 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (PlatformContext) -> Unit = ::re
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp)
         ) {
-            val latest = backups?.firstOrNull()
             // Com'è adesso, e il pulsante che serve di più.
             Column(
                 modifier = Modifier
@@ -152,26 +139,12 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (PlatformContext) -> Unit = ::re
                     .padding(16.dp)
             ) {
                 StatusLine(BackupStrings.lastBackup, Backups.lastBackupAt.takeIf { it > 0 }?.let(::whenLabel) ?: BackupStrings.noBackupYet)
-                Spacer(modifier = Modifier.size(6.dp))
-                StatusLine(BackupStrings.lastUpload, Backups.lastUploadAt.takeIf { it > 0 }?.let(::whenLabel) ?: BackupStrings.neverUploaded)
                 Spacer(modifier = Modifier.size(14.dp))
-                Button(
-                    onClick = { if (latest != null) upload(latest) else backupNow(thenUpload = true) },
-                    enabled = busy == null,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(BackupStrings.uploadToProton)
-                }
-                Spacer(modifier = Modifier.size(6.dp))
-                OutlinedButton(onClick = { backupNow(thenUpload = false) }, enabled = busy == null, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { backupNow() }, enabled = busy == null, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.Save, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.size(8.dp))
                     Text(BackupStrings.backupNow)
                 }
-                Spacer(modifier = Modifier.size(10.dp))
-                Text(uploadNote, style = MaterialTheme.typography.bodySmall, color = NotionGray400)
             }
 
             SectionHeader(BackupStrings.automatic)
@@ -211,7 +184,6 @@ fun BackupScreen(onBack: () -> Unit, onRestart: (PlatformContext) -> Unit = ::re
                     BackupRow(
                         file = file,
                         enabled = busy == null,
-                        onUpload = { upload(file) },
                         // Nella domanda la data vera: "del 28/10/2026 09:51", non "del Oggi alle 09:51".
                         onRestore = { restoreChoice = RestoreChoice(Formats.dateTime(file.createdAt)) { Backups.open(file) } },
                         onDelete = { deleting = file }
@@ -338,7 +310,7 @@ private fun StatusLine(label: String, value: String) {
 
 /** Un backup sul telefono: quando, quanto pesa, e il menu con caricare, ripristinare, eliminare. */
 @Composable
-private fun BackupRow(file: BackupFile, enabled: Boolean, onUpload: () -> Unit, onRestore: () -> Unit, onDelete: () -> Unit) {
+private fun BackupRow(file: BackupFile, enabled: Boolean, onRestore: () -> Unit, onDelete: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
@@ -364,7 +336,6 @@ private fun BackupRow(file: BackupFile, enabled: Boolean, onUpload: () -> Unit, 
                 Icon(Icons.Filled.MoreVert, contentDescription = com.gabriele.notionlocal.ui.i18n.ButtonStrings.options, tint = NotionGray400)
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text(BackupStrings.uploadToProton) }, onClick = { menu = false; onUpload() })
                 DropdownMenuItem(text = { Text(BackupStrings.restore) }, onClick = { menu = false; onRestore() })
                 DropdownMenuItem(
                     text = { Text(Strings.delete, color = MaterialTheme.colorScheme.error) },

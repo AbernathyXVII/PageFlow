@@ -288,47 +288,32 @@ class BackupTest {
     }
 
     @Test
-    fun uploadingCopiesTheBackupAndRemembersWhere() = runBlocking<Unit> {
-        val file = backup()
-        // Il file creato da "Salva come" su Proton Drive: qui uno finto, che tiene quello che riceve.
-        val target = Uri.parse("content://me.proton.android.drive.documents/document/prova")
-        val received = ByteArrayOutputStream()
-        shadowOf(context.contentResolver).registerOutputStream(target, received)
-        now = at(2026, 10, 28, 15, 0)
-        assertTrue(Backups.upload(file, target))
-        assertEquals(File(folder, file.name).readBytes().toList(), received.toByteArray().toList())
-        assertEquals(now, Backups.lastUploadAt)
-        assertEquals(target.toString(), Backups.lastUploadUri)
-        // Si ricorda anche dopo una riapertura.
-        Backups.init(context)
-        assertEquals(now, Backups.lastUploadAt)
-    }
-
-    @Test
     fun theReminderComesAfterTheChosenDaysOncePerDay() {
         val day = 24L * 60 * 60 * 1000
         val first = at(2026, 10, 1, 9, 0)
-        // Mai caricato: dopo 7 giorni dal primo backup.
-        assertFalse(isUploadReminderDue(first + 6 * day, 7, 0, first, 0))
-        assertTrue(isUploadReminderDue(first + 7 * day, 7, 0, first, 0))
+        // Dal 18/11/2026 conta dall'ultimo backup (prima dall'ultimo caricamento): dopo 7 giorni dal primo.
+        assertFalse(isBackupReminderDue(first + 6 * day, 7, first, first, 0))
+        assertTrue(isBackupReminderDue(first + 7 * day, 7, first, first, 0))
         // Già ricordato da poco: non di nuovo lo stesso giorno.
-        assertFalse(isUploadReminderDue(first + 7 * day + 3_600_000, 7, 0, first, first + 7 * day))
-        assertTrue(isUploadReminderDue(first + 8 * day, 7, 0, first, first + 7 * day))
-        // Caricato 3 giorni fa: niente. Spento: mai. Senza backup: niente.
-        assertFalse(isUploadReminderDue(first + 10 * day, 7, first + 7 * day, first, 0))
-        assertFalse(isUploadReminderDue(first + 100 * day, 0, 0, first, 0))
-        assertFalse(isUploadReminderDue(first + 100 * day, 7, 0, 0, 0))
+        assertFalse(isBackupReminderDue(first + 7 * day + 3_600_000, 7, first, first, first + 7 * day))
+        assertTrue(isBackupReminderDue(first + 8 * day, 7, first, first, first + 7 * day))
+        // Un backup 3 giorni fa: niente. Spento: mai. Senza backup: niente.
+        assertFalse(isBackupReminderDue(first + 10 * day, 7, first + 7 * day, first, 0))
+        assertFalse(isBackupReminderDue(first + 100 * day, 0, first, first, 0))
+        assertFalse(isBackupReminderDue(first + 100 * day, 7, 0, 0, 0))
     }
 
     @Test
     fun leavingTheAppAfterTooLongPostsTheReminder() {
         now = at(2026, 10, 1, 9, 0)
         backup(BackupReason.DAILY)
+        // Dal 18/11/2026 il promemoria conta dall'ultimo backup: col backup di ogni giorno acceso non serve.
+        Backups.setAuto(false)
         now = at(2026, 10, 9, 9, 0)
         runBlocking { Backups.onStopTasks() }
         val manager = context.getSystemService(NotificationManager::class.java)
         val posted = shadowOf(manager).allNotifications
-        assertNotNull(posted.find { it.extras.getString("android.title") == "Upload a backup to Proton Drive" })
+        assertNotNull(posted.find { it.extras.getString("android.title") == "Make a backup" })
         // Lo stesso giorno non torna.
         shadowOf(manager).allNotifications.size.let { count ->
             now = at(2026, 10, 9, 18, 0)
