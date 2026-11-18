@@ -236,29 +236,53 @@ class DesktopBlockSelectionTest {
         waitForBlocks(ids)
     }
 
-    /** Col cursore in una riga, Ctrl+A vela tutta la pagina (non solo il testo della riga), ed Esc la lascia. */
+    /**
+     * Col cursore in una riga, il primo Ctrl+A sceglie il testo della riga (dal 18/11/2026, chiesto
+     * dall'utente: "prima tutto il contenuto del blocco"), il secondo vela tutta la pagina; Esc la lascia.
+     */
     @Test
-    fun ctrlASelectsTheWholePage() = withPage { scene, frames, picture ->
-        val rows = textRows(picture())
+    fun ctrlASelectsTheBlockThenTheWholePage() = withPage { scene, frames, picture ->
+        val clean = picture()
+        val rows = textRows(clean)
         val line = Offset(100f, rows[3].center())
         val empty = Offset(400f, rows[6].center())
-        val before = picture().getColor(empty.x.toInt(), empty.y.toInt())
+        val before = clean.getColor(empty.x.toInt(), empty.y.toInt())
         onWindowThread {
             mouse(scene, PointerEventType.Move, line, pressed = false)
             mouse(scene, PointerEventType.Press, line, pressed = true)
             mouse(scene, PointerEventType.Release, line, pressed = false)
         }
         frames(5)
-        onWindowThread {
+        fun ctrlA() = onWindowThread {
             scene.sendKeyEvent(KeyEvent(Key.A, KeyEventType.KeyDown, isCtrlPressed = true))
             scene.sendKeyEvent(KeyEvent(Key.A, KeyEventType.KeyUp, isCtrlPressed = true))
         }
+        ctrlA()
         frames(5)
-        assertNotEquals("Ctrl+A vela anche le righe dove non c'era il cursore", before, picture().getColor(empty.x.toInt(), empty.y.toInt()))
+        val block = picture()
+        assertEquals("il primo Ctrl+A non vela le altre righe", before, block.getColor(empty.x.toInt(), empty.y.toInt()))
+        // Il testo della riga scelto: il fondo della scelta lungo la riga, fra le lettere.
+        val chosen = (40 until 300).count { x -> block.getColor(x, rows[3].first) != clean.getColor(x, rows[3].first) }
+        assertTrue("il primo Ctrl+A sceglie il testo della riga: $chosen", chosen > 40)
+        ctrlA()
+        frames(5)
+        assertNotEquals("il secondo Ctrl+A vela anche le righe dove non c'era il cursore", before, picture().getColor(empty.x.toInt(), empty.y.toInt()))
         onWindowThread { key(scene, Key.Escape) }
         frames(5)
         assertEquals(before, picture().getColor(empty.x.toInt(), empty.y.toInt()))
         assertEquals(ids, remaining())
+    }
+
+    /** Quale riga sceglie il primo Ctrl+A: quella del cursore, se non è già tutta scelta né vuota. */
+    @Test
+    fun theLineThatCtrlAChooses() {
+        val text = "uno\ndue tre\n\nquattro"
+        assertEquals(4 until 11, com.gabriele.notionlocal.ui.screen.ownLineToSelect(text, 6, 6))
+        assertEquals(0 until 3, com.gabriele.notionlocal.ui.screen.ownLineToSelect(text, 0, 1))
+        assertEquals("già tutta scelta", null, com.gabriele.notionlocal.ui.screen.ownLineToSelect(text, 4, 11))
+        assertEquals("vuota", null, com.gabriele.notionlocal.ui.screen.ownLineToSelect(text, 12, 12))
+        assertEquals("la scelta va oltre la riga", null, com.gabriele.notionlocal.ui.screen.ownLineToSelect(text, 5, 14))
+        assertEquals(13 until 20, com.gabriele.notionlocal.ui.screen.ownLineToSelect(text, 20, 20))
     }
 
     private fun IntRange.center(): Float = (first + last) / 2f

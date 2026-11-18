@@ -1126,6 +1126,22 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.24 — 18/11/2026 · 10:57 — Ctrl+A chooses the block first, then the page
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1305 tests passed)*
+
+- **[Change]** **[💻 PC]** **Ctrl+A chooses the block first, then the
+  page**, as on Notion: with the cursor in a block, the first Ctrl+A chooses
+  all the text of that block; the second (or the first, when the block is
+  empty or its text is already all chosen) chooses the whole page, as
+  before. It holds for the lines of text and for the blocks that are a field
+  of their own (a quote, a toggle…); in a table and in a database the cells
+  keep their own Ctrl+A
+- **[Project]** `BlockSelectAll` and `ownLineToSelect` (`BlockSelection.kt`):
+  the field with the cursor puts there how to choose its block, and the
+  Ctrl+A of the page asks it first. Tests: `DesktopBlockSelectionTest` (the
+  first Ctrl+A chooses the text of "Prima riga" and doesn't veil the others,
+  the second veils the page; which line is chosen, empty or already chosen)
+
 ### 🔧 v0.155.23.1 — 18/11/2026 · 10:38 — An address copied on its own is pasted as a link
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1304 tests passed)*
 

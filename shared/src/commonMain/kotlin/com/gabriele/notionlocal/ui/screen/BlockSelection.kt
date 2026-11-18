@@ -472,3 +472,25 @@ fun undoKeyOf(event: KeyEvent): Boolean? {
 
 /** Ctrl+A nei campi della pagina: tutta la pagina (non solo il pezzo di testo). */
 fun isSelectAll(event: KeyEvent): Boolean = event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.A
+
+/**
+ * **Ctrl+A: prima il blocco, poi la pagina** (dal 18/11/2026, chiesto dall'utente, come su Notion):
+ * il campo col cursore ci mette [inField], che sceglie il testo del suo blocco e dice sì; se è già
+ * tutto scelto (o il blocco è vuoto) dice no, e Ctrl+A sceglie tutta la pagina come prima.
+ */
+class BlockSelectAll {
+    var inField: (() -> Boolean)? = null
+}
+
+val LocalBlockSelectAll = staticCompositionLocalOf<BlockSelectAll?> { null }
+
+/**
+ * Nel testo [text] scelto da [from] a [to]: il blocco (la riga) del cursore da scegliere tutto, o
+ * null se è già tutto scelto, è vuoto o la scelta va già oltre.
+ */
+fun ownLineToSelect(text: String, from: Int, to: Int): IntRange? {
+    val start = text.lastIndexOf('\n', from - 1) + 1
+    val end = text.indexOf('\n', from).let { if (it < 0) text.length else it }
+    if (start == end || to > end || (from <= start && to >= end)) return null
+    return start until end
+}

@@ -282,6 +282,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LocalPinnableContainer
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.rememberUpdatedState
@@ -1734,6 +1735,8 @@ private fun PageEditorContent(
             pageSelected = true
         }
     }
+    // Ctrl+A: prima il blocco del cursore, poi la pagina (vedi `BlockSelectAll`).
+    val blockSelectAll = remember(pageId) { BlockSelectAll() }
     BackHandler(enabled = pageSelected) { pageSelected = false }
     BackHandler(enabled = selectedBlocks.value.isNotEmpty()) { selectedBlocks.value = emptySet() }
     var colorForBlockId by remember { mutableStateOf<String?>(null) }
@@ -3000,15 +3003,15 @@ private fun PageEditorContent(
             // a cambiare era solo la tastiera che si apriva o si chiudeva: mezzo
             // millisecondo l'una, abbastanza per perdere il fotogramma.
             val latestRenderItems = rememberUpdatedState(renderItems)
-            // I tasti della pagina dentro i suoi campi (vedi `BlockSelection.kt`): Ctrl+A tutta la
-            // pagina, Ctrl+Z e Ctrl+Y l'Annulla e il Ripristina della pagina. Vero se presi.
-            val pageKey: (KeyEvent) -> Boolean = remember(viewModel, selectWholePage) {
+            // I tasti della pagina dentro i suoi campi (vedi `BlockSelection.kt`): Ctrl+A il blocco e
+            // poi tutta la pagina, Ctrl+Z e Ctrl+Y l'Annulla e il Ripristina della pagina. Vero se presi.
+            val pageKey: (KeyEvent) -> Boolean = remember(viewModel, selectWholePage, blockSelectAll) {
                 { event ->
                     val undo = undoKeyOf(event)
                     when {
                         undo == true -> viewModel.undo()
                         undo == false -> viewModel.redo()
-                        isSelectAll(event) -> selectWholePage()
+                        isSelectAll(event) -> if (blockSelectAll.inField?.invoke() != true) selectWholePage()
                     }
                     undo != null || isSelectAll(event)
                 }
@@ -3153,7 +3156,8 @@ private fun PageEditorContent(
             // Sul PC il tasto destro sulle righe apre il menu della pagina (vedi `PcContextMenu.kt`).
             CompositionLocalProvider(
                 LocalPageTextMenu provides pcMenuHost.takeIf { pcEditing },
-                LocalColumnEdges provides columnEdges.takeIf { pcEditing }
+                LocalColumnEdges provides columnEdges.takeIf { pcEditing },
+                LocalBlockSelectAll provides blockSelectAll
             ) {
                 LazyColumn(
                     state = listState,
@@ -5829,6 +5833,18 @@ private fun MergedTextRunField(
     }
     var lastLineBlockId by remember(runKey) { mutableStateOf<String?>(null) }
     var fieldFocused by remember(runKey) { mutableStateOf(false) }
+    // Ctrl+A col cursore qui: prima la riga, cioè il blocco (vedi `BlockSelectAll`).
+    val blockSelectAll = LocalBlockSelectAll.current
+    if (blockSelectAll != null && fieldFocused) SideEffect {
+        blockSelectAll.inField = {
+            val body = bodyOf(fieldValue.text)
+            val from = (fieldValue.selection.min - RUN_LEAD.length).coerceIn(0, body.length)
+            val to = (fieldValue.selection.max - RUN_LEAD.length).coerceIn(from, body.length)
+            val line = ownLineToSelect(body, from, to)
+            if (fieldFocused && line != null) fieldValue = fieldValue.copy(selection = TextRange(RUN_LEAD.length + line.first, RUN_LEAD.length + line.last + 1))
+            fieldFocused && line != null
+        }
+    }
     // Il correttore: dove finisce quello che si è appena scritto (la parola
     // lì non si segna finché si scrive) e la parola toccata, col suo menu.
     var proofTyping by remember(runKey) { mutableStateOf<Int?>(null) }
@@ -7520,6 +7536,18 @@ private fun BlockRow(
     // l'eco della tastiera (vedi il commento dentro onValueChange).
     var lastSplit by remember(block.id) { mutableStateOf<SplitEcho?>(null) }
     var fieldFocused by remember(block.id) { mutableStateOf(false) }
+    // Ctrl+A col cursore qui: prima tutto il testo del blocco (vedi `BlockSelectAll`).
+    val blockSelectAll = LocalBlockSelectAll.current
+    if (blockSelectAll != null && fieldFocused) SideEffect {
+        blockSelectAll.inField = {
+            val value = editState.fieldValue
+            val length = bodyOf(value.text).length
+            val all = (value.selection.min - RUN_LEAD.length) <= 0 && (value.selection.max - RUN_LEAD.length) >= length
+            val take = fieldFocused && length > 0 && !all
+            if (take) editState = editState.copy(fieldValue = value.copy(selection = TextRange(RUN_LEAD.length, RUN_LEAD.length + length)))
+            take
+        }
+    }
     // Su quale numero è stato tenuto premuto: apre il menu della lista.
     var numberMenuFor by remember(block.id) { mutableStateOf<String?>(null) }
     // Il correttore, come nel campo unito: vedi lì.
