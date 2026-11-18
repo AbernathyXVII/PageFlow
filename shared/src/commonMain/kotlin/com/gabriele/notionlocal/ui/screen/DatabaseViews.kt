@@ -1,7 +1,21 @@
 package com.gabriele.notionlocal.ui.screen
 
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInParent
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -96,6 +110,79 @@ fun databaseViews(host: PageEntity, extra: List<PageEntity>): List<DatabaseView>
 
 private fun PageEntity.toView(removable: Boolean, deletable: Boolean = true) =
     DatabaseView(id, viewDisplayName(), databaseLayout ?: DatabaseLayout.TABLE, removable, named = viewName != null, deletable = deletable)
+
+/**
+ * **Sul PC le viste in fila** (dal 18/11/2026, chiesto dall'utente, come su Notion): una scheda per
+ * vista, con l'icona del layout e il nome, quella davanti evidenziata; un clic la porta davanti.
+ * Troppe per lo spazio, scorrono di lato con la loro barra sotto (vedi `HorizontalBar`) e non
+ * coprono mai le icone a destra; un nome lungo si accorcia coi puntini. La barra, la rotella col
+ * mouse sopra o il touchpad le fanno scorrere. Lo scorrimento [scroll] vive fuori dalla
+ * vista, così passando a un'altra non torna all'inizio, e quella davanti si porta sempre in vista.
+ */
+@Composable
+fun ViewTabs(
+    views: List<DatabaseView>,
+    activeId: String,
+    scroll: ScrollState,
+    onPick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Dove sta ogni scheda nella fila (inizio, larghezza) e quanto se ne vede, in px.
+    val bounds = remember { mutableMapOf<String, Pair<Int, Int>>() }
+    var viewport by remember { mutableIntStateOf(0) }
+    LaunchedEffect(activeId, viewport, views.size) {
+        val (x, width) = bounds[activeId] ?: return@LaunchedEffect
+        if (viewport <= 0) return@LaunchedEffect
+        when {
+            x < scroll.value -> scroll.animateScrollTo(x)
+            x + width > scroll.value + viewport -> scroll.animateScrollTo(x + width - viewport)
+        }
+    }
+    Column(modifier) {
+        Row(
+            modifier = Modifier
+                .onSizeChanged { viewport = it.width }
+                // La rotella su e giù, col mouse sopra, la fa scorrere di lato (quella di lato e il
+                // touchpad li prende già `horizontalScroll`, qui sotto).
+                .pointerInput(scroll) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            // Prima di `horizontalScroll`, che la rotella su e giù la prende senza muoversi.
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull() ?: continue
+                            if (event.type != PointerEventType.Scroll || change.isConsumed || scroll.maxValue == 0) continue
+                            if (change.scrollDelta.x != 0f || change.scrollDelta.y == 0f) continue
+                            scroll.dispatchRawDelta(change.scrollDelta.y * 40.dp.toPx())
+                            change.consume()
+                        }
+                    }
+                }
+                .horizontalScroll(scroll),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            views.forEach { view ->
+                val active = view.id == activeId
+                val tint = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    modifier = Modifier
+                        .onPlaced { bounds[view.id] = it.positionInParent().x.roundToInt() to it.size.width }
+                        .widthIn(max = 200.dp)
+                        .clip(RoundedCornerShape(percent = 50))
+                        .then(if (active) Modifier.background(MaterialTheme.colorScheme.surfaceVariant) else Modifier)
+                        .clickable { onPick(view.id) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(view.layout.icon(), contentDescription = null, modifier = Modifier.size(16.dp), tint = tint)
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text(view.name, style = MaterialTheme.typography.labelLarge, color = tint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Spacer(modifier = Modifier.size(2.dp))
+            }
+        }
+        if (scroll.maxValue > 0) HorizontalBar(scroll, Modifier.fillMaxWidth().padding(top = 2.dp))
+    }
+}
 
 /**
  * **Toccando il nome della vista**: l'elenco delle viste, per passare da una

@@ -1126,6 +1126,30 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.20 — 18/11/2026 · 01:50 — PC: the views of a database in a row
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1299 tests passed)*
+
+- **[Change]** **[💻 PC]** **All the views of a database in a row**, as on
+  Notion: under the title, one tab per view with the icon of its layout and
+  its name, the one in front highlighted; a click brings it in front. When
+  they don't fit, the row scrolls sideways under its own thin scroll bar (to
+  drag with the mouse; the wheel or the touchpad with the mouse over the row
+  scroll it too), and it never covers
+  the "+" and the icons on the right; a long name is shortened with dots. The
+  row stays where it was when changing view, and the view in front is always
+  brought into sight. On the far left, always there, the arrow that opens
+  all the views in a column, with their three dots (Edit view, Rename,
+  Delete). On the phone it stays as before: the name of the view and the
+  list
+- **[Project]** `ViewTabs` (in `DatabaseViews.kt`), shown by `ViewToolbar`
+  on the PC; its `ScrollState` lives in `DatabaseViewScreen`, outside the
+  `key` of the view; `HorizontalBar` (expect/actual: the desktop
+  `HorizontalScrollbar` in light colors, nothing on the phone). Test:
+  `DesktopViewTabsTest` (nine views in 900 points: the row scrolled to the
+  last, the bar, the icons on the right in their place; a click on the sixth
+  brings it in front without moving the row; the wheel moves the row;
+  scrolled to the start, the first; the arrow opens the list)
+
 ### 🔧 v0.155.19.1 — 17/11/2026 · 20:16 — Enter on an empty line of a list, and Backspace on its last item
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1298 tests passed)*
 

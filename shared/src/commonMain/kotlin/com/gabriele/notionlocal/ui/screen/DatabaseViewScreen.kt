@@ -127,6 +127,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -989,11 +990,16 @@ fun DatabaseContent(
     // "Relation" (dal 21/10/2026): i database collegati, per tutte le viste.
     RelationHost(viewModel = hostViewModel, onOpenPage = onOpenRowPage) {
     PageLinkHost(factory = factory, linkedPages = linkedPages, onOpenPage = onOpenRowPage) {
+    // Le viste in fila del PC: lo scorrimento resta passando da una all'altra.
+    val viewTabsScroll = rememberScrollState()
     // Una vista, un ViewModel e un pezzo di schermo nuovi: niente di
     // quello che era aperto su una resta appeso all'altra.
     key(activeId) {
         DatabaseViewBody(
             pageId = activeId,
+            views = hostPage?.let { databaseViews(it, extraViews) }.orEmpty(),
+            tabsScroll = viewTabsScroll,
+            onPickView = { id -> if (id != activeId) hostViewModel.setActiveView(id) },
             hostViewModel = hostViewModel,
             hostPage = hostPage,
             factory = factory,
@@ -1095,6 +1101,10 @@ fun DatabaseContent(
 @Composable
 private fun DatabaseViewBody(
     pageId: String,
+    /** Tutte le viste, per la fila del PC (`ViewTabs`). */
+    views: List<DatabaseView>,
+    tabsScroll: ScrollState,
+    onPickView: (String) -> Unit,
     hostViewModel: DatabaseViewModel,
     hostPage: PageEntity?,
     factory: ViewModelFactory,
@@ -1555,6 +1565,10 @@ private fun DatabaseViewBody(
             )
         } else ViewToolbar(
             firstLine = !showTitle,
+            views = views,
+            activeViewId = pageId,
+            tabsScroll = tabsScroll,
+            onPickView = onPickView,
             layout = layout,
             viewName = page?.viewName,
             sortActive = page?.sortRules().orEmpty().existingIn(state.columns).isNotEmpty(),
@@ -5992,7 +6006,12 @@ private fun ViewToolbar(
     onAddView: (() -> Unit)?,
     onOpenSettings: () -> Unit,
     /** Col titolo nascosto è lei la prima riga del database, per i sei puntini del PC (`BlockHandle.kt`). */
-    firstLine: Boolean = false
+    firstLine: Boolean = false,
+    /** Sul PC tutte le viste in fila (`ViewTabs`), con quella davanti [activeViewId]; vuoto = il nome e basta. */
+    views: List<DatabaseView> = emptyList(),
+    activeViewId: String = "",
+    tabsScroll: ScrollState? = null,
+    onPickView: (String) -> Unit = {}
 ) {
     val lockedTint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
     Row(
@@ -6014,7 +6033,11 @@ private fun ViewToolbar(
                 onClick = onOpenBlockMenu
             )
         }
-        Row(
+        if (isPc && tabsScroll != null && views.isNotEmpty()) {
+            // A sinistra, sempre lì: l'elenco delle viste in colonna, coi loro tre puntini.
+            ToolbarIconButton(icon = Icons.Filled.KeyboardArrowDown, contentDescription = DbStrings.views, onClick = onOpenViews)
+            ViewTabs(views, activeViewId, tabsScroll, onPickView, Modifier.weight(1f, fill = false))
+        } else Row(
             modifier = Modifier
                 .weight(1f, fill = false)
                 .background(
