@@ -71,22 +71,22 @@ class ViewArrangement(
  * e da sinistra a destra. Una riga che compare due volte (con la selezione
  * multipla sta in più gruppi) conta la prima.
  *
- * - Tabella: gruppo dopo gruppo (e sottogruppo dopo sottogruppo), dentro
- *   ognuno con le sotto-righe aperte sotto la loro riga.
+ * - Tabella ed elenco: gruppo dopo gruppo (e sottogruppo dopo sottogruppo);
+ *   nella tabella, dentro ognuno, con le sotto-righe aperte sotto la loro riga.
  * - Bacheca: colonna dopo colonna; con le fasce, fascia dopo fascia (a ogni livello).
  * - Calendario e timeline: per data, come le barre della timeline, e in fondo
  *   le righe senza data.
- * - Lista, galleria, grafico: l'ordine della vista.
+ * - Galleria, grafico: l'ordine della vista.
  */
 fun displayedRowIds(state: DatabaseTableState, view: ViewArrangement): List<String> {
     val out = LinkedHashSet<String>()
     when (view.layout) {
-        DatabaseLayout.TABLE -> {
-            // Gruppo dopo gruppo, a ogni livello, e all'ultimo le righe.
+        DatabaseLayout.TABLE, DatabaseLayout.LIST -> {
+            // Gruppo dopo gruppo, a ogni livello, e all'ultimo le righe (l'elenco coi gruppi della tabella dal 18/11/2026).
             fun walk(depth: Int, rows: List<DatabaseRowEntity>) {
                 val level = view.tableLevels.getOrNull(depth)
                 if (level == null) {
-                    rowTree(rows).forEach { out += it.row.id }
+                    if (view.layout == DatabaseLayout.TABLE) rowTree(rows).forEach { out += it.row.id } else rows.forEach { out += it.id }
                     return
                 }
                 for (g in buildLevelGroups(state, level, rows)) walk(depth + 1, g.rows)
@@ -130,7 +130,7 @@ fun displayedRowIds(state: DatabaseTableState, view: ViewArrangement): List<Stri
                 state.rows.filter { value(it.id).isBlank() }.forEach { out += it.id }
             }
         }
-        DatabaseLayout.LIST, DatabaseLayout.GALLERY, DatabaseLayout.CHART -> state.rows.forEach { out += it.id }
+        DatabaseLayout.GALLERY, DatabaseLayout.CHART -> state.rows.forEach { out += it.id }
     }
     return out.toList()
 }

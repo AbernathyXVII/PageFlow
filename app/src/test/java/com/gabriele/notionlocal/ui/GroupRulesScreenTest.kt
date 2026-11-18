@@ -192,6 +192,28 @@ class GroupRulesScreenTest {
         assertTrue(shown("Shampoo"))
     }
 
+    /**
+     * **I gruppi anche nell'elenco** (18/11/2026, chiesto dall'utente: "Implementa il grouping anche
+     * nelle viste List dei database"): gli stessi di "Group" della tabella, che c'è anche qui; un
+     * tocco sull'intestazione chiude il gruppo.
+     */
+    @Test
+    fun theListShowsTheGroupsToo() {
+        withDatabase(layout = DatabaseLayout.LIST, table = listOf(GroupRuleSpec("shop"), GroupRuleSpec("kind")))
+        open()
+        // Nelle righe i primi due valori (IPERPOLI e Cibo per Pasta e Sale); in più le intestazioni.
+        waitFor("i gruppi") { count("IPERPOLI") == 3 && count("Lidl") == 2 }
+        assertEquals("Cibo: le due righe e il sottogruppo", 3, count("Cibo"))
+        assertEquals("un \"New page\" per gruppo, e quello in fondo", 3, count("New page"))
+        // Chiuso IPERPOLI, le sue righe non si vedono più; quella di Lidl sì.
+        compose.onAllNodesWithText("IPERPOLI").onFirst().performClick()
+        waitFor("chiuso") { !shown("Pasta") && !shown("Sale") }
+        assertTrue(shown("Shampoo"))
+        assertEquals(listOf("IPERPOLI"), saved().tableGroupRules().first().collapsed)
+        openSettings()
+        assertTrue(shown("Group"))
+    }
+
     @Test
     fun theRulePageChangesHideEmptyThePropertyAndRemovesIt() {
         withDatabase(table = listOf(GroupRuleSpec("shop"), GroupRuleSpec("kind")))

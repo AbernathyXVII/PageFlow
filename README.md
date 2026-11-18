@@ -1126,6 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.35 — 18/11/2026 · 18:19 — Groups in the List views of databases too
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1315 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The List view has "Group" too**,
+  in the database settings, like the table: the pages are split by one or
+  more properties, groups inside groups, each with its arrow to close it, how
+  many pages it has and "+ New page" (a page created there gets the values of
+  its group). It is the same "Group" as the table's: switching the view from
+  Table to List (or back) the groups stay as they are. Inside a page the
+  first groups and the first pages of each, with "Load more"; dragging a page
+  with the mouse moves it among those of its group. The arrows that go from a
+  page to the next one follow the groups too
+- **[Project]** `ListLayout` gets the levels of `tableGroupLevels()` and
+  draws them with `GroupHeaderRow` (now also as wide as there is room) and
+  `GroupNewRowButton`, lazy at full page, with `RowLimits` inside a page;
+  `displayedRowIds` walks the groups for the List as for the Table. Tests:
+  `GroupRulesScreenTest.theListShowsTheGroupsToo`,
+  `RowOrderTest.aGroupedListGoesGroupByGroupToo`, `DesktopListGroupsTest`
+
 ### 🔧 v0.155.34.1 — 18/11/2026 · 17:45 — A file dropped on a peek goes into the peek's page
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1312 tests passed)*
 

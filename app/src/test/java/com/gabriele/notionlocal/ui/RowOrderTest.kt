@@ -80,6 +80,16 @@ class RowOrderTest {
     }
 
     @Test
+    fun aGroupedListGoesGroupByGroupToo() {
+        // Dal 18/11/2026 l'elenco ha i gruppi della tabella: le frecce delle pagine li seguono.
+        assertEquals(listOf("pasta", "sapone", "pane", "sale"), displayedRowIds(state, ViewArrangement(DatabaseLayout.LIST)))
+        assertEquals(
+            listOf("pane", "sapone", "pasta", "sale"),
+            displayedRowIds(state, ViewArrangement(DatabaseLayout.LIST, tableLevels = listOf(GroupLevel(shop), GroupLevel(kind))))
+        )
+    }
+
+    @Test
     fun aTableWithThreeLevelsGoesDeepFirst() {
         // Dal 28/10/2026 i livelli sono quanti se ne vogliono: per tipo, poi
         // supermercato, poi giorno. Cibo → ALDI (pane, senza giorno), IPERPOLI (pasta

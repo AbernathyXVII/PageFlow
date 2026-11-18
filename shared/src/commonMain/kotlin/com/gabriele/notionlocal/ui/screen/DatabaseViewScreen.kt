@@ -1859,6 +1859,12 @@ private fun DatabaseViewBody(
                         focusManager.clearFocus()
                         rowActionsFor = row
                     },
+                    groupLevels = viewModel.tableGroupLevels(),
+                    onCollapseGroup = { column, key, shut -> viewModel.setGroupCollapsed(false, column, key, shut) },
+                    onAddRowInGroups = { keys ->
+                        viewModel.addRowInGroups(viewModel.tableGroupLevels().zip(keys) { level, key -> level.column.id to key })
+                        newRowTick++
+                    },
                     lazy = lazyBody
                 )
 
@@ -3560,14 +3566,15 @@ private fun TableBodyRow(
 private fun GroupHeaderRow(
     group: RowGroup,
     collapsed: Boolean,
-    width: Dp,
+    /** Null: larga quanto c'è posto (nell'elenco). */
+    width: Dp?,
     /** Per i sottogruppi, un po' più a destra del loro gruppo. */
     indent: Dp = 0.dp,
     onToggle: () -> Unit
 ) {
     Row(
         modifier = Modifier
-            .width(width)
+            .then(if (width == null) Modifier.fillMaxWidth() else Modifier.width(width))
             .clickable { onToggle() }
             .padding(start = indent, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -5133,24 +5140,97 @@ private fun ListLayout(
     state: DatabaseTableState,
     onOpenRow: (DatabaseRowEntity) -> Unit,
     onRowLongPress: (DatabaseRowEntity) -> Unit,
+    /**
+     * **I gruppi anche nell'elenco** (dal 18/11/2026, chiesto dall'utente): gli
+     * stessi livelli di "Group" della tabella, così cambiando vista restano.
+     */
+    groupLevels: List<GroupLevel> = emptyList(),
+    onCollapseGroup: (String, String, Boolean) -> Unit = { _, _, _ -> },
+    onAddRowInGroups: (List<String>) -> Unit = {},
     /** A pagina intera: solo le righe sullo schermo (vedi `LazyBody`). */
     lazy: LazyBody? = null
 ) {
+    @Composable
+    fun Header(group: RowGroup, depth: Int, level: GroupLevel, key: String, collapsed: Boolean) = GroupHeaderRow(
+        group = group,
+        collapsed = collapsed,
+        width = null,
+        indent = LIST_GROUP_INDENT + SUB_GROUP_INDENT * depth,
+        onToggle = { onCollapseGroup(level.column.id, key, !collapsed) }
+    )
     if (lazy != null) {
+        // Gruppo dopo gruppo, come nella tabella: all'ultimo livello le righe e "New page".
+        fun LazyListScope.groupsAt(depth: Int, rows: List<DatabaseRowEntity>, path: List<String>) {
+            val level = groupLevels[depth]
+            buildLevelGroups(state, level, rows).forEach { group ->
+                val keys = path + group.key
+                val key = keys.joinToString(SUB_GROUP_KEY_SEPARATOR)
+                val collapsed = key in level.collapsed
+                item(key = "group:$key") { Header(group, depth, level, key, collapsed) }
+                if (!collapsed) {
+                    if (depth == groupLevels.lastIndex) {
+                        items(group.rows, key = { "g:$key:" + it.id }) { row -> ListRow(row, state, onOpenRow, onRowLongPress, keys) }
+                        item(key = "g:$key:add") { GroupNewRowButton { onAddRowInGroups(keys) } }
+                    } else {
+                        groupsAt(depth + 1, group.rows, keys)
+                    }
+                }
+                if (depth > 0) item(key = "gap:$key") { Spacer(modifier = Modifier.size(8.dp)) }
+            }
+        }
         LazyColumn(modifier = Modifier.fillMaxSize().keepFocusedAboveKeyboard()) {
-            items(state.rows, key = { it.id }) { row -> ListRow(row, state, onOpenRow, onRowLongPress) }
+            if (groupLevels.isEmpty()) {
+                items(state.rows, key = { it.id }) { row -> ListRow(row, state, onOpenRow, onRowLongPress) }
+            } else {
+                groupsAt(0, state.rows, emptyList())
+                item(key = "groups-end") { Spacer(modifier = Modifier.size(12.dp)) }
+            }
             item(key = "trailing") { lazy.trailing() }
         }
         return
     }
-    // Dentro una pagina: le prime righe e "Load more" (vedi `RowLimits`).
+    // Dentro una pagina: le prime righe (e i primi gruppi) e "Load more" (vedi `RowLimits`).
     val limits = LocalRowLimits.current
-    val shown = limits.limit("list", state.rows) { it.id }
+    @Composable
+    fun GroupsAt(depth: Int, rows: List<DatabaseRowEntity>, path: List<String>) {
+        val level = groupLevels[depth]
+        val limitKey = if (depth == 0) "list-groups:" + level.column.id else "list-subgroups:" + path.joinToString(SUB_GROUP_KEY_SEPARATOR)
+        val shownGroups = limits.limit(limitKey, buildLevelGroups(state, level, rows), DATABASE_GROUP_LIMIT) { it.key }
+        shownGroups.items.forEach { group ->
+            val keys = path + group.key
+            val key = keys.joinToString(SUB_GROUP_KEY_SEPARATOR)
+            val collapsed = key in level.collapsed
+            Header(group, depth, level, key, collapsed)
+            if (!collapsed) {
+                if (depth == groupLevels.lastIndex) {
+                    val rowsKey = "list-group:$key"
+                    val shown = limits.limit(rowsKey, group.rows) { it.id }
+                    shown.items.forEach { row -> ListRow(row, state, onOpenRow, onRowLongPress, keys) }
+                    if (shown.hidden > 0) LoadMoreButton(shown.hidden, onClick = { limits?.more(rowsKey) })
+                    GroupNewRowButton { onAddRowInGroups(keys) }
+                } else {
+                    GroupsAt(depth + 1, group.rows, keys)
+                }
+            }
+            Spacer(modifier = Modifier.size(if (depth == 0) 12.dp else 8.dp))
+        }
+        if (shownGroups.hidden > 0) {
+            LoadMoreButton(shownGroups.hidden, onClick = { limits?.more(limitKey, DATABASE_GROUP_LIMIT) })
+        }
+    }
     Column(modifier = Modifier.fillMaxWidth()) {
+        if (groupLevels.isNotEmpty()) {
+            GroupsAt(0, state.rows, emptyList())
+            return@Column
+        }
+        val shown = limits.limit("list", state.rows) { it.id }
         shown.items.forEach { row -> ListRow(row, state, onOpenRow, onRowLongPress) }
         if (shown.hidden > 0) LoadMoreButton(shown.hidden, onClick = { limits?.more("list") })
     }
 }
+
+/** Quanto rientrano le intestazioni dei gruppi dell'elenco: la freccia sotto l'icona delle righe. */
+private val LIST_GROUP_INDENT = 12.dp
 
 /** Una riga dell'elenco: l'icona, il nome, e a destra i primi due valori. */
 @Composable
@@ -5158,9 +5238,11 @@ private fun ListRow(
     row: DatabaseRowEntity,
     state: DatabaseTableState,
     onOpenRow: (DatabaseRowEntity) -> Unit,
-    onRowLongPress: (DatabaseRowEntity) -> Unit
+    onRowLongPress: (DatabaseRowEntity) -> Unit,
+    /** Il gruppo (le chiavi dal primo livello): trascinandola, la riga resta fra quelle del suo gruppo. */
+    group: List<String> = emptyList()
 ) {
-    RowDragBox(row, emptyList()) {
+    RowDragBox(row, group) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -10662,8 +10744,9 @@ private fun SettingsSheet(
                         // Il raggruppamento della tabella: una voce
                         // diversa da "Group by" della bacheca, perché
                         // sono due impostazioni distinte e cambiare
-                        // l'una non deve rimescolare l'altra.
-                        if (layout == DatabaseLayout.TABLE) {
+                        // l'una non deve rimescolare l'altra. Dal
+                        // 18/11/2026 anche dell'elenco (lo stesso).
+                        if (layout == DatabaseLayout.TABLE || layout == DatabaseLayout.LIST) {
                             HorizontalDivider()
                             SettingsRow(
                                 icon = Icons.Filled.Segment,
@@ -10672,6 +10755,8 @@ private fun SettingsSheet(
                                 value = groupRulesSummary(tableGroupRules, columns),
                                 onClick = { page = SettingsPage.TABLE_GROUP }
                             )
+                        }
+                        if (layout == DatabaseLayout.TABLE) {
                             // "Sub groups" (dal 29/09/2026) e i due "Hide empty" stanno
                             // dentro "Group" dal 28/10/2026 (chiesto dall'utente): i
                             // gruppi dentro i gruppi sono le regole dopo la prima, e ogni
