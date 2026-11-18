@@ -35,6 +35,7 @@ object DbStrings {
         ColumnType.NUMBER -> "Number"
         ColumnType.SELECT -> "Select"
         ColumnType.MULTI_SELECT -> "Multi-select"
+        ColumnType.PEOPLE -> "People"
         ColumnType.DATE -> "Date"
         ColumnType.DURATION -> "Duration"
         ColumnType.CHECKBOX -> "Checkbox"
@@ -57,6 +58,7 @@ object DbStrings {
         ColumnType.NUMBER -> t("Number", "Numero", "Zahl", "Nombre", "Número", "数字", "숫자", "数値")
         ColumnType.SELECT -> t("Select", "Selezione", "Auswahl", "Sélection", "Selección", "单选", "선택", "セレクト")
         ColumnType.MULTI_SELECT -> t("Multi-select", "Selezione multipla", "Mehrfachauswahl", "Sélection multiple", "Selección múltiple", "多选", "다중 선택", "マルチセレクト")
+        ColumnType.PEOPLE -> t("People", "Persone", "Personen", "Personnes", "Personas", "人员", "사람", "ユーザー")
         ColumnType.DATE -> t("Date", "Data", "Datum", "Date", "Fecha", "日期", "날짜", "日付")
         ColumnType.DURATION -> t("Duration", "Durata", "Dauer", "Durée", "Duración", "时长", "기간", "期間")
         ColumnType.CHECKBOX -> t("Checkbox", "Casella", "Kontrollkästchen", "Case à cocher", "Casilla", "复选框", "체크박스", "チェックボックス")

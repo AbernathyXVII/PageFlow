@@ -38,6 +38,7 @@ import com.gabriele.notionlocal.data.LinkTitles
 import com.gabriele.notionlocal.data.dao.RowCover
 import com.gabriele.notionlocal.data.entity.CalendarMode
 import com.gabriele.notionlocal.data.entity.ColumnType
+import com.gabriele.notionlocal.data.entity.isTag
 import com.gabriele.notionlocal.data.entity.DatabaseSnapshot
 import com.gabriele.notionlocal.data.entity.sortedAsBlocks
 import com.gabriele.notionlocal.data.entity.DateGroupBy
@@ -257,6 +258,7 @@ private val SEARCHABLE_COLUMN_TYPES = setOf(
     ColumnType.NUMBER,
     ColumnType.SELECT,
     ColumnType.MULTI_SELECT,
+    ColumnType.PEOPLE,
     ColumnType.URL,
     ColumnType.EMAIL,
     ColumnType.PHONE,
@@ -571,7 +573,7 @@ class DatabaseViewModel(
         if (wanted.isEmpty()) return
         val column = rawColumn(columnId) ?: return
         val value = when (column.type) {
-            ColumnType.SELECT, ColumnType.MULTI_SELECT -> wanted.first()
+            ColumnType.SELECT, ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> wanted.first()
             ColumnType.CHECKBOX -> if (wanted == listOf("true")) "true" else return
             else -> return
         }
@@ -2013,7 +2015,7 @@ class DatabaseViewModel(
         val index = nextColumnIndex()
         _page.value = view.copy(viewHiddenColumnIds = withNameHidden(view.viewHiddenColumnIds, true))
         viewModelScope.launch {
-            val tags = type == ColumnType.SELECT || type == ColumnType.MULTI_SELECT
+            val tags = type.isTag
             val options = if (tags && (optionsJson.isBlank() || optionsJson == "[]")) {
                 val labels = repository.rowTitles(data.id).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
                 json.encodeToString(labels.mapIndexed { i, label -> SelectOption(label = label, color = TAG_COLORS[i % TAG_COLORS.size].hex) })

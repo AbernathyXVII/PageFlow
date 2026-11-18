@@ -170,7 +170,7 @@ fun exportCellText(
         ColumnType.IMAGE -> if (raw.isBlank()) "" else "🖼"
         ColumnType.BUTTON -> ""
         ColumnType.SELECT -> raw
-        ColumnType.MULTI_SELECT -> raw.split(MULTI_VALUE_SEPARATOR).filter { it.isNotBlank() }.joinToString(", ")
+        ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> raw.split(MULTI_VALUE_SEPARATOR).filter { it.isNotBlank() }.joinToString(", ")
         else -> formatter.cell(column, raw)
     }
 }

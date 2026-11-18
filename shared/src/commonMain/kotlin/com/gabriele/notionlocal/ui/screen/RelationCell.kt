@@ -135,7 +135,7 @@ object AppRollupFormatter : RollupFormatter {
         ColumnType.COLOR -> parseColorCell(raw).text
         ColumnType.NUMBER -> formatNumberValue(raw, column)
         ColumnType.DATE -> parseDateRange(raw)?.let { Formats.date(it.start) } ?: raw
-        ColumnType.MULTI_SELECT -> raw.split(MULTI_VALUE_SEPARATOR).filter { it.isNotBlank() }.joinToString(", ")
+        ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> raw.split(MULTI_VALUE_SEPARATOR).filter { it.isNotBlank() }.joinToString(", ")
         else -> raw
     }
 }

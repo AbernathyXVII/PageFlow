@@ -374,7 +374,7 @@ private fun AutomationHeader(
                                 AutomationStrings.anyChange to { onTrigger(trigger.copy(values = emptyList())) }
                             )
                         )
-                        ColumnType.SELECT, ColumnType.MULTI_SELECT -> {
+                        ColumnType.SELECT, ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> {
                             Text(
                                 if (trigger.values.isEmpty()) AutomationStrings.anyChange else AutomationStrings.becomes,
                                 style = MaterialTheme.typography.bodySmall,

@@ -242,7 +242,7 @@ fun calculate(
     fun isEmpty(v: String) = if (type == ColumnType.CHECKBOX) v != "true" else v.isBlank()
     fun pieces(v: String): List<String> =
         // Una Relation (dal 21/10/2026) conta come i tag: ogni riga collegata è un valore.
-        if (type == ColumnType.MULTI_SELECT || type == ColumnType.RELATION) {
+        if (type?.isMultiTag == true || type == ColumnType.RELATION) {
             v.split(MULTI_VALUE_SEPARATOR).filter { it.isNotBlank() }
         } else {
             listOf(v)

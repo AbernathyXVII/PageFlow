@@ -156,7 +156,7 @@ object FormulaEngine {
                 ColumnType.TEXT, ColumnType.URL, ColumnType.EMAIL, ColumnType.PHONE, ColumnType.SELECT -> text(raw)
                 ColumnType.NUMBER -> raw.trim().replace(',', '.').toDoubleOrNull()?.let { FormulaValue.Num(it) } ?: FormulaValue.Empty
                 ColumnType.CHECKBOX -> FormulaValue.Bool(raw == "true")
-                ColumnType.MULTI_SELECT -> text(raw.split(MULTI_VALUE_SEPARATOR).filter { it.isNotBlank() }.joinToString(", "))
+                ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> text(raw.split(MULTI_VALUE_SEPARATOR).filter { it.isNotBlank() }.joinToString(", "))
                 ColumnType.DATE -> parseDateRange(raw)?.let { FormulaValue.Date(it.start, it.hasTime, it.end) } ?: FormulaValue.Empty
                 // Una durata vale i minuti fra l'inizio e la fine.
                 ColumnType.DURATION -> durationMillisOfCell(raw)?.let { FormulaValue.Num((it / 60_000).toDouble()) } ?: FormulaValue.Empty

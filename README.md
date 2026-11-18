@@ -1126,6 +1126,29 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.38 — 18/11/2026 · 19:36 — The People property
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1326 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"People"**, a new type of
+  property, right after "Multi-select" in the list of types, with the icon
+  of two people: the people of a row, chosen among those of the property or
+  written there, as many as needed, each with its color. For now it works
+  like a Multi-select (no accounts behind the names): groups (a row with two
+  people is in the group of each), filter, sort, calculations, board
+  columns, buttons, automations, formulas, charts and exports treat it the
+  same way. Changing a Multi-select into People (or back) the values stay
+- **[Change]** **[📱 Mobile]** **[💻 PC]** A property of a type that the
+  installed version doesn't know (arrived with the sync from a newer one)
+  is read as text, instead of making the app close when its database is
+  opened. Versions before this one don't do it yet: install this one on
+  both the phone and the PC before using People
+- **[Project]** `ColumnType.PEOPLE` and the two helpers `isMultiTag`
+  (Multi-select and People) and `isTag` (with Select), used where
+  Multi-select was named; `columnTypeOf` in `BlockTypeConverter` with
+  `TEXT` for an unknown name; the title of the tag window says the type of
+  the column. Test: `PeopleColumnTest` (the place among the types, the
+  converter, groups and export, the cell choosing two people)
+
 ### ✏️ v0.155.37 — 18/11/2026 · 19:06 — The main column keeps being the main column after "Change type"
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1322 tests passed)*
 

@@ -106,8 +106,20 @@ class BlockTypeConverter {
     @TypeConverter
     fun fromName(name: String): BlockType = BY_NAME[name] ?: BlockType.PARAGRAPH
 
+    /**
+     * **Lo stesso per le proprietà dei database** (dal 18/11/2026, con People): un
+     * tipo che questa versione non conosce si legge come testo, invece di far
+     * chiudere l'app aprendo il database.
+     */
+    @TypeConverter
+    fun columnTypeName(type: ColumnType): String = type.name
+
+    @TypeConverter
+    fun columnTypeOf(name: String): ColumnType = COLUMN_BY_NAME[name] ?: ColumnType.TEXT
+
     private companion object {
         val BY_NAME = BlockType.entries.associateBy { it.name }
+        val COLUMN_BY_NAME = ColumnType.entries.associateBy { it.name }
     }
 }
 

@@ -295,6 +295,8 @@ import com.gabriele.notionlocal.data.notify.NotificationTarget
 import androidx.compose.material.icons.filled.Event
 import com.gabriele.notionlocal.data.entity.CalendarMode
 import com.gabriele.notionlocal.data.entity.ColumnType
+import com.gabriele.notionlocal.data.entity.isMultiTag
+import com.gabriele.notionlocal.data.entity.isTag
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.DatabaseLayout
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
@@ -2939,8 +2941,8 @@ fun cellFitWidth(
         pageTitle(value)?.let { 16.dp + 6.dp + measure(it.ifBlank { Strings.untitled }, typography.bodyMedium) }
             ?: measure(DbStrings.pageNotFound, typography.bodyMedium)
     }
-    ColumnType.SELECT, ColumnType.MULTI_SELECT -> {
-        val labels = if (column.type == ColumnType.MULTI_SELECT) {
+    ColumnType.SELECT, ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> {
+        val labels = if (column.type.isMultiTag) {
             value.split(MULTI_VALUE_SEPARATOR).filter { it.isNotBlank() }
         } else {
             listOfNotNull(value.takeIf { it.isNotBlank() })
@@ -3698,7 +3700,7 @@ fun BoardLayout(
             }
         }
     }
-    val tagged = groupColumn.type == ColumnType.SELECT || groupColumn.type == ColumnType.MULTI_SELECT
+    val tagged = groupColumn.type.isTag
     val onPage = MaterialTheme.colorScheme.onBackground
     // **"Color columns"** (dal 30/09/2026, sul modello di Notion che l'utente
     // ha mostrato): la colonna intera ha un velo del colore del suo tag, le
@@ -5796,7 +5798,7 @@ private fun listCellLabel(column: DatabaseColumnEntity, value: String): String =
     ColumnType.NUMBER -> formatNumberValue(value, column)
     ColumnType.DATE -> parseDateRange(value)?.label() ?: value
     ColumnType.DURATION -> durationLabel(value, durationFormatOf(column.durationFormat)).orEmpty()
-    ColumnType.MULTI_SELECT -> value.split(MULTI_VALUE_SEPARATOR)
+    ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> value.split(MULTI_VALUE_SEPARATOR)
         .filter { it.isNotBlank() }
         .joinToString(", ")
     else -> value
@@ -6540,8 +6542,7 @@ private fun SortSheet(
  * riga.
  */
 private fun DatabaseColumnEntity.isFilterable(): Boolean =
-    type == ColumnType.SELECT ||
-        type == ColumnType.MULTI_SELECT ||
+    type.isTag ||
         type == ColumnType.DATE ||
         type == ColumnType.NUMBER ||
         type == ColumnType.CHECKBOX
@@ -7925,7 +7926,7 @@ private fun CellContent(
                 onSetOptionSecondColor = onSetOptionSecondColor
             )
 
-            ColumnType.MULTI_SELECT -> TagCell(
+            ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> TagCell(
                 column = column,
                 value = value,
                 allowMultiple = true,
@@ -8160,6 +8161,7 @@ fun TagCell(
             options = options,
             selected = selected,
             allowMultiple = allowMultiple,
+            type = column.type,
             onDismiss = { showSheet = false },
             onToggle = { label ->
                 val updated = when {
@@ -8374,6 +8376,8 @@ private fun TagPickerSheet(
     onDismiss: () -> Unit,
     onToggle: (String) -> Unit,
     onCreate: (String) -> Unit,
+    /** Il tipo della colonna, per il titolo (People); null: Select o Multi-select. */
+    type: ColumnType? = null,
     onRenameOption: (String, String) -> Unit,
     onSetOptionColor: (String, String) -> Unit,
     onDeleteOption: (String) -> Unit,
@@ -8429,7 +8433,7 @@ private fun TagPickerSheet(
             val canReorder = reordering || options.size >= 2
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = DbStrings.typeName(if (allowMultiple) ColumnType.MULTI_SELECT else ColumnType.SELECT),
+                    text = DbStrings.typeName(type ?: if (allowMultiple) ColumnType.MULTI_SELECT else ColumnType.SELECT),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,

@@ -79,6 +79,8 @@ import com.gabriele.notionlocal.data.buttons.needsValue
 import com.gabriele.notionlocal.data.buttons.selectOptions
 import com.gabriele.notionlocal.data.buttons.splitTags
 import com.gabriele.notionlocal.data.entity.ColumnType
+import com.gabriele.notionlocal.data.entity.isMultiTag
+import com.gabriele.notionlocal.data.entity.isTag
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.MULTI_VALUE_SEPARATOR
 import com.gabriele.notionlocal.data.entity.PageEntity
@@ -742,7 +744,7 @@ private fun FilterFields(step: ButtonStep.EditPages, columns: List<DatabaseColum
     ValueInput(
         column = column,
         isName = filter.columnId == NAME_PROPERTY_ID,
-        multiple = column?.type == ColumnType.SELECT || column?.type == ColumnType.MULTI_SELECT,
+        multiple = column?.type?.isTag == true,
         value = filter.values.joinToString(MULTI_VALUE_SEPARATOR),
         onValue = { value -> onChange(step.copy(filter = filter.copy(values = if (value.isEmpty()) emptyList() else value.split(MULTI_VALUE_SEPARATOR)))) },
         checkboxChoice = true
@@ -843,7 +845,7 @@ private fun PropertyEditRow(
             ValueInput(
                 column = column,
                 isName = isName,
-                multiple = column?.type == ColumnType.MULTI_SELECT,
+                multiple = column?.type?.isMultiTag == true,
                 value = edit.value,
                 onValue = { onChange(edit.copy(value = it)) },
                 checkboxChoice = false
@@ -869,7 +871,7 @@ private fun ValueInput(
 ) {
     val type = if (isName) ColumnType.TEXT else column?.type
     when {
-        type == ColumnType.SELECT || type == ColumnType.MULTI_SELECT -> {
+        type?.isTag == true -> {
             val chosen = splitTags(value)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 column!!.selectOptions().forEach { option ->

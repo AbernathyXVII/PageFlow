@@ -217,7 +217,7 @@ fun computeRollup(
                 val next = column.relationConfig()?.let { hop(it.database) }
                 relationIds(related.cells[row.id to column.id]).mapNotNull { id -> next?.rowsById?.get(id)?.title }
             }
-            column.type == ColumnType.MULTI_SELECT -> relationIds(related.cells[row.id to column.id])
+            column.type.isMultiTag -> relationIds(related.cells[row.id to column.id])
             column.type == ColumnType.CREATED_TIME -> listOf(format.date(row.createdAt))
             column.type == ColumnType.LAST_EDITED_TIME -> listOf(format.date(row.updatedAt ?: row.createdAt))
             else -> related.cells[row.id to column.id]

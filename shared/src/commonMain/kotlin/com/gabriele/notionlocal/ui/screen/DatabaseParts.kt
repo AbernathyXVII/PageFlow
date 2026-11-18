@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Functions
@@ -155,8 +156,8 @@ fun buildRowGroups(
     val emptyLabel = DbStrings.noValue(DbStrings.columnName(column.name))
 
     when (column.type) {
-        ColumnType.SELECT, ColumnType.MULTI_SELECT -> {
-            val multi = column.type == ColumnType.MULTI_SELECT
+        ColumnType.SELECT, ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> {
+            val multi = column.type != ColumnType.SELECT
             fun tagsOf(row: DatabaseRowEntity): List<String> = if (multi) {
                 valueOf(row).split(MULTI_VALUE_SEPARATOR).filter { it.isNotEmpty() }
             } else {
@@ -563,6 +564,7 @@ fun ColumnType.icon(): ImageVector = when (this) {
     ColumnType.NUMBER -> Icons.Filled.Tag
     ColumnType.SELECT -> Icons.Filled.ArrowDropDownCircle
     ColumnType.MULTI_SELECT -> Icons.Filled.Checklist
+    ColumnType.PEOPLE -> Icons.Filled.People
     ColumnType.DATE -> Icons.Filled.CalendarToday
     ColumnType.DURATION -> Icons.Filled.Timelapse
     ColumnType.CHECKBOX -> Icons.Filled.CheckBox

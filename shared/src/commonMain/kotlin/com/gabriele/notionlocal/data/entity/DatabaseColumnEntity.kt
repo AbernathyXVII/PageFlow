@@ -30,6 +30,14 @@ enum class ColumnType {
     COLOR,
     SELECT,
     MULTI_SELECT,
+    /**
+     * **"People"** (dal 18/11/2026, chiesto dall'utente: "tramite un sistema
+     * simile al Select o Multi Select… senza collegamenti vari tra account"):
+     * le persone di una riga, scelte fra quelle della colonna o scritte lì.
+     * Per ora è un Multi-select con le persone al posto dei tag (stesso valore,
+     * stesse opzioni): una base per quando ci saranno degli account.
+     */
+    PEOPLE,
     URL,
     EMAIL,
     PHONE,
@@ -75,6 +83,14 @@ enum class ColumnType {
      */
     FORMULA
 }
+
+/** Più etichette in una cella, separate da [MULTI_VALUE_SEPARATOR]: Multi-select e People. */
+val ColumnType.isMultiTag: Boolean
+    get() = this == ColumnType.MULTI_SELECT || this == ColumnType.PEOPLE
+
+/** Le etichette scelte fra le opzioni della colonna (`SelectOption`): Select, Multi-select e People. */
+val ColumnType.isTag: Boolean
+    get() = this == ColumnType.SELECT || isMultiTag
 
 /**
  * Se si può raggruppare per una proprietà di questo tipo, nella tabella e

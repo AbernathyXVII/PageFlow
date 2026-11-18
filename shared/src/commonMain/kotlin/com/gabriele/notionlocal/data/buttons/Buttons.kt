@@ -5,6 +5,7 @@ import com.gabriele.notionlocal.data.entity.ColumnType
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.MULTI_VALUE_SEPARATOR
 import com.gabriele.notionlocal.data.entity.SelectOption
+import com.gabriele.notionlocal.data.entity.isTag
 import com.gabriele.notionlocal.data.entity.encodeDateRange
 import com.gabriele.notionlocal.data.entity.parseDateRange
 import kotlinx.serialization.SerialName
@@ -222,7 +223,7 @@ const val NAME_PROPERTY_ID = "__name__"
 /** I tipi di proprietà che un bottone sa cambiare. */
 val ColumnType.buttonEditable: Boolean
     get() = this == ColumnType.TEXT || this == ColumnType.NUMBER || this == ColumnType.CHECKBOX ||
-        this == ColumnType.SELECT || this == ColumnType.MULTI_SELECT || this == ColumnType.DATE ||
+        isTag || this == ColumnType.DATE ||
         this == ColumnType.URL || this == ColumnType.EMAIL || this == ColumnType.PHONE
 
 /** Cosa si può fare a una proprietà di questo tipo, nell'ordine del menu; la prima è quella di partenza. */
@@ -230,7 +231,7 @@ fun ColumnType.editOps(): List<EditOp> = when (this) {
     ColumnType.CHECKBOX -> listOf(EditOp.CHECK, EditOp.UNCHECK, EditOp.TOGGLE)
     ColumnType.NUMBER -> listOf(EditOp.ADD, EditOp.REMOVE, EditOp.SET, EditOp.CLEAR)
     ColumnType.SELECT -> listOf(EditOp.SET, EditOp.CLEAR)
-    ColumnType.MULTI_SELECT -> listOf(EditOp.ADD, EditOp.REMOVE, EditOp.SET, EditOp.CLEAR)
+    ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> listOf(EditOp.ADD, EditOp.REMOVE, EditOp.SET, EditOp.CLEAR)
     ColumnType.DATE -> listOf(EditOp.NOW, EditOp.TODAY, EditOp.CLEAR)
     else -> listOf(EditOp.SET, EditOp.CLEAR)
 }
@@ -269,7 +270,7 @@ fun PropertyEdit.applyTo(column: DatabaseColumnEntity, current: String, now: Lon
         } else {
             null
         }
-        ColumnType.MULTI_SELECT -> {
+        ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> {
             val known = optionLabels(column)
             val chosen = splitTags(value).filter { it in known }
             if (chosen.isEmpty() && op != EditOp.SET) return null
@@ -331,7 +332,7 @@ fun ButtonFilter.matches(column: DatabaseColumnEntity?, cell: String): Boolean {
     return when (column?.type) {
         // Una casella mai toccata non ha la cella: vale "non spuntata".
         ColumnType.CHECKBOX -> (if (cell == "true") "true" else "false") in wanted
-        ColumnType.SELECT, ColumnType.MULTI_SELECT -> splitTags(cell).any { it in wanted }
+        ColumnType.SELECT, ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> splitTags(cell).any { it in wanted }
         ColumnType.NUMBER -> {
             val number = parseNumber(cell) ?: return false
             wanted.any { w -> parseNumber(w)?.let { it.compareTo(number) == 0 } == true }

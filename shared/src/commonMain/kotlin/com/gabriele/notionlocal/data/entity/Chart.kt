@@ -161,7 +161,7 @@ fun chartPoints(
         }
         val raw = cellValues[row.id to groupColumn.id].orEmpty()
         when (groupColumn.type) {
-            ColumnType.MULTI_SELECT -> {
+            ColumnType.MULTI_SELECT, ColumnType.PEOPLE -> {
                 val tags = raw.split(MULTI_VALUE_SEPARATOR).map { it.trim() }.filter { it.isNotEmpty() }
                 if (tags.isEmpty()) add("", labels.empty, ChartKey.Text("￿"), row)
                 tags.forEach { add(it, it, ChartKey.Text(it), row) }
