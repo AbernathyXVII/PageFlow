@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.gabriele.notionlocal.data.PageImageStore
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockAttrs
+import com.gabriele.notionlocal.data.entity.DividerStyle
 import com.gabriele.notionlocal.data.entity.LinkTarget
 import com.gabriele.notionlocal.data.entity.linkTargetsOf
 import com.gabriele.notionlocal.data.entity.PageLine
@@ -2956,6 +2957,15 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
             delay(IME_SETTLE_DELAY_MS)
             _focusRequestBlockId.value = newBlockId
         }
+    }
+
+    /**
+     * Lo stile del divisore fatto da "===", "___", "***" o "~~~" (dal 18/11/2026, vedi
+     * `DividerStyle`): in coda alle modifiche di struttura, quindi dopo che la riga è diventata divisore.
+     */
+    fun setDividerStyle(blockId: String, style: DividerStyle) {
+        if (style == DividerStyle.SINGLE) return
+        viewModelScope.launch { structuralEdits.withLock { repository.setDividerStyle(blockId, style) } }
     }
 
     /**

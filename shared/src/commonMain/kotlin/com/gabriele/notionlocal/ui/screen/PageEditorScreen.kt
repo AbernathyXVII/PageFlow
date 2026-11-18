@@ -255,6 +255,8 @@ import com.gabriele.notionlocal.data.entity.heldListType
 import com.gabriele.notionlocal.ui.i18n.BlockStrings
 import com.gabriele.notionlocal.ui.theme.CalloutBackground
 import com.gabriele.notionlocal.data.entity.BlockType
+import com.gabriele.notionlocal.data.entity.DividerStyle
+import com.gabriele.notionlocal.data.entity.dividerStyle
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.entity.RichTextSpan
 import com.gabriele.notionlocal.data.entity.applyPaste
@@ -1253,15 +1255,17 @@ private fun numberedListPrefixJustTyped(oldBody: String, newBody: String, caret:
 }
 
 /** La riga in cui si è appena scritto "---" (vedi `dividerShortcutJustTyped`). */
-data class DividerShortcut(val lineIndex: Int, val lineStart: Int)
+data class DividerShortcut(val lineIndex: Int, val lineStart: Int, val style: DividerStyle = DividerStyle.SINGLE)
 
 /**
  * Le righe che, scritte da sole, diventano un divisore (dal 14/10/2026,
  * chiesto dall'utente, come su Notion): tre trattini attaccati. Anche con
  * la lineetta lunga o media al posto dei primi due, che certe tastiere
- * mettono da sole scrivendo "--".
+ * mettono da sole scrivendo "--". **Dal 18/11/2026 anche gli altri di Word**
+ * (chiesto dall'utente): "===" doppio, "___" spesso, "***" a puntini, "~~~" a onda.
  */
-private val DIVIDER_SHORTCUTS = setOf("---", "—-", "–-")
+private val DIVIDER_SHORTCUTS: Map<String, DividerStyle> =
+    mapOf("—-" to DividerStyle.SINGLE, "–-" to DividerStyle.SINGLE) + DividerStyle.entries.associateBy { it.shortcut }
 
 /**
  * Riconosce "ho appena scritto il terzo trattino di una riga che contiene
@@ -1273,13 +1277,13 @@ private val DIVIDER_SHORTCUTS = setOf("---", "—-", "–-")
 fun dividerShortcutJustTyped(oldBody: String, newBody: String, caret: Int): DividerShortcut? {
     if (newBody.length != oldBody.length + 1) return null
     if (caret < 1 || caret > newBody.length) return null
-    if (newBody[caret - 1] != '-') return null
+    if (newBody[caret - 1] !in "-=_*~") return null
     if (newBody.removeRange(caret - 1, caret) != oldBody) return null
     val lineStart = newBody.lastIndexOf('\n', caret - 1) + 1
     val lineEnd = newBody.indexOf('\n', caret).let { if (it < 0) newBody.length else it }
     if (caret != lineEnd) return null
-    if (newBody.substring(lineStart, lineEnd) !in DIVIDER_SHORTCUTS) return null
-    return DividerShortcut(lineIndex = newBody.take(lineStart).count { it == '\n' }, lineStart = lineStart)
+    val style = DIVIDER_SHORTCUTS[newBody.substring(lineStart, lineEnd)] ?: return null
+    return DividerShortcut(lineIndex = newBody.take(lineStart).count { it == '\n' }, lineStart = lineStart, style = style)
 }
 
 /**
@@ -6770,6 +6774,7 @@ private fun MergedTextRunField(
                             dividerLine.lineIndex
                         )
                         onSlashAction(dividerBlock, SlashAction.Divider)
+                        viewModel.setDividerStyle(dividerBlock.id, dividerLine.style)
                     } else if (stepUndone) {
                         val oldLines = oldBody.split('\n')
                         var caretAtLineStart = 1
@@ -8227,7 +8232,7 @@ private fun BlockRow(
                         // sotto. Il campo sta per sparire col cursore dentro:
                         // prima il fuoco va sul campo invisibile, come per
                         // "Divider" dal menu "/".
-                        val divider = if (block.type == BlockType.PARAGRAPH && newText in DIVIDER_SHORTCUTS) {
+                        val divider = if (block.type == BlockType.PARAGRAPH && newText in DIVIDER_SHORTCUTS.keys) {
                             dividerShortcutJustTyped(oldText, newText, caretInBody)
                         } else {
                             null
@@ -8239,6 +8244,7 @@ private fun BlockRow(
                             )
                             focusPark?.requestFocus()
                             viewModel.convertToDividerAndFocusNext(block)
+                            viewModel.setDividerStyle(block.id, divider.style)
                             return@BasicTextField
                         }
                         // Stessa scorciatoia del testo condiviso: `||x||`
@@ -8766,7 +8772,7 @@ private fun DividerBlockContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(if (armed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                .dividerLine(block.dividerStyle, if (armed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
         )
     }
 }

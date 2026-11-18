@@ -1126,6 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.25 — 18/11/2026 · 11:14 — The dividers of Word: double, thick, dotted and wavy
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1306 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Four more dividers, as in
+  Word**: written alone at the start of a line, "===" makes a double line,
+  "___" a thick line, "***" a dotted line and "~~~" a wavy line, as "---"
+  already made the thin one; the characters go away and the cursor goes on
+  the new line below. They are as tall as the thin divider, so the page
+  doesn't move; they keep the long press menu and the blue of the first
+  Backspace, and they come out in the same style in the PDF. Also in the
+  lines inside a toggle
+- **[Project]** `BlockAttrs.divider` with `DividerStyle` (the style in the
+  entries of the block: no database change), `dividerShortcutJustTyped`
+  with the five shortcuts, `PageEditorViewModel.setDividerStyle` (after the
+  line became a divider), `Modifier.dividerLine` (`DividerLines.kt`); in the
+  PDF the styles made of thin lines. Test: `DesktopDividerStylesTest` (the
+  five written one after the other: five dividers in their styles, and "x"
+  on the line under them)
+
 ### ✏️ v0.155.24 — 18/11/2026 · 10:57 — Ctrl+A chooses the block first, then the page
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1305 tests passed)*
 

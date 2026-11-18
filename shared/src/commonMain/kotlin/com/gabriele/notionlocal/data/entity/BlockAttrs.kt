@@ -105,7 +105,13 @@ data class BlockAttrs(
      * **Il gruppo di un blocco sincronizzato** (dal 03/11/2026): le copie con
      * lo stesso id hanno le stesse righe, in qualunque pagina stiano.
      */
-    val syncId: String? = null
+    val syncId: String? = null,
+    /**
+     * **Lo stile di un divisore** (dal 18/11/2026, chiesto dall'utente, come in Word): null = la riga
+     * sottile di sempre ("---"), poi [DividerStyle] per nome ("===" doppia, "___" spessa, "***" a
+     * puntini, "~~~" a onda).
+     */
+    val divider: String? = null
 ) {
     /** L'elenco di cui questo paragrafo tiene il posto, o null. */
     val listIndentType: BlockType?
@@ -129,6 +135,13 @@ data class BlockAttrs(
 
 /** Le voci in più di un blocco: vedi `BlockAttrs`. */
 val BlockEntity.attrs: BlockAttrs get() = BlockAttrs.parse(attrsJson)
+
+/** Gli stili dei divisori, coi tre caratteri che scritti da soli in una riga li fanno (vedi `BlockAttrs.divider`). */
+enum class DividerStyle(val shortcut: String) { SINGLE("---"), DOUBLE("==="), THICK("___"), DOTTED("***"), WAVY("~~~") }
+
+/** Lo stile di questo divisore. */
+val BlockEntity.dividerStyle: DividerStyle
+    get() = attrs.divider?.let { name -> DividerStyle.entries.find { it.name == name } } ?: DividerStyle.SINGLE
 
 /** Gli elenchi di cui un paragrafo può tenere il posto: vedi `BlockAttrs.listIndent`. */
 val LIST_INDENT_TYPES = setOf(BlockType.BULLET_LIST_ITEM, BlockType.NUMBERED_LIST_ITEM)

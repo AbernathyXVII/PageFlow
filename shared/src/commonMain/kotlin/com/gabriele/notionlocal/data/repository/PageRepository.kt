@@ -43,6 +43,7 @@ import com.gabriele.notionlocal.data.entity.TableCellEntity
 import com.gabriele.notionlocal.data.entity.plainText
 import com.gabriele.notionlocal.data.entity.splitLines
 import com.gabriele.notionlocal.data.entity.BlockAttrs
+import com.gabriele.notionlocal.data.entity.DividerStyle
 import com.gabriele.notionlocal.data.entity.attrsForNewLine
 import com.gabriele.notionlocal.data.entity.firstEmptyLine
 import com.gabriele.notionlocal.data.entity.NewBlock
@@ -3208,6 +3209,13 @@ class PageRepository(private val db: AppDatabase) {
 
     /** Il secondo backspace: il testo lascia il posto dell'elenco e va a sinistra. */
     suspend fun releaseListIndent(blockId: String) = db.withTransaction { dropListIndent(blockId) }
+
+    /** Lo stile di un divisore (vedi `BlockAttrs.divider`); quello sottile di sempre non si scrive. */
+    suspend fun setDividerStyle(blockId: String, style: DividerStyle) = db.withTransaction {
+        val block = blockDao.getById(blockId) ?: return@withTransaction
+        val attrs = BlockAttrs.parse(block.attrsJson).copy(divider = style.takeIf { it != DividerStyle.SINGLE }?.name)
+        blockDao.setAttrs(blockId, BlockAttrs.encode(attrs))
+    }
 
     /**
      * **Più righe cambiano tipo insieme** (dal 14/10/2026, il "+" su del testo

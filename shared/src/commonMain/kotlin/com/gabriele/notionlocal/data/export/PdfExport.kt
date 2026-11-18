@@ -2,6 +2,8 @@ package com.gabriele.notionlocal.data.export
 
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
+import com.gabriele.notionlocal.data.entity.DividerStyle
+import com.gabriele.notionlocal.data.entity.dividerStyle
 import com.gabriele.notionlocal.data.entity.InkStrokeEntity
 import com.gabriele.notionlocal.data.entity.InkTool
 import com.gabriele.notionlocal.data.entity.ParagraphLook
@@ -340,7 +342,19 @@ class PdfExport(
             BlockType.DIVIDER -> {
                 sheets.ensure(dividerHeight)
                 val y = sheets.y + dividerHeight / 2
-                sheets.draw { it.drawLine(left, y, right, y, rulePaint) }
+                // Lo stile del divisore (dal 18/11/2026, vedi `DividerStyle`), fatto di righe sottili.
+                sheets.draw { canvas ->
+                    when (block.dividerStyle) {
+                        DividerStyle.SINGLE -> canvas.drawLine(left, y, right, y, rulePaint)
+                        DividerStyle.DOUBLE -> listOf(-1.5f, 1.5f).forEach { canvas.drawLine(left, y + it, right, y + it, rulePaint) }
+                        DividerStyle.THICK -> listOf(-1f, -0.5f, 0f, 0.5f, 1f).forEach { canvas.drawLine(left, y + it, right, y + it, rulePaint) }
+                        DividerStyle.DOTTED -> generateSequence(left) { it + 4f }.takeWhile { it < right }.forEach { canvas.drawLine(it, y, it + 1f, y, rulePaint) }
+                        DividerStyle.WAVY -> generateSequence(left) { it + 1f }.takeWhile { it < right }.forEach { x ->
+                            fun wave(at: Float) = y + 1.5f * kotlin.math.sin(2 * kotlin.math.PI * (at - left) / 6f).toFloat()
+                            canvas.drawLine(x, wave(x), x + 1f, wave(x + 1f), rulePaint)
+                        }
+                    }
+                }
                 sheets.y += dividerHeight
             }
             BlockType.PAGE_LINK, BlockType.PAGE_MENTION -> {
