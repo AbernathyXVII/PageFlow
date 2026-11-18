@@ -41,14 +41,19 @@ fun isLargeLine(spans: List<RichTextSpan>): Boolean {
  * si leggono**: ogni riga, poi quelle dentro di lei (un toggle), poi la
  * successiva.
  */
-fun linkTargetsOf(blocks: List<BlockEntity>, spansOf: (BlockEntity) -> List<RichTextSpan>): List<LinkTarget> {
+fun linkTargetsOf(
+    blocks: List<BlockEntity>,
+    spansOf: (BlockEntity) -> List<RichTextSpan>,
+    /** Quali righe: di suo quelle col pin e quelle scritte tutte in grande. */
+    include: (BlockEntity, List<RichTextSpan>) -> Boolean = { block, spans -> block.attrs.linkTarget || isLargeLine(spans) }
+): List<LinkTarget> {
     val children = blocks.groupBy { it.parentBlockId }.mapValues { (_, list) -> list.sortedBy { it.orderIndex } }
     val targets = mutableListOf<LinkTarget>()
     fun visit(parentId: String?, depth: Int) {
         for (block in children[parentId].orEmpty()) {
             val spans = spansOf(block)
             val pinned = block.attrs.linkTarget
-            if (pinned || isLargeLine(spans)) {
+            if (include(block, spans)) {
                 val label = spans.plainText().lineSequence().firstOrNull()?.trim().orEmpty()
                 targets += LinkTarget(block.id, label, pinned, depth + block.indentLevel)
             }
@@ -58,3 +63,11 @@ fun linkTargetsOf(blocks: List<BlockEntity>, spansOf: (BlockEntity) -> List<Rich
     visit(null, 0)
     return targets
 }
+
+/**
+ * **Le voci dell'indice a destra della pagina** (dal 18/11/2026, chiesto dall'utente): solo i
+ * blocchi segnati con "Flag (for Table of contents)" (`BlockAttrs.tocFlag`), nell'ordine in cui si
+ * leggono. Prima c'erano tutte le destinazioni dei collegamenti, titoli grandi compresi.
+ */
+fun tocTargetsOf(blocks: List<BlockEntity>, spansOf: (BlockEntity) -> List<RichTextSpan>): List<LinkTarget> =
+    linkTargetsOf(blocks, spansOf) { block, _ -> block.attrs.tocFlag }

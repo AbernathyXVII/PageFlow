@@ -85,6 +85,17 @@ class PageLinkTargetTest {
         waitFor("il pin tolto") { viewModel.linkTargets().map { it.blockId } == listOf(large.id) }
     }
 
+    /** **"Flag (for Table of contents)"** (18/11/2026): il blocco entra nell'indice a destra, e se ne toglie. */
+    @Test
+    fun theFlagPutsTheLineInTheTableOfContents() {
+        assertTrue("di suo nessuna voce, nemmeno il titolo grande", viewModel.tocTargets().isEmpty())
+        viewModel.setTocFlag(chapter, true)
+        waitFor("segnata") { saved(chapter.id).attrs.tocFlag }
+        waitFor("nell'indice") { viewModel.tocTargets().map { it.blockId } == listOf(chapter.id) }
+        viewModel.setTocFlag(viewModel.blocks.value.single { it.id == chapter.id }, false)
+        waitFor("tolta") { !saved(chapter.id).attrs.tocFlag && viewModel.tocTargets().isEmpty() }
+    }
+
     @Test
     fun theIndexEntryLinksToTheChapter() {
         // "Capitolo 1" selezionato nella prima riga, collegato alla terza.

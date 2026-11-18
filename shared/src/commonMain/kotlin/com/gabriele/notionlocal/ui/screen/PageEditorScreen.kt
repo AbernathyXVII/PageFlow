@@ -3291,16 +3291,18 @@ private fun PageEditorContent(
             }
             // **La barretta di scorrimento** (dal 20/10/2026), sul bordo destro.
             PageScrollIndicator(listState, modifier = Modifier.align(Alignment.TopEnd))
-            // **L'indice a destra** (dal 18/11/2026, sul PC, vedi `PageContentsRail`): i punti di
-            // "Link → In this page", rifatti quando si smette di scrivere (leggerli vuol dire leggere
-            // tutte le righe).
-            if (isPc) {
+            // **L'indice a destra** (dal 18/11/2026, vedi `PageContentsRail`): i blocchi segnati con
+            // "Flag (for Table of contents)" (`tocTargetsOf`), rifatti quando si smette di scrivere
+            // (leggerli vuol dire leggere tutte le righe). Dal 18/11/2026 anche sul telefono.
+            run {
                 val contents by produceState(emptyList<LinkTarget>(), blocks) {
                     delay(300)
-                    value = viewModel.linkTargets()
+                    value = viewModel.tocTargets()
                 }
                 if (contents.isNotEmpty()) {
-                    val reachedPx = with(inkDensity) { (PC_TOP_BAR + 100.dp).toPx() }
+                    // Sul PC la barra in alto sta sopra la pagina; sul telefono la pagina comincia sotto la sua.
+                    val railTop = if (isPc) PC_TOP_BAR else 0.dp
+                    val reachedPx = with(inkDensity) { (railTop + 100.dp).toPx() }
                     // Il punto a cui si è arrivati: l'ultimo salito sopra la cima della pagina, più un po'.
                     val current by remember(contents) {
                         derivedStateOf {
@@ -3327,7 +3329,7 @@ private fun PageEditorContent(
                         targets = contents,
                         current = current,
                         onJump = jumpToBlock,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(top = PC_TOP_BAR + 96.dp, end = 14.dp)
+                        modifier = Modifier.align(Alignment.TopEnd).padding(top = railTop + 96.dp, end = 14.dp)
                     )
                 }
             }

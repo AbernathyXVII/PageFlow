@@ -70,7 +70,7 @@ class DesktopPageContentsTest {
         val pinned = mapOf(5 to "Primo punto", 40 to "Secondo punto", 75 to "Terzo punto")
         repeat(90) { i ->
             val text = pinned[i] ?: "Riga $i"
-            val attrs = if (i in pinned) """{"linkTarget":true}""" else "{}"
+            val attrs = if (i in pinned) """{"tocFlag":true}""" else "{}"
             repo.saveBlock(BlockEntity(id = "r$i", pageId = "lunga", type = BlockType.PARAGRAPH, textJson = """[{"text":"$text"}]""", attrsJson = attrs, orderIndex = i))
         }
     }

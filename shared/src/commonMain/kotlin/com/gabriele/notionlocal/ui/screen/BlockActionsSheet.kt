@@ -22,6 +22,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.outlined.Flag as FlagOutlined
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Autorenew
@@ -523,6 +525,11 @@ fun BlockActionsHost(
                         onTogglePin = {
                             onDismiss()
                             viewModel.setLinkTarget(block, !block.attrs.linkTarget)
+                        },
+                        flagged = block.attrs.tocFlag,
+                        onToggleFlag = {
+                            onDismiss()
+                            viewModel.setTocFlag(block, !block.attrs.tocFlag)
                         },
                         onParagraph = onParagraph?.let { open ->
                             {
@@ -1098,6 +1105,9 @@ private fun TextBlockMenu(
     /** Se la riga è un punto di arrivo dei collegamenti (vedi `BlockLinks.kt`). */
     pinned: Boolean = false,
     onTogglePin: () -> Unit = {},
+    /** Se la riga è una voce dell'indice a destra (vedi `tocTargetsOf`). */
+    flagged: Boolean = false,
+    onToggleFlag: () -> Unit = {},
     /** "Paragraph" (dal 21/10/2026): lo spazio fra i blocchi e dopo il marcatore di questa riga. */
     onParagraph: (() -> Unit)? = null
 ) {
@@ -1108,6 +1118,12 @@ private fun TextBlockMenu(
             icon = if (pinned) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
             label = if (pinned) EditorStrings.unpinLinkTarget else EditorStrings.pinAsLinkTarget,
             onClick = onTogglePin
+        )
+        HorizontalDivider()
+        OptionRow(
+            icon = if (flagged) Icons.Filled.Flag else Icons.Outlined.FlagOutlined,
+            label = if (flagged) EditorStrings.unflagForContents else EditorStrings.flagForContents,
+            onClick = onToggleFlag
         )
         HorizontalDivider()
         OptionRow(icon = Icons.Filled.Autorenew, label = EditorStrings.turnInto, trailing = { Chevron() }, onClick = onTurnInto)

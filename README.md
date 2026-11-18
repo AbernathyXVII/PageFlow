@@ -1126,6 +1126,28 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.40 — 18/11/2026 · 22:57 — "Flag (for Table of contents)", and the table of contents on the phone too
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1332 tests passed)*
+
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **"Flag (for Table of contents)"
+  in the menu of the six dots** of a line (text, title, quote, callout…),
+  under "Pin as link target", with a flag: only the lines flagged this way
+  are in the table of contents on the right of the page. The big titles no
+  longer get in by themselves, nor the pinned lines. Flagged, the menu says
+  "Remove flag (for Table of contents)". "Link → In this page" still offers
+  the same lines as before (pinned or written big)
+- **[Change]** **[📱 Mobile]** **The table of contents on the phone too**:
+  the dashes on the right of the page; a tap opens "Table of contents" from
+  the bottom with the names, and a tap on a name goes there
+- **[Project]** `BlockAttrs.tocFlag` (in the JSON of the block, no change to
+  the database); `tocTargetsOf` (`linkTargetsOf` with which lines to take);
+  `PageEditorViewModel.tocTargets` and `setTocFlag`; `PageContentsRail`
+  without `isPc`, on the phone `PhoneContents` with `NoteBottomSheet`. Tests:
+  `BlockLinksTest.theTableOfContentsHasOnlyTheFlaggedLines`,
+  `PageLinkTargetTest.theFlagPutsTheLineInTheTableOfContents`,
+  `PhoneContentsTest`; `DesktopPageContentsTest` and `DesktopTocColumnsTest`
+  with flagged lines
+
 ### 🔧 v0.155.39.1 — 18/11/2026 · 22:38 — A link to a line inside columns lights that line only
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1329 tests passed)*
 

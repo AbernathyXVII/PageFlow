@@ -16,6 +16,7 @@ import com.gabriele.notionlocal.data.entity.BlockAttrs
 import com.gabriele.notionlocal.data.entity.DividerStyle
 import com.gabriele.notionlocal.data.entity.LinkTarget
 import com.gabriele.notionlocal.data.entity.linkTargetsOf
+import com.gabriele.notionlocal.data.entity.tocTargetsOf
 import com.gabriele.notionlocal.data.entity.PageLine
 import com.gabriele.notionlocal.data.entity.NewBlock
 import com.gabriele.notionlocal.data.entity.moveTargetsFor
@@ -3188,7 +3189,15 @@ class PageEditorViewModel(
     }
 
     /** Le righe a cui si può collegare del testo, nell'ordine della pagina: vedi `linkTargetsOf`. */
-    fun linkTargets(): List<LinkTarget> = linkTargetsOf(_blocks.value) { spansOf(it) }
+    fun linkTargets(): List<LinkTarget> = linkTargetsOf(_blocks.value, { spansOf(it) })
+
+    /** Le voci dell'indice a destra: vedi `tocTargetsOf`. */
+    fun tocTargets(): List<LinkTarget> = tocTargetsOf(_blocks.value) { spansOf(it) }
+
+    /** **"Flag (for Table of contents)"** dal menu dei sei puntini (dal 18/11/2026): il blocco entra nell'indice. Si può annullare. */
+    fun setTocFlag(block: BlockEntity, flagged: Boolean) {
+        updateBlockAttrs(block.id) { it.copy(tocFlag = flagged) }
+    }
 
     /**
      * La riga arrivata con un collegamento si illumina, come una riga spostata; **dal 18/11/2026 la

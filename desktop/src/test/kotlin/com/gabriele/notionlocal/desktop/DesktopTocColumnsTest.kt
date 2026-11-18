@@ -77,7 +77,7 @@ class DesktopTocColumnsTest {
         repo.saveBlock(BlockEntity(id = "c2", pageId = "casa", parentBlockId = "cols", type = BlockType.COLUMN, orderIndex = 1))
         repeat(40) { i ->
             if (i == 30) {
-                repo.saveBlock(line("quote", "c1", i, "Una citazione importante", BlockType.QUOTE, """{"linkTarget":true}"""))
+                repo.saveBlock(line("quote", "c1", i, "Una citazione importante", BlockType.QUOTE, """{"tocFlag":true}"""))
             } else {
                 repo.saveBlock(line("s$i", "c1", i, "Sinistra $i"))
             }

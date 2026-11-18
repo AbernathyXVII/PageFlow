@@ -78,6 +78,13 @@ data class BlockAttrs(
      */
     val linkTarget: Boolean = false,
     /**
+     * **Una voce dell'indice a destra della pagina** (dal 18/11/2026, chiesto
+     * dall'utente: "un'opzione specifica chiamata Flag (for Table of content)"):
+     * segnato dal menu dei sei puntini. Nell'indice ci sono solo i blocchi così,
+     * non più da soli i titoli grandi. Vedi `tocTargetsOf`.
+     */
+    val tocFlag: Boolean = false,
+    /**
      * **"Paragraph" di un gruppo di righe** (dal 21/10/2026, chiesto
      * dall'utente, come su Word): lo spazio in più fra questo blocco e quelli
      * vicini, in punti; null = quello della pagina. Vedi `ParagraphLook`.

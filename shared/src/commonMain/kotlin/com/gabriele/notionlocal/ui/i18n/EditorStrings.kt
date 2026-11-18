@@ -142,6 +142,10 @@ object EditorStrings {
     // --- I collegamenti dentro la pagina (dal 20/10/2026), vedi `BlockLinks.kt` ---
     val pinAsLinkTarget get() = t("Pin as link target", "Fissa come destinazione", "Als Linkziel anheften", "Épingler comme cible de lien", "Fijar como destino de enlace", "固定为链接目标", "링크 대상으로 고정", "リンク先として固定")
     val unpinLinkTarget get() = t("Unpin link target", "Togli dalle destinazioni", "Linkziel lösen", "Retirer des cibles de lien", "Quitar de los destinos", "取消固定链接目标", "링크 대상 고정 해제", "リンク先の固定を解除")
+    // --- L'indice a destra della pagina (dal 18/11/2026), vedi `tocTargetsOf` ---
+    val flagForContents get() = t("Flag (for Table of contents)", "Segna (per l'indice)", "Markieren (für das Inhaltsverzeichnis)", "Marquer (pour la table des matières)", "Marcar (para el índice)", "标记（用于目录）", "표시 (목차용)", "マーク（目次用）")
+    val unflagForContents get() = t("Remove flag (for Table of contents)", "Togli dall'indice", "Aus dem Inhaltsverzeichnis entfernen", "Retirer de la table des matières", "Quitar del índice", "从目录中移除", "목차에서 제거", "目次から外す")
+    val tableOfContents get() = t("Table of contents", "Indice", "Inhaltsverzeichnis", "Table des matières", "Índice", "目录", "목차", "目次")
     val linkWeb get() = t("Web", "Web", "Web", "Web", "Web", "网页", "웹", "ウェブ")
     val linkInThisPage get() = t("In this page", "In questa pagina", "Auf dieser Seite", "Dans cette page", "En esta página", "本页内", "이 페이지", "このページ内")
     // --- Quello che si vede di un link (dal 27/10/2026), vedi `LinkShowChoices` ---

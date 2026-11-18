@@ -16,7 +16,7 @@ class BlockLinksTest {
     /** Il testo di ogni riga, per id. */
     private val texts = mutableMapOf<String, List<RichTextSpan>>()
 
-    private fun line(id: String, text: String, order: Int, parent: String? = null, pinned: Boolean = false, size: Int? = null): BlockEntity {
+    private fun line(id: String, text: String, order: Int, parent: String? = null, pinned: Boolean = false, size: Int? = null, flagged: Boolean = false): BlockEntity {
         texts[id] = listOf(RichTextSpan(text, size = size))
         return BlockEntity(
             id = id,
@@ -24,7 +24,7 @@ class BlockLinksTest {
             parentBlockId = parent,
             orderIndex = order,
             type = BlockType.PARAGRAPH,
-            attrsJson = if (pinned) """{"linkTarget":true}""" else "{}"
+            attrsJson = BlockAttrs.encode(BlockAttrs(linkTarget = pinned, tocFlag = flagged))
         )
     }
 
@@ -46,6 +46,25 @@ class BlockLinksTest {
         assertTrue(isLargeLine(listOf(RichTextSpan("Titolo", size = 20), RichTextSpan("  "))))
         assertFalse(isLargeLine(listOf(RichTextSpan("normale"))))
         assertFalse(isLargeLine(emptyList()))
+    }
+
+    /**
+     * **L'indice a destra: solo i blocchi segnati** (18/11/2026, chiesto dall'utente: "un'opzione
+     * specifica chiamata Flag (for Table of content)"): né i titoli grandi né le righe col pin, da soli.
+     */
+    @Test
+    fun theTableOfContentsHasOnlyTheFlaggedLines() {
+        val blocks = listOf(
+            line("titolo", "Kapitel 1", 0, size = 24),
+            line("pin", "Wortschatz", 1, pinned = true),
+            line("segnato", "Grammatik", 2, size = 24, flagged = true),
+            line("toggle", "Übungen", 3),
+            line("dentro", "Verben", 0, parent = "toggle", flagged = true)
+        )
+        assertEquals(listOf("segnato", "dentro"), tocTargetsOf(blocks, spans).map { it.blockId })
+        assertEquals(listOf("Grammatik", "Verben"), tocTargetsOf(blocks, spans).map { it.label })
+        // Le destinazioni dei collegamenti restano quelle di prima.
+        assertEquals(listOf("titolo", "pin", "segnato"), linkTargetsOf(blocks, spans).map { it.blockId })
     }
 
     @Test
