@@ -1126,6 +1126,17 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.39 — 18/11/2026 · 22:16 — An empty Color cell stays empty
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1328 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **No dash in the empty cells of a
+  "Color cell" property**: a new property, or a cell without color and
+  text, shows nothing, in the table and in the card of a row. The cells
+  with a color or a text are as before; "Fit to content" no longer counts
+  the dash either
+- **[Project]** `ColorCell` and `fitWidths` without the "—". Test:
+  `ColorCellEmptyTest`
+
 ### 🔧 v0.155.38.1 — 18/11/2026 · 21:59 — Pasted from OneNote with images, the lines are close at once
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1327 tests passed)*
 

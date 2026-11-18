@@ -2957,8 +2957,8 @@ fun cellFitWidth(
             (if (range?.notify == true) 18.dp else 0.dp)
     }
     ColumnType.COLOR -> {
-        val cell = parseColorCell(value)
-        measure(cell.text.ifEmpty { if (hexToColor(cell.color) == null) "\u2014" else "" }, typography.bodyMedium)
+        // Una cella vuota non ha il trattino (dal 18/11/2026, vedi `ColorCell`).
+        measure(parseColorCell(value).text, typography.bodyMedium)
     }
     ColumnType.DURATION -> measure(durationLabel(value, durationFormatOf(column.durationFormat)) ?: "\u2014", typography.bodyMedium)
     ColumnType.CREATED_TIME, ColumnType.LAST_EDITED_TIME -> {
@@ -8687,8 +8687,9 @@ private fun ColorCell(
         contentAlignment = LocalCellAlignment.current.box
     ) {
         Text(
-            // Una cella vuota mostra il trattino, come le altre.
-            text = cell.text.ifEmpty { if (fill == null) "—" else "" },
+            // **Una cella vuota resta vuota** (dal 18/11/2026, chiesto dall'utente: "di default
+            // appare una lineetta in tutte le celle. Toglimela"): prima mostrava il trattino.
+            text = cell.text,
             style = MaterialTheme.typography.bodyMedium,
             color = textColor,
             maxLines = cellMaxLines,
