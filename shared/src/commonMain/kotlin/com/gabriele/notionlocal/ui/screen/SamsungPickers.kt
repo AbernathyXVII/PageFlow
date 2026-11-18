@@ -467,21 +467,28 @@ private fun DayCell(
                 .size(36.dp)
                 .clip(CircleShape)
                 .background(if (selected) SamsungOrange else Color.Transparent)
-                .then(if (startRing) Modifier.border(2.dp, SamsungOrange, CircleShape) else Modifier)
+                // **Oggi cerchiato in bianco** (dal 18/11/2026, chiesto dall'utente: prima era in
+                // grassetto arancione, come il giorno scelto); il giorno scelto resta arancione.
+                .then(
+                    when {
+                        startRing -> Modifier.border(2.dp, SamsungOrange, CircleShape)
+                        today && !selected -> Modifier.border(1.5.dp, NotionWhite, CircleShape)
+                        else -> Modifier
+                    }
+                )
                 .clickable { onPick(date) },
             contentAlignment = Alignment.Center
         ) {
             val base = when {
                 selected -> Color.White
                 date.dayOfWeek == DayOfWeek.SUNDAY -> SundayRed
-                today -> SamsungOrange
                 else -> NotionWhite
             }
             Text(
                 text = date.dayOfMonth.toString(),
                 color = base,
                 fontSize = 17.sp,
-                fontWeight = if (today || selected) FontWeight.Bold else FontWeight.Normal
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
             )
         }
     }

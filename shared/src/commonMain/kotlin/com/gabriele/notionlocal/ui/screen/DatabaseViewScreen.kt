@@ -99,6 +99,8 @@ import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -4746,25 +4748,16 @@ private fun MiniMonth(
                             Box(
                                 modifier = Modifier
                                     .size(MINI_DAY_SIZE)
-                                    .background(
-                                        when {
-                                            date == today -> MaterialTheme.colorScheme.primary
-                                            date in busyDays -> DarkSurfaceVariant
-                                            else -> Color.Transparent
-                                        },
-                                        CircleShape
-                                    ),
+                                    .background(if (date in busyDays) DarkSurfaceVariant else Color.Transparent, CircleShape)
+                                    // Oggi cerchiato in bianco (dal 18/11/2026; prima pieno del colore dell'app).
+                                    .then(if (date == today) Modifier.border(1.dp, MaterialTheme.colorScheme.onBackground, CircleShape) else Modifier),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = date.dayOfMonth.toString(),
                                     fontSize = MINI_DAY_FONT,
                                     lineHeight = MINI_DAY_FONT,
-                                    color = if (date == today) {
-                                        MaterialTheme.colorScheme.onPrimary
-                                    } else {
-                                        MaterialTheme.colorScheme.onBackground
-                                    },
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     maxLines = 1
                                 )
                             }
@@ -5021,12 +5014,14 @@ private fun CalendarWeekRow(
             Row(modifier = Modifier.fillMaxWidth()) {
                 repeat(7) { dayIndex ->
                     val date = weekStart.plusDays(dayIndex.toLong())
+                    val ring = MaterialTheme.colorScheme.onBackground
                     Text(
                         text = date.dayOfMonth.toString(),
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
                         color = when {
-                            date == today -> MaterialTheme.colorScheme.primary
+                            // Oggi del colore di tutti, ma cerchiato in bianco (dal 18/11/2026, qui sotto).
+                            date == today -> MaterialTheme.colorScheme.onBackground
                             shownMonth == null || YearMonth.from(date) == shownMonth ->
                                 MaterialTheme.colorScheme.onBackground
                             // I giorni del mese prima e dopo restano
@@ -5034,7 +5029,15 @@ private fun CalendarWeekRow(
                             // spezzare la griglia.
                             else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                         },
-                        modifier = Modifier.weight(1f).padding(vertical = 2.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            // Il cerchio attorno al numero, senza cambiare l'altezza della riga.
+                            .then(
+                                if (date != today) Modifier else Modifier.drawBehind {
+                                    drawCircle(ring, radius = size.height / 2f, center = center, style = Stroke(width = 1.dp.toPx()))
+                                }
+                            )
+                            .padding(vertical = 2.dp)
                     )
                 }
             }

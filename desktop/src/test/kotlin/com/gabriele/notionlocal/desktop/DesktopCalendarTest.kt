@@ -135,15 +135,11 @@ class DesktopCalendarTest {
         try {
             frames(50)
             val first = shot("calendar_pc")
-            // Il numero di oggi è blu: lì sopra c'è la sua colonna.
-            val anyBlue = (330 until first.height).flatMap { y ->
-                (0 until first.width).filter { x -> first.getColor(x, y).let { c -> ((c shr 16) and 0xFF) < 100 && (c and 0xFF) > 200 && ((c shr 8) and 0xFF) in 100..180 } }.map { x -> x to y }
-            }
-            // Il blu più in alto (sotto c'è anche "New page", dello stesso colore).
-            val blue = anyBlue.filter { it.second <= anyBlue.minOf { p -> p.second } + 12 }
-            assertTrue("il numero di oggi", blue.isNotEmpty())
-            val dayX = blue.map { it.first }.average().toInt()
-            val dayBottom = blue.maxOf { it.second }
+            // Il numero di oggi è cerchiato (dal 18/11/2026; prima era blu): lì sopra c'è la sua colonna.
+            val ring = todayRing(first, 330)
+            assertTrue("il numero di oggi", ring != null)
+            val (dayX, ringY, radius) = ring!!
+            val dayBottom = ringY + radius
             /** Le righe con del testo nella colonna di oggi, sotto il suo numero: le barre e "Show more". */
             fun lines(bitmap: Bitmap): List<IntRange> {
                 val rows = (dayBottom + 3 until minOf(dayBottom + 400, bitmap.height)).filter { y ->
@@ -172,7 +168,7 @@ class DesktopCalendarTest {
             assertEquals("di nuovo cinque e \"Show more\"", 6, lines(shot("calendar_pc_less")).size)
             // Sabato e domenica (le ultime due colonne) più grigi di lunedì (la prima): il calendario va
             // da un margine all'altro della pagina, e sopra il numero di oggi c'è la riga dei giorni.
-            val headerY = blue.minOf { it.second } - 20
+            val headerY = ringY - radius - 18
             val background = first.getColor(first.width - 5, first.height - 5)
             // Fuori dalla colonna di oggi: i suoi eventi (di lunedì, la prima a sinistra) non sono il grigio.
             val tinted = (0 until first.width).filter { x -> kotlin.math.abs(x - dayX) > first.width / 14 }

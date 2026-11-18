@@ -1126,6 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.27 — 18/11/2026 · 13:49 — Today circled in white in the calendars
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1308 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Today is circled in white in
+  the calendars**: in the calendar where a date (and the time of a
+  notification) is chosen, today was written in bold orange, like the chosen
+  day; now it has a thin white circle around it and is written like the
+  other days, and the chosen day stays the orange dot. In the Calendar view
+  of a database the number of today, in the month and in the week, was in
+  the color of the app; now it is white with the circle around it, without
+  making the row taller; in the year it was a full dot, now it is the
+  circle
+- **[Project]** `DayCell` of `SamsungCalendar` (the ring when it isn't
+  chosen), the numbers of the weeks of the calendar (`drawBehind` with the
+  circle) and the small months of the year (`border`). Tests:
+  `DesktopTodayRingTest` (the picker: today circled, the chosen day orange);
+  `DesktopCalendarTest` and `DesktopCalendarPropertiesTest` find the column
+  of today by its circle (`todayRing`), no longer by its blue
+
 ### ✏️ v0.155.26 — 18/11/2026 · 11:41 — Images on the left, in the center or on the right, with a caption and a title
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1307 tests passed)*
 

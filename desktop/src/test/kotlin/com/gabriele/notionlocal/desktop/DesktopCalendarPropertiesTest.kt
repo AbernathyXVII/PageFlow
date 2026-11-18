@@ -131,14 +131,11 @@ class DesktopCalendarPropertiesTest {
         try {
             frames(50)
             val first = shot("calendar_properties")
-            // Il numero di oggi è blu (come in DesktopCalendarTest): lì sotto c'è il suo evento.
-            val anyBlue = (150 until first.height).flatMap { y ->
-                (0 until first.width).filter { x -> first.getColor(x, y).let { c -> ((c shr 16) and 0xFF) < 100 && (c and 0xFF) > 200 && ((c shr 8) and 0xFF) in 100..180 } }.map { x -> x to y }
-            }
-            val blue = anyBlue.filter { it.second <= anyBlue.minOf { p -> p.second } + 12 }
-            assertTrue("il numero di oggi", blue.isNotEmpty())
-            val dayX = blue.map { it.first }.average().toInt()
-            val dayBottom = blue.maxOf { it.second }
+            // Il numero di oggi è cerchiato (come in DesktopCalendarTest): lì sotto c'è il suo evento.
+            val ring = todayRing(first, 150)
+            assertTrue("il numero di oggi", ring != null)
+            val (dayX, ringY, radius) = ring!!
+            val dayBottom = ringY + radius
             /** Le righe con del testo chiaro nella colonna di oggi, sotto il suo numero e prima dei numeri della settimana dopo. */
             fun lines(bitmap: Bitmap): List<IntRange> {
                 fun bright(c: Int) = ((c shr 16) and 0xFF) > 120 && ((c shr 8) and 0xFF) > 120 && (c and 0xFF) > 120
