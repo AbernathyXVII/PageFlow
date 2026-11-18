@@ -1126,6 +1126,23 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.39.1 — 18/11/2026 · 22:38 — A link to a line inside columns lights that line only
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1329 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **[📱 Mobile]** **The table of contents (and a
+  link "In this page") going to a line inside another block lights that line
+  only**: for a Quote inside columns the whole block of columns lit up, which
+  can be the whole page, and the page stopped where the columns begin, often
+  with the Quote still out of sight. Now the page goes down to the line and
+  only the line lights up. The same for the lines inside a toggle, a quote or
+  a callout with lines under it, and a synced block; inside a closed toggle,
+  which doesn't show the line, the toggle lights up as before
+- **[Project]** `nestedAnchor` (`PageAnchors.kt`) on the lines drawn inside
+  another block (`ColumnLines`, the children in `BlockRow`, the synced
+  block): their own flash (`LocalMovedBlock`) and where they are
+  (`LocalNestedSpots`); `jumpToBlock` scrolls to that place and lights the
+  line itself. Test: `DesktopTocColumnsTest`
+
 ### ✏️ v0.155.39 — 18/11/2026 · 22:16 — An empty Color cell stays empty
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1328 tests passed)*
 

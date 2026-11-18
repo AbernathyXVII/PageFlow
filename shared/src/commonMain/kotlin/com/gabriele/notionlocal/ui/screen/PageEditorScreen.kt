@@ -2202,6 +2202,7 @@ private fun PageEditorContent(
             val latestRenderItems = rememberUpdatedState(renderItems)
             val latestBlocks = rememberUpdatedState(blocks)
             val jumpMarginPx = with(inkDensity) { (FLOATING_BAR_CLEARANCE + 12.dp).toPx() }
+            val nestedSpots = remember(pageId) { NestedSpots() }
             val jumpToBlock: (String) -> Unit = remember(listState, visibleRunLines) {
                 { blockId ->
                     jumpScope.launch {
@@ -2231,8 +2232,22 @@ private fun PageEditorContent(
                                 listState.scrollToItem(index, top.roundToInt())
                             }
                         }
+                        // **Una riga dentro un altro blocco** (colonne, toggle…; dal 18/11/2026): la
+                        // pagina scende fin lì, e si illumina lei, non tutto il blocco (vedi `nestedAnchor`).
+                        // Se non si vede (un toggle chiuso), si illumina il blocco che la contiene.
+                        var lit = anchor.id
+                        if (blockId != anchor.id) {
+                            withFrameNanos { }
+                            withFrameNanos { }
+                            val spot = nestedSpots.coordinates[blockId]?.takeIf { it.isAttached }
+                            val listTop = pageListCoordinates.get()?.takeIf { it.isAttached }?.positionInWindow()?.y
+                            if (spot != null && listTop != null) {
+                                listState.scrollBy(spot.positionInWindow().y - listTop)
+                                lit = blockId
+                            }
+                        }
                         listState.scrollBy(-jumpMarginPx)
-                        viewModel.highlightBlock(anchor.id)
+                        viewModel.highlightBlock(lit)
                     }
                 }
             }
@@ -2591,6 +2606,8 @@ private fun PageEditorContent(
                 LocalSideScroll provides sideScroll,
                 LocalVisibleRunLines provides visibleRunLines,
                 LocalBlockLinkJump provides jumpToBlock,
+                LocalMovedBlock provides movedBlockNow,
+                LocalNestedSpots provides nestedSpots,
                 LocalPageMentionOpen provides openMentionedPage,
                 LocalDateMentionTap provides tapDateMention,
                 LocalPageFingerDown provides pageFinger,
@@ -5582,6 +5599,8 @@ private fun ColumnLines(
             Column(
                 modifier = Modifier
                     .padding(vertical = (look.spacingOf(child) / 2f).sp.toDpIn(density))
+                    // Arrivandoci con un collegamento si illumina lei (vedi `nestedAnchor`).
+                    .nestedAnchor(child.id, PAGE_SIDE_PADDING)
                     // Col mouse la riga ha i suoi sei puntini, accanto al suo testo (dal 12/11/2026).
                     .pickableAs(
                         "line:" + child.id,
@@ -7323,7 +7342,7 @@ private fun BlockRow(
                 // Ogni riga col suo `key`, come dentro un toggle.
                 key(child.id) {
                     // Una colonna, non un `Box`: un database qui dentro ha la sua riga di fine sotto, non in cima.
-                    Column(modifier = Modifier.padding(vertical = (syncedLook.spacingOf(child) / 2f).sp.toDpIn(syncedDensity))) {
+                    Column(modifier = Modifier.padding(vertical = (syncedLook.spacingOf(child) / 2f).sp.toDpIn(syncedDensity)).nestedAnchor(child.id, PAGE_SIDE_PADDING)) {
                         BlockRow(
                             block = child,
                             allBlocks = allBlocks,
@@ -8466,7 +8485,7 @@ private fun BlockRow(
                 key(child.id) {
                     // Lo spazio fra i blocchi ("Paragraph") anche fra le righe
                     // dentro un toggle, metà sopra e metà sotto come fuori.
-                    Box(modifier = Modifier.padding(vertical = (paragraphLook.spacingOf(child) / 2f).sp.toDpIn(density))) {
+                    Box(modifier = Modifier.padding(vertical = (paragraphLook.spacingOf(child) / 2f).sp.toDpIn(density)).nestedAnchor(child.id, PAGE_SIDE_PADDING)) {
                         BlockRow(
                             block = child,
                             allBlocks = allBlocks,

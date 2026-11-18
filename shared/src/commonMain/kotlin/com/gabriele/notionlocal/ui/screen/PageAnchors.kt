@@ -17,6 +17,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -210,6 +213,32 @@ fun Modifier.anchorDecor(
 }
 
 private const val ANCHOR_FLASH_MS = 700
+
+/** La riga arrivata con un collegamento o spostata (vedi `PageEditorViewModel.movedBlock`), per [nestedAnchor]. */
+val LocalMovedBlock = staticCompositionLocalOf<PageEditorViewModel.MovedBlock?> { null }
+
+/** Dove stanno adesso le righe dentro un altro blocco ([nestedAnchor]): l'indice e i collegamenti ci arrivano. */
+class NestedSpots {
+    val coordinates = HashMap<String, LayoutCoordinates>()
+}
+
+val LocalNestedSpots = staticCompositionLocalOf<NestedSpots?> { null }
+
+/**
+ * **Una riga dentro un altro blocco** (colonne, toggle, citazioni con righe,
+ * blocchi sincronizzati) **si illumina lei sola** quando ci si arriva (dal
+ * 18/11/2026, trovato dall'utente: con l'indice su una Quote dentro le colonne
+ * si illuminava tutta la pagina, cioè il blocco di colonne), e dice dove sta
+ * perché la pagina ci scorra (vedi `jumpToBlock`). Il nastrino del pin no: le
+ * righe dentro un blocco non l'avevano.
+ */
+@Composable
+fun Modifier.nestedAnchor(blockId: String, left: androidx.compose.ui.unit.Dp): Modifier {
+    val spots = LocalNestedSpots.current
+    DisposableEffect(blockId, spots) { onDispose { spots?.coordinates?.remove(blockId) } }
+    return (if (spots == null) this else onGloballyPositioned { spots.coordinates[blockId] = it })
+        .anchorDecor(blockId, pinned = false, moved = LocalMovedBlock.current, left = left)
+}
 
 /**
  * **"Back"**, in basso dopo un salto (come su Kindle): riporta dov'era la
