@@ -5,6 +5,7 @@ import com.gabriele.notionlocal.data.entity.linkShow
 import com.gabriele.notionlocal.data.entity.LinkColumnShow
 import com.gabriele.notionlocal.data.entity.PageParagraph
 import com.gabriele.notionlocal.data.entity.nameColumnHidden
+import com.gabriele.notionlocal.data.entity.titleColumnId
 import com.gabriele.notionlocal.ui.navigation.horizontalResizeCursor
 import kotlinx.coroutines.delay
 import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
@@ -1241,6 +1242,9 @@ private fun DatabaseViewBody(
     // sempre. Una funzione sola per le sei viste, così nessuna può
     // restare indietro.
     val simple = dataPage?.isSimpleDatabase == true
+    // Con una colonna che dà il nome alle righe, Name non c'è più in nessuna vista (dal 18/11/2026: vedi `LocalTitleColumnId`).
+    val titleColumnId = dataPage?.titleColumnId()
+    val nameHidden = page?.nameColumnHidden() == true || titleColumnId != null
     // Bloccato il database (o solo questa vista, se è collegata): righe e
     // celle si leggono ma non si scrivono.
     // Una vista in più segue il database su cui è nata: bloccato o
@@ -1403,6 +1407,7 @@ private fun DatabaseViewBody(
         LocalButtonColumnEditor provides propertyMenuActions.editButton,
         LocalRowIcons provides rowIcons,
         LocalSimpleDatabase provides simple,
+        LocalTitleColumnId provides titleColumnId,
         LocalRowSearch provides state.search,
         LocalCheckFlash provides checkFlash,
         LocalCellLinkLabels provides cellLinkLabels,
@@ -1704,7 +1709,7 @@ private fun DatabaseViewBody(
                     nameColumnOrder = dataPage?.nameColumnOrder ?: -1,
                     onMoveName = { delta -> viewModel.moveColumn(NAME_COLUMN_KEY, delta) },
                     onRenameName = viewModel::renameNameColumn,
-                    nameHidden = page?.nameColumnHidden() == true,
+                    nameHidden = nameHidden,
                     onHideName = if (viewLocked) null else { { viewModel.setNameHidden(true) } },
                     onNameType = if (contentLocked) {
                         null
@@ -1969,8 +1974,9 @@ private fun DatabaseViewBody(
             },
             onSetAllColumnsHidden = { viewModel.setAllColumnsHidden(it) },
             nameLabel = dataPage?.nameColumnTitle ?: DbStrings.name,
-            nameHidden = page?.nameColumnHidden() == true,
-            onSetNameHidden = if (viewLocked) null else { hidden -> viewModel.setNameHidden(hidden) },
+            nameHidden = nameHidden,
+            // La colonna principale è quella che dà il nome: Name non si rimostra.
+            onSetNameHidden = if (viewLocked || titleColumnId != null) null else { hidden -> viewModel.setNameHidden(hidden) },
             nameOrder = dataPage?.nameColumnOrder ?: -1,
             onReorderShown = if (viewLocked) null else { shown -> viewModel.reorderShownColumns(shown) },
             filterColumn = viewModel.filterColumn(),
@@ -2052,6 +2058,7 @@ private fun DatabaseViewBody(
             // Un bottone non ha un valore per cui ordinare (dal 27/10/2026).
             columns = state.columns.filter { it.type != ColumnType.BUTTON },
             rules = rules,
+            byName = titleColumnId == null,
             onPickFirst = { columnId ->
                 // Scegliendo una proprietà si parte sempre dal crescente: è
                 // il verso che ci si aspetta. Ritoccando quella che è già la
@@ -2187,6 +2194,7 @@ private fun DatabaseViewBody(
             hasIcon = rowIcons[live.id] != null,
             iconEditable = !contentLocked,
             simple = simple,
+            nameField = titleColumnId == null,
             onTitleChange = { title -> viewModel.updateRowTitle(live, title) },
             onOpenAs = opener?.takeIf { !simple }?.let { pageOpener ->
                 { mode ->
@@ -3533,8 +3541,11 @@ private fun TableBodyRow(
                 CellSeparator(NAME_COLUMN_KEY, stretch = wrap)
             }
         ) { index, column ->
+            // **La colonna che dà il nome alle righe è la principale** (dal 18/11/2026, chiesto
+            // dall'utente): il clic destro e la pressione lunga aprono le azioni della riga, come sul nome.
+            val rowMenu = if (column.id == LocalTitleColumnId.current) ({ onRowLongPress(row) }) else null
             val cell: @Composable () -> Unit = {
-                Box(Modifier.cellSpoiler(row.id, column.id)) {
+                Box(Modifier.cellSpoiler(row.id, column.id).onRightClick(rowMenu).onLongPressFirst(rowMenu)) {
                     CellEditor(
                         row = row,
                         column = column,
@@ -6252,6 +6263,8 @@ private fun SortSheet(
     columns: List<DatabaseColumnEntity>,
     /** Le regole, nell'ordine in cui contano. */
     rules: List<SortRuleSpec>,
+    /** Il nome fra le scelte: non con la colonna che dà il nome alle righe, che è già fra le proprietà. */
+    byName: Boolean = true,
     onPickFirst: (String) -> Unit,
     onAdd: (String) -> Unit,
     onToggle: (String) -> Unit,
@@ -6294,7 +6307,7 @@ private fun SortSheet(
             // Il nome della pagina è una colonna della tabella ma non una
             // proprietà: va elencato a mano, e per primo, perché è quello
             // per cui si ordina più spesso.
-            if (SORT_BY_NAME !in except) {
+            if (byName && SORT_BY_NAME !in except) {
                 SettingsRow(
                     icon = Icons.Filled.Notes,
                     label = nameLabel,
@@ -6450,7 +6463,7 @@ private fun SortSheet(
                 // Quando tutte le proprietà sono già in una regola non c'è
                 // altro da aggiungere.
                 val used = rules.mapTo(HashSet()) { it.column }
-                val canAdd = SORT_BY_NAME !in used || columns.any { it.id !in used }
+                val canAdd = (byName && SORT_BY_NAME !in used) || columns.any { it.id !in used }
                 SheetGroup {
                     SettingsRow(
                         icon = Icons.Filled.Add,
@@ -9884,6 +9897,9 @@ private fun DateEditorTimeRow(label: String, time: LocalTime, onClick: () -> Uni
  */
 private val LocalSimpleDatabase = staticCompositionLocalOf { false }
 
+/** La colonna da cui le righe prendono il nome, se c'è (vedi `TitleColumn.kt`): nella tabella fa da Name. */
+private val LocalTitleColumnId = staticCompositionLocalOf<String?> { null }
+
 /**
  * Le icone delle pagine delle righe del database aperto: riga → immagine o
  * emoji. Passa da qui per la stessa ragione di `LocalDatabaseLocked`:
@@ -10013,6 +10029,8 @@ private fun RowActionsSheet(
      * È quello che si apre toccando una riga, in qualunque vista.
      */
     simple: Boolean = false,
+    /** Il nome da scrivere in cima: non con la colonna che dà il nome alle righe, che sta fra le proprietà (dal 18/11/2026). */
+    nameField: Boolean = true,
     onTitleChange: (String) -> Unit = {},
     /**
      * **"Open as…"** (dal 12/11/2026, solo sul PC, come in Notion): la pagina
@@ -10062,12 +10080,14 @@ private fun RowActionsSheet(
 
             when (page) {
                 RowActionsPage.ROOT -> if (simple) {
-                    SimpleRowNameField(
-                        row = row,
-                        editable = iconEditable,
-                        onTitleChange = onTitleChange
-                    )
-                    Spacer(modifier = Modifier.size(12.dp))
+                    if (nameField) {
+                        SimpleRowNameField(
+                            row = row,
+                            editable = iconEditable,
+                            onTitleChange = onTitleChange
+                        )
+                        Spacer(modifier = Modifier.size(12.dp))
+                    }
                     RowPropertiesList(
                         row = row,
                         columns = columns,

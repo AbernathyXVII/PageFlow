@@ -1126,6 +1126,35 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.37 — 18/11/2026 · 19:06 — The main column keeps being the main column after "Change type"
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1322 tests passed)*
+
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **After "Change type" on the main
+  column (Name), the column of the new type is the main column in
+  everything**: a right click (on the PC) or a long press (on the phone) on
+  its cells opens the row, with its actions (delete, duplicate, move…),
+  as on the name before
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **No hidden copy of Name any
+  more**: Name doesn't appear anywhere while a column gives the names to the
+  rows — not in "Property visibility" (it can't be shown again), not among
+  the properties of "Sort", not in the other views of the same database
+  (where it was still there), not in the PDF, Markdown and CSV exports.
+  Deleting that column, Name comes back with the names of now, as before
+- **[Change]** **[📱 Mobile]** **[💻 PC]** In a simple database the card of a
+  row no longer has the field of the name on top while a column gives the
+  names: written there, the name didn't change (it comes from the column);
+  the column is among the properties right below
+- **[Project]** `LocalTitleColumnId` in `DatabaseViewScreen`: in
+  `TableBodyRow` the cells of that column get `onRightClick` and the new
+  `onLongPressFirst` (`RightClick.kt`: the long press of the finger that
+  goes before the cell's own taps); `nameHidden` counts the title column in
+  every view (also `moveColumn`); `onSetNameHidden` null and
+  `SortSheet(byName = false)` with it; `RowActionsSheet(nameField)`;
+  `databaseRead` without Name with a title column (`nameIndex` on it, -1
+  if hidden). Tests: `TitleColumnScreenTest` (long press, right click,
+  Property visibility, Sort),
+  `ExportExtrasTest.withATitleColumnNameIsNotExportedTwice`
+
 ### ✏️ v0.155.36 — 18/11/2026 · 18:44 — Pasting brings the images in the copied text too
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1317 tests passed)*
 

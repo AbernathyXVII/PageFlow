@@ -27,6 +27,8 @@ import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.entity.RelationConfig
 import com.gabriele.notionlocal.data.entity.RichTextSpan
 import com.gabriele.notionlocal.data.entity.encodeRelationConfig
+import com.gabriele.notionlocal.data.entity.withNameHidden
+import com.gabriele.notionlocal.data.entity.withTitleColumn
 import com.gabriele.notionlocal.data.ink.InkPoint
 import com.gabriele.notionlocal.data.ink.encodeInkPoints
 import com.gabriele.notionlocal.data.repository.PageRepository
@@ -182,6 +184,33 @@ class ExportExtrasTest {
         assertEquals(listOf("Done", "Name", "Tags", "Who"), read.database.csvHeaders)
         assertEquals(listOf("✓", "Spesa", "Casa, Urgente", ""), read.database.rows[0].csvCells)
         assertEquals(listOf("spesa", null), read.rowPageIds)
+    }
+
+    /** Con la colonna che dà il nome alle righe (18/11/2026), Name non c'è: lei fa da nome. */
+    @Test
+    fun withATitleColumnNameIsNotExportedTwice() {
+        val host = PageEntity(
+            id = "spesa", title = "Spesa", isDatabase = true, isSimpleDatabase = true,
+            viewHiddenColumnIds = withTitleColumn(withNameHidden(null, true), "qty")
+        )
+        val columns = listOf(
+            DatabaseColumnEntity(id = "qty", pageId = "spesa", name = "Quantità", type = ColumnType.NUMBER, orderIndex = 0),
+            DatabaseColumnEntity(id = "note", pageId = "spesa", name = "Note", type = ColumnType.TEXT, orderIndex = 1)
+        )
+        val state = DatabaseTableState(
+            columns = columns,
+            rows = listOf(DatabaseRowEntity(id = "a", pageId = "spesa", title = "12")),
+            cellValues = mapOf(("a" to "qty") to "12", ("a" to "note") to "pane")
+        )
+        val read = databaseRead(host, host, host, state, emptyMap(), emptyMap())
+        assertEquals(listOf("Quantità", "Note"), read.database.headers)
+        assertEquals(listOf("Quantità", "Note"), read.database.csvHeaders)
+        assertEquals(0, read.database.nameIndex)
+        assertEquals(listOf("12", "pane"), read.database.rows.single().cells)
+        // Nascosta anche lei: nessuna colonna fa da nome, e "Note" resta coi suoi valori.
+        val hidden = databaseRead(host, host, host, state.copy(columns = listOf(columns[0].copy(hidden = true), columns[1])), emptyMap(), emptyMap())
+        assertEquals(listOf("Note"), hidden.database.headers)
+        assertEquals(-1, hidden.database.nameIndex)
     }
 
     @Test

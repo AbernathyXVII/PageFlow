@@ -2346,7 +2346,9 @@ class DatabaseViewModel(
     fun moveColumn(key: String, delta: Int) {
         val state = _tableState.value
         val data = _dataPage.value ?: return
-        val order = state.orderAfterMove(key, delta, data.nameColumnOrder, _page.value?.nameColumnHidden() == true) ?: return
+        // Con la colonna dei nomi Name non si vede in nessuna vista (vedi `LocalTitleColumnId`).
+        val nameHidden = _page.value?.nameColumnHidden() == true || data.titleColumnId() != null
+        val order = state.orderAfterMove(key, delta, data.nameColumnOrder, nameHidden) ?: return
         saveColumnOrder(order, data)
     }
 

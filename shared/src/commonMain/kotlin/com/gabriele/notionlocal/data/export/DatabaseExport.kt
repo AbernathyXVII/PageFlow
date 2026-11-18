@@ -18,6 +18,7 @@ import com.gabriele.notionlocal.data.entity.parseDateRange
 import com.gabriele.notionlocal.data.entity.relationConfig
 import com.gabriele.notionlocal.data.entity.relationTitles
 import com.gabriele.notionlocal.data.entity.tableKeys
+import com.gabriele.notionlocal.data.entity.titleColumnId
 import com.gabriele.notionlocal.data.repository.PageRepository
 import com.gabriele.notionlocal.ui.i18n.DbStrings
 import com.gabriele.notionlocal.viewmodel.DatabaseTableState
@@ -107,7 +108,9 @@ fun databaseRead(
 ): DatabaseRead {
     val byId = state.columns.associateBy { it.id }
     val nameTitle = DbStrings.nameColumn(data.nameColumnTitle ?: host.nameColumnTitle)
-    val order = tableKeys(state.columns, view.nameColumnOrder)
+    // Con la colonna che dà il nome alle righe Name non c'è (dal 18/11/2026): sarebbe la stessa colonna due volte.
+    val titleColumn = data.titleColumnId()?.takeIf { it in byId }
+    val order = tableKeys(state.columns, view.nameColumnOrder).filter { titleColumn == null || it != NAME_COLUMN_KEY }
     val shown = order.filter { it == NAME_COLUMN_KEY || byId[it]?.hidden == false }
     fun header(key: String) = if (key == NAME_COLUMN_KEY) nameTitle else byId[key]?.name.orEmpty()
     fun value(row: DatabaseRowEntity, key: String): String {
@@ -130,7 +133,8 @@ fun databaseRead(
             headers = shown.map(::header),
             rows = rows,
             csvHeaders = order.map(::header),
-            nameIndex = shown.indexOf(NAME_COLUMN_KEY).coerceAtLeast(0)
+            // La colonna dei nomi nascosta: nessuna colonna fa da nome (-1), la prima resta coi suoi valori.
+            nameIndex = if (titleColumn != null) shown.indexOf(titleColumn) else shown.indexOf(NAME_COLUMN_KEY).coerceAtLeast(0)
         ),
         pageIds
     )
