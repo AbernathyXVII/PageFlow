@@ -1126,6 +1126,34 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.36 — 18/11/2026 · 18:44 — Pasting brings the images in the copied text too
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1317 tests passed)*
+
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **The images among the copied text
+  arrive with it**: pasting (with the formatting of the source, as Ctrl+V on
+  the PC does) something copied from OneNote, Word or another Office app with
+  an image in the middle, every image becomes an image block in its place,
+  between the line before and the one after, with its copy inside the app
+  (it stays even if the original goes). The same for images written inside
+  the copied HTML (`data:`). Images that are only an address on the web
+  aren't downloaded: getting images from links was removed on 25/09/2026, as
+  asked. An image in the middle of a list item splits it: item, image, item
+- **[Bug fix]** **[💻 PC]** **[📱 Mobile]** After pasting a table (or now an
+  image) copied from OneNote, the line where it was pasted kept showing,
+  above the table, all the pasted text, with the name of the table in place
+  of the table: now it shows only its own lines at once
+- **[Project]** `parseClipHtml` makes an `IMAGE` line for every `<img>`
+  that `pastableImage` accepts (`file:` and `data:image/`), and drops
+  Office's `<![if !vml]>` and `<![endif]>`; `PASTED_IMAGE_TAG` carries the
+  source up to `PastedLine.image`; `PageEditorViewModel` (now with the
+  `PageImageStore`) copies the images with `savePastedImage` before writing
+  the lines (`withPastedImages`, in `writeRunChange` and
+  `splitBlockAtMultiple`), and after tables and images bumps
+  `externalChangeTick`. Tests: `ClipHtmlTest.theImagesAreLinesOfTheirOwn`,
+  `DesktopPasteImagesTest` (a OneNote-like copy with a `clip_image` file and
+  a `data:` image: the blocks, the two copies, nothing else in the folder,
+  the page)
+
 ### ✏️ v0.155.35 — 18/11/2026 · 18:19 — Groups in the List views of databases too
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1315 tests passed)*
 

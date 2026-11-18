@@ -105,6 +105,44 @@ class ClipHtmlTest {
         assertEquals(listOf("Prima|PARAGRAPH|0", "Solo questo|PARAGRAPH|0", "Dopo|PARAGRAPH|0"), lines.map { shape(it) })
     }
 
+    /**
+     * **Le immagini fra le righe copiate** (18/11/2026, chiesto dall'utente): ognuna una riga sua al
+     * suo posto, da un file accanto (OneNote, dentro `<![if !vml]>`) o scritta nell'HTML; da un
+     * indirizzo web no. Una voce d'elenco con un'immagine in mezzo resta voce prima e dopo.
+     */
+    @Test
+    fun theImagesAreLinesOfTheirOwn() {
+        val html = "<body style='font-size:11.0pt'><!--StartFragment-->" +
+            "<p>Prima</p>" +
+            "<p><!--[if gte vml 1]><v:imagedata src=\"file:///C:/x/clip_image001.png\"/><![endif]--><![if !vml]>" +
+            "<img width=120 height=60 src=\"file:///C:/Users/Me/AppData/Local/Temp/msohtmlclip1/01/clip_image002.png\"><![endif]></p>" +
+            "<p>Testo <img src='data:image/png;base64,iVBORw0KGgo='> dopo</p>" +
+            "<p><img src=\"https://example.com/foto.png\">Dal web</p>" +
+            "<ul><li>Voce <img src=\"file:///C:/a.png\"> continua</li></ul>" +
+            "<!--EndFragment--></body>"
+        val lines = parseClipHtml(html)
+        assertEquals(
+            listOf(
+                "Prima|PARAGRAPH|0",
+                "Image|IMAGE|0",
+                "Testo|PARAGRAPH|0",
+                "Image|IMAGE|0",
+                "dopo|PARAGRAPH|0",
+                "Dal web|PARAGRAPH|0",
+                "Voce|BULLET_LIST_ITEM|0",
+                "Image|IMAGE|0",
+                "continua|BULLET_LIST_ITEM|0"
+            ),
+            lines.map { shape(it) }
+        )
+        assertEquals(
+            listOf("file:///C:/Users/Me/AppData/Local/Temp/msohtmlclip1/01/clip_image002.png", "data:image/png;base64,iVBORw0KGgo=", "file:///C:/a.png"),
+            lines.mapNotNull { it.image }
+        )
+        // Il segnaposto non conta per la grandezza del testo.
+        assertNull(noteSizes(lines)(11f))
+    }
+
     @Test
     fun spacesAndEmptyLinesAtTheEdgesAreNotText() {
         val lines = parseClipHtml("<div>\n  <p>&nbsp;</p>\n  <p>  Ciao   mondo  </p><br>\n</div>")

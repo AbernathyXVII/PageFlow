@@ -139,7 +139,11 @@ enum class SplitOutcome { SPLIT, SPLIT_ABOVE, BECAME_PARAGRAPH, NOTHING }
  */
 enum class BackspaceOutcome { NOTHING, STEP_UNDONE, MERGED_INTO_ISLAND, REMOVED_CLOSE_KEYBOARD }
 
-class PageEditorViewModel(private val repository: PageRepository) : ViewModel() {
+class PageEditorViewModel(
+    private val repository: PageRepository,
+    /** Dove vanno le immagini incollate (vedi [withPastedImages]); null nei test che non ne incollano. */
+    private val imageStore: PageImageStore? = null
+) : ViewModel() {
 
     companion object {
         /** Ogni quanto, con la pagina aperta, si salva una versione se è cambiata. */
@@ -2796,7 +2800,9 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
 
         viewModelScope.launch {
             val startIndex = currentBlock.orderIndex + 1
-            val firstSpans = spansFor(0)
+            // Le immagini incollate, copiate prima (vedi `withPastedImages`): il testo della loro riga era un segnaposto.
+            val kinds = lineKinds?.let { withPastedImages(it) }
+            val first = retypedFirst(currentBlock, kinds?.getOrNull(0), kinds)
             repository.applyBlockChanges(
                 shift = PageRepository.BlockShift(
                     pageId,
@@ -2804,10 +2810,10 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                     startIndex,
                     lines.size - 1
                 ),
-                saved = listOf(retypedFirst(currentBlock, lineKinds?.getOrNull(0), lineKinds).copy(textJson = json.encodeToString(firstSpans))) +
+                saved = listOf(first.copy(textJson = if (first.type == BlockType.IMAGE) EMPTY_TEXT_JSON else json.encodeToString(spansFor(0)))) +
                     lines.drop(1).mapIndexed { i, _ ->
-                        val kind = lineKinds?.getOrNull(i + 1)
-                        val minIndent = lineKinds?.filterNotNull()?.minOfOrNull { it.indent } ?: 0
+                        val kind = kinds?.getOrNull(i + 1)
+                        val minIndent = kinds?.filterNotNull()?.minOfOrNull { it.indent } ?: 0
                         BlockEntity(
                             id = newBlockIds[i],
                             pageId = pageId,
@@ -2816,8 +2822,9 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                             isChecked = kind?.checked ?: false,
                             indentLevel = kind?.let { (currentBlock.indentLevel + it.indent - minIndent).coerceIn(0, MAX_INDENT_LEVEL) }
                                 ?: 0,
-                            textJson = json.encodeToString(spansFor(i + 1)),
-                            orderIndex = startIndex + i
+                            textJson = if (kind?.image != null) EMPTY_TEXT_JSON else json.encodeToString(spansFor(i + 1)),
+                            orderIndex = startIndex + i,
+                            attrsJson = kind?.let { pastedImageAttrs(it) } ?: "{}"
                         )
                     }
             )
@@ -2839,7 +2846,8 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         return block.copy(
             type = kind.type,
             isChecked = kind.checked,
-            indentLevel = (block.indentLevel + kind.indent - minIndent).coerceIn(0, MAX_INDENT_LEVEL)
+            indentLevel = (block.indentLevel + kind.indent - minIndent).coerceIn(0, MAX_INDENT_LEVEL),
+            attrsJson = pastedImageAttrs(kind) ?: block.attrsJson
         )
     }
 
@@ -4470,14 +4478,16 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         // (casella, spuntata o no, elenco puntato o numerato) e il suo
         // rientro, contato da quello della riga in cui si incolla. Vedi
         // `PastedLine`. Le altre restano come sempre.
-        val lineKinds: List<PastedLine?> = run {
-            var at = 0
-            newMiddleLines.map { line ->
-                val kind = middlePaste.lineAt(at, at + line.length)
-                at += line.length + 1
-                kind
+        val lineKinds: List<PastedLine?> = withPastedImages(
+            run {
+                var at = 0
+                newMiddleLines.map { line ->
+                    val kind = middlePaste.lineAt(at, at + line.length)
+                    at += line.length + 1
+                    kind
+                }
             }
-        }
+        )
         val minPastedIndent = lineKinds.filterNotNull().minOfOrNull { it.indent } ?: 0
         fun pastedIndent(kind: PastedLine): Int =
             (indentLevel + kind.indent - minPastedIndent).coerceIn(0, MAX_INDENT_LEVEL)
@@ -4492,10 +4502,10 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                 type = kind.type,
                 isChecked = kind.checked,
                 indentLevel = pastedIndent(kind),
-                textJson = if (table != null) EMPTY_TEXT_JSON else textJson,
+                textJson = if (table != null || kind.image != null) EMPTY_TEXT_JSON else textJson,
                 tableRows = table?.size ?: block.tableRows,
                 tableCols = table?.maxOfOrNull { it.size } ?: block.tableCols,
-                attrsJson = BlockAttrs.encode(BlockAttrs.parse(block.attrsJson).copy(listIndent = null))
+                attrsJson = pastedImageAttrs(kind) ?: BlockAttrs.encode(BlockAttrs.parse(block.attrsJson).copy(listIndent = null))
             )
         }
 
@@ -4557,7 +4567,7 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                         type = kind?.type ?: inheritedType,
                         isChecked = kind?.checked ?: false,
                         indentLevel = kind?.let { pastedIndent(it) } ?: indentLevel,
-                        textJson = if (table != null) {
+                        textJson = if (table != null || kind?.image != null) {
                             EMPTY_TEXT_JSON
                         } else {
                             json.encodeToString(spansForLine(oldMiddleBlocks.size + i, line))
@@ -4565,7 +4575,7 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                         tableRows = table?.size ?: 2,
                         tableCols = table?.maxOfOrNull { it.size } ?: 2,
                         orderIndex = shiftFromIndex + i,
-                        attrsJson = if (kind != null) "{}" else inheritedAttrs
+                        attrsJson = if (kind != null) pastedImageAttrs(kind) ?: "{}" else inheritedAttrs
                     )
                 }
                 // Le righe nuove restano nel pezzo in cui si scrive (vedi
@@ -4608,7 +4618,24 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
                 writePastedCells(newMiddleLines.indices.map { i -> oldMiddleBlocks[i].id to lineKinds.getOrNull(i) })
             }
         }
+        // Le righe incollate diventate tabelle o immagini escono dal campo, e il testo che il campo
+        // aspetta indietro (coi loro segnaposto) non torna più: che rilegga le righe (vedi `pendingText`).
+        if (lineKinds.any { it != null && (it.table != null || it.type == BlockType.IMAGE) }) _externalChangeTick.value += 1
     }
+
+    /**
+     * **Le immagini incollate, copiate nell'app** (dal 18/11/2026, chiesto dall'utente: "fai sì che
+     * incolli sull'app anche le immagini"): al posto di da dove si prendono, il nome del file (vedi
+     * `PageImageStore.savePastedImage`). Una che non si legge diventa una riga vuota.
+     */
+    private suspend fun withPastedImages(kinds: List<PastedLine?>): List<PastedLine?> = kinds.map { kind ->
+        val source = kind?.image ?: return@map kind
+        imageStore?.savePastedImage(source)?.let { kind.copy(image = it) } ?: kind.copy(type = BlockType.PARAGRAPH, image = "")
+    }
+
+    /** Gli attributi del blocco di un'immagine incollata (vedi [withPastedImages]); null per le altre righe. */
+    private fun pastedImageAttrs(kind: PastedLine): String? =
+        kind.image?.takeIf { kind.type == BlockType.IMAGE }?.let { BlockAttrs.encode(BlockAttrs(file = it)) }
 
     /** Se un blocco ha righe dentro di sé: in pratica, un toggle non vuoto. */
     private fun hasChildren(blockId: String): Boolean = _blocks.value.any { it.parentBlockId == blockId }

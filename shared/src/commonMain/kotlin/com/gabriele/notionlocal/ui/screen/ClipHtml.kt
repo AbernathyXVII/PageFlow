@@ -31,7 +31,9 @@ data class ClipLine(
     val runs: List<ClipRun>,
     val type: BlockType = BlockType.PARAGRAPH,
     val indent: Int = 0,
-    val table: List<List<String>>? = null
+    val table: List<List<String>>? = null,
+    /** Per un'immagine (vedi [pastableImage]): da dove si prende; il testo della riga è solo un segnaposto. */
+    val image: String? = null
 ) {
     val text: String get() = runs.joinToString("") { it.text }
 }
@@ -65,6 +67,8 @@ fun parseClipHtml(html: String): List<ClipLine> {
         ?: html
     val cleaned = fragment
         .replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
+        // Office intorno alle immagini: `<![if !vml]>` e `<![endif]>` non sono testo.
+        .replace(Regex("<!\\[[^\\]]*\\]>"), "")
         .replace(Regex("<(style|script|head|title|noscript|template)\\b[^>]*>.*?</\\1\\s*>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
     val parser = ClipParser()
     // OneNote e Word scrivono il carattere di tutto il testo sul `<body>`, fuori dal frammento.
@@ -93,7 +97,7 @@ fun noteSizes(lines: List<ClipLine>): (Float?) -> Int? {
         // Il testo che non dice la sua grandezza ha quella di sempre di un
         // browser: sulle pagine web spesso solo i titoli la dicono.
         val pt = run.sizePt ?: DEFAULT_SOURCE_PT
-        if (run.text.isBlank() || line.table != null) continue
+        if (run.text.isBlank() || line.table != null || line.image != null) continue
         val key = (pt * 2).roundToInt() / 2f
         weights[key] = (weights[key] ?: 0) + run.text.length
     }
@@ -168,6 +172,7 @@ private class ClipParser {
     fun open(tag: String, attrs: String) {
         if (tag in VOID_TAGS || attrs.trimEnd().endsWith("/")) {
             if (tag == "br") lineBreak()
+            if (tag == "img") image(attrs)
             return
         }
         when {
@@ -225,6 +230,24 @@ private class ClipParser {
         if (first < 0) return emptyList()
         val last = lines.indexOfLast { it.text.isNotBlank() || it.table != null }
         return lines.subList(first, last + 1).toList()
+    }
+
+    /**
+     * **Un'immagine fra le righe copiate** (dal 18/11/2026, chiesto dall'utente): una riga sua,
+     * fra il testo di prima e quello dopo, che resta del suo tipo (una voce d'elenco con
+     * un'immagine in mezzo). Nelle tabelle no: le celle sono testo.
+     */
+    private fun image(attrs: String) {
+        if (tableDepth > 0) return
+        val src = Regex("src\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", RegexOption.IGNORE_CASE).find(attrs)?.let { m ->
+            decodeEntities(m.groupValues[2].ifEmpty { m.groupValues[3] }.ifEmpty { m.groupValues[4] }).trim()
+        }?.takeIf { pastableImage(it) } ?: return
+        val keepType = type
+        val keepIndent = indent
+        flushLine()
+        lines += ClipLine(listOf(ClipRun(IMAGE_PLACEHOLDER)), BlockType.IMAGE, keepIndent, image = src)
+        type = keepType
+        indent = keepIndent
     }
 
     private fun lineBreak() {
@@ -328,6 +351,18 @@ private class ClipParser {
     private fun fontTagSize(attrs: String): Float? =
         Regex("size\\s*=\\s*[\"']?([1-7])\\b").find(attrs)?.groupValues?.get(1)?.toIntOrNull()?.let { FONT_TAG_SIZES[it] }
 }
+
+/** Il testo di una riga-immagine finché non diventa l'immagine. */
+private const val IMAGE_PLACEHOLDER = "Image"
+
+/**
+ * Un'immagine copiata che si può portare nell'app: un file sul PC (OneNote e
+ * Office la scrivono accanto, `file:///…/clip_image001.png`) o scritta dentro
+ * l'HTML (`data:image/…`). Da un indirizzo web no: scaricare immagini dai
+ * link l'utente l'aveva fatto togliere il 25/09/2026 (vedi `PageImageStore`).
+ */
+fun pastableImage(src: String): Boolean =
+    src.startsWith("file:", ignoreCase = true) || src.startsWith("data:image/", ignoreCase = true)
 
 // ---------------------------------------------------------------------------
 // **I colori del testo copiato** (dal 17/11/2026, chiesto dall'utente: "quando

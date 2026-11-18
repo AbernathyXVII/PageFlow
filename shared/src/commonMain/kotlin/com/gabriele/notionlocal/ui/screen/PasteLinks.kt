@@ -51,6 +51,7 @@ internal const val PASTED_STYLE_TAG = "pasted-style"
 internal const val PASTED_PLAIN_TAG = "pasted-plain"
 internal const val PASTED_LINES_TAG = "pasted-lines"
 internal const val PASTED_TABLE_TAG = "pasted-table"
+internal const val PASTED_IMAGE_TAG = "pasted-image"
 
 /** Fra le righe e fra le celle di una tabella incollata, nell'etichetta: caratteri che nel testo non ci sono. */
 internal const val TABLE_ROW_SEPARATOR = '\u001E'
@@ -141,7 +142,7 @@ internal fun sourceFormatted(lines: List<ClipLine>): AnnotatedString {
         var at = lineStart
         for (run in line.runs) {
             val end = at + run.text.length
-            if (end > at && line.table == null) {
+            if (end > at && line.table == null && line.image == null) {
                 val style = StyleRange(at, end, run.bold, run.italic, run.underline, run.strikethrough, sizeOf(run.sizePt), run.color, run.background)
                 if (style.isStyled) builder.addStringAnnotation(PASTED_STYLE_TAG, styleCode(style), at, end)
                 run.link?.let { builder.addStringAnnotation(PASTED_LINK_TAG, it.trim(), at, end) }
@@ -151,6 +152,10 @@ internal fun sourceFormatted(lines: List<ClipLine>): AnnotatedString {
         val length = line.text.length
         if (line.table != null && length > 0) {
             builder.addStringAnnotation(PASTED_TABLE_TAG, encodeTable(line.table), lineStart, lineStart + length)
+        }
+        // Un'immagine (dal 18/11/2026): da dove la si prende; la copia la fa la pagina (`savePastedImage`).
+        if (line.image != null && length > 0) {
+            builder.addStringAnnotation(PASTED_IMAGE_TAG, line.image, lineStart, lineStart + length)
         }
         lineStart += length + 1
     }
@@ -319,6 +324,7 @@ fun TextFieldValue.pastedFormat(lead: Int): PasteFormat {
         .filter { it.start >= 0 && it.end > it.start }
     // Le celle delle tabelle incollate, per dove comincia la loro riga.
     val tables = all.getStringAnnotations(PASTED_TABLE_TAG, 0, text.length).associate { (it.start - lead) to decodeTable(it.item) }
+    val images = all.getStringAnnotations(PASTED_IMAGE_TAG, 0, text.length).associate { (it.start - lead) to it.item }
     val plain = all.getStringAnnotations(PASTED_PLAIN_TAG, 0, text.length)
         .map { (it.start - lead) until (it.end - lead) }
         .filter { it.first >= 0 && !it.isEmpty() }
@@ -332,10 +338,10 @@ fun TextFieldValue.pastedFormat(lead: Int): PasteFormat {
             val start = at
             at += pieces[i].length + 1
             copiedLineOf(entries[i])?.takeIf { start >= 0 }?.let {
-                PastedLine(start, start + pieces[i].length, it.type, it.checked, it.indent, tables[start])
+                PastedLine(start, start + pieces[i].length, it.type, it.checked, it.indent, tables[start], images[start])
             }
         }
-    }.filter { it.type != BlockType.TABLE || it.table != null }
+    }.filter { (it.type != BlockType.TABLE || it.table != null) && (it.type != BlockType.IMAGE || it.image != null) }
     return PasteFormat(links, styles, plain, lines)
 }
 
@@ -348,7 +354,7 @@ fun TextFieldValue.pastedLinks(lead: Int): List<LinkRange> = pastedFormat(lead).
  * non disturbare la tastiera mentre si scrive).
  */
 fun TextFieldValue.withoutPastedLinks(): TextFieldValue {
-    val tags = setOf(PASTED_LINK_TAG, PASTED_STYLE_TAG, PASTED_PLAIN_TAG, PASTED_LINES_TAG, PASTED_TABLE_TAG)
+    val tags = setOf(PASTED_LINK_TAG, PASTED_STYLE_TAG, PASTED_PLAIN_TAG, PASTED_LINES_TAG, PASTED_TABLE_TAG, PASTED_IMAGE_TAG)
     val marked = annotatedString.getStringAnnotations(0, text.length).any { it.tag in tags }
     return if (marked) copy(annotatedString = AnnotatedString(text)) else this
 }

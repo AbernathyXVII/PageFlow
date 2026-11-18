@@ -44,7 +44,7 @@ class ViewModelFactory(private val context: PlatformContext) : ViewModelProvider
     override fun <T : ViewModel> create(modelClass: KClass<T>, extras: CreationExtras): T {
         return when {
             modelClass == PageEditorViewModel::class ->
-                PageEditorViewModel(pageRepository) as T
+                PageEditorViewModel(pageRepository, imageStore) as T
 
             modelClass == DatabaseViewModel::class ->
                 DatabaseViewModel(databaseRepository, pageRepository) as T

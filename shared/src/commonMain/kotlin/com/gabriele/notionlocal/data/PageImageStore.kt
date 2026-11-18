@@ -7,6 +7,8 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
+import java.net.URI
+import java.util.Base64
 import java.util.UUID
 
 /**
@@ -85,6 +87,22 @@ class PageImageStore(context: PlatformContext) {
             require(isImage(target))
             name
         }.onFailure { target.delete() }.getOrNull()
+    }
+
+    /**
+     * **Un'immagine incollata** (dal 18/11/2026, chiesto dall'utente: copiando
+     * da OneNote): il file che Office scrive accanto all'HTML copiato
+     * (`file:///…/clip_image001.png`) o quella scritta dentro l'HTML
+     * (`data:image/png;base64,…`), copiata qui (vedi `pastableImage`). Il nome
+     * del file, o null se non c'è o non è un'immagine.
+     */
+    suspend fun savePastedImage(source: String): String? = withContext(Dispatchers.IO) {
+        if (source.startsWith("data:", ignoreCase = true)) {
+            val bytes = runCatching { Base64.getMimeDecoder().decode(source.substringAfter("base64,", "")) }.getOrNull()
+            return@withContext bytes?.takeIf { it.isNotEmpty() }?.let { saveImageBytes(it) }
+        }
+        val file = runCatching { File(URI(source.replace(" ", "%20"))) }.getOrNull()?.takeIf { it.isFile } ?: return@withContext null
+        saveFromStream({ file.inputStream() }, mustBeImage = true, cannotOpen = file.name).getOrNull()
     }
 
     /**

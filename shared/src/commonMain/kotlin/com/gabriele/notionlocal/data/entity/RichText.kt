@@ -503,7 +503,14 @@ data class PastedLine(
      * web): le celle, riga per riga. La riga incollata diventa una tabella
      * semplice di notE con queste celle; il suo testo è solo un segnaposto.
      */
-    val table: List<List<String>>? = null
+    val table: List<List<String>>? = null,
+    /**
+     * **Un'immagine copiata** (dal 18/11/2026, da OneNote): da dove la si
+     * prende (vedi `pastableImage`) e, dopo `savePastedImage`, il nome del
+     * file nell'app ("" se non si è potuta leggere). Anche qui il testo della
+     * riga è un segnaposto.
+     */
+    val image: String? = null
 )
 
 /**
