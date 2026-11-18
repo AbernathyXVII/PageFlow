@@ -2555,7 +2555,7 @@ private fun TableLayout(
                             }
                         }
                     }
-                    .horizontalScroll(horizontal)
+                    .hoverScrollBar(horizontal).horizontalScroll(horizontal)
             ) {
                 LazyColumn(
                     state = listState,
@@ -2594,7 +2594,7 @@ private fun TableLayout(
                     }
                 }
             }
-            .horizontalScroll(horizontal)
+            .hoverScrollBar(horizontal).horizontalScroll(horizontal)
     ) {
         if (!grouped) {
             PinnedHeaderSection(pin = freezeFirstRow, header = {
@@ -3707,7 +3707,7 @@ fun BoardLayout(
 
     if (bandLevels.isEmpty()) {
         Row(
-            modifier = Modifier.horizontalScroll(boardScroll),
+            modifier = Modifier.hoverScrollBar(boardScroll).horizontalScroll(boardScroll),
             verticalAlignment = Alignment.Top
         ) {
             groups.forEach { group ->
@@ -3803,7 +3803,7 @@ fun BoardLayout(
         }
     }
 
-    Column(modifier = Modifier.horizontalScroll(boardScroll)) {
+    Column(modifier = Modifier.hoverScrollBar(boardScroll).horizontalScroll(boardScroll)) {
         Row(verticalAlignment = Alignment.Top) {
             groups.forEach { group ->
                 val tint = tints[group.key]

@@ -1126,6 +1126,23 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.29 — 18/11/2026 · 14:28 — PC: the bar to scroll a database sideways
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1311 tests passed)*
+
+- **[Change]** **[💻 PC]** **The bar to scroll a database sideways**: when a
+  table has more properties than fit, or a board more columns, with the
+  mouse over it a thin bar appears at its bottom, as long as the part one
+  sees; it can be dragged, and a click beside it brings it there. It goes
+  away by itself 2 seconds after the mouse stops or leaves the database. It
+  is drawn over the database, so nothing moves when it appears; where
+  everything fits it doesn't appear
+- **[Project]** `Modifier.hoverScrollBar` and `hoverBarThumb`
+  (`HoverScrollBar.kt`), put before the `horizontalScroll` of the table
+  (opened on its own and inside a page) and of the board. Test:
+  `DesktopHoverScrollBarTest` (a table with twelve properties in 900
+  points: no bar, the bar with the mouse over it, dragged to the right the
+  table scrolls, gone 2 seconds later; where the thumb is)
+
 ### ✏️ v0.155.28 — 18/11/2026 · 14:11 — PC: the table of contents on the right of the page
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1309 tests passed)*
 
