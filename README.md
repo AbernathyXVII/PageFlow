@@ -1126,6 +1126,20 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.22 — 18/11/2026 · 09:50 — PC: in the Center peek the margins don't change with Full width
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1302 tests passed)*
+
+- **[Change]** **[💻 PC]** **In the Center peek a page has the margins of
+  "Full width" whether it is on or off**: with it off, the text went into
+  the column in the middle (637 points wide), and in the window of the peek
+  the empty space on the left and on the right grew (79 points more on each
+  side in the test). The switch still holds for the page opened full page
+  or in a tab
+- **[Project]** `pageInsetFor` gets "full width" also when `LocalOpenMode`
+  is `CENTER_PEEK`. Test: `DesktopPeekMarginsTest` (the same page in a
+  Center peek 900 points wide, Full width off and on: the text starts at the
+  same point; it failed before the change)
+
 ### ✏️ v0.155.21 — 18/11/2026 · 09:33 — PC: the middle mouse button scrolls the page, as in a browser
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1301 tests passed)*
 

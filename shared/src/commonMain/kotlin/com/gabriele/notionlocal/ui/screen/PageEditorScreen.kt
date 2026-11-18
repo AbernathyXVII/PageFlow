@@ -11,6 +11,8 @@ import androidx.compose.ui.input.key.isShiftPressed
 import com.gabriele.notionlocal.data.ocr.PhotoTextRequests
 import com.gabriele.notionlocal.data.entity.NewBlock
 import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
+import com.gabriele.notionlocal.ui.navigation.LocalOpenMode
+import com.gabriele.notionlocal.data.settings.OpenMode
 import com.gabriele.notionlocal.ui.navigation.LocalPageOpener
 import com.gabriele.notionlocal.platform.emojiTransformation
 import com.gabriele.notionlocal.platform.withEmojiFont
@@ -1817,7 +1819,9 @@ private fun PageEditorContent(
     var pageAreaOrigin by remember { mutableStateOf(Offset.Zero) }
     // Sul PC "Full width" o al centro (vedi `pageInsetFor`): dalla larghezza del riquadro della pagina.
     var pageAreaWidth by remember { mutableStateOf(PageAreaMemory.width) }
-    val pageInset = pageInsetFor(page?.paragraph?.fullWidth != false, pageAreaWidth)
+    // **Nel Center peek i margini di "Full width" sempre** (dal 18/11/2026, chiesto dall'utente): la
+    // finestra è già stretta, e la colonna al centro ci lasciava ai lati più spazio vuoto che testo.
+    val pageInset = pageInsetFor(page?.paragraph?.fullWidth != false || LocalOpenMode.current == OpenMode.CENTER_PEEK, pageAreaWidth)
     val pageLeftInset = pageLeftInsetFor(pageInset)
     val pageRightInset = pageRightInsetFor(pageInset)
     val showTemplatePicker = page?.isRowPage == true && !readOnlyPage && !templatePickerDismissed &&
