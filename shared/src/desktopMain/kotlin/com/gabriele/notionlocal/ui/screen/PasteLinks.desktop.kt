@@ -100,10 +100,14 @@ actual class LinkClipboard(
         if ((mode == PasteMode.KEEP_SOURCE && html != null) || mode == PasteMode.TEXT_ONLY) {
             builder.addStringAnnotation(PASTED_PLAIN_TAG, "", 0, plain.length)
         }
-        if (html != null && (mode == PasteMode.KEEP_SOURCE || mode == PasteMode.LINKS_ONLY)) {
+        val links = if (html != null && (mode == PasteMode.KEEP_SOURCE || mode == PasteMode.LINKS_ONLY)) {
             runCatching { linksOf(html, plain) }.getOrDefault(emptyList())
-                .forEach { builder.addStringAnnotation(PASTED_LINK_TAG, it.url, it.start, it.end) }
+        } else {
+            emptyList()
         }
+        // Un indirizzo copiato da solo (dalla barra del browser c'è solo il testo): un link (vedi `bareWebLink`).
+        links.ifEmpty { listOfNotNull(bareWebLink(plain).takeIf { mode != PasteMode.TEXT_ONLY }) }
+            .forEach { builder.addStringAnnotation(PASTED_LINK_TAG, it.url, it.start, it.end) }
         if (html != null && mode == PasteMode.KEEP_SOURCE) {
             runCatching { matchStyles(htmlStyleRuns(html), plain) }.getOrDefault(emptyList()).forEach {
                 builder.addStringAnnotation(PASTED_STYLE_TAG, styleCode(it), it.start, it.end)

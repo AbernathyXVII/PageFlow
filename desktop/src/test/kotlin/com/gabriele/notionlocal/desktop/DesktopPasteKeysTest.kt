@@ -233,6 +233,16 @@ class DesktopPasteKeysTest {
             println("PASTEKEYS after home backspace ${page()}")
             assertEquals("Backspace a inizio voce: ${page()}", BlockType.PARAGRAPH, page()[6].first)
             shot("pastekeys_after")
+            // **Un indirizzo copiato dalla barra del browser** (18/11/2026): negli appunti solo il testo, e
+            // incollato in una riga nuova è un link.
+            system.setContents(java.awt.datatransfer.StringSelection("https://www.notion.so/prova"), null)
+            key(Key.MoveEnd)
+            key(Key.Enter)
+            frames(6)
+            key(Key.V, ctrl = true)
+            frames(10)
+            val linked = runBlocking { db.blockDao().getBlocksForPageOnce("incolla").sortedBy { it.orderIndex }[7].textJson }
+            assertTrue("l'indirizzo incollato è un link: $linked", linked.contains("https://www.notion.so/prova") && linked.contains("\"link\""))
         } finally {
             onWindowThread { scene.close() }
         }

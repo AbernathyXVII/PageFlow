@@ -67,6 +67,18 @@ class DesktopPasteTest {
         assertTrue(TextFieldValue(LinkClipboard(base, compose, system = system).getText()!!).pastedFormat(0).isEmpty)
     }
 
+    /** Un indirizzo copiato da solo (dalla barra del browser c'è solo il testo): arriva come link (18/11/2026). */
+    @Test
+    fun aBareAddressBecomesALink() {
+        system.setContents(java.awt.datatransfer.StringSelection("https://www.notion.so/prova"), null)
+        val pasted = LinkClipboard(base, compose, system = system).getText()!!
+        assertEquals(listOf(com.gabriele.notionlocal.data.entity.LinkRange(0, 27, "https://www.notion.so/prova")), TextFieldValue(pasted).pastedFormat(0).links)
+        // "www." senza https: il link lo ha; una frase con un indirizzo dentro resta testo.
+        assertEquals("https://www.notion.so", com.gabriele.notionlocal.ui.screen.bareWebLink("www.notion.so")?.url)
+        assertEquals(null, com.gabriele.notionlocal.ui.screen.bareWebLink("vai su https://www.notion.so oggi"))
+        assertEquals(null, com.gabriele.notionlocal.ui.screen.bareWebLink("ciao"))
+    }
+
     @Test
     fun copyingBoldTextPutsItsHtmlToo() {
         val spans = listOf(RichTextSpan("ciao ", bold = true), RichTextSpan("mondo"))

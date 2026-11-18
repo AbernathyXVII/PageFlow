@@ -1126,6 +1126,24 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.23.1 — 18/11/2026 · 10:38 — An address copied on its own is pasted as a link
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1304 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **An address copied on its own
+  is pasted as a link**: copied from the bar of the browser (or from any
+  place that gives only the text), a web address arrived as plain text,
+  because the link was looked for only in the HTML of the clipboard, which
+  there isn't. Now a pasted text that is all and only an address
+  (`http://…`, `https://…` or `www.…`, which gets `https://`) becomes a link
+  on itself; also when the address is written in a page copied from the
+  web without being a link there. A sentence with an address inside stays
+  text, and "Paste as plain text" too
+- **[Project]** `bareWebLink` (`LinkText.kt`), used by `getText` of the
+  `LinkClipboard` of PC and phone and by `sourceFormatted` when no link
+  came. Tests: `DesktopPasteTest` (the address alone, `www.`, a sentence),
+  `DesktopPasteKeysTest` (Ctrl+V of an address in a new line of a page: the
+  block has the link)
+
 ### ✏️ v0.155.23 — 18/11/2026 · 10:09 — PC: no halo around the knob of a switch
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1303 tests passed)*
 

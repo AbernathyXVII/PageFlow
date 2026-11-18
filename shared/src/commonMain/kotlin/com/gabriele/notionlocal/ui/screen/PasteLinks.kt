@@ -157,6 +157,10 @@ internal fun sourceFormatted(lines: List<ClipLine>): AnnotatedString {
     if (plain.isNotEmpty() && lines.any { it.type != BlockType.PARAGRAPH }) {
         builder.addStringAnnotation(PASTED_LINES_TAG, lines.joinToString(";") { "${it.type.name},0,${it.indent}" }, 0, plain.length)
     }
+    // Un indirizzo scritto in una pagina web, non un link: diventa un link (vedi `bareWebLink`).
+    if (lines.none { line -> line.runs.any { it.link != null } }) {
+        bareWebLink(plain)?.let { builder.addStringAnnotation(PASTED_LINK_TAG, it.url, it.start, it.end) }
+    }
     return builder.toAnnotatedString()
 }
 

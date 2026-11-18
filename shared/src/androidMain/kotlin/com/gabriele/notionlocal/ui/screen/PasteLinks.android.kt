@@ -123,7 +123,9 @@ actual class LinkClipboard(
             builder.addStringAnnotation(PASTED_PLAIN_TAG, "", 0, plain.length)
         }
         if (mode == PasteMode.KEEP_SOURCE || mode == PasteMode.LINKS_ONLY) {
+            // Un indirizzo copiato da solo, senza link negli appunti: un link (vedi `bareWebLink`).
             runCatching { clipLinks(item, plain) }.getOrDefault(emptyList())
+                .ifEmpty { listOfNotNull(bareWebLink(plain)) }
                 .forEach { builder.addStringAnnotation(PASTED_LINK_TAG, it.url, it.start, it.end) }
         }
         if (mode == PasteMode.KEEP_SOURCE) {
