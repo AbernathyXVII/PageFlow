@@ -12,6 +12,7 @@ import com.gabriele.notionlocal.data.ocr.PhotoTextRequests
 import com.gabriele.notionlocal.data.entity.NewBlock
 import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
 import com.gabriele.notionlocal.ui.navigation.LocalOpenMode
+import com.gabriele.notionlocal.ui.navigation.LocalUnderPeek
 import com.gabriele.notionlocal.data.settings.OpenMode
 import com.gabriele.notionlocal.ui.navigation.LocalPageOpener
 import com.gabriele.notionlocal.platform.emojiTransformation
@@ -3196,8 +3197,9 @@ private fun PageEditorContent(
                             }
                         )
                         // Sul PC i file portati da Esplora risorse: la linea blu dei blocchi, e lì diventano blocchi (vedi `OutsideFileDrop.kt`).
+                        // Con un peek aperto sopra, i file vanno lì e non qui.
                         .then(
-                            if (!pcEditing) {
+                            if (!pcEditing || LocalUnderPeek.current) {
                                 Modifier
                             } else {
                                 Modifier.outsideFileDrop(

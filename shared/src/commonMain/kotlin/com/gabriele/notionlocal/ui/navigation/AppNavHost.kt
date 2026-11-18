@@ -691,6 +691,8 @@ private fun AppTab(
                             .horizontalScroll(pageScroll, enabled = sideOpen)
                     ) {
                         Box(modifier = Modifier.width(full).fillMaxHeight()) {
+                            // Compose dà un file trascinato al primo bersaglio che contiene il punto, e questa pagina viene prima del peek.
+                            CompositionLocalProvider(LocalUnderPeek provides (peek != null)) {
                             AppRoutes(
                                 navController = navController,
                                 factory = factory,
@@ -700,6 +702,7 @@ private fun AppTab(
                                     scope.launch { factory.pageRepository.ensureRowPage(rowId)?.let(then) }
                                 }
                             )
+                            }
                         }
                     }
                     // Side peek: sopra la pagina, a destra; la barra laterale resta libera.

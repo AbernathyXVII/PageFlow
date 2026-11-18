@@ -25,6 +25,12 @@ val LocalPageOpener = compositionLocalOf<PageOpener?> { null }
 val LocalOpenMode = compositionLocalOf<OpenMode?> { null }
 
 /**
+ * Vero per la pagina sotto un peek aperto (sul PC): non prende i file trascinati da fuori, che
+ * altrimenti Compose le darebbe anche lasciati sul peek (chiesto dall'utente il 18/11/2026).
+ */
+val LocalUnderPeek = compositionLocalOf { false }
+
+/**
  * **I comandi del peek** in alto a sinistra (chiudi, a pagina intera, il modo):
  * dentro un peek la pagina e il database li mettono al posto di indietro, ☰
  * e percorso. Null fuori da un peek.

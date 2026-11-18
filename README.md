@@ -1126,6 +1126,23 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.34.1 — 18/11/2026 · 17:45 — A file dropped on a peek goes into the peek's page
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1312 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **An image (or any file) dragged from File
+  Explorer onto a page in Center peek goes into that page**, no longer into
+  the page behind it. The same happened in the Side peek panel since
+  v0.155.31, when the page under it became as wide as the window: fixed too.
+  While a peek is open, files go only into the peek's page: dropped on the
+  page under a Side peek they aren't taken
+- **[Project]** Compose gives a dragged file to the first drop target, in the
+  order of the tree, whose (unclipped) bounds contain the point, without
+  looking at what is drawn on top: the page under the peek comes first. Now
+  `AppNavHost` gives it `LocalUnderPeek` and `PageEditorScreen` leaves out
+  `outsideFileDrop` while a peek is open. Test: `DesktopPeekDropTest` (makes
+  the same choice Compose makes on the file targets of the window, with the
+  Center peek and with the Side peek)
+
 ### ✏️ v0.155.34 — 18/11/2026 · 17:28 — Room for three empty lines at the end of every page
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1311 tests passed)*
 
