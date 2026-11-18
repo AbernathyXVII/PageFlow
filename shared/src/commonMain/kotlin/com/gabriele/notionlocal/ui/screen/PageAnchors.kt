@@ -189,6 +189,8 @@ fun Modifier.anchorDecor(
     LaunchedEffect(moved) {
         if (moved?.blockId != blockId) return@LaunchedEffect
         flash.snapTo(1f)
+        // Arrivati con un collegamento, la luce resta piena un secondo (dal 18/11/2026).
+        delay(moved.holdMs)
         flash.animateTo(0f, tween(ANCHOR_FLASH_MS))
     }
     val flashColor = MaterialTheme.colorScheme.primary

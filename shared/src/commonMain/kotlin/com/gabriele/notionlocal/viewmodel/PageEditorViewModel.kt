@@ -205,6 +205,9 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
         // lascia selezionare meno righe insieme.
         const val CHUNK_MAX_LINES = 50
 
+        // Quanto resta piena la luce della riga arrivata con un collegamento, prima di svanire.
+        const val LINK_HIGHLIGHT_HOLD_MS = 1_000L
+
         // Oltre queste righe il campo col fuoco non prende altri pezzi, anche
         // se si vedono: scriverci costerebbe troppo (vedi `keepVisibleTogether`).
         const val FOCUSED_CHUNK_CAP = 200
@@ -3109,7 +3112,8 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
      * fosse il divisore a salire mangiandosi una riga (l'utente). Il
      * momento distingue due spostamenti di fila della stessa riga.
      */
-    data class MovedBlock(val blockId: String, val at: Long)
+    /** [holdMs]: quanto la luce resta piena prima di svanire (la riga arrivata con un collegamento). */
+    data class MovedBlock(val blockId: String, val at: Long, val holdMs: Long = 0L)
 
     private val _movedBlock = MutableStateFlow<MovedBlock?>(null)
     val movedBlock: StateFlow<MovedBlock?> = _movedBlock
@@ -3178,9 +3182,13 @@ class PageEditorViewModel(private val repository: PageRepository) : ViewModel() 
     /** Le righe a cui si può collegare del testo, nell'ordine della pagina: vedi `linkTargetsOf`. */
     fun linkTargets(): List<LinkTarget> = linkTargetsOf(_blocks.value) { spansOf(it) }
 
-    /** La riga arrivata con un collegamento si illumina un attimo, come una riga spostata. */
+    /**
+     * La riga arrivata con un collegamento si illumina, come una riga spostata; **dal 18/11/2026 la
+     * luce resta piena un secondo prima di svanire** (chiesto dall'utente: "cosicché io sia sicuro di
+     * dove si trova il titolo linkato").
+     */
     fun highlightBlock(blockId: String) {
-        _movedBlock.value = MovedBlock(blockId, System.nanoTime() / 1_000_000)
+        _movedBlock.value = MovedBlock(blockId, System.nanoTime() / 1_000_000, holdMs = LINK_HIGHLIGHT_HOLD_MS)
     }
 
     /**

@@ -1126,8 +1126,24 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.32 — 18/11/2026 · 16:52 — The line reached with a link stays lit one second more
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1313 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The line reached with a link
+  stays lit one second more**: following a link to a line of the same page
+  (from a table of contents in the page, from "Link → In this page", from
+  the lines on the right), the line arrived at lit up and faded at once
+  (0.7 s). Now the light stays full for one second and then fades, so it is
+  clear where the linked line is. The link clicked doesn't light up; a line
+  moved with the arrows flashes as before
+- **[Project]** `PageEditorViewModel.MovedBlock.holdMs`, 1000 ms from
+  `highlightBlock` (`LINK_HIGHLIGHT_HOLD_MS`); the flash of the lines in a
+  text field and of the blocks on their own waits that long before fading.
+  Test: `DesktopLinkHighlightTest` (one second after the jump the line is
+  still lit, then the light goes away)
+
 ### ✏️ v0.155.31 — 18/11/2026 · 15:38 — PC: with a Side peek open, the page under it scrolls sideways
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1312 tests passed)*
+*(Claude Code on the PC; tested by the user on 18/11/2026; installed on the phone; 1312 tests passed)*
 
 - **[Change]** **[💻 PC]** **With a Side peek open, the page under it
   scrolls sideways**: the panel on the right covered part of the page (for

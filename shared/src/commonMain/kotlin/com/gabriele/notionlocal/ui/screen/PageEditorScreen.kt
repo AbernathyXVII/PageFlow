@@ -6095,6 +6095,7 @@ private fun MergedTextRunField(
         val moved = movedBlock ?: return@LaunchedEffect
         if (runBlocks.none { it.id == moved.blockId }) return@LaunchedEffect
         moveFlash.snapTo(1f)
+        delay(moved.holdMs)
         moveFlash.animateTo(0f, tween(MOVE_FLASH_MS))
     }
 
