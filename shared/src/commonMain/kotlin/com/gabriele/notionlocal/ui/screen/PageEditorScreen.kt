@@ -450,12 +450,13 @@ fun pageInsetFor(fullWidth: Boolean, areaWidth: Dp): Dp =
 internal val PAGE_LEFT_INSET = PAGE_INSET / 2
 
 /**
- * **In fondo a ogni pagina lo spazio di due righe vuote** (dal 13/11/2026,
+ * **In fondo a ogni pagina lo spazio di tre righe vuote** (dal 13/11/2026,
  * chiesto dall'utente sul PC e sul telefono: tolte le righe vuote in fondo,
- * quello che si scrive restava attaccato al bordo). Non sono blocchi: non ci
- * si scrive, e toccandolo il cursore va nell'ultima riga, come sotto.
+ * quello che si scrive restava attaccato al bordo; due righe fino al
+ * 18/11/2026, poi tre, chiesto dall'utente). Non sono blocchi: non ci si
+ * scrive, e toccandolo il cursore va nell'ultima riga, come sotto.
  */
-internal val PAGE_BOTTOM_SPACE = 48.dp
+internal val PAGE_BOTTOM_SPACE = 72.dp
 
 /**
  * **A destra un margine un po' più piccolo di quello a sinistra** (dal

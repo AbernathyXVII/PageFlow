@@ -1126,6 +1126,17 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.34 — 18/11/2026 · 17:28 — Room for three empty lines at the end of every page
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1311 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Three empty lines at the end of
+  every page, no longer two**: scrolled all the way down, the last line has
+  the room of three lines under it. As before they aren't blocks: nothing is
+  written there, and a tap or a click there puts the cursor in the last line
+- **[Project]** `PAGE_BOTTOM_SPACE` from 48 to 72 dp. Test:
+  `DesktopBottomSpaceTest` (a long page scrolled to the end leaves at least
+  72 points between the last line and the edge)
+
 ### ✏️ v0.155.33 — 18/11/2026 · 17:11 — Backup: no more "Upload to Proton Drive"
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1310 tests passed)*
 
