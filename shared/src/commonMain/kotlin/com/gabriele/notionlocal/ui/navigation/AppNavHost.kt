@@ -310,8 +310,14 @@ private fun AppTab(
     }
     val peekActions = PeekActions(
         close = { peek = null },
-        changeMode = { mode -> peek?.let { open -> openWith(open.pageId, open.isDatabase, mode) } },
-        replace = { id, isDatabase -> peek = peek?.copy(pageId = id, isDatabase = isDatabase) },
+        back = { peek = peek?.back() },
+        changeMode = { mode ->
+            peek?.let { open ->
+                // Da un peek all'altro la cronologia resta; a pagina intera o in una scheda si apre e basta.
+                if (mode == OpenMode.SIDE_PEEK || mode == OpenMode.CENTER_PEEK) peek = open.copy(mode = mode) else openWith(open.pageId, open.isDatabase, mode)
+            }
+        },
+        replace = { id, isDatabase -> peek = peek?.replacedBy(id, isDatabase) },
         openSearch = {
             peek = null
             navController.navigate(Routes.SEARCH)

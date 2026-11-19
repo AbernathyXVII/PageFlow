@@ -77,7 +77,7 @@ class DesktopPeekMarginsTest {
     fun fullWidthDoesNotChangeTheMarginsInTheCenterPeek() {
         val factory = ViewModelFactory(context)
         val owner = ScreenOwner()
-        val actions = PeekActions(close = {}, changeMode = {}, replace = { _, _ -> }, openSearch = {}, openUpdates = {}, openOutside = { _, _, _ -> })
+        val actions = PeekActions(close = {}, back = {}, changeMode = {}, replace = { _, _ -> }, openSearch = {}, openUpdates = {}, openOutside = { _, _, _ -> })
         val scene = onWindowThread {
             ImageComposeScene(width = 1800, height = 800, density = Density(1f)) {
                 CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {

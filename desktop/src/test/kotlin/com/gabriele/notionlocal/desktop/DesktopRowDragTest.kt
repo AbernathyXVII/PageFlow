@@ -13,6 +13,15 @@ import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getAllSemanticsNodes
+import androidx.compose.ui.semantics.getOrNull
+import androidx.lifecycle.viewmodel.CreationExtras
+import com.gabriele.notionlocal.data.entity.BlockEntity
+import com.gabriele.notionlocal.data.entity.BlockType
+import com.gabriele.notionlocal.ui.screen.PageEditorScreen
+import com.gabriele.notionlocal.ui.screen.notePresses
+import com.gabriele.notionlocal.viewmodel.PageEditorViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -174,5 +183,85 @@ class DesktopRowDragTest {
         } finally {
             onWindowThread { scene.close() }
         }
+    }
+
+    /**
+     * **Lo stesso in un database dentro una pagina** (l'utente il 19/11/2026: "quando in un
+     * database su PC sposto una pagina, mi appare quel famoso rettangolino della selezione"):
+     * la maniglia sposta la riga, e il rettangolo azzurro della pagina non parte.
+     */
+    @Test
+    fun aRowOfADatabaseInAPageIsDragged() {
+        runBlocking {
+            val repo = PageRepository(db)
+            repo.createPage(PageEntity(id = "casa", title = "Casa"))
+            repo.saveBlock(BlockEntity(id = "sopra", pageId = "casa", textJson = """[{"text":"Sopra"}]""", orderIndex = 0))
+            repo.saveBlock(BlockEntity(id = "db", pageId = "casa", type = BlockType.DATABASE_LINK, linkedPageId = "giochi", orderIndex = 1))
+        }
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 700, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            PageEditorScreen(
+                                pageId = "casa", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                                onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun mouse(type: PointerEventType, at: Offset, pressed: Boolean) = onWindowThread {
+            scene.sendPointerEvent(
+                type, at, type = PointerType.Mouse,
+                buttons = if (pressed) PointerButtons(isPrimaryPressed = true) else PointerButtons(),
+                button = if (type == PointerEventType.Press || type == PointerEventType.Release) PointerButton.Primary else null
+            )
+        }
+        fun nodes(what: (androidx.compose.ui.semantics.SemanticsConfiguration) -> Boolean) = onWindowThread {
+            scene.semanticsOwners.flatMap { it.getAllSemanticsNodes(mergingEnabled = true) }.filter { what(it.config) }.map { it.boundsInRoot }
+        }
+        fun textAt(text: String) = nodes { c -> c.getOrNull(SemanticsProperties.Text)?.any { it.text == text } == true }.first()
+        try {
+            frames(40)
+            val uno = textAt("Uno")
+            val tre = textAt("Tre")
+            mouse(PointerEventType.Move, uno.center, pressed = false)
+            frames(4)
+            val handle = nodes { c -> c.getOrNull(SemanticsProperties.ContentDescription)?.contains("Drag to move") == true }.single().center
+            picture("rowdrag_page_handle.png", scene, time)
+            mouse(PointerEventType.Move, handle, pressed = false)
+            frames(2)
+            mouse(PointerEventType.Press, handle, pressed = true)
+            frames(2)
+            var y = handle.y
+            val goal = tre.center.y + 8f
+            while (y < goal) {
+                y = minOf(goal, y + 10f)
+                mouse(PointerEventType.Move, Offset(handle.x, y), pressed = true)
+                frames(1)
+            }
+            picture("rowdrag_page_dragging.png", scene, time)
+            mouse(PointerEventType.Release, Offset(handle.x, y), pressed = false)
+            frames(10)
+            assertEquals("Uno dopo Tre", listOf("Due", "Tre", "Uno", "Quattro"), order())
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    private fun picture(name: String, scene: ImageComposeScene, time: Long) {
+        val bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+        File("build/desktop-screenshots", name).apply { parentFile.mkdirs() }.writeBytes(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes)
     }
 }

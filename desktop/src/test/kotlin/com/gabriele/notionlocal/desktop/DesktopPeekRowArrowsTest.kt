@@ -5,6 +5,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getAllSemanticsNodes
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.geometry.Offset
@@ -91,10 +94,12 @@ class DesktopPeekRowArrowsTest {
         val factory = ViewModelFactory(context)
         val owner = ScreenOwner()
         var peek by mutableStateOf(PagePeek("p1", false, OpenMode.CENTER_PEEK))
+        var closed = false
         val actions = PeekActions(
-            close = {},
+            close = { closed = true },
+            back = { peek.back()?.let { peek = it } ?: run { closed = true } },
             changeMode = {},
-            replace = { id, isDatabase -> peek = peek.copy(pageId = id, isDatabase = isDatabase) },
+            replace = { id, isDatabase -> peek = peek.replacedBy(id, isDatabase) },
             openSearch = {},
             openUpdates = {},
             openOutside = { _, _, _ -> }
@@ -162,6 +167,23 @@ class DesktopPeekRowArrowsTest {
             click(Offset(center(again[0]), y))
             frames(20)
             assertEquals("su dalla terza riga", "p1", peek.pageId)
+            // **La freccia "indietro"** (dal 19/11/2026), a destra del pulsante del modo: le pagine
+            // aperte prima nel peek, all'indietro (p2, poi p1), e dalla prima chiude il peek.
+            fun backArrow(): Offset = onWindowThread {
+                val nodes = scene.semanticsOwners.flatMap { it.getAllSemanticsNodes(mergingEnabled = true) }
+                    .filter { node -> node.config.getOrNull(SemanticsProperties.ContentDescription)?.contains("Back") == true }
+                assertEquals("una sola freccia indietro: ${nodes.map { it.boundsInRoot }}", 1, nodes.size)
+                nodes.single().boundsInRoot.center
+            }
+            val arrow = backArrow()
+            assertTrue("la freccia sta in alto a sinistra del peek: $arrow", arrow.x < 600f && arrow.y < 120f)
+            click(arrow)
+            assertEquals("p2", peek.pageId)
+            click(backArrow())
+            assertEquals("p1", peek.pageId)
+            assertTrue(!closed)
+            click(backArrow())
+            assertTrue("dalla prima pagina la freccia chiude il peek", closed)
         } finally {
             onWindowThread { scene.close() }
         }

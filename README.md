@@ -1126,6 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.43 — 19/11/2026 · 22:48 — A back arrow in the peek; the rows of a database in a page are dragged again
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1343 tests passed)*
+
+- **[Change]** **[💻 PC]** **A back arrow in the peek**, on the right of the
+  button that chooses how the page is open: it goes back to the page opened
+  before in the same peek (a link, a subpage or the arrows of a database's
+  rows open the next one in its place); from the first page it closes the
+  peek. Switching between Center peek and Side peek keeps where it can go
+  back to
+- **[Bug fix]** **[💻 PC]** **The rows of a database inside a page can be
+  dragged again**: the handle of a row is on the left of the column of the
+  text, and pressing there started the blue rectangle that chooses the
+  blocks, which took the whole database instead of moving the row. On a
+  database the rectangle no longer starts: the handle moves the row
+- **[Project]** `PagePeek.previous` with `replacedBy` and `back`,
+  `PeekActions.back`; `mouseBlockSelection(ownsDrag)` (a `DATABASE_LINK`
+  block). Tests: `DesktopPeekRowArrowsTest` (back twice, then the peek
+  closes), `DesktopRowDragTest.aRowOfADatabaseInAPageIsDragged`
+
 ### ✏️ v0.155.42 — 19/11/2026 · 22:20 — A search result opens the page where the text is
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1342 tests passed)*
 

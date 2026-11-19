@@ -273,6 +273,11 @@ fun Modifier.mouseBlockSelection(
     scrollBy: suspend (Float) -> Unit,
     /** Il rettangolo azzurro, nelle coordinate della pagina (vedi [drawMarquee]); null: niente rettangolo. */
     marquee: MutableState<Rect?>? = null,
+    /**
+     * I blocchi che col mouse si trascinano da soli (un database: le righe dalla maniglia, le
+     * schede, le colonne): premuti fuori dalla colonna del testo non fanno partire il rettangolo.
+     */
+    ownsDrag: (String) -> Boolean = { false },
     onSelect: (Set<String>?) -> Unit
 ): Modifier = pointerInput(picker) {
     coroutineScope {
@@ -292,7 +297,9 @@ fun Modifier.mouseBlockSelection(
             // fuori dal testo (nei margini ai lati, o sotto l'ultimo blocco) e trascinando, i blocchi che
             // il rettangolo tocca sono scelti. Si aggancia al primo blocco che tocca, e lo segue mentre la
             // pagina scorre (al bordo o con la rotella): la scelta va da lui a quello verso il puntatore.
-            val boxing = marquee != null && runCatching {
+            // Dal 19/11/2026 non su un database (l'utente: spostando una pagina "mi appare quel famoso
+            // rettangolino", perché la maniglia delle righe sta a sinistra della colonna del testo).
+            val boxing = marquee != null && (start == null || !ownsDrag(start.second)) && runCatching {
                 val at = page.localToWindow(down.position)
                 val (left, right, bottom) = picker.pageExtent() ?: return@runCatching false
                 at.x < left || at.x > right || (start == null && at.y > bottom)

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.OpenInFull
@@ -60,12 +61,28 @@ import com.gabriele.notionlocal.ui.theme.DarkBackground
 import com.gabriele.notionlocal.ui.theme.NotionGray900
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 
-/** Una pagina aperta in un peek: quale, e come (Side peek o Center peek). */
-data class PagePeek(val pageId: String, val isDatabase: Boolean, val mode: OpenMode)
+/**
+ * Una pagina aperta in un peek: quale, e come (Side peek o Center peek). [previous]: le pagine
+ * aperte prima nello stesso peek, l'ultima in fondo, per la freccia "indietro" (dal 19/11/2026).
+ */
+data class PagePeek(
+    val pageId: String,
+    val isDatabase: Boolean,
+    val mode: OpenMode,
+    val previous: List<Pair<String, Boolean>> = emptyList()
+) {
+    /** [id] prende il posto di questa pagina, che va nella cronologia. */
+    fun replacedBy(id: String, database: Boolean) = copy(pageId = id, isDatabase = database, previous = previous + (pageId to isDatabase))
+
+    /** La pagina di prima nello stesso peek; null se questa è la prima. */
+    fun back(): PagePeek? = previous.lastOrNull()?.let { (id, database) -> copy(pageId = id, isDatabase = database, previous = previous.dropLast(1)) }
+}
 
 /** Chi fa le cose che dal peek escono fuori: cambiare modo, aprire a pagina intera, chiudere. */
 class PeekActions(
     val close: () -> Unit,
+    /** La freccia "indietro": la pagina di prima nel peek, o via il peek se questa era la prima. */
+    val back: () -> Unit,
     /** Un altro modo per la stessa pagina (anche pagina intera o una scheda nuova). */
     val changeMode: (OpenMode) -> Unit,
     /** Una pagina toccata dentro il peek: prende il suo posto. */
@@ -236,6 +253,8 @@ private fun RowScope.PeekControls(mode: OpenMode, actions: PeekActions) {
             }
         }
     }
+    // **Indietro** (dal 19/11/2026, chiesto dall'utente): a destra del modo, la pagina aperta prima nel peek.
+    PcBarButton(Icons.Filled.ArrowBack, Strings.back, actions.back)
 }
 
 private class PeekStoreOwner : ViewModelStoreOwner {

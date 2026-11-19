@@ -3225,6 +3225,7 @@ private fun PageEditorContent(
                             selected = { selectedBlocks.value.isNotEmpty() },
                             scrollBy = { listState.scrollBy(it) },
                             marquee = marquee.takeIf { pcEditing },
+                            ownsDrag = { id -> viewModel.blocks.value.firstOrNull { it.id == id }?.type == BlockType.DATABASE_LINK },
                             onSelect = { ids ->
                                 if (!ids.isNullOrEmpty() && selectedBlocks.value.isEmpty()) focusManager.clearFocus()
                                 pageSelected = false
