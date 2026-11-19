@@ -2203,8 +2203,9 @@ private fun PageEditorContent(
             val latestBlocks = rememberUpdatedState(blocks)
             val jumpMarginPx = with(inkDensity) { (FLOATING_BAR_CLEARANCE + 12.dp).toPx() }
             val nestedSpots = remember(pageId) { NestedSpots() }
-            val jumpToBlock: (String) -> Unit = remember(listState, visibleRunLines) {
-                { blockId ->
+            // [withReturn]: un collegamento lascia "Back" per tornare dov'era la pagina; la ricerca no.
+            val jumpToBlockFrom: (String, Boolean) -> Unit = remember(listState, visibleRunLines) {
+                { blockId, withReturn ->
                     jumpScope.launch {
                         val byId = latestBlocks.value.associateBy { it.id }
                         var anchor = byId[blockId]
@@ -2217,11 +2218,13 @@ private fun PageEditorContent(
                         }
                         focusManager.clearFocus()
                         val index = found + HEADER_ITEM_COUNT
-                        linkReturn = LinkReturn(
-                            index = listState.firstVisibleItemIndex,
-                            offset = listState.firstVisibleItemScrollOffset,
-                            upward = index > listState.firstVisibleItemIndex
-                        )
+                        if (withReturn) {
+                            linkReturn = LinkReturn(
+                                index = listState.firstVisibleItemIndex,
+                                offset = listState.firstVisibleItemScrollOffset,
+                                upward = index > listState.firstVisibleItemIndex
+                            )
+                        }
                         listState.scrollToItem(index)
                         val item = items[found]
                         if (item is RenderItem.Run) {
@@ -2250,6 +2253,21 @@ private fun PageEditorContent(
                         viewModel.highlightBlock(lit)
                     }
                 }
+            }
+            val jumpToBlock: (String) -> Unit = remember(jumpToBlockFrom) { { blockId -> jumpToBlockFrom(blockId, true) } }
+            // **Aperta da un risultato della ricerca** (dal 19/11/2026, vedi `SearchJump`): appena il
+            // blocco trovato è nella pagina, lei ci scorre e lo illumina. Se la pagina cambia mentre
+            // aspetta i due fotogrammi, si riprova col giro dopo.
+            val searchTarget = remember(pageId) { SearchJump.take(pageId) }
+            var searchJumped by remember(pageId) { mutableStateOf(false) }
+            LaunchedEffect(searchTarget, blocks, renderItems) {
+                val target = searchTarget ?: return@LaunchedEffect
+                if (searchJumped || blocks.none { it.id == target }) return@LaunchedEffect
+                withFrameNanos { }
+                withFrameNanos { }
+                if (searchJumped) return@LaunchedEffect
+                searchJumped = true
+                jumpToBlockFrom(target, false)
             }
             // **La foto del Web Clipper appena arrivata** (dal 20/10/2026): la
             // pagina scorre fin lì (senza "Back": non è un collegamento). Si

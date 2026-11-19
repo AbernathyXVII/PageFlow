@@ -279,3 +279,20 @@ fun BackPill(upward: Boolean, tag: String, onClick: () -> Unit, modifier: Modifi
         Text(Strings.back, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+/**
+ * **La riga trovata dalla ricerca** (dal 19/11/2026, chiesto dall'utente: "la pagina deve
+ * scorrere fino al punto in cui quella voce che ho cercato si trova"): aprendo un risultato,
+ * la ricerca lascia qui la pagina e il blocco; la pagina, appena si apre, lo prende, ci
+ * scorre e lo illumina come un collegamento (senza "Back"). Sul PC e sul telefono.
+ */
+object SearchJump {
+    private var pending: Pair<String, String>? = null
+
+    fun request(pageId: String, blockId: String) {
+        pending = pageId to blockId
+    }
+
+    /** Il blocco da raggiungere nella pagina [pageId], una volta sola; null se non ce n'è. */
+    fun take(pageId: String): String? = pending?.takeIf { it.first == pageId }?.second?.also { pending = null }
+}

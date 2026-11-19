@@ -667,7 +667,9 @@ class PageRepository(private val db: AppDatabase) {
         val matchStart: Int,
         val matchLength: Int,
         val inTrash: Boolean,
-        val iconSymbol: String? = null
+        val iconSymbol: String? = null,
+        /** Il blocco dove sta il testo trovato: aprendo il risultato la pagina scorre fin lì (dal 19/11/2026). */
+        val blockId: String? = null
     )
 
     /**
@@ -690,7 +692,7 @@ class PageRepository(private val db: AppDatabase) {
         fun allowed(page: PageEntity) = (page.trashedAt == null || inTrash) &&
             page.notebookSectionId == null && !page.isTemplate
 
-        fun hitFor(page: PageEntity, snippet: Snippet?) = SearchHit(
+        fun hitFor(page: PageEntity, snippet: Snippet?, blockId: String? = null) = SearchHit(
             pageId = page.id,
             rowId = null,
             isDatabase = page.isDatabase,
@@ -701,7 +703,8 @@ class PageRepository(private val db: AppDatabase) {
             snippet = snippet?.text,
             matchStart = snippet?.start ?: 0,
             matchLength = snippet?.length ?: 0,
-            inTrash = page.trashedAt != null
+            inTrash = page.trashedAt != null,
+            blockId = blockId
         )
 
         // Le viste collegate hanno il nome del loro database, e sarebbero
@@ -718,14 +721,14 @@ class PageRepository(private val db: AppDatabase) {
                 val existing = hits[block.pageId]
                 if (existing?.snippet != null) continue
                 val page = pageDao.getById(block.pageId)?.takeIf { allowed(it) } ?: continue
-                hits[page.id] = hitFor(page, snippet)
+                hits[page.id] = hitFor(page, snippet, block.id)
             }
             for (cell in tableCellDao.searchCells(needle)) {
                 val snippet = snippetAround(cell.text, needle) ?: continue
                 val block = blockDao.getById(cell.blockId) ?: continue
                 if (hits[block.pageId]?.snippet != null) continue
                 val page = pageDao.getById(block.pageId)?.takeIf { allowed(it) } ?: continue
-                hits[page.id] = hitFor(page, snippet)
+                hits[page.id] = hitFor(page, snippet, block.id)
             }
             // **Il testo delle foto** (dal 03/11/2026): quello che c'è scritto
             // in un'immagine o in un documento scansionato, letto da `ImageTexts`.
@@ -735,7 +738,7 @@ class PageRepository(private val db: AppDatabase) {
                     if (block.type != BlockType.IMAGE || block.attrs.file != entry.file) continue
                     if (hits[block.pageId]?.snippet != null) continue
                     val page = pageDao.getById(block.pageId)?.takeIf { allowed(it) } ?: continue
-                    hits[page.id] = hitFor(page, snippet.copy(text = PHOTO_MARK + snippet.text, start = snippet.start + PHOTO_MARK.length))
+                    hits[page.id] = hitFor(page, snippet.copy(text = PHOTO_MARK + snippet.text, start = snippet.start + PHOTO_MARK.length), block.id)
                 }
             }
             for (row in db.databaseDao().searchRows(needle)) {
@@ -800,7 +803,7 @@ class PageRepository(private val db: AppDatabase) {
             when {
                 key.startsWith("row:") -> null
                 lockedBy == containerId && hit.title.contains(needle, ignoreCase = true) ->
-                    hit.copy(snippet = null, matchStart = 0, matchLength = 0)
+                    hit.copy(snippet = null, matchStart = 0, matchLength = 0, blockId = null)
                 else -> null
             }
         }

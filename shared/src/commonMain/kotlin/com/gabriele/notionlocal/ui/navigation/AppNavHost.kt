@@ -1,6 +1,7 @@
 package com.gabriele.notionlocal.ui.navigation
 
 import com.gabriele.notionlocal.ui.screen.LibraryScreen
+import com.gabriele.notionlocal.ui.screen.SearchJump
 import com.gabriele.notionlocal.ui.screen.RecentsSidebarSection
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.key
@@ -889,6 +890,8 @@ private fun AppRoutes(
                     val pageId = hit.pageId
                     val rowId = hit.rowId
                     if (pageId != null) {
+                        // La pagina scorre fino al testo trovato (vedi `SearchJump`).
+                        if (!hit.isDatabase) hit.blockId?.let { SearchJump.request(pageId, it) }
                         navController.popBackStack()
                         navController.navigate(Routes.forPage(pageId, hit.isDatabase))
                     } else if (rowId != null) {

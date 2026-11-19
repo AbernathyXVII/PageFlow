@@ -1126,6 +1126,20 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.42 — 19/11/2026 · 22:20 — A search result opens the page where the text is
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1342 tests passed)*
+
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **A search result opens the page
+  where the text is**: when the words were found in the page (in a line, a
+  table or the text of a photo), the page scrolls down to that line and
+  lights it up, as a link to a line does. A page found only by its title
+  still opens at the top
+- **[Project]** `SearchHit.blockId` (the block of the text found), `SearchJump`
+  (the search leaves the page and the block, the page takes them once when it
+  opens), `jumpToBlockFrom` (the jump of the links, here without "Back").
+  Tests: `DesktopSearchJumpTest` (the hit knows its block; the opened page
+  scrolls to a to-do and to a line of text, which lights up)
+
 ### ✏️ v0.155.41 — 19/11/2026 · 15:28 — The counter heard on the PC, "/" and Backspace in columns, a question before changing a type
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1339 tests passed)*
 
