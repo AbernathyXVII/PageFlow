@@ -2082,7 +2082,7 @@ say that **they still have to be verified on the phone**: when they are,
   `theEmptiedPencilGivesThePageTitleBack`
 
 ### ✏️ v0.155.5 — 13/11/2026 · 19:19 — PC: dark window bar, tabs you drag (also into a new window), a taller cover
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1264 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1264 tests passed)*
 
 - **[Change]** **[💻 PC]** **The bar at the top of the window** (the one with
   minimize, maximize and close) **is no longer white**: dark with the dark
@@ -2122,7 +2122,7 @@ say that **they still have to be verified on the phone**: when they are,
   checked by the user
 
 ### ✏️ v0.155.4 — 13/11/2026 · 18:47 — "Cell spoiler": cover any cell of a table
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1261 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1261 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **"Cell spoiler"** in "Database
   settings" (the button with the sliders at the right of the database bar),
@@ -2147,7 +2147,7 @@ say that **they still have to be verified on the phone**: when they are,
   covers without opening the field, another uncovers)
 
 ### ✏️ v0.155.3 — 13/11/2026 · 18:16 — Room at the bottom of every page, and "Back" only far down
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1259 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1259 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **Every page ends with the room
   of two empty lines**, so what is written last is never stuck to the bottom
@@ -2203,7 +2203,7 @@ say that **they still have to be verified on the phone**: when they are,
   and OPEN appears in its cell)
 
 ### ✏️ v0.155.1 — 13/11/2026 · 15:12 — No grey background in Recents
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1254 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1254 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **No grey background in
   Recents**: the page open at the moment had the grey background of the tree
@@ -2241,7 +2241,7 @@ say that **they still have to be verified on the phone**: when they are,
   the wide Library on the PC)
 
 ### 🆕 v0.154 — 13/11/2026 · 14:26 — A recurring event, ticked, goes to its next date
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1250 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1250 tests passed)*
 
 - **[New feature]** **[📱 Mobile]** **[💻 PC]** **Ticking a recurring event
   takes it to its next date**: in a database seen as a table and grouped by a
@@ -2265,7 +2265,7 @@ say that **they still have to be verified on the phone**: when they are,
   and a table not grouped: the usual tick)
 
 ### ✏️ v0.153.80 — 13/11/2026 · 13:59 — No line at the end of a database
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1242 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1242 tests passed)*
 
 - **[Removed]** **[📱 Mobile]** **[💻 PC]** **The line at the end of a
   database** in a page (added on 18/10/2026): after a database there is only
@@ -2295,7 +2295,7 @@ say that **they still have to be verified on the phone**: when they are,
   the end of the same line)
 
 ### ✏️ v0.153.79 — 13/11/2026 · 13:19 — A smaller right margin
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1241 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1241 tests passed)*
 
 - **[Change]** **[💻 PC]** **The right margin of a page is smaller than the
   left one**: 24 points instead of 66 (on the left there are 33), so tables,
@@ -2328,7 +2328,7 @@ say that **they still have to be verified on the phone**: when they are,
   side: the second one 33 points after the edge
 
 ### ✏️ v0.153.77 — 13/11/2026 · 10:06 — Columns resized with the mouse; files dragged in from outside; images at their own size
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1241 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1241 tests passed)*
 
 - **[Change]** **[💻 PC]** **The columns of a page are resized with the
   mouse**, like the columns of a database: in the space between two columns
@@ -2368,7 +2368,7 @@ say that **they still have to be verified on the phone**: when they are,
   columns; below: in a row; a PNG an image, a .txt a file)
 
 ### ✏️ v0.153.76 — 13/11/2026 · 09:18 — The right-click menu on the PC; database columns resized with the mouse
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1237 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1237 tests passed)*
 
 - **[Change]** **[💻 PC]** **The right-click menu of a page**: a right
   click on a line opens, one under the other, what on the phone is in the bar
@@ -2407,7 +2407,7 @@ say that **they still have to be verified on the phone**: when they are,
   stays there)
 
 ### 🔧 v0.153.75.1 — 13/11/2026 · 08:37 — The compact calendar also on the phone
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1234 tests passed)*
+*(Claude Code on the PC; tested by the user on the phone on 14/11/2026; installed on the phone; 1234 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **The calendar's month on the phone was still
   tall and mostly empty**: v0.153.75 made the weeks compact only on the PC,
@@ -2474,7 +2474,7 @@ say that **they still have to be verified on the phone**: when they are,
   columns below, the wheel down and up: the dots on the first title)
 
 ### 🔧 v0.153.74.1 — 12/11/2026 · 22:51 — The six dots follow the page when it moves under a still mouse
-*(Claude Code on the PC; not yet tested by the user; installed on the phone with v0.153.74.2; 1229 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone with v0.153.74.2; 1229 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **Six dots appeared out of nowhere**, next to a
   line in the middle of a database's list, far from its title: with the mouse
@@ -2569,7 +2569,7 @@ say that **they still have to be verified on the phone**: when they are,
   block lands)
 
 ### ✏️ v0.153.71 — 12/11/2026 · 19:23 — New columns are blocks you can see
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1216 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1216 tests passed)*
 
 - **[Change]** **[💻 PC]** **"Create two/three/four columns" makes blocks you
   can see**, as in Notion: one on the left, one in the middle, one on the
@@ -2607,7 +2607,7 @@ say that **they still have to be verified on the phone**: when they are,
   "/", ↓, ↓ and Enter makes a numbered list, "e/o" and Enter stays text)
 
 ### 🔧 v0.153.69.1 — 12/11/2026 · 18:29 — The columns: the lines around them, Enter inside them and the six dots
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1211 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1211 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **After "Create two columns" the lines around
   them stayed as before**: the text box the line came from kept all its old
@@ -2725,7 +2725,7 @@ say that **they still have to be verified on the phone**: when they are,
   lands; a line dragged to the bottom, the divider to the top)
 
 ### ✏️ v0.153.66 — 12/11/2026 · 14:01 — On the PC no tab bar with a single tab
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1194 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1194 tests passed)*
 
 - **[Change]** **[💻 PC]** **With a single tab open the tab bar isn't
   there**, and the page goes back up to the top of the window, as before the
@@ -2738,7 +2738,7 @@ say that **they still have to be verified on the phone**: when they are,
   two; Ctrl+W: gone again)
 
 ### ✏️ v0.153.65 — 12/11/2026 · 13:46 — On the PC Ctrl+T and Ctrl+W for the tabs
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1194 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1194 tests passed)*
 
 - **[Change]** **[💻 PC]** **Ctrl+T** opens a new tab on the main menu, like
   the + of the tab bar, and **Ctrl+W** closes the open one, like its ×, as
@@ -2749,7 +2749,7 @@ say that **they still have to be verified on the phone**: when they are,
   (Ctrl+T adds the second tab to the bar, Ctrl+W takes it away)
 
 ### ✏️ v0.153.64 — 12/11/2026 · 13:24 — On the PC pages in Center peek, Side peek, Full page or a new tab
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1193 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1193 tests passed)*
 
 - **[Change]** **[💻 PC]** **Pages and databases open in four ways**, as in
   Notion, clicking a page in a block (a page link) or a database row:
@@ -2793,7 +2793,7 @@ say that **they still have to be verified on the phone**: when they are,
   down by the tab bar
 
 ### ✏️ v0.153.63 — 12/11/2026 · 10:37 — On the PC "Full width" or the page in the middle, as in Notion
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1190 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1190 tests passed)*
 
 - **[Change]** **[💻 PC]** **"Full width"** in a page's three dots, as in
   Notion: on, the text is as wide as the space, as before; off, it sits in a
@@ -2814,7 +2814,7 @@ say that **they still have to be verified on the phone**: when they are,
   page starting at 381 in a 1400 window, back at 86 in full width)
 
 ### ✏️ v0.153.62 — 12/11/2026 · 10:10 — On the PC the windows as large as what they hold
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1188 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1188 tests passed)*
 
 - **[Change]** **[💻 PC]** **"Set time" and "Set date" are a small card in
   the middle** of the window, no longer a strip as wide as it: 260 and 340
@@ -2838,7 +2838,7 @@ say that **they still have to be verified on the phone**: when they are,
   ("Repeat", "Custom recurrence" and "Set time" measured in the picture)
 
 ### ✏️ v0.153.61 — 12/11/2026 · 09:53 — On the PC the file windows of Windows 11
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1187 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1187 tests passed)*
 
 - **[Change]** **[💻 PC]** **Choosing or saving a file opens Windows' own
   window**, the one of File Explorer in Windows 10 and 11, instead of the old
@@ -2860,7 +2860,7 @@ say that **they still have to be verified on the phone**: when they are,
   arguments, PowerShell preparing the dialog without opening it)
 
 ### 🔧 v0.153.60.2 — 12/11/2026 · 09:33 — On the PC ☺️ and ♥️ in colour in titles, cells and the sidebar too
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1185 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1185 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** The emoji Windows also has as letters (☺️, ♥️,
   ©️, 1️⃣…) were still white **in page and database titles, in database cells
@@ -2876,7 +2876,7 @@ say that **they still have to be verified on the phone**: when they are,
   in a text field)
 
 ### 🔧 v0.153.60.1 — 12/11/2026 · 09:20 — On the PC ☺️, ♥️ and the other emoji Windows also has as letters, in colour
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1184 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1184 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **☺️, ♥️ ♠️ ♦️ ♣️, ♀️ ♂️, ‼️, the arrows ↔️ ↕️,
   ©️ ®️ ™️, the keys 0️⃣–9️⃣ #️⃣, ✔️ ✖️ and the small squares ▪️ ◻️** were
@@ -2901,7 +2901,7 @@ say that **they still have to be verified on the phone**: when they are,
   the text, white without the fix)
 
 ### ✏️ v0.153.60 — 12/11/2026 · 09:01 — On the PC Google's emoji, with the flags
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1182 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1182 tests passed)*
 
 - **[Change]** **[💻 PC]** **Google's emoji on the PC**, the same as on
   Android phones (Noto Color Emoji), instead of Windows' ones: everywhere in
@@ -2923,7 +2923,7 @@ say that **they still have to be verified on the phone**: when they are,
   and red with the normal, Serif and Monospace text) fails
 
 ### ✏️ v0.153.59 — 12/11/2026 · 08:07 — The README and the Patch Notes in English, without personal data
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1181 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1181 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **The Patch Notes in English**:
   Settings → Patch Notes shows the whole changelog in English, whatever
@@ -2943,7 +2943,7 @@ say that **they still have to be verified on the phone**: when they are,
   `PatchNotesTest` checks the English labels and platforms (🌍 All)
 
 ### ✏️ v0.153.58 — 11/11/2026 · 18:07 — Closed groups stay closed, and on the PC the six dots a bit further away
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1181 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1181 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **A closed group in a database
   stays closed**: in the table and in the board's bands, closed or opened
@@ -2966,7 +2966,7 @@ say that **they still have to be verified on the phone**: when they are,
   `BoardLayoutTest` keeps the closed bands itself, like the view
 
 ### 🔧 v0.153.57.1 — 11/11/2026 · 17:38 — A tag in an empty select cell
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1179 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1179 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **In an empty select or
   multi-select cell a tag couldn't be added**: the click opened nothing,
@@ -2980,7 +2980,7 @@ say that **they still have to be verified on the phone**: when they are,
   empty "Day" cell opens the tag picker; before the fix it failed
 
 ### ✏️ v0.153.57 — 11/11/2026 · 17:21 — On the PC the full-page database with Notion's margins
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1178 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1178 tests passed)*
 
 - **[Project]** **[💻 PC]** **The database opened full page has the
   pages' margins**, as in Notion: name, views and rows start at 66 from
@@ -2994,7 +2994,7 @@ say that **they still have to be verified on the phone**: when they are,
   the clicks moved and the right margin empty
 
 ### ✏️ v0.153.56 — 11/11/2026 · 17:05 — On the PC a long title wraps
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1178 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1178 tests passed)*
 
 - **[Project]** **[💻 PC]** **A page's title wraps** when it is longer
   than the line, as in Notion: before it stayed on a single line and was
@@ -3007,7 +3007,7 @@ say that **they still have to be verified on the phone**: when they are,
   window, and Enter doesn't change it
 
 ### ✏️ v0.153.55 — 11/11/2026 · 16:53 — On the PC zoom like in a browser: Ctrl +, Ctrl − and Ctrl with the wheel
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1177 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1177 tests passed)*
 
 - **[Project]** **[💻 PC]** **Zoom, like in a browser**: Ctrl + (also
   Ctrl = and the keypad "+") zooms in, Ctrl − zooms out, and so does the
@@ -3026,7 +3026,7 @@ say that **they still have to be verified on the phone**: when they are,
   Ctrl the wheel scrolls)
 
 ### ✏️ v0.153.54 — 11/11/2026 · 16:39 — On the PC the sports widget's full standings, with all the teams
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1174 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1174 tests passed)*
 
 - **[Project]** **[💻 PC]** **The standings are shown whole**: they were
   at most 640 tall and scrolled inside themselves, as on the phone, and
@@ -3039,7 +3039,7 @@ say that **they still have to be verified on the phone**: when they are,
   Serie A standings of 11/11: all 20 teams, about 700 tall
 
 ### ✏️ v0.153.53 — 11/11/2026 · 16:27 — On the PC "Players" with the cards, on its own, and "Show less"
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1174 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1174 tests passed)*
 
 - **[Project]** **[💻 PC]** **The sports widget's "Players"**: besides
   goals and assists there are again the yellow and red cards, as on the
@@ -3055,7 +3055,7 @@ say that **they still have to be verified on the phone**: when they are,
   standings box has no tabs
 
 ### ✏️ v0.153.52 — 11/11/2026 · 16:12 — On the PC the sports widget with "Today", the arrows, "Standings" and "Players" under the name
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1174 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1174 tests passed)*
 
 - **[Project]** **[💻 PC]** **The sports widget as the user wants it on
   the PC.** With the mouse over it only the match lights up, no longer
@@ -3080,7 +3080,7 @@ say that **they still have to be verified on the phone**: when they are,
   zero
 
 ### ✏️ v0.153.51 — 11/11/2026 · 15:37 — On the PC "OPEN", "⋯" and "+" appear with the mouse, as in Notion
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1172 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1172 tests passed)*
 
 - **[Project]** **[💻 PC]** **Fourth phase of the Notion look: the
   mouse.** In database tables "OPEN" shows only with the mouse over the
@@ -3100,7 +3100,7 @@ say that **they still have to be verified on the phone**: when they are,
   the mouse over it, and the clicks do their things
 
 ### ✏️ v0.153.50 — 11/11/2026 · 15:13 — On the PC the top bar on databases opened full page too
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1171 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1171 tests passed)*
 
 - **[Project]** **[💻 PC]** **The database opened full page has the same
   top bar as the pages** (found by the user: it still had the old
@@ -3114,7 +3114,7 @@ say that **they still have to be verified on the phone**: when they are,
   the click on "Madre" opens it
 
 ### ✏️ v0.153.49 — 11/11/2026 · 14:58 — On the PC the top bar with the page's path, and Notion's margins
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1170 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1170 tests passed)*
 
 - **[Project]** **[💻 PC]** **Third phase of the Notion look: the page's
   frame.** Instead of the round buttons floating over the page there is a
@@ -3136,7 +3136,7 @@ say that **they still have to be verified on the phone**: when they are,
   in the margin
 
 ### ✏️ v0.153.48 — 11/11/2026 · 14:38 — On the PC lines, menus and sidebar dense as in Notion
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1169 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1169 tests passed)*
 
 - **[Project]** **[💻 PC]** **Second phase of the Notion look: the
   sizes**, taken from the user's photos of Notion. The sidebar entries
@@ -3159,7 +3159,7 @@ say that **they still have to be verified on the phone**: when they are,
   apart (32 plus the line)
 
 ### ✏️ v0.153.47 — 11/11/2026 · 14:19 — On the PC the text is as big as in Notion
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1168 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1168 tests passed)*
 
 - **[Project]** **[💻 PC]** **First phase of the Notion look: text
   sizes**, measured in the user's photo (Notion with "Small text" and the
@@ -3178,7 +3178,7 @@ say that **they still have to be verified on the phone**: when they are,
   text line and database title as wide as in Notion, within 4%)
 
 ### ✏️ v0.153.46 — 11/11/2026 · 13:12 — On the PC the six dots straight, halfway up the letters and the databases' title
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1167 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1167 tests passed)*
 
 - **[Project]** **[💻 PC]** **The six dots are straight**: they sit
   halfway up the letters of the first line, not of the whole line (which
@@ -3200,7 +3200,7 @@ say that **they still have to be verified on the phone**: when they are,
   and to the left of the title without touching it
 
 ### ✏️ v0.153.45 — 11/11/2026 · 10:38 — On the PC the page sits a bit more to the right, with the six dots in the margin
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1166 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1166 tests passed)*
 
 - **[Project]** **[💻 PC]** **The whole page moves 30 points to the
   right**: text, title, icon, embedded databases, tables, images and also
@@ -3216,7 +3216,7 @@ say that **they still have to be verified on the phone**: when they are,
   (without `bleedStart` it fails)
 
 ### ✏️ v0.153.44 — 11/11/2026 · 10:17 — On the PC small windows open next to the click, and blocks have the six dots
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1165 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1165 tests passed)*
 
 - **[Project]** **[💻 PC]** **Small windows no longer rise from the
   bottom**: a database's settings, "Property visibility", filters,
@@ -3248,7 +3248,7 @@ say that **they still have to be verified on the phone**: when they are,
   comes under the mouse)
 
 ### ✏️ v0.153.43 — 11/11/2026 · 09:36 — Database tables like Notion: lines all the way, and the three dots next to "+"
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1163 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 16/11/2026, not yet on the phone; installed on the phone; 1163 tests passed)*
 
 - **[Project]** **[📱 Mobile]** **[💻 PC]** **The lines between a table's
   rows go all the way**: in a window (or a page) wider than the columns,
@@ -3265,7 +3265,7 @@ say that **they still have to be verified on the phone**: when they are,
   right edge, and the three dots open the panel)
 
 ### ✏️ v0.153.42 — 11/11/2026 · 09:20 — On the PC the pin's circle shows only with the mouse over it
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1162 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 16/11/2026, not yet on the phone; installed on the phone; 1162 tests passed)*
 
 - **[Project]** **[💻 PC]** **The grey circle behind the button to pin
   or hide the sidebar appears only with the mouse over it**; without, only
@@ -3276,14 +3276,14 @@ say that **they still have to be verified on the phone**: when they are,
   the circle always on it fails)
 
 ### ✏️ v0.153.41 — 11/11/2026 · 09:06 — A divider between "Favorite pages" and the pages
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1161 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 16/11/2026, not yet on the phone; installed on the phone; 1161 tests passed)*
 
 - **[Project]** **[📱 Mobile]** **[💻 PC]** **In the sidebar a divider
   separates "Favorite pages" from "Pages"**, the page tree, like the one
   under "Main menu". Not yet tested by the user
 
 ### ✏️ v0.153.40 — 11/11/2026 · 08:55 — Favorites and pages right under "Main menu"
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1161 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 16/11/2026, not yet on the phone; installed on the phone; 1161 tests passed)*
 
 - **[Project]** **[📱 Mobile]** **[💻 PC]** **The sidebar is now: "Main
   menu", "Favorite pages", the page tree, then "Notebooks", the widgets
@@ -3297,7 +3297,7 @@ say that **they still have to be verified on the phone**: when they are,
   (`app_pinned.png`) shows it
 
 ### ✏️ v0.153.39 — 11/11/2026 · 08:41 — "Main menu" at the top of the sidebar, the PC's pin in a circle
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1161 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 16/11/2026, not yet on the phone; installed on the phone; 1161 tests passed)*
 
 - **[Project]** **[📱 Mobile]** **[💻 PC]** **"Main menu" is the first
   entry of the sidebar**, above "Notebooks"; before it was under the
@@ -3314,7 +3314,7 @@ say that **they still have to be verified on the phone**: when they are,
   the sidebar on the PC (`app_pinned.png`) show it
 
 ### ✏️ v0.153.38 — 11/11/2026 · 08:25 — On the PC Ctrl+Z and Ctrl+Y are the page's Undo and Redo
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone (not connected); 1161 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; not installed on the phone (not connected); 1161 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **Ctrl+Z undoes like the page's Undo
   button**, and Ctrl+Y (or Ctrl+Shift+Z) redoes. Before, inside a line,
@@ -3331,7 +3331,7 @@ say that **they still have to be verified on the phone**: when they are,
   Ctrl+Y removes it again (without the fix it fails)
 
 ### ✏️ v0.153.37 — 10/11/2026 · 22:33 — With a divider removed the lines stay tight, and selecting with the mouse scrolls the page
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1160 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; installed on the phone; 1160 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **With a divider deleted, the
   lines below no longer take the space of a heading.** The lines before
@@ -3388,7 +3388,7 @@ say that **they still have to be verified on the phone**: when they are,
   it go, two cells emptied, all the cells and the table goes away)
 
 ### ✏️ v0.153.35 — 10/11/2026 · 22:08 — Selecting a large heading the lines below no longer widen
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1152 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; installed on the phone; 1152 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The lines under a large
   heading no longer take its space.** Selecting the end of a larger text
@@ -3471,7 +3471,7 @@ say that **they still have to be verified on the phone**: when they are,
   photo of "Connections" with the code question
 
 ### ✏️ v0.153.31 — 10/11/2026 · 17:30 — On the PC Ctrl+N makes a new page
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone (not connected); 1144 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; not installed on the phone (not connected); 1144 tests passed)*
 
 - **[Project]** **Ctrl+N on the PC**: a new page, with the link at the
   bottom of the open page (from the main menu, or from a screen that is
@@ -3485,7 +3485,7 @@ say that **they still have to be verified on the phone**: when they are,
   bottom of the menu and enters the new page
 
 ### ✏️ v0.153.30 — 10/11/2026 · 17:25 — On the PC locked pages open with Windows Hello
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone (not connected); 1143 tests passed)*
+*(Claude Code on the PC; tested by the user on 14/11/2026; not installed on the phone (not connected); 1143 tests passed)*
 
 - **[Project]** **Windows Hello for locked pages**, like the fingerprint
   on the phone: opening a locked page the Windows Hello window (face,
@@ -3522,7 +3522,7 @@ say that **they still have to be verified on the phone**: when they are,
   the clipboard)
 
 ### ✏️ v0.153.28 — 10/11/2026 · 10:26 — On the PC Notifications in Settings: the test, turning them off, turning them off for a while
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone (not connected); 1140 tests passed)*
+*(Claude Code on the PC; tested by the user on 16/11/2026; not installed on the phone (not connected); 1140 tests passed)*
 
 - **[Project]** **The "Notifications" section of Settings on the PC
   too**: "Send a test notification", "Turn off notifications" and "Turn
@@ -5987,7 +5987,7 @@ tall) had a white hole in place of every advertising box.
   `ImageFrameTest`
 
 ### 🆕 v0.122 — 20/10/2026 · 19:45 — Image handles only on request, and "Full resize" like a window
-*(Claude Code on the PC; not yet tested on the phone; 717 tests passed)*
+*(Claude Code on the PC; tested by the user on the phone on 14/11/2026; 717 tests passed)*
 
 - **[New feature]** **[📱 Mobile]** **Image handles are no longer shown**
   (they had been there since 06/10/2026, always, on all of them).
@@ -6158,7 +6158,7 @@ tall) had a white hole in place of every advertising box.
   `WebClipPlacementTest`, `WebClipperSheetTest`
 
 ### 🆕 v0.119 — 20/10/2026 · 17:55 — Favorite colours, under the last colours used
-*(Claude Code on the PC; not yet tested on the phone; 693 tests passed)*
+*(Claude Code on the PC; tested by the user on the phone on 14/11/2026; 693 tests passed)*
 
 - **[New feature]** **[📱 Mobile]** **The star** in the colour picker, to
   the right of the preview ("Aa" with the colour's name and code): tapped,
@@ -6279,7 +6279,7 @@ tall) had a white hole in place of every advertising box.
   not a `Box`
 
 ### 🔧 v0.118.0.1 — 20/10/2026 · 13:39 — Numbers in text are sorted as numbers: 2 before 10
-*(Claude Code on the PC; not yet tested on the phone; 678 tests passed)*
+*(Claude Code on the PC; tested by the user on the phone on 14/11/2026; 678 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **Sorting by a text** (the rows' name, a
   text property, the title of a linked page…) the numbers inside count for
@@ -6295,7 +6295,7 @@ tall) had a white hole in place of every advertising box.
   `buildRowGroups`. Test: `NaturalOrderTest`
 
 ### 🆕 v0.118 — 20/10/2026 · 13:01 — The navigable index: links to a line of the same page
-*(Claude Code on the PC; not yet tested on the phone; 674 tests passed)*
+*(Claude Code on the PC; tested by the user on the phone on 14/11/2026; 674 tests passed)*
 
 - **[New feature]** **[📱 Mobile]** **The pin**: in the six-dots menu of a
   text line (also callout, quote, toggle, code), **"Pin as link target"**.
@@ -6361,7 +6361,7 @@ tall) had a white hole in place of every advertising box.
   minimum, top and bottom; it appears scrolling and fades after)
 
 ### 🔧 v0.116.0.2 — 20/10/2026 · 08:58 — "Today" moves to the next matchday at midnight
-*(Claude Code on the PC; not yet tested on the phone; 661 tests passed; commit only local)*
+*(Claude Code on the PC; tested by the user on the phone on 14/11/2026; 661 tests passed; commit only local)*
 
 - **[Bug fix]** **[📱 Mobile]** **"Today" no longer keeps the finished
   matchday the day after**: until 23:59 of the day of the last match it
