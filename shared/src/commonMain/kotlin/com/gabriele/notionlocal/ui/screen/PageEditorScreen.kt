@@ -2606,6 +2606,7 @@ private fun PageEditorContent(
                 LocalSideScroll provides sideScroll,
                 LocalVisibleRunLines provides visibleRunLines,
                 LocalBlockLinkJump provides jumpToBlock,
+                LocalSlashAction provides applyInsertAction,
                 LocalMovedBlock provides movedBlockNow,
                 LocalNestedSpots provides nestedSpots,
                 LocalPageMentionOpen provides openMentionedPage,
@@ -4712,6 +4713,56 @@ fun slashShown(entries: List<SlashEntry>, query: String): List<SlashEntry> {
 }
 
 /**
+ * **Il menu "/" dopo una modifica del testo** da [oldBody] a [newBody], col
+ * cursore in [caret]: dove sta la barra e cosa c'è scritto dopo, o null se il
+ * menu è chiuso. Si apre con la barra scritta a inizio riga o dopo uno spazio
+ * (come su Notion e come la "@": "e/o" o "km/h" restano testo); scrivendo
+ * filtra le voci; si chiude se la barra se ne va, se il cursore torna prima di
+ * lei, con un a capo, o con uno spazio quando nessuna voce gli somiglia più
+ * ("/create two columns" e Invio fa le colonne). [anchor] è dove stava prima.
+ * Lo stesso per le righe della pagina e, dal 19/11/2026, per quelle dentro un
+ * altro blocco (colonne, toggle, riquadri, citazioni).
+ */
+internal fun slashAfterEdit(oldBody: String, newBody: String, caret: Int, anchor: Int?, catalog: List<SlashEntry>): Pair<Int, String>? {
+    val justTypedSlash = newBody.length == oldBody.length + 1 &&
+        caret >= 1 && caret <= newBody.length && newBody[caret - 1] == '/' &&
+        (caret == 1 || newBody[caret - 2].isWhitespace())
+    if (justTypedSlash) return (caret - 1) to ""
+    if (anchor == null) return null
+    if (anchor >= newBody.length || newBody[anchor] != '/' || caret <= anchor) return null
+    val typed = newBody.substring(anchor + 1, caret.coerceAtMost(newBody.length))
+    val spaceEnds = ' ' in typed && slashShown(catalog, typed).none { it.enabled }
+    if ('\n' in typed || typed.startsWith(' ') || spaceEnds) return null
+    return anchor to typed
+}
+
+/**
+ * **I tasti del menu "/" aperto**: Invio sceglie la voce evidenziata
+ * ([choosable] alla posizione [highlight]), ↑ e ↓ cambiano voce, Esc lo
+ * chiude. Vero se il tasto era suo.
+ */
+internal fun slashMenuKey(
+    event: KeyEvent,
+    choosable: List<SlashEntry>,
+    highlight: Int,
+    onHighlight: (Int) -> Unit,
+    onChoose: (SlashEntry) -> Unit,
+    onClose: () -> Unit
+): Boolean {
+    if (event.type != KeyEventType.KeyDown) return false
+    return when (event.key) {
+        Key.Enter, Key.NumPadEnter -> choosable.getOrNull(highlight)?.let { onChoose(it); true } ?: false
+        Key.DirectionDown -> true.also { onHighlight((highlight + 1).coerceAtMost((choosable.size - 1).coerceAtLeast(0))) }
+        Key.DirectionUp -> true.also { onHighlight((highlight - 1).coerceAtLeast(0)) }
+        Key.Escape -> true.also { onClose() }
+        else -> false
+    }
+}
+
+/** Cosa fa una voce del menu "/" scelta in una riga dentro un altro blocco: lo stesso che nelle righe della pagina. */
+internal val LocalSlashAction = staticCompositionLocalOf<((BlockEntity, SlashAction) -> Unit)?> { null }
+
+/**
  * Quanto una voce del menu "/" somiglia a quello che si è scritto dopo
  * la barra: 0 se il nome comincia così, 1 se ci comincia una parola del
  * nome ("To-do list" conta "do" come parola), 2 se lo contiene soltanto,
@@ -6369,17 +6420,9 @@ private fun MergedTextRunField(
         if (block != null) onSlashAction(block, entry.action)
     }
 
-    /** I tasti del menu "/" aperto: vero se il tasto era suo (vedi `slashHighlight`). */
-    fun slashKey(event: KeyEvent): Boolean {
-        if (slashAnchor == null || event.type != KeyEventType.KeyDown) return false
-        return when (event.key) {
-            Key.Enter, Key.NumPadEnter -> slashChoosable.getOrNull(slashHighlight)?.let { applySlashEntry(it); true } ?: false
-            Key.DirectionDown -> true.also { slashHighlight = (slashHighlight + 1).coerceAtMost((slashChoosable.size - 1).coerceAtLeast(0)) }
-            Key.DirectionUp -> true.also { slashHighlight = (slashHighlight - 1).coerceAtLeast(0) }
-            Key.Escape -> true.also { slashAnchor = null }
-            else -> false
-        }
-    }
+    /** I tasti del menu "/" aperto: vero se il tasto era suo (vedi `slashMenuKey`). */
+    fun slashKey(event: KeyEvent): Boolean =
+        slashAnchor != null && slashMenuKey(event, slashChoosable, slashHighlight, { slashHighlight = it }, ::applySlashEntry) { slashAnchor = null }
 
     // Il corpo più grande scelto con la barra Aa in queste righe: tutte le
     // righe del gruppo si allungano quanto basta per lui (vedi `lineScaleFor`).
@@ -6703,35 +6746,9 @@ private fun MergedTextRunField(
                     // Solo a inizio riga o dopo uno spazio (dal 12/11/2026, come su
                     // Notion e come la "@"): da quando Invio sceglie la voce, "e/o" o
                     // "km/h" con Invio in fondo avrebbero cambiato la riga.
-                    val justTypedSlash = newBody.length == oldBody.length + 1 &&
-                        caret >= 1 && caret <= newBody.length && newBody[caret - 1] == '/' &&
-                        (caret == 1 || newBody[caret - 2].isWhitespace())
-                    if (justTypedSlash) {
-                        slashAnchor = caret - 1
-                        slashQuery = ""
-                    } else {
-                        val anchor = slashAnchor
-                        if (anchor != null) {
-                            val stillOpen = anchor < newBody.length &&
-                                newBody[anchor] == '/' &&
-                                caret > anchor
-                            val typed = if (stillOpen) {
-                                newBody.substring(anchor + 1, caret.coerceAtMost(newBody.length))
-                            } else {
-                                ""
-                            }
-                            // Uno spazio chiude il menu solo se non c'è più una voce che
-                            // gli somiglia (dal 12/11/2026): "/create two columns" e
-                            // Invio, come su Notion, fa le colonne.
-                            val spaceEnds = ' ' in typed && slashShown(slashCatalog, typed).none { it.enabled }
-                            if (!stillOpen || '\n' in typed || typed.startsWith(' ') || spaceEnds) {
-                                slashAnchor = null
-                                slashQuery = ""
-                            } else {
-                                slashQuery = typed
-                            }
-                        }
-                    }
+                    val slash = slashAfterEdit(oldBody, newBody, caret, slashAnchor, slashCatalog)
+                    slashAnchor = slash?.first
+                    slashQuery = slash?.second.orEmpty()
 
                     // Il menu "@": si apre con la chiocciola a inizio riga o
                     // dopo uno spazio, e si chiude come quello "/" (vedi
@@ -8031,6 +8048,43 @@ private fun BlockRow(
             viewModel.arriveAtEdge(next.id, atEnd = !right)
             return true
         }
+        // **Il menu "/" anche qui** (dal 19/11/2026, trovato dall'utente nel collaudo: "su PC /
+        // non funziona"): le righe dentro un altro blocco (colonne, toggle, riquadri, citazioni)
+        // non l'avevano. Come nel campo unito: vedi `slashAfterEdit` e `slashMenuKey`.
+        val islandSlashAction = LocalSlashAction.current
+        var islandSlashAnchor by remember(block.id) { mutableStateOf<Int?>(null) }
+        var islandSlashQuery by remember(block.id) { mutableStateOf("") }
+        var islandSlashHighlight by remember(block.id) { mutableStateOf(0) }
+        LaunchedEffect(islandSlashQuery, islandSlashAnchor) { islandSlashHighlight = 0 }
+        val islandSlashCatalog = slashEntries()
+        val islandSlashChoosable = remember(islandSlashQuery, islandSlashCatalog, AppSettings.language) {
+            slashShown(islandSlashCatalog, islandSlashQuery).filter { it.enabled }
+        }
+        // Scelta una voce, la barra e quello che le sta dietro spariscono dal testo; poi la voce fa il suo.
+        fun applyIslandSlash(entry: SlashEntry) {
+            val anchor = islandSlashAnchor ?: return
+            val query = islandSlashQuery
+            islandSlashAnchor = null
+            islandSlashQuery = ""
+            val body = bodyOf(editState.fieldValue.text)
+            if (anchor >= body.length || body[anchor] != '/') return
+            val cleaned = body.removeRange(anchor, (anchor + 1 + query.length).coerceAtMost(body.length))
+            val spans = applyTextEdit(editState.spans, body, cleaned)
+            editState = BlockEditState(spans, TextFieldValue(RUN_LEAD + cleaned, TextRange(RUN_LEAD.length + anchor)))
+            viewModel.updateBlockSpans(block, spans)
+            islandSlashAction?.invoke(block, entry.action)
+        }
+        fun islandSlashKey(event: KeyEvent): Boolean =
+            islandSlashAnchor != null &&
+                slashMenuKey(event, islandSlashChoosable, islandSlashHighlight, { islandSlashHighlight = it }, ::applyIslandSlash) { islandSlashAnchor = null }
+        if (islandSlashAnchor != null && islandSlashAction != null) {
+            SlashMenu(
+                query = islandSlashQuery,
+                highlighted = islandSlashChoosable.getOrNull(islandSlashHighlight),
+                onDismiss = { islandSlashAnchor = null },
+                onSelect = ::applyIslandSlash
+            )
+        }
         val islandArrow by viewModel.arrowCaret.collectAsStateWithLifecycle()
         LaunchedEffect(islandArrow) {
             val arrow = islandArrow?.takeIf { it.blockId == block.id } ?: return@LaunchedEffect
@@ -8089,6 +8143,11 @@ private fun BlockRow(
                     }
 
                     val newText = bodyOf(newFieldValue.text)
+                    if (islandSlashAction != null) {
+                        val slash = slashAfterEdit(oldText, newText, (newFieldValue.selection.end - RUN_LEAD.length).coerceAtLeast(0), islandSlashAnchor, islandSlashCatalog)
+                        islandSlashAnchor = slash?.first
+                        islandSlashQuery = slash?.second.orEmpty()
+                    }
                     if (block.type in MULTILINE_TYPES) {
                         // **Nel riquadro e nella citazione l'Invio va a capo
                         // dentro** (dal 06/10/2026): il blocco si allunga.
@@ -8414,7 +8473,7 @@ private fun BlockRow(
                         proofMenu = word to at
                     }
                     .onGloballyPositioned { islandCoords[0] = it }
-                    .onPreviewKeyEvent { islandArrowKey(it) || islandSideKey(it) }
+                    .onPreviewKeyEvent { islandSlashKey(it) || islandArrowKey(it) || islandSideKey(it) }
                     // Col tasto destro, come nel campo unito.
                     .rightClickCaret(
                         enabled = isPc && !pageLocked,

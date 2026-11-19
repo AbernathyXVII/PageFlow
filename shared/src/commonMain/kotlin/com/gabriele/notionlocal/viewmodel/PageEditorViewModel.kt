@@ -4074,10 +4074,11 @@ class PageEditorViewModel(
             .filter { it.parentBlockId == parentId && it.orderIndex < current.orderIndex }
             .filter { isFocusableBlockType(it.type) }
             .maxByOrNull { it.orderIndex }
-        // La prima riga di un blocco sincronizzato o di una colonna: sopra non
-        // c'è un campo dove andare, il blocco si toglie dal suo menu.
+        // La prima riga di un blocco sincronizzato: sopra non c'è un campo
+        // dove andare, il blocco si toglie dal suo menu.
         val parentType = _blocks.value.find { it.id == parentId }?.type
-        if (previousSibling == null && (parentType == BlockType.SYNCED || parentType == BlockType.COLUMN)) return false
+        if (previousSibling == null && parentType == BlockType.SYNCED) return false
+        if (previousSibling == null && parentType == BlockType.COLUMN) return removeFirstColumnLine(current)
         val focusTarget = previousSibling?.id ?: parentId
         // La tastiera a volte manda lo stesso backspace due volte, a due
         // millisecondi di distanza (si vede nel registro): la seconda
@@ -4129,6 +4130,37 @@ class PageEditorViewModel(
         // Il campo resta vivo finché il fuoco non se n'è andato: non deve
         // posarlo sul campo invisibile. Vedi `backspaceAtIslandStart`.
         return false
+    }
+
+    /**
+     * **Backspace sulla prima riga vuota di una colonna** (dal 19/11/2026,
+     * l'utente nel collaudo: "con i sei puntini un blocco vuoto si elimina, ma
+     * vorrei che lo facesse anche con Backspace"): se ne va come con "Delete"
+     * dal suo menu (con la colonna, se era la sua ultima riga, e il gruppo
+     * torna righe normali se resta una colonna sola) e il cursore va in fondo
+     * alla riga che si vede prima. Il campo muore, e le righe intorno possono
+     * cambiare campo: true, il fuoco aspetta sul campo invisibile.
+     */
+    private fun removeFirstColumnLine(line: BlockEntity): Boolean {
+        if (!removingNestedLines.add(line.id)) return false
+        val above = lineNextTo(line.id, down = false)
+        snapshotForStructuralChange()
+        viewModelScope.launch {
+            try {
+                structuralEdits.withLock { repository.deleteBlock(line) }
+            } finally {
+                removingNestedLines.remove(line.id)
+            }
+            _externalChangeTick.value += 1
+            if (above != null) {
+                // Prima la pagina senza la riga: se no il fuoco se lo prende il campo
+                // vecchio della riga sopra (nella colonna che sta per sparire) e muore con lui.
+                withTimeoutOrNull(FOCUS_HANDOFF_TIMEOUT_MS) { blocks.first { list -> list.none { it.id == line.id } } }
+                _pendingCaret.value = above.id to plainTextOf(above).length
+                _focusRequestBlockId.value = above.id
+            }
+        }
+        return true
     }
 
     /** Le righe dentro un toggle che un backspace sta già togliendo. */

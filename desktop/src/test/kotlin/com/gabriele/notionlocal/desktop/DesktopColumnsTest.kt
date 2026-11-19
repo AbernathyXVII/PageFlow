@@ -455,7 +455,28 @@ class DesktopColumnsTest {
     @Test
     fun aSlashInsideAWordIsJustText() = slashRound("inword")
 
+    /**
+     * **Il menu "/" anche nelle righe dentro le colonne** (l'utente il 19/11/2026,
+     * nel collaudo: "Su PC / non funziona"): "/bul" e Invio fanno la riga elenco
+     * puntato e la barra col comando spariscono.
+     */
+    @Test
+    fun theSlashMenuWorksInsideAColumn() = slashRound("nested")
+
+    /**
+     * **Backspace sulla riga vuota di una colonna la toglie** (l'utente il 19/11/2026,
+     * nel collaudo: come "Delete" dai sei puntini): la colonna se ne va, il gruppo
+     * rimasto con una colonna torna righe normali e si scrive in fondo a "PRIMA".
+     */
+    @Test
+    fun backspaceRemovesTheEmptyFirstLineOfAColumn() = slashRound("backspace")
+
+    /** Lo stesso nella seconda colonna: il cursore va nella riga della prima, che resta. */
+    @Test
+    fun backspaceInTheSecondColumnGoesToTheFirst() = slashRound("backspace2")
+
     private fun slashRound(mode: String) {
+        if (mode == "nested" || mode.startsWith("backspace")) runBlocking { repo.makeColumns("vuota", 2) }
         val factory = ViewModelFactory(context)
         val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
         val owner = ScreenOwner()
@@ -516,6 +537,42 @@ class DesktopColumnsTest {
                 frames(10)
                 assertEquals(BlockType.NUMBERED_LIST_ITEM, childrenOf(null).single { it.id == "vuota" }.type)
                 assertEquals(listOf("prima", "vuota", "dopo"), childrenOf(null).map { it.id })
+                return
+            }
+            if (mode.startsWith("backspace")) {
+                val first = lineOf("vuota", 0).id
+                val second = lineOf("vuota", 1).id
+                if (mode == "backspace2") {
+                    click(450f + 100f, 213f)
+                    frames(5)
+                }
+                key(androidx.compose.ui.input.key.Key.Backspace)
+                frames(15)
+                assertTrue(blocks().none { it.type == BlockType.COLUMN_LIST || it.type == BlockType.COLUMN })
+                type("x")
+                frames(10)
+                shot("columns_backspace")
+                val top = childrenOf(null)
+                if (mode == "backspace") {
+                    assertEquals(listOf("prima", second, "dopo"), top.map { it.id })
+                    assertEquals("""[{"text":"PRIMAx"}]""", top[0].textJson)
+                } else {
+                    assertEquals(listOf("prima", first, "dopo"), top.map { it.id })
+                    assertEquals("""[{"text":"x"}]""", top[1].textJson)
+                }
+                assertTidy()
+                return
+            }
+            if (mode == "nested") {
+                type("/bul")
+                frames(5)
+                shot("columns_nested_slash")
+                key(androidx.compose.ui.input.key.Key.Enter)
+                frames(10)
+                val line = lineOf("vuota", 0)
+                assertEquals(BlockType.BULLET_LIST_ITEM, line.type)
+                assertEquals("""[{"text":""}]""", line.textJson)
+                assertEquals(1, childrenOf(childrenOf("vuota")[0].id).size)
                 return
             }
             if (mode == "inword") {

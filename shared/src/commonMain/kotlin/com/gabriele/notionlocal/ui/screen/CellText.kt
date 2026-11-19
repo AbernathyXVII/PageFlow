@@ -242,6 +242,8 @@ fun TextLikeCell(
     linkLabel: LinkLabel? = null,
     /** "Show as…" nel menu del link; null = non si può cambiare. */
     onLinkLabel: ((LinkLabel?) -> Unit)? = null,
+    /** Una cella Number: si scrive solo un numero (vedi `numberEditAllowed`). */
+    numeric: Boolean = false,
     cellKey: String
 ) {
     val wrap = LocalWrapCells.current
@@ -274,6 +276,7 @@ fun TextLikeCell(
                     value = fieldValue,
                     onValueChange = { next ->
                         val clean = next.text.replace("\n", "")
+                        if (numeric && !numberEditAllowed(localValue, clean)) return@BasicTextField
                         fieldValue = if (clean == next.text) next else TextFieldValue(clean, TextRange(clean.length))
                         if (clean != localValue) {
                             localValue = clean

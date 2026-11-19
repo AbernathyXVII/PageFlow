@@ -8058,6 +8058,7 @@ private fun CellContent(
                     // **Un URL si apre** (dal 05/10/2026): tocco = apri, tocco
                     // lungo = modifica, copia, incolla. Vedi `TextLikeCell`.
                     isLink = column.type == ColumnType.URL,
+                    numeric = column.type == ColumnType.NUMBER,
                     // E si mostra come si è scelto (dal 27/10/2026, "Show as…").
                     linkLabel = linkLabels?.labels?.get(row.id to column.id)?.takeIf { column.type == ColumnType.URL },
                     onLinkLabel = linkLabels?.takeIf { column.type == ColumnType.URL }?.let { labels -> { label -> labels.set(row, column, label) } },
@@ -11409,6 +11410,33 @@ private fun PropertySheet(
         }
     }
 
+    fun save() = onSave(
+        effectiveName,
+        selectedType,
+        saveOptions,
+        number.takeIf { selectedType == ColumnType.NUMBER },
+        duration.takeIf { selectedType == ColumnType.DURATION },
+        twinNameNow.trim().ifBlank { DbStrings.englishTypeName(ColumnType.RELATION) }
+            .takeIf { selectedType == ColumnType.RELATION && twoWay }
+    )
+    // **Prima di cambiare tipo, la domanda** (dal 19/11/2026, l'utente nel collaudo: "mi chiede
+    // se voglio davvero cambiare tipo della colonna"), come prima di eliminarla.
+    var confirmType by remember { mutableStateOf(false) }
+    if (confirmType) {
+        FitAlertDialog(
+            onDismissRequest = { confirmType = false },
+            title = { Text(DbStrings.changeTypeTitle(DbStrings.columnName(effectiveName), selectedType.displayName())) },
+            text = { Text(DbStrings.changeTypeNote) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmType = false
+                    save()
+                }) { Text(DbStrings.changeType) }
+            },
+            dismissButton = { TextButton(onClick = { confirmType = false }) { Text(Strings.cancel) } }
+        )
+    }
+
     NoteBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -11438,15 +11466,12 @@ private fun PropertySheet(
                 TextButton(
                     enabled = canSave,
                     onClick = {
-                        onSave(
-                            effectiveName,
-                            selectedType,
-                            saveOptions,
-                            number.takeIf { selectedType == ColumnType.NUMBER },
-                            duration.takeIf { selectedType == ColumnType.DURATION },
-                            twinNameNow.trim().ifBlank { DbStrings.englishTypeName(ColumnType.RELATION) }
-                                .takeIf { selectedType == ColumnType.RELATION && twoWay }
-                        )
+                        // Un tipo nuovo per una proprietà che c'è già (la principale compresa): si chiede.
+                        if (target is PropertyTarget.NameAsColumn || (existing != null && selectedType != existing.type)) {
+                            confirmType = true
+                        } else {
+                            save()
+                        }
                     }
                 ) { Text(if (existing == null) DbStrings.add else EditorStrings.save) }
             }

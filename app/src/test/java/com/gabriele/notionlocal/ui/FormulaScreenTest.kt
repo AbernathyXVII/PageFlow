@@ -3,6 +3,7 @@ package com.gabriele.notionlocal.ui
 import android.app.Application
 import android.content.Context
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
@@ -219,6 +220,8 @@ class FormulaScreenTest {
         compose.waitForIdle()
         compose.onNodeWithText("Edit formula · prop(\"Prezzo\") * 2").performScrollTo().assertExists()
         compose.onNodeWithText("Save").performClick()
+        // Prima di cambiare tipo si chiede (dal 19/11/2026).
+        compose.onNode(hasText("Change type") and hasClickAction()).performClick()
         waitFor("la proprietà è una formula") {
             runBlocking { db.databaseDao().getColumnById("quanti")!!.type } == ColumnType.FORMULA
         }

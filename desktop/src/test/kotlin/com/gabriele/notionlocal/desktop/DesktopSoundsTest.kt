@@ -40,4 +40,16 @@ class DesktopSoundsTest {
             }
         }
     }
+
+    /** **Il clic del contatore lungo abbastanza da sentirsi su Windows** (19/11/2026): lo stesso suono, col silenzio dopo. */
+    @Test
+    fun theCounterClicksLastAtLeastAFewTenthsOfASecond() {
+        for (sound in CounterSound.entries) {
+            val wave = CounterSoundWaves.samples(sound)
+            val played = DesktopSounds.counterSamples(sound)
+            assertTrue("${sound.name}: ${played.size} campioni", played.size >= (0.3 * COUNTER_SAMPLE_RATE).toInt())
+            assertTrue(sound.name, played.copyOf(wave.size).contentEquals(wave))
+            assertTrue("${sound.name}: dopo il suono silenzio", played.drop(wave.size).all { it.toInt() == 0 })
+        }
+    }
 }

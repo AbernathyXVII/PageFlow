@@ -41,6 +41,7 @@ object DesktopSounds {
             val clip = counterClip(sound) ?: return@execute
             runCatching {
                 clip.stop()
+                clip.flush()
                 clip.framePosition = 0
                 setGain(clip, CounterSoundWaves.gain(volume))
                 clip.start()
@@ -88,7 +89,20 @@ object DesktopSounds {
     }
 
     private fun counterClip(sound: CounterSound): Clip? =
-        counter[sound] ?: clipOf(CounterSoundWaves.samples(sound))?.also { counter[sound] = it }
+        counter[sound] ?: clipOf(counterSamples(sound))?.also { counter[sound] = it }
+
+    /**
+     * **Il clic del contatore con del silenzio dopo** (dal 19/11/2026, trovato dall'utente nel
+     * collaudo: "il counter non va, timer e pomodoro sì"): su Windows un suono più corto del
+     * buffer di Java Sound (i clic durano da 20 a 180 ms) spesso non si sente; la sveglia, lunga,
+     * sì. Allungato a [MIN_COUNTER_SECONDS] col silenzio, suona com'era.
+     */
+    fun counterSamples(sound: CounterSound): ShortArray {
+        val samples = CounterSoundWaves.samples(sound)
+        return samples.copyOf(max(samples.size, (MIN_COUNTER_SECONDS * COUNTER_SAMPLE_RATE).roundToInt()))
+    }
+
+    private const val MIN_COUNTER_SECONDS = 0.3
 
     /** Un suono pronto da [samples] (44,1 kHz, 16 bit, mono); null senza audio. */
     private fun clipOf(samples: ShortArray): Clip? = runCatching {

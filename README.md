@@ -1126,6 +1126,45 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.41 — 19/11/2026 · 15:28 — The counter heard on the PC, "/" and Backspace in columns, a question before changing a type
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1339 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The clicks of the Counter widget are heard on
+  the PC**: its sounds last from 20 to 180 thousandths of a second, often too
+  short for Windows to play them. Now they are followed by silence up to
+  three tenths of a second, and every click starts the sound again from the
+  beginning. The timer and the pomodoro, longer, were already heard. Found by
+  the user on the test page
+- **[Bug fix]** **[💻 PC]** **[📱 Mobile]** **The "/" menu in the lines inside
+  columns and toggles** (and in the to-do lines): typing "/" there opened
+  nothing. Now the menu opens as in the other lines: Enter and the arrows
+  choose, Escape closes, and the "/" with what was typed goes away. Found by
+  the user on the test page
+- **[Bug fix]** **[💻 PC]** **[📱 Mobile]** **Backspace removes the empty
+  first line of a column**, as "Delete" from its six dots: the column goes
+  too if it was its last line, and a group left with one column becomes
+  normal lines again. The cursor goes to the end of the line before. Before,
+  that line could be removed only from its menu. Found by the user on the
+  test page
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **A question before changing the
+  type of a property**: "Change type" (also on the main property, Name) asks
+  "Change "Price" to Number?" before saving, with "Change type" and "Cancel";
+  the values in the rows stay as they are. Keeping the same type asks nothing
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **A Number cell takes only a
+  number**: digits, a sign at the beginning, one comma or point. Letters are
+  ignored; a value left from before (a column that was Name) can still be
+  deleted
+- **[Project]** `DesktopSounds.counterSamples`; `slashAfterEdit`,
+  `slashMenuKey` and `LocalSlashAction` (the same "/" menu for the shared text
+  and the single fields); `PageEditorViewModel.removeFirstColumnLine`;
+  `numberEditAllowed` and `TextLikeCell(numeric)`; the question in
+  `PropertySheet`. Tests: `DesktopSoundsTest.theCounterClicksLastAtLeastAFewTenthsOfASecond`,
+  `DesktopColumnsTest.theSlashMenuWorksInsideAColumn`,
+  `backspaceRemovesTheEmptyFirstLineOfAColumn`,
+  `backspaceInTheSecondColumnGoesToTheFirst`,
+  `PropertyMenuTest.changingTheTypeAsksFirst`/`aNumberCellTakesOnlyANumber`,
+  `DesktopLinkTitlesTest` (a Link property showing page titles, on the PC)
+
 ### ✏️ v0.155.40 — 18/11/2026 · 22:57 — "Flag (for Table of contents)", and the table of contents on the phone too
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1332 tests passed)*
 

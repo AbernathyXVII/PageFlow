@@ -3,6 +3,8 @@ package com.gabriele.notionlocal.ui
 import java.time.Duration
 import org.robolectric.Shadows.shadowOf
 import com.gabriele.notionlocal.data.LinkTitles
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.semantics.SemanticsActions
@@ -35,6 +37,7 @@ import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.ui.screen.PROPERTY_MENU_TAG
 import com.gabriele.notionlocal.ui.screen.PROPERTY_NAME_FIELD_TAG
 import com.gabriele.notionlocal.ui.screen.PageEditorScreen
+import com.gabriele.notionlocal.ui.screen.numberEditAllowed
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 import kotlinx.coroutines.runBlocking
@@ -189,8 +192,53 @@ class PropertyMenuTest {
         assertTrue(compose.onAllNodesWithText("Property name").fetchSemanticsNodes().isEmpty())
         compose.onNodeWithText("Checkbox").performScrollTo().performClick()
         compose.onNodeWithText("Save").performClick()
+        // Prima di cambiare tipo si chiede (dal 19/11/2026).
+        compose.onNode(hasText("Change type") and hasClickAction()).performClick()
         waitFor { column("voto").type == ColumnType.CHECKBOX }
         assertEquals("Voto", column("voto").name)
+    }
+
+    /**
+     * **Prima di cambiare tipo, la domanda** (l'utente il 14/11/2026, nel collaudo: "mi
+     * chiede se voglio davvero cambiare tipo della colonna"): con "Cancel" resta com'era.
+     */
+    @Test
+    fun changingTheTypeAsksFirst() {
+        open()
+        compose.onNodeWithText("Voto").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Change type").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Checkbox").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Change \"Voto\" to Checkbox?").assertExists()
+        compose.onAllNodesWithText("Cancel").onLast().performClick()
+        compose.waitForIdle()
+        assertTrue(compose.onAllNodesWithText("Change \"Voto\" to Checkbox?").fetchSemanticsNodes().isEmpty())
+        Thread.sleep(300)
+        assertEquals(ColumnType.NUMBER, column("voto").type)
+        // Lo stesso tipo di prima non chiede niente.
+        compose.onNodeWithText("Number").performScrollTo().performClick()
+        compose.onNodeWithText("Save").performClick()
+        compose.waitForIdle()
+        assertTrue(compose.onAllNodes(hasText("Change \"Voto\"", substring = true)).fetchSemanticsNodes().isEmpty())
+    }
+
+    /** **In una cella Number solo un numero** (l'utente il 14/11/2026): le lettere no, cancellare sì. */
+    @Test
+    fun aNumberCellTakesOnlyANumber() {
+        assertTrue(numberEditAllowed("", "-"))
+        assertTrue(numberEditAllowed("12", "12,5"))
+        assertTrue(numberEditAllowed("12.", "12.75"))
+        assertTrue(!numberEditAllowed("12", "12a"))
+        assertTrue(!numberEditAllowed("1.5", "1.5.2"))
+        assertTrue(!numberEditAllowed("", "Mario"))
+        // Un valore di prima che numero non è (la colonna era Name) si cancella.
+        assertTrue(numberEditAllowed("Mario", "Mari"))
+        assertTrue(numberEditAllowed("Mario", ""))
+        assertTrue(!numberEditAllowed("Mario", "Marion"))
+        assertTrue(!numberEditAllowed("12345", "a"))
     }
 
     @Test

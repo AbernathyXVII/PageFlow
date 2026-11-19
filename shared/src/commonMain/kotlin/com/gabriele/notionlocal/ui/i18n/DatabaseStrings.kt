@@ -418,6 +418,26 @@ object DbStrings {
         "모든 행의 값도 함께 삭제돼요.",
         "すべての行のこのプロパティの値も削除されます。"
     )
+    fun changeTypeTitle(name: String, type: String) = t(
+        "Change \"$name\" to $type?",
+        "Cambiare \"$name\" in $type?",
+        "\"$name\" in $type ändern?",
+        "Changer « $name » en $type ?",
+        "¿Cambiar \"$name\" a $type?",
+        "将“${name}”改为${type}？",
+        "'$name'을(를) $type(으)로 바꿀까요?",
+        "「${name}」を${type}に変更しますか？"
+    )
+    val changeTypeNote get() = t(
+        "The values already in the rows stay, but those that don't fit the new type may show differently.",
+        "I valori già scritti nelle righe restano, ma quelli che non vanno bene per il tipo nuovo potrebbero vedersi diversi.",
+        "Die Werte in den Zeilen bleiben, aber was nicht zum neuen Typ passt, wird eventuell anders angezeigt.",
+        "Les valeurs déjà dans les lignes restent, mais celles qui ne conviennent pas au nouveau type peuvent s'afficher autrement.",
+        "Los valores de las filas se conservan, pero los que no encajan con el nuevo tipo pueden verse distintos.",
+        "行中已有的值会保留，但不符合新类型的值可能显示不同。",
+        "행에 있는 값은 그대로 남지만, 새 유형에 맞지 않는 값은 다르게 보일 수 있어요.",
+        "行の値はそのまま残りますが、新しい種類に合わない値は表示が変わることがあります。"
+    )
     val noPropertiesYet get() = t("This database has no properties yet.", "Questo database non ha ancora proprietà.", "Diese Datenbank hat noch keine Eigenschaften.", "Cette base de données n'a pas encore de propriétés.", "Esta base de datos aún no tiene propiedades.", "此数据库还没有属性。", "이 데이터베이스에는 아직 속성이 없습니다.", "このデータベースにはまだプロパティがありません。")
 
     // --- Tag ---

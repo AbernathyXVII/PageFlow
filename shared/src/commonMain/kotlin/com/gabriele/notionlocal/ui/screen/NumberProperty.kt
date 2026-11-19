@@ -97,6 +97,21 @@ fun formatNumberValue(raw: String, settings: NumberSettings): String {
 
 fun formatNumberValue(raw: String, column: DatabaseColumnEntity): String = formatNumberValue(raw, column.numberSettings())
 
+/**
+ * **In una cella Number solo un numero** (dal 19/11/2026, l'utente nel collaudo: "posso
+ * scriverci anche le lettere, non va bene"): dopo il tasto [after] è ancora un numero a
+ * metà (segno, cifre, una virgola o un punto), oppure si è solo cancellato, anche da un
+ * valore di prima che numero non è (una colonna che era Name).
+ */
+fun numberEditAllowed(before: String, after: String): Boolean {
+    if (NUMBER_TYPING.matches(after)) return true
+    val prefix = before.commonPrefixWith(after).length
+    val suffix = before.drop(prefix).commonSuffixWith(after.drop(prefix)).length
+    return after.length == prefix + suffix
+}
+
+private val NUMBER_TYPING = Regex("[-+]?\\d*([.,]\\d*)?")
+
 // --- A sinistra, al centro, a destra (dal 26/09/2026) ---
 
 /** Dove sta il contenuto della cella che si sta disegnando: lo dà la tabella, altrove è a sinistra. */
