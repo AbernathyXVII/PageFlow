@@ -1126,6 +1126,22 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.46 — 23/11/2026 · 17:49 — The right-click menu in order: Delete at the bottom, Duplicate under Paste, Color, every type in Turn into
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1350 tests passed)*
+
+- **[Change]** **[💻 PC]** **The right-click menu of a line, in the user's
+  order**: Delete is at the bottom, in red like "Move to trash"; Duplicate is
+  under Paste; Color (of the block) takes the place of "Text and background
+  color"; Turn into has every item of "Add or change block type", in the same
+  order (those that would lose the text of the line, like Image or Link to
+  page, do what they do from there). Delete is red in the menu of the chosen
+  blocks too
+- **[Bug fix]** **[💻 PC]** **A submenu taller than the window scrolls** with
+  the wheel, as the menu does: the last items of Turn into were out of reach
+- **[Project]** `PcMenuItem.danger`; the submenu of `PcContextMenu` scrolls;
+  `PcPageMenu` without `onColors`. Tests: `DesktopPcMenuTest` (Delete red and
+  last, Duplicate under Paste, Turn into scrolls)
+
 ### ✏️ v0.155.45 — 23/11/2026 · 17:15 — A menu for the chosen blocks, the block options in the right-click menu, no more long press on the PC
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1350 tests passed)*
 

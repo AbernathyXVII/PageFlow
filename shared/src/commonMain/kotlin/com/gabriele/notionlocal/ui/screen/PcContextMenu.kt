@@ -58,6 +58,9 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 /**
  * **Il menu del tasto destro sul PC** (dal 13/11/2026, chiesto dall'utente):
@@ -78,7 +81,9 @@ class PcMenuItem(
     /** Le voci che si aprono di lato passandoci sopra. */
     val submenu: List<PcMenuEntry> = emptyList(),
     /** Null con un sottomenu: il clic lo apre e basta. */
-    val onClick: (() -> Unit)? = null
+    val onClick: (() -> Unit)? = null,
+    /** In rosso, come "Move to trash" (dal 23/11/2026, chiesto dall'utente per "Delete"). */
+    val danger: Boolean = false
 ) : PcMenuEntry
 
 object PcMenuSeparator : PcMenuEntry
@@ -166,7 +171,8 @@ private fun PcMenuRow(
     val hovered by interaction.collectIsHoveredAsState()
     val latestHover by rememberUpdatedState(onHover)
     LaunchedEffect(hovered) { if (hovered) latestHover() }
-    val color = if (item.enabled) PcMenuText else PcMenuText.copy(alpha = 0.38f)
+    val base = if (item.danger) MaterialTheme.colorScheme.error else PcMenuText
+    val color = if (item.enabled) base else base.copy(alpha = 0.38f)
     Box {
         Row(
             modifier = Modifier
@@ -199,7 +205,8 @@ private fun PcMenuRow(
             // finestra "la finestra di destra è completamente staccata", e andandoci col mouse si chiudeva).
             Popup(popupPositionProvider = SubmenuBesideItem, onDismissRequest = onCloseSubmenu, properties = PopupProperties(focusable = false)) {
                 Surface(shape = PcMenuShape, color = PcMenuBackground, border = BorderStroke(1.dp, PcMenuBorder), shadowElevation = 8.dp) {
-                    Column(modifier = Modifier.padding(vertical = 8.dp).width(IntrinsicSize.Max)) {
+                    // Più alto della finestra ("Turn into", dal 23/11/2026 con tutte le voci) scorre, come il menu.
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(vertical = 8.dp).width(IntrinsicSize.Max)) {
                         PcMenuEntries(item.submenu, onDismissAll)
                     }
                 }

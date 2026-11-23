@@ -88,7 +88,9 @@ class DesktopPcMenuTest {
         val frames: (Int) -> Unit,
         val shot: (String) -> Bitmap,
         val mouse: (PointerEventType, Offset, PointerButton?, PointerButtons) -> Unit,
-        val key: (Key, Boolean) -> Unit
+        val key: (Key, Boolean) -> Unit,
+        /** Un giro di rotella in [at]: in giù col numero positivo. */
+        val wheel: (Offset, Float) -> Unit = { _, _ -> }
     ) {
         fun move(x: Float, y: Float) {
             mouse(PointerEventType.Move, Offset(x, y), null, PointerButtons())
@@ -150,7 +152,11 @@ class DesktopPcMenuTest {
         }
         try {
             frames(40)
-            Page(frames, shot, mouse, key).act()
+            val wheel: (Offset, Float) -> Unit = { at, notches ->
+                onWindowThread { scene.sendPointerEvent(PointerEventType.Scroll, at, scrollDelta = Offset(0f, notches), type = PointerType.Mouse) }
+                frames(2)
+            }
+            Page(frames, shot, mouse, key, wheel).act()
         } finally {
             onWindowThread { scene.close() }
         }
@@ -188,8 +194,8 @@ class DesktopPcMenuTest {
         frames(5)
         val menu = shot("pcmenu_open")
         val top = firstRow(menu, 110, terza)
-        // Le voci del blocco (dal 23/11/2026: due, una riga, sei, una riga), quattro voci (copia…), una riga, Outdent, Indent, Move up.
-        val moveUp = top + BLOCK_ITEMS + 4 * 30 + 9 + 2 * 30 + 15
+        // Le voci del blocco (dal 23/11/2026), cinque voci (copia, incolla, Duplicate…), una riga, Outdent, Indent, Move up.
+        val moveUp = top + BLOCK_ITEMS + 5 * 30 + 9 + 2 * 30 + 15
         click(190f, moveUp.toFloat())
         frames(10)
         assertEquals(listOf("prima", "terza", "seconda"), lines().map { it.id })
@@ -211,7 +217,7 @@ class DesktopPcMenuTest {
         frames(5)
         val menu = shot("pcmenu_open2")
         val top = firstRow(menu, 110, seconda)
-        val aaTop = top + BLOCK_ITEMS + 10 * 30 + 2 * 9
+        val aaTop = top + BLOCK_ITEMS + 11 * 30 + 2 * 9
         move(190f, aaTop + 15f)
         frames(5)
         val open = shot("pcmenu_aa")
@@ -233,8 +239,8 @@ class DesktopPcMenuTest {
     }
 
     /**
-     * **Le voci di "Block options" nel menu** (dal 23/11/2026, chiesto dall'utente): "Duplicate"
-     * fa la copia della riga cliccata, subito sotto.
+     * **Le voci di "Block options" nel menu** (dal 23/11/2026, chiesto dall'utente): "Delete" in
+     * rosso, e "Duplicate", sotto "Paste", fa la copia della riga cliccata, subito sotto.
      */
     @Test
     fun theBlockItemsAreInTheMenu() = withPage {
@@ -242,9 +248,32 @@ class DesktopPcMenuTest {
         val terza = y.last()
         click(110f, terza.toFloat(), right = true)
         frames(5)
-        val top = firstRow(shot("pcmenu_open3"), 110, terza)
-        // Add above, Add below, una riga, Pin, Flag, Turn into, Color, Duplicate.
-        click(190f, (top + 6 * 30 + 9 + 15).toFloat())
+        val menu = shot("pcmenu_open3")
+        val top = firstRow(menu, 110, terza)
+        // Delete in fondo e in rosso (il rosso chiaro di "Move to trash"): l'ultima riga scritta del menu.
+        fun reddish(c: Int) = ((c shr 16) and 0xFF).let { r -> r > 200 && r - ((c shr 8) and 0xFF) > 30 && r - (c and 0xFF) > 30 }
+        fun written(c: Int) = ((c shr 16) and 0xFF) > 140 || ((c shr 8) and 0xFF) > 140
+        val textRows = (top until menu.height).filter { y -> (150 until 260).any { x -> written(menu.getColor(x, y)) } }
+        val redRows = textRows.filter { y -> (150 until 260).count { x -> reddish(menu.getColor(x, y)) } > 2 }
+        assertTrue("una riga rossa", redRows.isNotEmpty())
+        assertTrue("Delete è l'ultima: rosse $redRows, scritte fino a ${textRows.last()}", redRows.last() >= textRows.last() - 2 && redRows.first() > top + 600)
+        // Turn into, passandoci sopra: il sottomenu con tutte le voci di "Add or change block type".
+        val turnIntoY = (top + 4 * 30 + 9 + 15).toFloat()
+        move(190f, turnIntoY)
+        frames(5)
+        val before = shot("pcmenu_turninto")
+        // Più alto della finestra: con la rotella scorre fino alle ultime voci.
+        move(330f, turnIntoY)
+        move(380f, 900f)
+        repeat(6) { wheel(Offset(380f, 900f), 3f) }
+        frames(5)
+        val after = shot("pcmenu_turninto_scrolled")
+        val changed = (40 until 1080 step 10).count { y -> before.getColor(380, y) != after.getColor(380, y) }
+        assertTrue("il sottomenu è scorso: $changed righe cambiate", changed > 10)
+        move(190f, turnIntoY)
+        frames(3)
+        // Le voci del blocco, Copy, Paste, Duplicate.
+        click(190f, (top + BLOCK_ITEMS + 2 * 30 + 15).toFloat())
         frames(10)
         val now = lines()
         assertEquals(4, now.size)
@@ -252,8 +281,8 @@ class DesktopPcMenuTest {
     }
 
     private companion object {
-        /** Le voci del blocco in cima al menu (dal 23/11/2026): Add above e below, una riga, sei voci, una riga. */
-        const val BLOCK_ITEMS = 8 * 30 + 2 * 9
+        /** Le voci del blocco in cima al menu (dal 23/11/2026): Add above e below, una riga, Pin, Flag, Turn into, una riga. */
+        const val BLOCK_ITEMS = 5 * 30 + 2 * 9
         val MENU_BACKGROUND = 0xFF2C2C2C.toInt()
         val MENU_BORDER = 0xFF454545.toInt()
     }

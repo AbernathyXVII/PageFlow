@@ -3495,10 +3495,6 @@ private fun PageEditorContent(
                                 onFont = { font ->
                                     if (!viewModel.applyFontToCapturedSelection(font)) showMessage(context, EditorStrings.selectTextFirst)
                                 },
-                                onColors = {
-                                    viewModel.captureSelection()
-                                    showColorPicker = true
-                                },
                                 onLink = {
                                     viewModel.captureSelection()
                                     linkDialogFor = viewModel.capturedLink().orEmpty()
@@ -9207,7 +9203,7 @@ private fun PcSelectionMenu(
         add(PcMenuItem(EditorStrings.copy, icon(Icons.Filled.ContentCopy), hint = "Ctrl+C", onClick = onCopy))
         if (editable) {
             add(PcMenuItem(EditorStrings.cut, icon(Icons.Filled.ContentCut), hint = "Ctrl+X", onClick = onCut))
-            add(PcMenuItem(Strings.delete, icon(Icons.Filled.Delete), hint = "Del", onClick = onDelete))
+            add(PcMenuItem(Strings.delete, icon(Icons.Filled.Delete), hint = "Del", danger = true, onClick = onDelete))
             add(PcMenuSeparator)
             add(PcMenuItem(EditorStrings.outdent, icon(Icons.Filled.FormatIndentDecrease), onClick = { onIndent(false) }))
             add(PcMenuItem(EditorStrings.indent, icon(Icons.Filled.FormatIndentIncrease), onClick = { onIndent(true) }))
@@ -9271,7 +9267,6 @@ private fun PcPageMenu(
     onParagraph: (BlockEntity?) -> Unit,
     onFontSize: () -> Unit,
     onFont: (PageFont?) -> Unit,
-    onColors: () -> Unit,
     onLink: () -> Unit
 ) {
     when (open.kind) {
@@ -9301,7 +9296,9 @@ private fun PcPageMenu(
                 clipboard?.nextPasteMode = mode
                 open.edit.paste()
             }
-            val turnInto = turnIntoEntries()
+            // Turn into ha tutte le voci di "Add or change block type", nel loro ordine (dal 23/11/2026, chiesto
+            // dall'utente): quelle che con Turn into il testo lo perderebbero fanno quello che fanno da lì.
+            val keepsText = turnIntoEntries()
             val entries = buildList {
                 // **Le voci di "Block options" insieme alle altre** (dal 23/11/2026, chiesto dall'utente:
                 // "so già che ce ne saranno alcune doppie, poi ti dico quali togliere").
@@ -9328,23 +9325,21 @@ private fun PcPageMenu(
                     add(
                         PcMenuItem(
                             EditorStrings.turnInto, icon(Icons.Filled.Autorenew),
-                            submenu = turnInto.map { entry ->
+                            submenu = slashEntries().map { entry ->
                                 PcMenuItem(EditorStrings.blockType(entry.label), icon(entry.icon), enabled = entry.enabled, onClick = {
-                                    if ((entry.action as? SlashAction.Type)?.type != focused.type) onTurnInto(focused, entry)
+                                    when {
+                                        (entry.action as? SlashAction.Type)?.type == focused.type -> Unit
+                                        entry in keepsText -> onTurnInto(focused, entry)
+                                        else -> onTypeEntry(focused, entry)
+                                    }
                                 })
                             }
                         )
                     )
-                    // Il codice ha i colori del suo linguaggio: niente "Color", come nel menu del blocco.
-                    if (focused.type != BlockType.CODE) {
-                        add(PcMenuItem(EditorStrings.color, icon(Icons.Filled.Brush), onClick = { onBlockStep(focused, BlockMenuStep.COLOR) }))
-                    }
                     if (focused.type == BlockType.CALLOUT) {
                         add(PcMenuItem(EditorStrings.editIcon, icon(Icons.Filled.EmojiEmotions), onClick = { onBlockStep(focused, BlockMenuStep.CALLOUT_ICON) }))
                         add(PcMenuItem(EditorStrings.backgroundColor, icon(Icons.Filled.FormatColorFill), onClick = { onBlockStep(focused, BlockMenuStep.CALLOUT_COLOR) }))
                     }
-                    add(PcMenuItem(Strings.duplicate, icon(Icons.Filled.ContentCopy), onClick = { onDuplicate(focused) }))
-                    add(PcMenuItem(Strings.delete, icon(Icons.Filled.Delete), onClick = { onDelete(focused) }))
                     add(PcMenuSeparator)
                 }
                 add(PcMenuItem(EditorStrings.copy, icon(Icons.Filled.ContentCopy), hint = "Ctrl+C", onClick = open.edit.copy))
@@ -9360,6 +9355,8 @@ private fun PcPageMenu(
                         onClick = { paste(PasteMode.KEEP_SOURCE) }
                     )
                 )
+                // Sotto Paste (dal 23/11/2026, chiesto dall'utente).
+                if (focused != null) add(PcMenuItem(Strings.duplicate, icon(Icons.Filled.ContentCopy), onClick = { onDuplicate(focused) }))
                 add(PcMenuItem(EditorStrings.cut, icon(Icons.Filled.ContentCut), hint = "Ctrl+X", onClick = open.edit.cut))
                 add(PcMenuItem(EditorStrings.selectAll, icon(Icons.Filled.SelectAll), hint = "Ctrl+A", onClick = onSelectAll))
                 add(PcMenuSeparator)
@@ -9397,7 +9394,8 @@ private fun PcPageMenu(
                             )
                         )
                     )
-                    add(PcMenuItem(EditorStrings.textAndBackgroundColor, icon(Icons.Filled.Brush), onClick = onColors))
+                    // "Color" del blocco al posto di "Text and background color" (dal 23/11/2026, chiesto dall'utente).
+                    add(PcMenuItem(EditorStrings.color, icon(Icons.Filled.Brush), onClick = { onBlockStep(focused, BlockMenuStep.COLOR) }))
                     if (selectionLink.hasText || selectionLink.link != null || selectionLink.onSite) {
                         add(PcMenuItem(EditorStrings.link, icon(Icons.Filled.Link), onClick = onLink))
                     }
@@ -9405,6 +9403,11 @@ private fun PcPageMenu(
                 add(PcMenuSeparator)
                 add(PcMenuItem(EditorStrings.undo, icon(Icons.Filled.Undo), hint = "Ctrl+Z", enabled = canUndo, onClick = { viewModel.undo() }))
                 add(PcMenuItem(EditorStrings.redo, icon(Icons.Filled.Redo), hint = "Ctrl+Y", enabled = canRedo, onClick = { viewModel.redo() }))
+                // In fondo e in rosso, come "Move to trash" (dal 23/11/2026, chiesto dall'utente).
+                if (focused != null) {
+                    add(PcMenuSeparator)
+                    add(PcMenuItem(Strings.delete, icon(Icons.Filled.Delete), danger = true, onClick = { onDelete(focused) }))
+                }
             }
             PcContextMenu(entries, onDismiss = onClose)
         }
