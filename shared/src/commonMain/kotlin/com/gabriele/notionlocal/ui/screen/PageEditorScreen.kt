@@ -1743,7 +1743,9 @@ private fun PageEditorContent(
         PageTextMenuHost(
             open = { at, edit ->
                 val chosen = selectedBlocks.value
-                if (chosen.isNotEmpty() && runCatching { blockPicker.at(at)?.second }.getOrNull() in chosen) {
+                // Anche una riga scelta dentro una colonna (dal 23/11/2026).
+                val under = runCatching { listOfNotNull(blockPicker.innerAt(at)?.second, blockPicker.at(at)?.second) }.getOrDefault(emptyList())
+                if (chosen.isNotEmpty() && under.any { it in chosen }) {
                     selectionMenuAt = at
                 } else {
                     pcMenu = PcMenuOpen(at, edit)
@@ -3311,6 +3313,11 @@ private fun PageEditorContent(
                             order = { latestRenderItems.value.flatMap { renderItemBlockIds(it) } },
                             selectsOnClick = { id -> viewModel.blocks.value.firstOrNull { it.id == id }?.type == BlockType.DIVIDER },
                             selection = { selectedBlocks.value },
+                            innerOrder = { group ->
+                                val all = viewModel.blocks.value
+                                all.filter { it.parentBlockId == group && it.type == BlockType.COLUMN }.sortedBy { it.orderIndex }
+                                    .flatMap { column -> all.filter { it.parentBlockId == column.id }.sortedBy { it.orderIndex }.map { it.id } }
+                            },
                             scrollBy = { listState.scrollBy(it) },
                             marquee = marquee.takeIf { pcEditing },
                             onSelect = { ids ->
@@ -5749,6 +5756,8 @@ private fun ColumnLines(
                     .padding(vertical = (look.spacingOf(child) / 2f).sp.toDpIn(density))
                     // Arrivandoci con un collegamento si illumina lei (vedi `nestedAnchor`).
                     .nestedAnchor(child.id, PAGE_SIDE_PADDING)
+                    // Scelta col mouse, col velo azzurro come i blocchi della pagina (dal 23/11/2026).
+                    .pageVeil(LocalBlockSelection.current?.selected?.value?.contains(child.id) == true, LocalBlockSelection.current?.veil ?: Color.Transparent)
                     // Col mouse la riga ha i suoi sei puntini, accanto al suo testo (dal 12/11/2026).
                     .pickableAs(
                         "line:" + child.id,
@@ -7802,6 +7811,18 @@ private fun BlockRow(
             if (id == block.id && spans.plainText() == bodyOf(editState.fieldValue.text)) {
                 editState = editState.copy(spans = spans)
             }
+        }
+    }
+    // **Annulla e Ripristina anche col cursore qui dentro** (dal 23/11/2026, vedi
+    // `PageEditorViewModel.restoredBlocks`): la riga torna com'era, il cursore resta dov'era.
+    LaunchedEffect(block.id) {
+        viewModel.restoredBlocks.collect { restored ->
+            val mine = restored.find { it.id == block.id } ?: return@collect
+            val text = viewModel.plainTextOf(mine)
+            val spans = viewModel.spansOf(mine)
+            if (bodyOf(editState.fieldValue.text) == text && editState.spans == spans) return@collect
+            val caret = (editState.fieldValue.selection.end - RUN_LEAD.length).coerceIn(0, text.length)
+            editState = BlockEditState(spans, TextFieldValue(RUN_LEAD + text, TextRange(RUN_LEAD.length + caret)))
         }
     }
     // Il testo nuovo di un link (dal 27/10/2026, vedi

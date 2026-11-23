@@ -101,7 +101,6 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -174,6 +173,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -1396,6 +1396,8 @@ private fun DatabaseViewBody(
         FormulaEditorFor(viewModel, column, rowId, onDismiss = { editingFormula = null })
     }
 
+    // Le frecce da una cella all'altra mentre si scrive (vedi `CellGrid`).
+    val cellGrid = remember { CellGrid() }
     CompositionLocalProvider(
         LocalFormulaValues provides state.formulas,
         LocalFormulaEditor provides formulaEditor,
@@ -1414,7 +1416,8 @@ private fun DatabaseViewBody(
         LocalCheckFlash provides checkFlash,
         LocalCellLinkLabels provides cellLinkLabels,
         LocalTitleEditRequest provides TitleEditRequest(editTitleOf, viewModel::consumeEditTitle),
-        LocalRowLimits provides rowLimits
+        LocalRowLimits provides rowLimits,
+        LocalCellGrid provides cellGrid
     ) {
     Column(
         modifier = modifier
@@ -4769,8 +4772,8 @@ private fun MiniMonth(
                                 modifier = Modifier
                                     .size(MINI_DAY_SIZE)
                                     .background(if (date in busyDays) DarkSurfaceVariant else Color.Transparent, CircleShape)
-                                    // Oggi cerchiato in bianco (dal 18/11/2026; prima pieno del colore dell'app).
-                                    .then(if (date == today) Modifier.border(1.dp, MaterialTheme.colorScheme.onBackground, CircleShape) else Modifier),
+                                    // Oggi col contorno arancione (dal 23/11/2026, chiesto dall'utente; dal 18/11 un cerchio bianco).
+                                    .then(if (date == today) Modifier.border(1.5.dp, SamsungOrange, RoundedCornerShape(3.dp)) else Modifier),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -5034,13 +5037,12 @@ private fun CalendarWeekRow(
             Row(modifier = Modifier.fillMaxWidth()) {
                 repeat(7) { dayIndex ->
                     val date = weekStart.plusDays(dayIndex.toLong())
-                    val ring = MaterialTheme.colorScheme.onBackground
                     Text(
                         text = date.dayOfMonth.toString(),
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
                         color = when {
-                            // Oggi del colore di tutti, ma cerchiato in bianco (dal 18/11/2026, qui sotto).
+                            // Oggi del colore di tutti: lo dice il contorno del suo quadratino (qui sopra).
                             date == today -> MaterialTheme.colorScheme.onBackground
                             shownMonth == null || YearMonth.from(date) == shownMonth ->
                                 MaterialTheme.colorScheme.onBackground
@@ -5051,12 +5053,6 @@ private fun CalendarWeekRow(
                         },
                         modifier = Modifier
                             .weight(1f)
-                            // Il cerchio attorno al numero, senza cambiare l'altezza della riga.
-                            .then(
-                                if (date != today) Modifier else Modifier.drawBehind {
-                                    drawCircle(ring, radius = size.height / 2f, center = center, style = Stroke(width = 1.dp.toPx()))
-                                }
-                            )
                             .padding(vertical = 2.dp)
                     )
                 }
@@ -5134,6 +5130,23 @@ private fun CalendarWeekRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp)
                 )
+            }
+        }
+
+        // **Il quadratino di oggi col contorno arancione** (dal 23/11/2026, chiesto dall'utente, al posto
+        // del cerchietto bianco attorno al numero): l'arancione del giorno scelto nelle date. Sopra le barre,
+        // che altrimenti lo coprono; senza tocchi suoi, gli eventi sotto si cliccano come prima.
+        val todayIndex = java.time.temporal.ChronoUnit.DAYS.between(weekStart, today)
+        if (todayIndex in 0..6) {
+            Row(modifier = Modifier.matchParentSize()) {
+                repeat(7) { dayIndex ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .then(if (dayIndex.toLong() == todayIndex) Modifier.border(2.dp, SamsungOrange) else Modifier)
+                    )
+                }
             }
         }
     }
@@ -7580,6 +7593,10 @@ private fun NameCell(
     }
 
     val wrap = LocalWrapCells.current
+    // Le frecce fra le celle mentre si scrive (dal 23/11/2026, vedi `CellGrid`): anche il nome.
+    val grid = LocalCellGrid.current.takeIf { !LocalDatabaseLocked.current }
+    val gridKey = "${row.id}:$NAME_COLUMN_KEY"
+    DisposableEffect(grid, gridKey) { onDispose { grid?.forget(gridKey) } }
     // **Il nome tagliato coi tre puntini** (dal 30/09/2026): toccandolo si
     // apre lì sopra il riquadro grigio col nome intero (`FullTextPopup`).
     var cut by remember(row.id) { mutableStateOf(false) }
@@ -7639,7 +7656,16 @@ private fun NameCell(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(end = 12.dp),
+                    .padding(end = 12.dp)
+                    .then(
+                        if (grid == null) Modifier else Modifier.onGloballyPositioned { at ->
+                            grid.place(gridKey, at) {
+                                fieldValue = TextFieldValue(localTitle, TextRange(localTitle.length))
+                                everFocused = false
+                                editing = true
+                            }
+                        }
+                    ),
                 contentAlignment = Alignment.CenterStart
             ) {
                 if (editing) {
@@ -7682,6 +7708,7 @@ private fun NameCell(
                                 .cellWrapPadding()
                                 .focusRequester(focusRequester)
                                 .markFocusChanges()
+                                .onPreviewKeyEvent { cellArrow(it, fieldValue, grid, gridKey) }
                                 .onFocusChanged { focusState ->
                                     if (focusState.isFocused) {
                                         everFocused = true

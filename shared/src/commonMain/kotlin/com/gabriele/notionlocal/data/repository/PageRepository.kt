@@ -1879,6 +1879,8 @@ class PageRepository(private val db: AppDatabase) {
         if (saved.isNotEmpty()) blockDao.insertAll(saved)
         texts.forEach { (blockId, textJson) -> blockDao.setText(blockId, textJson) }
         deleted.forEach { blockDao.delete(it) }
+        // Le colonne rimaste vuote se ne vanno, come con `deleteBlock` (dal 23/11/2026: le righe di una colonna si eliminano anche insieme).
+        deleted.mapNotNull { it.parentBlockId }.distinct().forEach { tidyColumn(it) }
     }
 
     /** I blocchi di una pagina come sono **adesso** nel database, letti una volta. */

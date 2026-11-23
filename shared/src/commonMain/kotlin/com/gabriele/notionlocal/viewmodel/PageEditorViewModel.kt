@@ -1820,6 +1820,14 @@ class PageEditorViewModel(
     private val _externalChangeTick = MutableStateFlow(0)
     val externalChangeTick: StateFlow<Int> = _externalChangeTick
 
+    /**
+     * **Le righe come le hanno rimesse Annulla e Ripristina** (dal 23/11/2026, trovato dall'utente nelle
+     * colonne: "sembra che anche CTRL + Z funzioni male"): un campo a sé col cursore dentro non prende il
+     * testo da fuori, per non litigare con quello che si scrive; queste sì, perché le ha chieste l'utente.
+     */
+    private val _restoredBlocks = MutableSharedFlow<List<BlockEntity>>(extraBufferCapacity = 4)
+    val restoredBlocks: SharedFlow<List<BlockEntity>> = _restoredBlocks
+
     fun undo() {
         val previous = undoStack.removeLastOrNull() ?: return
         // Annullare vuol dire tornare alla foto di prima: una riga nuova
@@ -1831,6 +1839,7 @@ class PageEditorViewModel(
             is BlocksStep -> {
                 redoStack.addLast(BlocksStep(_blocks.value))
                 updateUndoRedoAvailability()
+                _restoredBlocks.tryEmit(previous.blocks)
                 viewModelScope.launch { historyLock.withLock { applySnapshot(previous.blocks) } }
             }
             is PageStep -> {
@@ -1866,6 +1875,7 @@ class PageEditorViewModel(
             is BlocksStep -> {
                 undoStack.addLast(BlocksStep(_blocks.value))
                 updateUndoRedoAvailability()
+                _restoredBlocks.tryEmit(next.blocks)
                 viewModelScope.launch { historyLock.withLock { applySnapshot(next.blocks) } }
             }
             is PageStep -> {
@@ -3367,9 +3377,14 @@ class PageEditorViewModel(
     suspend fun pageCopyLines(only: Set<String>? = null): List<PageCopyLine> {
         val children = _blocks.value.groupBy { it.parentBlockId }.mapValues { (_, list) -> list.sortedBy { it.orderIndex } }
         val lines = mutableListOf<PageCopyLine>()
-        suspend fun visit(parentId: String?, depth: Int) {
+        // [inside]: dentro un blocco scelto. Uno non scelto si guarda dentro lo stesso: le righe di una
+        // colonna si scelgono da sole (dal 23/11/2026, vedi `mouseBlockSelection`).
+        suspend fun visit(parentId: String?, depth: Int, inside: Boolean) {
             for (block in children[parentId].orEmpty()) {
-                if (parentId == null && only != null && block.id !in only) continue
+                if (!inside && only != null && block.id !in only) {
+                    visit(block.id, depth, false)
+                    continue
+                }
                 when (block.type) {
                     BlockType.PARAGRAPH, BlockType.BULLET_LIST_ITEM, BlockType.NUMBERED_LIST_ITEM, BlockType.CHECKBOX ->
                         lines += PageCopyLine(spansOf(block), CopiedLine(block.type, block.isChecked, (block.indentLevel + depth).coerceIn(0, 10)))
@@ -3384,7 +3399,7 @@ class PageEditorViewModel(
                     BlockType.PAGE_LINK, BlockType.DATABASE_LINK -> Unit
                     // Le colonne (dal 12/11/2026) sono cornici: le loro righe, una colonna dopo l'altra, senza rientro.
                     BlockType.COLUMN_LIST, BlockType.COLUMN -> {
-                        visit(block.id, depth)
+                        visit(block.id, depth, true)
                         continue
                     }
                     in MEDIA_TYPES -> {
@@ -3393,10 +3408,10 @@ class PageEditorViewModel(
                     }
                     else -> spansOf(block).splitLines().forEach { lines += PageCopyLine(it, null) }
                 }
-                visit(block.id, depth + 1)
+                visit(block.id, depth + 1, true)
             }
         }
-        visit(null, 0)
+        visit(null, 0, false)
         return lines
     }
 
@@ -3404,15 +3419,19 @@ class PageEditorViewModel(
      * **"Cut" e "Delete" della pagina intera**: tutto quello che c'è nella
      * pagina se ne va, tranne le sottopagine e i database (e i toggle che li
      * contengono), che si tolgono uno alla volta dal loro menu. Si può annullare.
-     * Con [only], solo quei blocchi di primo livello e quello che contengono.
+     * Con [only], solo quei blocchi e quello che contengono (dal 23/11/2026 anche le righe di una colonna).
      */
     fun deletePageContent(only: Set<String>? = null) {
         val byId = _blocks.value.associateBy { it.id }
-        fun topOf(block: BlockEntity): String {
-            var current = block
-            while (true) current = byId[current.parentBlockId ?: return current.id] ?: return current.id
+        fun chosen(block: BlockEntity): Boolean {
+            var current: BlockEntity? = block
+            while (current != null) {
+                if (current.id in only.orEmpty()) return true
+                current = current.parentBlockId?.let { byId[it] }
+            }
+            return false
         }
-        val all = if (only == null) _blocks.value else _blocks.value.filter { topOf(it) in only }
+        val all = if (only == null) _blocks.value else _blocks.value.filter { chosen(it) }
         // Chi contiene una sottopagina o un database resta, per non portarseli via.
         val holders = HashSet<String>()
         for (block in all) {

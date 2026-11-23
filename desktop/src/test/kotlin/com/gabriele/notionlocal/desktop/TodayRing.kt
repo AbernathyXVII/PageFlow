@@ -33,3 +33,22 @@ fun todayRing(bitmap: Bitmap, fromY: Int): Triple<Int, Int, Int>? {
     }
     return null
 }
+
+/**
+ * **Il giorno di oggi nel calendario di un database: il quadratino col contorno arancione** (dal
+ * 23/11/2026, al posto del cerchio bianco). Cercato sotto [fromY]: il bordo di sopra (una riga lunga
+ * di arancione) e dentro, subito sotto, il numero. Come [todayRing]: il centro della colonna, l'altezza
+ * a metà del numero e mezza altezza del numero più un margine (il raggio del cerchio di prima), o null.
+ */
+fun todayCell(bitmap: Bitmap, fromY: Int): Triple<Int, Int, Int>? {
+    fun orange(c: Int) = ((c shr 16) and 0xFF) > 190 && ((c shr 8) and 0xFF) in 120..185 && (c and 0xFF) < 140
+    fun bright(c: Int) = ((c shr 16) and 0xFF) > 110 && ((c shr 8) and 0xFF) > 110 && (c and 0xFF) > 110
+    val top = (fromY until bitmap.height).firstOrNull { y -> (0 until bitmap.width).count { x -> orange(bitmap.getColor(x, y)) } > 40 } ?: return null
+    val xs = (0 until bitmap.width).filter { x -> orange(bitmap.getColor(x, top)) }
+    val left = xs.first()
+    val right = xs.last()
+    val first = (top + 2 until minOf(top + 40, bitmap.height)).firstOrNull { y -> (left + 4 until right - 3).any { x -> bright(bitmap.getColor(x, y)) } } ?: return null
+    var last = first
+    while (last + 1 < bitmap.height && (left + 4 until right - 3).any { x -> bright(bitmap.getColor(x, last + 1)) }) last++
+    return Triple((left + right) / 2, (first + last) / 2, (last - first) / 2 + 5)
+}

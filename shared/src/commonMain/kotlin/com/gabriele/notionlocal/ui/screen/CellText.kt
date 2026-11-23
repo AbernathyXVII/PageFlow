@@ -70,6 +70,19 @@ import com.gabriele.notionlocal.platform.copyPlainText
 import com.gabriele.notionlocal.platform.openUrl
 import com.gabriele.notionlocal.platform.showMessage
 import com.gabriele.notionlocal.platform.screenWidthDp
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isAltPressed
 
 /**
  * **"Wrap cells"** (dal 30/09/2026, nelle impostazioni di ogni tabella):
@@ -248,6 +261,8 @@ fun TextLikeCell(
 ) {
     val wrap = LocalWrapCells.current
     val alignment = LocalCellAlignment.current
+    val grid = LocalCellGrid.current.takeIf { !LocalDatabaseLocked.current }
+    DisposableEffect(grid, cellKey) { onDispose { grid?.forget(cellKey) } }
     var localValue by remember(cellKey) { mutableStateOf(value) }
     var editing by remember(cellKey) { mutableStateOf(false) }
     var expanded by remember(cellKey) { mutableStateOf(false) }
@@ -267,7 +282,17 @@ fun TextLikeCell(
         modifier = Modifier
             .fillMaxWidth()
             .cellWrapPadding()
-            .onSizeChanged { textWidthPx = it.width },
+            .onSizeChanged { textWidthPx = it.width }
+            // Le frecce da un'altra cella arrivano qui: si scrive nella cella, col cursore in fondo.
+            .then(
+                if (grid == null) Modifier else Modifier.onGloballyPositioned { at ->
+                    grid.place(cellKey, at) {
+                        fieldValue = TextFieldValue(localValue, TextRange(localValue.length))
+                        everFocused = false
+                        editing = true
+                    }
+                }
+            ),
         contentAlignment = alignment.box
     ) {
         if (editing) {
@@ -294,6 +319,7 @@ fun TextLikeCell(
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
                         .markFocusChanges()
+                        .onPreviewKeyEvent { cellArrow(it, fieldValue, grid, cellKey) }
                         .onFocusChanged { state ->
                             if (state.isFocused) everFocused = true else if (everFocused) editing = false
                         }
@@ -478,3 +504,61 @@ fun pastedLink(context: PlatformContext): String? =
     clipboardText(context)
         ?.replace("\n", " ")?.trim()
         ?.takeIf { it.isNotEmpty() }
+
+/**
+ * **Le frecce da una cella all'altra mentre si scrive** (dal 23/11/2026, chiesto dall'utente:
+ * "permettimi di spostarmi con le freccette direzionali per scrivere direttamente in altre celle ...
+ * ma solo quando il text cursor si trova attivo dentro una cella"). Ogni cella dove si scrive dice
+ * qui dove sta e come si comincia a scriverci; con le frecce si passa alla più vicina in quel verso,
+ * su e giù nella stessa colonna, a destra e a sinistra nella stessa riga. Invio chiude come prima.
+ */
+class CellGrid {
+    private class Slot(val coordinates: LayoutCoordinates, val edit: () -> Unit)
+
+    private val slots = HashMap<String, Slot>()
+
+    fun place(key: String, coordinates: LayoutCoordinates, edit: () -> Unit) {
+        slots[key] = Slot(coordinates, edit)
+    }
+
+    fun forget(key: String) {
+        slots.remove(key)
+    }
+
+    /** Si comincia a scrivere nella cella accanto a [key] nel verso ([dx], [dy]); falso se lì non ce n'è una. */
+    fun move(key: String, dx: Int, dy: Int): Boolean {
+        val from = slots[key]?.coordinates?.takeIf { it.isAttached }?.boundsInWindow() ?: return false
+        val target = slots.filter { (other, slot) -> other != key && slot.coordinates.isAttached }.values.mapNotNull { slot ->
+            val b = slot.coordinates.boundsInWindow()
+            val inLine = when {
+                dy > 0 -> b.top >= from.bottom - 1f && b.center.x in from.left..from.right
+                dy < 0 -> b.bottom <= from.top + 1f && b.center.x in from.left..from.right
+                dx > 0 -> b.left >= from.right - 1f && b.center.y in from.top..from.bottom
+                else -> b.right <= from.left + 1f && b.center.y in from.top..from.bottom
+            }
+            if (inLine) slot to (b.center - from.center).getDistance() else null
+        }.minByOrNull { it.second }?.first ?: return false
+        target.edit()
+        return true
+    }
+}
+
+/** Le celle della vista (le dà la tabella); null dove le frecce restano nel testo. */
+val LocalCellGrid = staticCompositionLocalOf<CellGrid?> { null }
+
+/**
+ * Le frecce in una cella che si sta scrivendo ([value]): su e giù vanno sempre alla cella sopra e
+ * sotto; sinistra e destra solo dall'inizio e dalla fine del testo, se no si muovono fra le lettere.
+ * Vero se si è passati a un'altra cella.
+ */
+fun cellArrow(event: KeyEvent, value: TextFieldValue, grid: CellGrid?, key: String): Boolean {
+    if (grid == null || event.type != KeyEventType.KeyDown || event.isShiftPressed || event.isCtrlPressed || event.isAltPressed) return false
+    val caret = value.selection.takeIf { it.collapsed }?.start
+    return when (event.key) {
+        Key.DirectionUp -> grid.move(key, 0, -1)
+        Key.DirectionDown -> grid.move(key, 0, 1)
+        Key.DirectionLeft -> caret == 0 && grid.move(key, -1, 0)
+        Key.DirectionRight -> caret == value.text.length && grid.move(key, 1, 0)
+        else -> false
+    }
+}

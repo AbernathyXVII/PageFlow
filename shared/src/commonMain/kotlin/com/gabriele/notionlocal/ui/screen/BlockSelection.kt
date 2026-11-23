@@ -133,6 +133,9 @@ class BlockPicker {
     /** La voce e il blocco della pagina sotto il punto [window] della finestra, o null fra due voci (per scegliere più blocchi). */
     fun at(window: Offset): Pair<String, String>? = find(window, inner = false)?.let { (key, _, id) -> key to id }
 
+    /** Come [at], ma in un gruppo di colonne la riga sotto il punto, non il gruppo (dal 23/11/2026). */
+    fun innerAt(window: Offset): Pair<String, String>? = find(window, inner = true)?.let { (key, _, id) -> key to id }
+
     /**
      * Il blocco sotto il punto e dove sta la sua prima riga nella finestra,
      * per i sei puntini (`BlockHandle.kt`). Un blocco che non dice di più (un
@@ -290,6 +293,12 @@ fun Modifier.mouseBlockSelection(
     selectsOnClick: (String) -> Boolean,
     /** I blocchi scelti adesso (vuoto: nessuno). */
     selection: () -> Set<String>,
+    /**
+     * Le righe dentro il gruppo di colonne [group], colonna dopo colonna (dal 23/11/2026, trovato
+     * dall'utente: "non posso selezionare i vari blocchi del testo" in due colonne): da una riga a
+     * un'altra dello stesso gruppo si scelgono loro, non il gruppo intero. Vuoto: non è un gruppo.
+     */
+    innerOrder: (group: String) -> List<String> = { emptyList() },
     scrollBy: suspend (Float) -> Unit,
     /** Il rettangolo azzurro, nelle coordinate della pagina (vedi [drawMarquee]); null: niente rettangolo. */
     marquee: MutableState<Rect?>? = null,
@@ -301,7 +310,20 @@ fun Modifier.mouseBlockSelection(
             if (down.type != PointerType.Mouse || !currentEvent.buttons.isPrimaryPressed) return@awaitEachGesture
             val page = coordinates() ?: return@awaitEachGesture
             fun hit(position: Offset) = runCatching { picker.at(page.localToWindow(position)) }.getOrNull()
+            fun innerHit(position: Offset) = runCatching { picker.innerAt(page.localToWindow(position)) }.getOrNull()?.second
             val start = hit(down.position)
+            // La riga di partenza, se è dentro un gruppo di colonne.
+            val startLine = start?.let { (_, group) -> innerHit(down.position)?.takeIf { it != group && it in innerOrder(group) } }
+            /** Fra il blocco di partenza e quello in [position]: le righe del gruppo, se si resta lì dentro. */
+            fun rangeTo(position: Offset): Set<String> {
+                val now = hit(position) ?: return emptySet()
+                val from = start ?: return emptySet()
+                if (startLine != null && now.second == from.second) {
+                    val line = innerHit(position) ?: return emptySet()
+                    return blockRange(innerOrder(from.second), startLine, line)
+                }
+                return blockRange(order(), from.second, now.second)
+            }
             val base = selection()
             val hadSelection = base.isNotEmpty()
             // **Con Ctrl si aggiunge** (dal 23/11/2026, chiesto dall'utente: "più blocchi ma non attaccati
@@ -317,11 +339,12 @@ fun Modifier.mouseBlockSelection(
                     val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
                     change.consume()
                     if (!change.pressed) {
-                        if (!dragged) onSelect(if (start.second in base) base - start.second else base + start.second)
+                        val clicked = startLine ?: start.second
+                        if (!dragged) onSelect(if (clicked in base) base - clicked else base + clicked)
                         break
                     }
                     if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) dragged = true
-                    if (dragged) hit(change.position)?.let { now -> choose(blockRange(order(), start.second, now.second)) }
+                    if (dragged) rangeTo(change.position).takeIf { it.isNotEmpty() }?.let { choose(it) }
                 }
                 return@awaitEachGesture
             }
@@ -385,12 +408,13 @@ fun Modifier.mouseBlockSelection(
             fun follow(position: Offset): Boolean {
                 if (start == null) return false
                 val now = hit(position) ?: return blocks
-                if (!blocks && now.second == start.second) return false
+                // Nello stesso gruppo di colonne conta la riga, non il gruppo: nella stessa riga si seleziona il
+                // testo; fra due righe (o fra le colonne) resta com'era, come fra due blocchi della pagina.
+                val nowLine = if (startLine != null && now.second == start.second) innerHit(position) ?: return blocks else null
+                val sameLine = if (nowLine != null) nowLine == startLine else now.second == start.second
+                if (!blocks && sameLine) return false
                 blocks = true
-                val ids = order()
-                val from = ids.indexOf(start.second)
-                val to = ids.indexOf(now.second)
-                if (from >= 0 && to >= 0) onSelect(ids.subList(minOf(from, to), maxOf(from, to) + 1).toSet())
+                rangeTo(position).takeIf { it.isNotEmpty() }?.let { onSelect(it) }
                 return true
             }
 

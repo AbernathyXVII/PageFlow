@@ -131,8 +131,8 @@ class DesktopCalendarPropertiesTest {
         try {
             frames(50)
             val first = shot("calendar_properties")
-            // Il numero di oggi è cerchiato (come in DesktopCalendarTest): lì sotto c'è il suo evento.
-            val ring = todayRing(first, 150)
+            // Il quadratino di oggi col contorno arancione (come in DesktopCalendarTest): lì sotto c'è il suo evento.
+            val ring = todayCell(first, 150)
             assertTrue("il numero di oggi", ring != null)
             val (dayX, ringY, radius) = ring!!
             val dayBottom = ringY + radius

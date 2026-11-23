@@ -1126,6 +1126,38 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.48 — 23/11/2026 · 22:20 — Lines in columns chosen with the mouse, Ctrl+Z there too; arrows between cells; today in orange
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1358 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The lines inside columns are chosen with the
+  mouse**: dragging from a line of a column to another line of the same
+  group chooses those lines (column after column), not the whole group, and
+  Ctrl + click chooses a single line, also in another column. Copy, Cut,
+  Delete and the menu of the chosen blocks (colors, Turn into, Indent…) act
+  on them; a column left empty goes away, as from its six dots. Found by the
+  user with song lyrics in two columns and Pokémon teams in three
+- **[Bug fix]** **[💻 PC]** **[📱 Mobile]** **Ctrl+Z with the cursor in a line
+  of its own** (in a column, a to-do, a toggle…): the line went back in the
+  database but kept showing what it had before, colors included. Now it
+  shows the undone text at once, with the cursor where it was; Ctrl+Y too
+- **[Change]** **[💻 PC]** **The arrows move between the cells of a
+  database while writing in one**: up and down go to the cell above and
+  below, left and right to the cell beside when the cursor is at the start
+  or at the end of the text (otherwise they move between the letters), also
+  from and to the name. Enter still ends the writing
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **Today in the Calendar view of a
+  database: its square with an orange outline**, the orange of the chosen
+  day in the date picker, above the bars of the events; no more white circle
+  around the number (in the Year view too, around the small number)
+- **[Project]** `BlockPicker.innerAt` and `mouseBlockSelection(innerOrder)`;
+  `pageCopyLines`/`deletePageContent` reach the chosen lines inside blocks;
+  `applyBlockChanges` tidies the emptied columns; `restoredBlocks` from
+  `undo`/`redo` to the single fields; `CellGrid`, `LocalCellGrid` and
+  `cellArrow` (text cells and the name); the outline of today drawn over the
+  week row. Tests: `DesktopColumnSelectionTest`, `DesktopCellArrowsTest`;
+  `DesktopCalendarTest` and `DesktopCalendarPropertiesTest` find today by its
+  outline (`todayCell`)
+
 ### 🔧 v0.155.47.1 — 23/11/2026 · 18:37 — The six dots stay on their block when the wheel scrolls the page
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1353 tests passed)*
 
