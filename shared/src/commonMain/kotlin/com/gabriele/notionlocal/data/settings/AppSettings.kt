@@ -183,6 +183,7 @@ object AppSettings {
         zoomState.value = prefs.getInt(KEY_ZOOM, 100).coerceIn(ZOOM_MIN, ZOOM_MAX)
         openPagesAsState.value = enumOr(KEY_OPEN_PAGES_AS, OpenMode.CENTER_PEEK)
         sidePeekPercentState.value = prefs.getInt(KEY_SIDE_PEEK_PERCENT, SIDE_PEEK_DEFAULT_PERCENT).coerceIn(SIDE_PEEK_MIN_PERCENT, SIDE_PEEK_MAX_PERCENT)
+        centerPeekWidthState.value = prefs.getInt(KEY_CENTER_PEEK_WIDTH, CENTER_PEEK_MIN_WIDTH).coerceIn(CENTER_PEEK_MIN_WIDTH, CENTER_PEEK_MAX_WIDTH)
     }
 
     // --- Aspetto ---
@@ -294,6 +295,19 @@ object AppSettings {
             if (::prefs.isInitialized) prefs.edit().putInt(KEY_SIDE_PEEK_PERCENT, sidePeekPercentState.value).apply()
         }
 
+    private val centerPeekWidthState = mutableStateOf(CENTER_PEEK_MIN_WIDTH)
+
+    /**
+     * **Quanto è largo il Center peek**, in dp (dal 23/11/2026, chiesto dall'utente): si allarga e si
+     * stringe trascinandone i bordi, dalla larghezza di prima (la minima) a [CENTER_PEEK_MAX_WIDTH].
+     */
+    var centerPeekWidth: Int
+        get() = centerPeekWidthState.value
+        set(value) {
+            centerPeekWidthState.value = value.coerceIn(CENTER_PEEK_MIN_WIDTH, CENTER_PEEK_MAX_WIDTH)
+            if (::prefs.isInitialized) prefs.edit().putInt(KEY_CENTER_PEEK_WIDTH, centerPeekWidthState.value).apply()
+        }
+
     /**
      * **Le schede aperte sul PC** (dal 12/11/2026, chiesto dall'utente come nei
      * browser): il JSON di `PcTabs`, che si riaprono alla volta dopo. Null = una sola.
@@ -307,6 +321,10 @@ object AppSettings {
     const val SIDE_PEEK_DEFAULT_PERCENT = 50
     const val SIDE_PEEK_MIN_PERCENT = 25
     const val SIDE_PEEK_MAX_PERCENT = 85
+
+    /** Il Center peek: largo com'era prima dal 12/11/2026, e al massimo una volta e mezza tanto. */
+    const val CENTER_PEEK_MIN_WIDTH = 900
+    const val CENTER_PEEK_MAX_WIDTH = 1350
 
     const val SIDEBAR_DEFAULT_WIDTH = 300
     const val SIDEBAR_MIN_WIDTH = 220
@@ -701,6 +719,7 @@ object AppSettings {
     private const val KEY_ZOOM = "zoom"
     private const val KEY_OPEN_PAGES_AS = "open_pages_as"
     private const val KEY_SIDE_PEEK_PERCENT = "side_peek_percent"
+    private const val KEY_CENTER_PEEK_WIDTH = "center_peek_width"
     private const val KEY_PC_TABS = "pc_tabs"
     private const val KEY_NUMBER_STYLE = "number_style"
     private const val KEY_DATE_STYLE = "date_style"

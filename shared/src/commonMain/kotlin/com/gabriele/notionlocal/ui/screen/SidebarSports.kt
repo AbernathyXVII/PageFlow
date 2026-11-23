@@ -816,14 +816,61 @@ private fun MatchRow(match: SportMatch, sport: Sport, compact: Boolean, modifier
             modifier = Modifier.width(if (compact) 48.dp else 60.dp)
         )
         Column(modifier = Modifier.weight(1f)) {
-            SideLine(match.home, match.state, sport)
-            SideLine(match.away, match.state, sport)
+            if (isPc && sport != Sport.TENNIS) {
+                OneLineMatch(match)
+            } else {
+                SideLine(match.home, match.state, sport)
+                SideLine(match.away, match.state, sport)
+            }
             if (!compact && match.note.isNotEmpty()) {
                 Text(match.note, color = NotionGray400, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
 }
+
+/**
+ * **Sul PC una partita su una riga sola** (dal 23/11/2026, chiesto dall'utente: "stemma, squadra,
+ * gol - gol squadra, stemma", perché su due righe gli stemmi erano troppo piccoli): la squadra di casa
+ * a sinistra, quella in trasferta a destra, il punteggio in mezzo; il vincitore in grassetto.
+ */
+@Composable
+private fun OneLineMatch(match: SportMatch) {
+    fun weightOf(side: MatchSide) = if (match.state == MatchState.POST && side.winner) FontWeight.Bold else null
+    val scoreColor = if (match.state == MatchState.IN) LiveRed else NotionWhite
+    Row(modifier = Modifier.padding(vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            TeamLogo(match.home.logo, ONE_LINE_CREST)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                teamDisplayName(match.home.name), color = NotionWhite, fontSize = 13.sp, fontWeight = weightOf(match.home),
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
+            )
+        }
+        val home = match.home.score.orEmpty()
+        val away = match.away.score.orEmpty()
+        Row(modifier = Modifier.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (home.isEmpty() && away.isEmpty()) {
+                Text("–", color = NotionGray400, fontSize = 13.sp)
+            } else {
+                Text(home, color = scoreColor, fontSize = 13.sp, fontWeight = weightOf(match.home))
+                Text(" – ", color = NotionGray400, fontSize = 13.sp)
+                Text(away, color = scoreColor, fontSize = 13.sp, fontWeight = weightOf(match.away))
+            }
+        }
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                teamDisplayName(match.away.name), color = NotionWhite, fontSize = 13.sp, fontWeight = weightOf(match.away),
+                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End, modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            TeamLogo(match.away.logo, ONE_LINE_CREST)
+        }
+    }
+}
+
+/** Lo stemma della partita su una riga (sul PC): più grande dei 16 punti delle due righe. */
+private val ONE_LINE_CREST = 24.dp
 
 @Composable
 private fun SideLine(side: MatchSide, state: MatchState, sport: Sport) {

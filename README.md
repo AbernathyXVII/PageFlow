@@ -1126,6 +1126,30 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.49 — 23/11/2026 · 22:53 — Matches on one line, a wider Center peek, "Load limit" for each database
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1361 tests passed)*
+
+- **[Change]** **[💻 PC]** **A match on one line in the sports widget**:
+  crest, team, goals – goals, team, crest, with crests of 24 points instead
+  of 16 (on two lines they were too small); the time, "Final" or the minute
+  stay on the left. Tennis keeps its two lines, with the sets of the players
+- **[Change]** **[💻 PC]** **The Center peek gets wider and narrower from its
+  edges**: dragging the left or right edge, the window stays in the middle
+  and grows on both sides, from its old width, 900 points (the smallest), up
+  to 1350; the width is kept for the next time
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **"Load limit" for each
+  database inside a page**: in the settings of the view, under Layout, how
+  many rows it shows before "Load more": 10, 25, 50 or 100 pages (before,
+  always 50). For tables, lists, galleries and boards; open at full page the
+  rows still all scroll
+- **[Project]** `OneLineMatch` (`SidebarSports.kt`); `AppSettings.centerPeekWidth`
+  and the edges of `CenterPeekLayer`; `PageEntity.loadLimit`/`withLoadLimit`
+  (a mark in `viewHiddenColumnIds`, like the ones of Name: no change to the
+  database), `DatabaseViewModel.setLoadLimit`, `RowLimits(step)` used by
+  default, `SettingsPage.LOAD_LIMIT`. Tests: `DesktopSportsWidgetTest` (both
+  teams on one line), `DesktopPeekRowArrowsTest.theCenterPeekGrowsFromItsEdges`,
+  `DesktopLoadLimitTest`
+
 ### ✏️ v0.155.48 — 23/11/2026 · 22:20 — Lines in columns chosen with the mouse, Ctrl+Z there too; arrows between cells; today in orange
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1358 tests passed)*
 

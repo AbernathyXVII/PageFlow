@@ -6,6 +6,9 @@ import com.gabriele.notionlocal.data.entity.LinkColumnShow
 import com.gabriele.notionlocal.data.entity.PageParagraph
 import com.gabriele.notionlocal.data.entity.nameColumnHidden
 import com.gabriele.notionlocal.data.entity.titleColumnId
+import com.gabriele.notionlocal.data.entity.loadLimit
+import com.gabriele.notionlocal.data.entity.LOAD_LIMITS
+import com.gabriele.notionlocal.data.entity.DEFAULT_LOAD_LIMIT
 import com.gabriele.notionlocal.ui.navigation.horizontalResizeCursor
 import kotlinx.coroutines.delay
 import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
@@ -1156,7 +1159,9 @@ private fun DatabaseViewBody(
     // Le prime righe e "Load more" (vedi `RowLimits`): quante se ne vedono
     // per ogni elenco, e le righe create qui, che si vedono sempre.
     val createdHere by viewModel.createdHere.collectAsStateWithLifecycle()
-    val rowLimits = remember(pageId) { RowLimits() }
+    // Quante, lo dice la vista ("Load limit", dal 23/11/2026).
+    val loadLimit = page?.loadLimit() ?: DEFAULT_LOAD_LIMIT
+    val rowLimits = remember(pageId, loadLimit) { RowLimits(loadLimit) }
     rowLimits.created = createdHere
     // La riga di cui si sta scegliendo l'icona, dalla finestra delle azioni.
     var iconForRow by remember { mutableStateOf<DatabaseRowEntity?>(null) }
@@ -1966,6 +1971,8 @@ private fun DatabaseViewBody(
             onSetColorBoardCards = { viewModel.setColorBoardCards(it) },
             boardHideNew = page?.boardHideNew == true,
             onSetBoardHideNew = { viewModel.setBoardHideNew(it) },
+            loadLimit = page?.loadLimit() ?: DEFAULT_LOAD_LIMIT,
+            onSetLoadLimit = if (embedded) { limit -> viewModel.setLoadLimit(limit) } else null,
             cellOverflow = CellOverflow.of(page?.cellOverflow ?: 0),
             onSetCellOverflow = { viewModel.setCellOverflow(it) },
             freezeFirstColumn = page?.freezeFirstColumn == true,
@@ -9984,6 +9991,8 @@ private enum class SettingsPage {
     ROOT,
     EDIT_PROPERTIES,
     LAYOUT,
+    /** "Load limit" (dal 23/11/2026): quante righe prima di "Load more", per un database dentro una pagina. */
+    LOAD_LIMIT,
     /**
      * I raggruppamenti della **bacheca**: le colonne e le fasce. Dal
      * 28/10/2026 un elenco di regole, quante se ne vogliono, come quello della
@@ -10590,6 +10599,9 @@ private fun SettingsSheet(
     /** "Hide New" della bacheca (dal 26/10/2026). */
     boardHideNew: Boolean = false,
     onSetBoardHideNew: ((Boolean) -> Unit)? = null,
+    /** "Load limit" (dal 23/11/2026): null dove non serve (a pagina intera le righe scorrono tutte). */
+    loadLimit: Int = DEFAULT_LOAD_LIMIT,
+    onSetLoadLimit: ((Int) -> Unit)? = null,
     /** Il testo lungo nelle celle della tabella (dal 30/09/2026). */
     cellOverflow: CellOverflow = CellOverflow.TRUNCATE,
     onSetCellOverflow: ((CellOverflow) -> Unit)? = null,
@@ -10692,6 +10704,7 @@ private fun SettingsSheet(
                         SettingsPage.GROUP_ADD -> DbStrings.addGroup
                         SettingsPage.GROUP_RULE -> columns.find { it.id == groupRuleColumn }?.name?.let(DbStrings::columnName) ?: DbStrings.group
                         SettingsPage.CELL_OVERFLOW -> DbStrings.longText
+                        SettingsPage.LOAD_LIMIT -> DbStrings.loadLimit
                         SettingsPage.PROPERTY_VISIBILITY -> DbStrings.propertyVisibility
                         SettingsPage.DATE_PROPERTY -> DbStrings.dateProperty
                         SettingsPage.CARD_PREVIEW -> DbStrings.cardPreview
@@ -10793,6 +10806,18 @@ private fun SettingsSheet(
                                     onCheckedChange = onSetColorBoardCards
                                 )
                             }
+                        }
+                        // **"Load limit"** (dal 23/11/2026, chiesto dall'utente: "deciderlo database
+                        // per database"): le viste che dentro una pagina mostrano le prime righe.
+                        if (onSetLoadLimit != null && layout in setOf(DatabaseLayout.TABLE, DatabaseLayout.LIST, DatabaseLayout.GALLERY, DatabaseLayout.BOARD)) {
+                            HorizontalDivider()
+                            SettingsRow(
+                                icon = Icons.Filled.FormatListNumbered,
+                                label = DbStrings.loadLimit,
+                                enabled = !viewLocked,
+                                value = DbStrings.loadLimitPages(loadLimit),
+                                onClick = { page = SettingsPage.LOAD_LIMIT }
+                            )
                         }
                         // Il raggruppamento della tabella: una voce
                         // diversa da "Group by" della bacheca, perché
@@ -11070,6 +11095,23 @@ private fun SettingsSheet(
                             onColumnChanged = { groupRuleColumn = it },
                             onRemoved = { page = groupsPage }
                         )
+                    }
+                }
+
+                SettingsPage.LOAD_LIMIT -> {
+                    SheetGroup {
+                        LOAD_LIMITS.forEachIndexed { index, limit ->
+                            if (index > 0) HorizontalDivider()
+                            SettingsRow(
+                                icon = Icons.Filled.FormatListNumbered,
+                                label = DbStrings.loadLimitPages(limit),
+                                value = if (limit == loadLimit) "✓" else null,
+                                onClick = {
+                                    onSetLoadLimit?.invoke(limit)
+                                    page = SettingsPage.LAYOUT
+                                }
+                            )
+                        }
                     }
                 }
 

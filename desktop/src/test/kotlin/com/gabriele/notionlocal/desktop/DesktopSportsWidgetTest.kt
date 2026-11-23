@@ -25,6 +25,10 @@ import com.gabriele.notionlocal.data.widgets.buildRounds
 import com.gabriele.notionlocal.data.widgets.currentRound
 import com.gabriele.notionlocal.data.widgets.parseScoreboard
 import com.gabriele.notionlocal.data.widgets.parseStandings
+import com.gabriele.notionlocal.data.widgets.teamDisplayName
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getAllSemanticsNodes
+import androidx.compose.ui.semantics.getOrNull
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import com.gabriele.notionlocal.ui.screen.TeamLogos
@@ -159,6 +163,18 @@ class DesktopSportsWidgetTest {
             assertEquals("sotto il nome: ‹, Today, ›, Standings, Players ($words)", 5, words.size)
             fun center(group: IntRange) = Offset((group.first + group.last) / 2f, (bar.first + bar.last) / 2f)
             fun same(a: Bitmap, b: Bitmap, band: IntRange) = band.all { y -> (8 until 292).all { x -> a.getColor(x, y) == b.getColor(x, y) } }
+
+            // **Sul PC una partita su una riga** (dal 23/11/2026, chiesto dall'utente): le due squadre di una
+            // partita della giornata alla stessa altezza, quella di casa a sinistra e l'altra a destra.
+            val texts = onWindowThread {
+                scene.semanticsOwners.flatMap { it.getAllSemanticsNodes(mergingEnabled = false) }
+                    .mapNotNull { node -> node.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }?.let { it to node.boundsInRoot } }
+            }
+            val shown = board.matches.firstOrNull { m -> texts.any { it.first == teamDisplayName(m.home.name) } && texts.any { it.first == teamDisplayName(m.away.name) } }
+            assertTrue("una partita della giornata sullo schermo", shown != null)
+            val home = texts.first { it.first == teamDisplayName(shown!!.home.name) }.second
+            val away = texts.first { it.first == teamDisplayName(shown!!.away.name) }.second
+            assertTrue("sulla stessa riga: $home e $away", kotlin.math.abs(home.center.y - away.center.y) < 2f && home.center.x < away.center.x)
 
             // Col mouse sopra una partita non si illumina niente, né lei né la giornata (dal 17/11/2026,
             // chiesto dall'utente: niente riquadri grigi col mouse sopra, "dappertutto").

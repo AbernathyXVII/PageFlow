@@ -60,6 +60,7 @@ import com.gabriele.notionlocal.ui.screen.openModeIcon
 import com.gabriele.notionlocal.ui.theme.DarkBackground
 import com.gabriele.notionlocal.ui.theme.NotionGray900
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
+import kotlin.math.roundToInt
 
 /**
  * Una pagina aperta in un peek: quale, e come (Side peek o Center peek). [previous]: le pagine
@@ -110,18 +111,43 @@ fun CenterPeekLayer(peek: PagePeek, factory: ViewModelFactory, actions: PeekActi
                 .background(Color.Black.copy(alpha = 0.55f))
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { actions.close() }
         )
-        Surface(
+        // **Più largo o più stretto dai suoi bordi** (dal 23/11/2026, chiesto dall'utente): la finestra resta
+        // al centro e si allarga dai due lati insieme, da com'era prima (la minima) fino al massimo.
+        val density = LocalDensity.current
+        var width by remember { mutableFloatStateOf(AppSettings.centerPeekWidth.toFloat()) }
+        Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(vertical = CENTER_PEEK_MARGIN)
-                .width(min(CENTER_PEEK_WIDTH, maxWidth - CENTER_PEEK_MARGIN * 2))
-                .fillMaxHeight(),
-            shape = RoundedCornerShape(10.dp),
-            color = DarkBackground,
-            shadowElevation = 16.dp,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                .width(min(width.dp, maxWidth - CENTER_PEEK_MARGIN * 2) + CENTER_PEEK_EDGE * 2)
+                .fillMaxHeight()
         ) {
-            PeekContent(peek, factory, actions)
+            Surface(
+                modifier = Modifier.padding(horizontal = CENTER_PEEK_EDGE).fillMaxSize(),
+                shape = RoundedCornerShape(10.dp),
+                color = DarkBackground,
+                shadowElevation = 16.dp,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            ) {
+                PeekContent(peek, factory, actions)
+            }
+            for (side in listOf(-1f, 1f)) {
+                Box(
+                    modifier = Modifier
+                        .align(if (side < 0) Alignment.CenterStart else Alignment.CenterEnd)
+                        .width(CENTER_PEEK_EDGE)
+                        .fillMaxHeight()
+                        .horizontalResizeCursor()
+                        .draggable(
+                            state = rememberDraggableState { delta ->
+                                width = (width + side * 2 * with(density) { delta.toDp() }.value)
+                                    .coerceIn(AppSettings.CENTER_PEEK_MIN_WIDTH.toFloat(), AppSettings.CENTER_PEEK_MAX_WIDTH.toFloat())
+                            },
+                            orientation = Orientation.Horizontal,
+                            onDragStopped = { AppSettings.centerPeekWidth = width.roundToInt() }
+                        )
+                )
+            }
         }
     }
 }
@@ -261,5 +287,6 @@ private class PeekStoreOwner : ViewModelStoreOwner {
     override val viewModelStore = ViewModelStore()
 }
 
-private val CENTER_PEEK_WIDTH = 900.dp
+/** La striscia ai lati del Center peek che lo allarga e lo stringe. */
+private val CENTER_PEEK_EDGE = 6.dp
 private val CENTER_PEEK_MARGIN = 32.dp

@@ -17,10 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.gabriele.notionlocal.data.entity.DatabaseLayout
+import com.gabriele.notionlocal.data.entity.DEFAULT_LOAD_LIMIT
 import com.gabriele.notionlocal.ui.i18n.DbStrings
 
-/** Quante righe si vedono subito, e quante in più a ogni "Load more". */
-const val DATABASE_ROW_LIMIT = 50
+/** Quante righe si vedono subito, e quante in più a ogni "Load more": dal 23/11/2026 di ogni vista ("Load limit"). */
+const val DATABASE_ROW_LIMIT = DEFAULT_LOAD_LIMIT
 
 /**
  * **Le prime righe e "Load more"** (dal 18/10/2026, come su Notion, scelto
@@ -37,7 +38,7 @@ const val DATABASE_ROW_LIMIT = 50
  * il limite: altrimenti "New page" sembrerebbe non fare niente.
  */
 @Stable
-class RowLimits(private val step: Int = DATABASE_ROW_LIMIT) {
+class RowLimits(val step: Int = DATABASE_ROW_LIMIT) {
     private val shown = mutableStateMapOf<String, Int>()
 
     /**
@@ -69,9 +70,9 @@ class RowLimits(private val step: Int = DATABASE_ROW_LIMIT) {
 /** Le righe da mostrare e quante ne restano fuori. */
 data class Limited<T>(val items: List<T>, val hidden: Int)
 
-/** Le righe di un elenco col limite, se c'è; tutte altrimenti. */
-fun <T> RowLimits?.limit(key: String, items: List<T>, first: Int = DATABASE_ROW_LIMIT, id: (T) -> String): Limited<T> =
-    this?.take(key, items, first, id) ?: Limited(items, 0)
+/** Le righe di un elenco col limite, se c'è (di suo quello della vista); tutte altrimenti. */
+fun <T> RowLimits?.limit(key: String, items: List<T>, first: Int? = null, id: (T) -> String): Limited<T> =
+    this?.take(key, items, first ?: step, id) ?: Limited(items, 0)
 
 /**
  * **Le fasce della bacheca** (dal 21/10/2026): le prime 12 e "Load more" ne

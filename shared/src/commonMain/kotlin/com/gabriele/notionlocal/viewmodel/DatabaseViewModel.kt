@@ -7,6 +7,7 @@ import com.gabriele.notionlocal.data.entity.linkShow
 import com.gabriele.notionlocal.data.entity.LinkColumnShow
 import com.gabriele.notionlocal.ui.screen.coverKey
 import com.gabriele.notionlocal.data.entity.withNameHidden
+import com.gabriele.notionlocal.data.entity.withLoadLimit
 import com.gabriele.notionlocal.data.entity.titleColumnId
 import com.gabriele.notionlocal.data.entity.nameColumnHidden
 import com.gabriele.notionlocal.data.entity.nextOccurrenceValue
@@ -1600,6 +1601,14 @@ class DatabaseViewModel(
      * **Il testo lungo nelle celle** (dal 30/09/2026) di questa vista: tre
      * puntini, colonna allargata o a capo (vedi `CellOverflow`).
      */
+    /** **"Load limit"** di questa vista (dal 23/11/2026): vedi `PageEntity.loadLimit`. */
+    fun setLoadLimit(limit: Int) {
+        val current = _page.value ?: return
+        val updated = current.copy(viewHiddenColumnIds = withLoadLimit(current.viewHiddenColumnIds, limit))
+        _page.value = updated
+        viewModelScope.launch { pageRepository.updatePage(updated) }
+    }
+
     fun setCellOverflow(mode: CellOverflow) {
         val current = _page.value ?: return
         val updated = current.copy(cellOverflow = mode.code)

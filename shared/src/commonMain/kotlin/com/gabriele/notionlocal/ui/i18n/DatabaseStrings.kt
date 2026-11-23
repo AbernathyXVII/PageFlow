@@ -504,6 +504,8 @@ object DbStrings {
     /** "Color columns" (dal 30/09/2026): nelle impostazioni della bacheca. */
     val colorColumns get() = t("Color columns", "Colora le colonne", "Spalten einfärben", "Colorer les colonnes", "Colorear columnas", "为列着色", "열 색상 입히기", "列に色を付ける")
     /** "Long text" (dal 30/09/2026): nelle impostazioni di una tabella, cosa fa il testo che non ci sta. */
+    val loadLimit get() = t("Load limit", "Limite di caricamento", "Ladelimit", "Limite de chargement", "Límite de carga", "加载限制", "불러오기 한도", "読み込み上限")
+    fun loadLimitPages(count: Int) = t("$count pages", "$count pagine", "$count Seiten", "$count pages", "$count páginas", "${count} 个页面", "페이지 ${count}개", "${count}ページ")
     val longText get() = t("Long text", "Testo lungo", "Langer Text", "Texte long", "Texto largo", "长文本", "긴 텍스트", "長いテキスト")
     fun cellOverflowName(mode: CellOverflow): String = when (mode) {
         CellOverflow.TRUNCATE -> t("Show …", "Tre puntini", "Mit … kürzen", "Afficher …", "Mostrar …", "显示 …", "… 표시", "… で省略")

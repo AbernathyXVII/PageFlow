@@ -188,4 +188,58 @@ class DesktopPeekRowArrowsTest {
             onWindowThread { scene.close() }
         }
     }
+
+    /**
+     * **Il Center peek si allarga e si stringe dai bordi** (chiesto dall'utente il 23/11/2026): il bordo
+     * destro trascinato di 100 a destra lo fa largo 200 di più (resta al centro); trascinato verso
+     * l'interno non va sotto la larghezza di prima, 900.
+     */
+    @Test
+    fun theCenterPeekGrowsFromItsEdges() {
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        val peek = PagePeek("p1", false, OpenMode.CENTER_PEEK)
+        val actions = PeekActions(close = {}, back = {}, changeMode = {}, replace = { _, _ -> }, openSearch = {}, openUpdates = {}, openOutside = { _, _, _ -> })
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1500, height = 800, density = Density(1f)) {
+                CompositionLocalProvider(
+                    LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner
+                ) {
+                    NotionLocalTheme { CenterPeekLayer(peek, factory, actions) }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun drag(from: Offset, to: Offset) {
+            onWindowThread {
+                scene.sendPointerEvent(PointerEventType.Move, from, type = PointerType.Mouse)
+                scene.sendPointerEvent(PointerEventType.Press, from, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
+            }
+            for (step in 1..10) {
+                onWindowThread {
+                    scene.sendPointerEvent(PointerEventType.Move, Offset(from.x + (to.x - from.x) * step / 10f, from.y), type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true))
+                }
+                frames(1)
+            }
+            onWindowThread { scene.sendPointerEvent(PointerEventType.Release, to, type = PointerType.Mouse, buttons = PointerButtons(), button = PointerButton.Primary) }
+            frames(5)
+        }
+        try {
+            frames(30)
+            // La finestra larga 900 al centro di 1500: da 300 a 1200, e il bordo destro subito fuori.
+            drag(Offset(1203f, 400f), Offset(1303f, 400f))
+            assertEquals(1100, AppSettings.centerPeekWidth)
+            // Ora va da 200 a 1300: il bordo destro, trascinato molto a sinistra, si ferma a 900.
+            drag(Offset(1303f, 400f), Offset(900f, 400f))
+            assertEquals(AppSettings.CENTER_PEEK_MIN_WIDTH, AppSettings.centerPeekWidth)
+        } finally {
+            AppSettings.centerPeekWidth = AppSettings.CENTER_PEEK_MIN_WIDTH
+            onWindowThread { scene.close() }
+        }
+    }
 }

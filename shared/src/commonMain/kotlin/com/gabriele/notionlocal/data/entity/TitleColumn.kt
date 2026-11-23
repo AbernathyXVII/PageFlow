@@ -44,3 +44,22 @@ fun withNameHidden(raw: String?, hidden: Boolean): String? {
 /** [raw] con [columnId] come colonna dei nomi (null: nessuna). */
 fun withTitleColumn(raw: String?, columnId: String?): String? =
     encodeMarks(hiddenMarksOf(raw).filterNot { it.startsWith(TITLE_MARK) } + listOfNotNull(columnId?.let { TITLE_MARK + it }))
+
+/**
+ * **"Load limit"** (dal 23/11/2026, chiesto dall'utente: "deciderlo database per database"): quante
+ * righe mostra un database dentro una pagina prima di "Load more", come su Notion. Un segno nello
+ * stesso campo, per vista, come quelli qui sopra; senza, [DEFAULT_LOAD_LIMIT].
+ */
+private const val LIMIT_MARK = "__limit__="
+
+/** Le scelte, quelle di Notion. */
+val LOAD_LIMITS = listOf(10, 25, 50, 100)
+
+const val DEFAULT_LOAD_LIMIT = 50
+
+fun PageEntity.loadLimit(): Int =
+    hiddenMarksOf(viewHiddenColumnIds).firstOrNull { it.startsWith(LIMIT_MARK) }?.removePrefix(LIMIT_MARK)?.toIntOrNull() ?: DEFAULT_LOAD_LIMIT
+
+/** [raw] col limite [limit] (quello di sempre: nessun segno). */
+fun withLoadLimit(raw: String?, limit: Int): String? =
+    encodeMarks(hiddenMarksOf(raw).filterNot { it.startsWith(LIMIT_MARK) } + listOfNotNull((LIMIT_MARK + limit).takeIf { limit != DEFAULT_LOAD_LIMIT }))
