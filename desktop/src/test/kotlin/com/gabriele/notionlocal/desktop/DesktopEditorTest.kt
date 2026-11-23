@@ -290,6 +290,68 @@ class DesktopEditorTest {
     }
 
     /**
+     * **La barra laterale torna col suo pulsante** (bug trovato dall'utente il 23/11/2026: "se tolgo la
+     * sidebar e riclicco il pulsante, la sidebar non appare. Se chiudo l'app e la riapro, rifunziona"):
+     * aperta e chiusa, si riapre; fissata e sganciata, si riapre lo stesso.
+     */
+    @Test
+    fun theSidebarComesBackWithItsButton() {
+        AppSettings.sidebarPinned = false
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 800, density = Density(1f)) {
+                CompositionLocalProvider(
+                    LocalPlatformContext provides context,
+                    LocalLifecycleOwner provides owner,
+                    LocalViewModelStoreOwner provides owner
+                ) {
+                    NotionLocalTheme { Surface(modifier = Modifier.fillMaxSize()) { AppNavHost(factory = factory) } }
+                }
+            }
+        }
+        var time = 0L
+        fun pageColor(): Int {
+            var color = 0
+            repeat(20) {
+                color = onWindowThread { Bitmap.makeFromImage(scene.render(time)).getColor(800, 400) }
+                time += 100_000_000L
+                Thread.sleep(30)
+            }
+            return color
+        }
+        fun click(x: Float, y: Float) = onWindowThread {
+            val at = Offset(x, y)
+            scene.sendPointerEvent(PointerEventType.Move, at)
+            scene.sendPointerEvent(PointerEventType.Press, at, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
+            scene.sendPointerEvent(PointerEventType.Release, at, buttons = PointerButtons(), button = PointerButton.Primary)
+        }
+        try {
+            val clear = pageColor()
+            // A: aperta col pulsante, chiusa con un clic sul velo, di nuovo col pulsante.
+            click(28f, 28f)
+            assertNotEquals("aperta", clear, pageColor())
+            click(800f, 400f)
+            assertEquals("chiusa", clear, pageColor())
+            click(28f, 28f)
+            assertNotEquals("riaperta col pulsante", clear, pageColor())
+            // B: fissata con la puntina, sganciata, e di nuovo il pulsante.
+            click(268f, 28f)
+            assertEquals("fissata", clear, pageColor())
+            assertTrue(AppSettings.sidebarPinned)
+            click(268f, 28f)
+            assertEquals("sganciata: la barra se ne va", clear, pageColor())
+            assertFalse(AppSettings.sidebarPinned)
+            click(28f, 28f)
+            assertNotEquals("dopo averla sganciata il pulsante la riapre", clear, pageColor())
+        } finally {
+            onWindowThread { scene.close() }
+            AppSettings.sidebarPinned = false
+        }
+    }
+
+    /**
      * **Il pallino dietro la puntina si vede solo col mouse sopra** (chiesto
      * dall'utente l'11/11/2026): un punto del pallino, fuori dall'icona, è del
      * colore della barra finché il mouse non ci passa, e torna così dopo.

@@ -253,7 +253,9 @@ private fun AppTab(
     }
 
     fun openSidebar() {
-        if (pinned) return
+        // Letta adesso, non quando è nata la pagina (bug trovato dall'utente il 23/11/2026: sganciata la barra
+        // fissata, il pulsante delle pagine aperte prima teneva "fissata" e non la riapriva più).
+        if (canPinSidebar && AppSettings.sidebarPinned) return
         sidebar.refresh()
         scope.launch {
             if (animations == AnimationLevel.OFF) drawerState.snapTo(DrawerValue.Open) else drawerState.open()

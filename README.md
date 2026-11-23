@@ -1126,6 +1126,18 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.49.1 — 23/11/2026 · 23:16 — The sidebar opens again after being unpinned
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1362 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The sidebar opens again after being unpinned**:
+  with the sidebar pinned beside the page, unpinning it and then pressing the
+  button on the page to open it did nothing until the app was closed and
+  opened again. The button of the pages already open still thought the
+  sidebar was pinned (so already there); now it looks at the pin when it is
+  pressed. Found by the user
+- **[Project]** `openSidebar` reads `AppSettings.sidebarPinned` at the click.
+  Test: `DesktopEditorTest.theSidebarComesBackWithItsButton`
+
 ### ✏️ v0.155.49 — 23/11/2026 · 22:53 — Matches on one line, a wider Center peek, "Load limit" for each database
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1361 tests passed)*
 
