@@ -152,8 +152,9 @@ class DesktopCalendarTest {
                 }
                 // Non i numeri dei giorni (della settimana dopo): quelli hanno del testo anche nella colonna accanto.
                 val neighbor = if (dayX > bitmap.width / 2) dayX - 138 else dayX + 138
+                // Anche i numeri grigi del mese dopo (trovato lunedì 23/11/2026: accanto al 30 c'era l'1 di dicembre).
                 fun neighborHasText(band: IntRange) = band.any { y ->
-                    (neighbor - 40 until neighbor + 40).any { x -> bitmap.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 120 && ((c shr 8) and 0xFF) > 120 && (c and 0xFF) > 120 } }
+                    (neighbor - 40 until neighbor + 40).any { x -> bitmap.getColor(x, y).let { c -> ((c shr 16) and 0xFF) > 60 && ((c shr 8) and 0xFF) > 60 && (c and 0xFF) > 60 } }
                 }
                 return bands.takeWhile { !neighborHasText(it) }
             }

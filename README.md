@@ -1126,6 +1126,34 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.44 — 23/11/2026 · 16:37 — Ctrl chooses blocks that aren't together; the right click opens the menus of the long press
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1346 tests passed)*
+
+- **[Change]** **[💻 PC]** **Ctrl chooses blocks that aren't next to
+  each other**: Ctrl + click on a block adds it to the blocks already chosen
+  (on one already chosen, takes it away); Ctrl + dragging adds the blocks
+  from the first to the one under the mouse, also starting in the margin with
+  the blue rectangle. Copy, Cut and Delete act on all of them. Without Ctrl
+  everything is as before
+- **[Change]** **[💻 PC]** **The right click opens the menus of the long
+  press** also where it didn't yet: on a link in a URL cell (Edit, Copy and
+  Paste link), on the Countdown widget, and on the number of a numbered
+  list. Where two menus are one inside the other (a cell in a row), the right
+  click opens only one
+- **[Bug fix]** **[💻 PC]** **The rows of a database in a column are dragged
+  again** (as in the main page, with the databases side by side): the blue
+  rectangle started there too. Now it doesn't start anywhere on a database
+  in the page, in a column or not
+- **[Project]** `BlockPicker.putDragArea`/`ownsDragAt` (where a database is
+  drawn) in place of `ownsDrag`; `mouseBlockSelection(selection)` with Ctrl;
+  `onRightClick` skips a press already taken; right click in `TextLikeCell`
+  (links), `CountdownBlock` and the number marker of the shared text. Tests:
+  `DesktopBlockSelectionTest.ctrlClickChoosesBlocksThatAreNotTogether`,
+  `DesktopRowDragTest.aRowOfADatabaseInAColumnIsDragged`,
+  `LinkShowDialogTest.aRightClickOpensTheSameMenu`; `DesktopCalendarTest`
+  and `DesktopCalendarPropertiesTest` count the grey numbers of the next
+  month too (they failed on Mondays at the end of the month)
+
 ### ✏️ v0.155.43 — 19/11/2026 · 22:48 — A back arrow in the peek; the rows of a database in a page are dragged again
 *(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1343 tests passed)*
 

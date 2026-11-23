@@ -147,7 +147,9 @@ class DesktopCalendarPropertiesTest {
                     if (last != null && y <= last.last + 3) bands[bands.lastIndex] = last.first..y else bands += y..y
                 }
                 val neighbor = if (dayX > bitmap.width / 2) dayX - 138 else dayX + 138
-                return bands.takeWhile { band -> band.none { y -> (neighbor - 40 until neighbor + 40).any { x -> bright(bitmap.getColor(x, y)) } } }
+                // Anche i numeri grigi del mese dopo (trovato lunedì 23/11/2026: accanto al 30 c'era l'1 di dicembre).
+                fun visible(c: Int) = ((c shr 16) and 0xFF) > 60 && ((c shr 8) and 0xFF) > 60 && (c and 0xFF) > 60
+                return bands.takeWhile { band -> band.none { y -> (neighbor - 40 until neighbor + 40).any { x -> visible(bitmap.getColor(x, y)) } } }
             }
             val shown = lines(first)
             assertEquals("il nome, Luogo e Note: $shown", 3, shown.size)

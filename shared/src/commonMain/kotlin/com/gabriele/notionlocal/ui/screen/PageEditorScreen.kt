@@ -3222,10 +3222,9 @@ private fun PageEditorContent(
                             coordinates = { pageListCoordinates.get() },
                             order = { latestRenderItems.value.flatMap { renderItemBlockIds(it) } },
                             selectsOnClick = { id -> viewModel.blocks.value.firstOrNull { it.id == id }?.type == BlockType.DIVIDER },
-                            selected = { selectedBlocks.value.isNotEmpty() },
+                            selection = { selectedBlocks.value },
                             scrollBy = { listState.scrollBy(it) },
                             marquee = marquee.takeIf { pcEditing },
-                            ownsDrag = { id -> viewModel.blocks.value.firstOrNull { it.id == id }?.type == BlockType.DATABASE_LINK },
                             onSelect = { ids ->
                                 if (!ids.isNullOrEmpty() && selectedBlocks.value.isEmpty()) focusManager.clearFocus()
                                 pageSelected = false
@@ -7224,6 +7223,8 @@ private fun MergedTextRunField(
                         modifier = Modifier
                             .offset(x = left.toDp(), y = top.toDp())
                             .size(width = (right - left).toDp(), height = (bottom - top).toDp())
+                            // Sul PC il clic destro, come nel numero dentro un toggle (dal 23/11/2026).
+                            .onRightClick { numberMenuFor = block.id }
                             .pointerInput(block.id) {
                                 // Solo il tocco prolungato. Prima un
                                 // tocco semplice faceva ripartire la
@@ -7507,6 +7508,9 @@ private fun BlockRow(
         // lui) dentro una pagina aperta: al suo posto la richiesta di
         // sbloccarlo.
         // Nelle celle del database "Select all" prende solo la cella (vedi `PageSelection.kt`).
+        // Dove sta il database: lì il rettangolo azzurro della pagina non parte (vedi `BlockPicker.ownsDragAt`).
+        val dragPicker = LocalBlockPicker.current
+        DisposableEffect(dragPicker, block.id) { onDispose { dragPicker?.removeDragArea(block.id) } }
         LockGate(databasePageId, factory.pageRepository, fullScreen = false, isDatabase = true) {
         PlainTextToolbar {
         DatabaseContent(
@@ -7531,7 +7535,9 @@ private fun BlockRow(
             // una tabella deve poter usare tutta la larghezza, e il
             // rientro della pagina la farebbe partire staccata dal bordo
             // mentre a schermo intero è attaccata.
-            modifier = Modifier.padding(start = (depth * 20).dp, top = 8.dp, bottom = 8.dp)
+            modifier = Modifier
+                .padding(start = (depth * 20).dp, top = 8.dp, bottom = 8.dp)
+                .onGloballyPositioned { dragPicker?.putDragArea(block.id, it) }
         )
         }
         }

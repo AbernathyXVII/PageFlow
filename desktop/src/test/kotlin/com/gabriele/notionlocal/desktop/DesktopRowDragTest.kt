@@ -191,12 +191,30 @@ class DesktopRowDragTest {
      * la maniglia sposta la riga, e il rettangolo azzurro della pagina non parte.
      */
     @Test
-    fun aRowOfADatabaseInAPageIsDragged() {
+    fun aRowOfADatabaseInAPageIsDragged() = dragInPage(inColumns = false)
+
+    /**
+     * **Lo stesso con il database in una colonna** (l'utente il 19/11/2026: "Nel menu principale il
+     * rettangolino parte comunque", dove i database stanno affiancati).
+     */
+    @Test
+    fun aRowOfADatabaseInAColumnIsDragged() = dragInPage(inColumns = true)
+
+    private fun dragInPage(inColumns: Boolean) {
         runBlocking {
             val repo = PageRepository(db)
             repo.createPage(PageEntity(id = "casa", title = "Casa"))
             repo.saveBlock(BlockEntity(id = "sopra", pageId = "casa", textJson = """[{"text":"Sopra"}]""", orderIndex = 0))
-            repo.saveBlock(BlockEntity(id = "db", pageId = "casa", type = BlockType.DATABASE_LINK, linkedPageId = "giochi", orderIndex = 1))
+            if (inColumns) {
+                repo.saveBlock(BlockEntity(id = "gruppo", pageId = "casa", textJson = """[{"text":""}]""", orderIndex = 1))
+                repo.makeColumns("gruppo", 2)
+                val blocks = db.blockDao().getBlocksForPageOnce("casa")
+                val firstColumn = blocks.filter { it.parentBlockId == "gruppo" }.minBy { it.orderIndex }
+                val line = blocks.single { it.parentBlockId == firstColumn.id }
+                repo.saveBlock(line.copy(type = BlockType.DATABASE_LINK, linkedPageId = "giochi", textJson = "[]"))
+            } else {
+                repo.saveBlock(BlockEntity(id = "db", pageId = "casa", type = BlockType.DATABASE_LINK, linkedPageId = "giochi", orderIndex = 1))
+            }
         }
         val factory = ViewModelFactory(context)
         val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
@@ -239,7 +257,7 @@ class DesktopRowDragTest {
             mouse(PointerEventType.Move, uno.center, pressed = false)
             frames(4)
             val handle = nodes { c -> c.getOrNull(SemanticsProperties.ContentDescription)?.contains("Drag to move") == true }.single().center
-            picture("rowdrag_page_handle.png", scene, time)
+            picture(if (inColumns) "rowdrag_column_handle.png" else "rowdrag_page_handle.png", scene, time)
             mouse(PointerEventType.Move, handle, pressed = false)
             frames(2)
             mouse(PointerEventType.Press, handle, pressed = true)
@@ -251,7 +269,7 @@ class DesktopRowDragTest {
                 mouse(PointerEventType.Move, Offset(handle.x, y), pressed = true)
                 frames(1)
             }
-            picture("rowdrag_page_dragging.png", scene, time)
+            picture(if (inColumns) "rowdrag_column_dragging.png" else "rowdrag_page_dragging.png", scene, time)
             mouse(PointerEventType.Release, Offset(handle.x, y), pressed = false)
             frames(10)
             assertEquals("Uno dopo Tre", listOf("Due", "Tre", "Uno", "Quattro"), order())

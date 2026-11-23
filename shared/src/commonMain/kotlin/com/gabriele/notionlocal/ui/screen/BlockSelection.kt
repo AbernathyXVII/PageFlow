@@ -27,6 +27,8 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -83,6 +85,23 @@ class BlockPicker {
     fun remove(key: String) {
         entries.remove(key)
     }
+
+    /**
+     * **Dove il mouse è di chi sta sotto** (dal 23/11/2026): un database nella pagina, anche in
+     * una colonna, trascina da sé righe, schede e colonne; premuto lì il rettangolo azzurro non
+     * parte (vedi [mouseBlockSelection]).
+     */
+    private val dragAreas = HashMap<String, LayoutCoordinates>()
+
+    fun putDragArea(key: String, coordinates: LayoutCoordinates) {
+        dragAreas[key] = coordinates
+    }
+
+    fun removeDragArea(key: String) {
+        dragAreas.remove(key)
+    }
+
+    fun ownsDragAt(window: Offset): Boolean = dragAreas.values.any { it.isAttached && it.boundsInWindow().contains(window) }
 
     /**
      * La voce sotto il punto: con [inner] prima le righe dentro le colonne
@@ -269,15 +288,11 @@ fun Modifier.mouseBlockSelection(
     coordinates: () -> LayoutCoordinates?,
     order: () -> List<String>,
     selectsOnClick: (String) -> Boolean,
-    selected: () -> Boolean,
+    /** I blocchi scelti adesso (vuoto: nessuno). */
+    selection: () -> Set<String>,
     scrollBy: suspend (Float) -> Unit,
     /** Il rettangolo azzurro, nelle coordinate della pagina (vedi [drawMarquee]); null: niente rettangolo. */
     marquee: MutableState<Rect?>? = null,
-    /**
-     * I blocchi che col mouse si trascinano da soli (un database: le righe dalla maniglia, le
-     * schede, le colonne): premuti fuori dalla colonna del testo non fanno partire il rettangolo.
-     */
-    ownsDrag: (String) -> Boolean = { false },
     onSelect: (Set<String>?) -> Unit
 ): Modifier = pointerInput(picker) {
     coroutineScope {
@@ -287,7 +302,29 @@ fun Modifier.mouseBlockSelection(
             val page = coordinates() ?: return@awaitEachGesture
             fun hit(position: Offset) = runCatching { picker.at(page.localToWindow(position)) }.getOrNull()
             val start = hit(down.position)
-            val hadSelection = selected()
+            val base = selection()
+            val hadSelection = base.isNotEmpty()
+            // **Con Ctrl si aggiunge** (dal 23/11/2026, chiesto dall'utente: "più blocchi ma non attaccati
+            // l'uno con l'altro"): i blocchi scelti restano, e quelli nuovi si aggiungono.
+            val ctrl = currentEvent.keyboardModifiers.isCtrlPressed
+            fun choose(ids: Set<String>) = onSelect(if (ctrl) base + ids else ids)
+            if (ctrl && start != null && runCatching { !picker.ownsDragAt(page.localToWindow(down.position)) }.getOrDefault(true)) {
+                // Ctrl + clic su un blocco lo aggiunge (o, se c'era già, lo toglie); Ctrl + trascinamento
+                // aggiunge i blocchi da lui a quello sotto il puntatore. Il testo non prende il cursore.
+                down.consume()
+                var dragged = false
+                while (true) {
+                    val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
+                    change.consume()
+                    if (!change.pressed) {
+                        if (!dragged) onSelect(if (start.second in base) base - start.second else base + start.second)
+                        break
+                    }
+                    if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) dragged = true
+                    if (dragged) hit(change.position)?.let { now -> choose(blockRange(order(), start.second, now.second)) }
+                }
+                return@awaitEachGesture
+            }
             var blocks = false
             var pointer = down.position
             var moved = false
@@ -298,9 +335,11 @@ fun Modifier.mouseBlockSelection(
             // il rettangolo tocca sono scelti. Si aggancia al primo blocco che tocca, e lo segue mentre la
             // pagina scorre (al bordo o con la rotella): la scelta va da lui a quello verso il puntatore.
             // Dal 19/11/2026 non su un database (l'utente: spostando una pagina "mi appare quel famoso
-            // rettangolino", perché la maniglia delle righe sta a sinistra della colonna del testo).
-            val boxing = marquee != null && (start == null || !ownsDrag(start.second)) && runCatching {
+            // rettangolino", perché la maniglia delle righe sta a sinistra della colonna del testo),
+            // dal 23/11/2026 anche dentro le colonne (vedi `BlockPicker.ownsDragAt`).
+            val boxing = marquee != null && runCatching {
                 val at = page.localToWindow(down.position)
+                if (picker.ownsDragAt(at)) return@runCatching false
                 val (left, right, bottom) = picker.pageExtent() ?: return@runCatching false
                 at.x < left || at.x > right || (start == null && at.y > bottom)
             }.getOrDefault(false)
@@ -334,7 +373,7 @@ fun Modifier.mouseBlockSelection(
                 val from = anchor
                 val to = hit(position)?.second ?: nearest(position.y, startY)
                 val ids = order()
-                onSelect(if (from != null && to != null) blockRange(ids, from, to) else emptySet())
+                choose(if (from != null && to != null) blockRange(ids, from, to) else emptySet())
             }
 
             /**

@@ -332,6 +332,8 @@ fun TextLikeCell(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    // Sul PC il clic destro su un link dà lo stesso menu della pressione lunga (dal 23/11/2026).
+                    .onRightClick(if (link) ({ linkMenu = true }) else null)
                     .pointerInput(cellKey, cut, wrap, showsVisual, link) {
                         detectTapGestures(
                             onTap = { if (link) openLink(context, localValue) else startEditing() },

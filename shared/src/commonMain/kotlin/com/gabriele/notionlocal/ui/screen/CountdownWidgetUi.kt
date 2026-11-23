@@ -147,6 +147,8 @@ private fun CountdownBlock(entry: CountdownEntry, now: LocalDateTime, onEdit: ()
         modifier = Modifier
             .fillMaxWidth()
             .testTag(COUNTDOWN_TAG)
+            // Sul PC il clic destro, come la pressione lunga (dal 23/11/2026).
+            .onRightClick(onEdit)
             .pointerInput(entry.id) {
                 detectTapGestures(onLongPress = {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)

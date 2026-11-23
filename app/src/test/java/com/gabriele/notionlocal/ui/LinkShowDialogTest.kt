@@ -20,6 +20,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.rightClick
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.gabriele.notionlocal.data.LinkTitles
@@ -205,6 +208,16 @@ class LinkShowDialogTest {
         compose.onNodeWithText("Show as…").assertDoesNotExist()
         // Senza titolo, niente matita.
         compose.onNodeWithContentDescription("Edit title").assertDoesNotExist()
+    }
+
+    /** **Il clic destro dà lo stesso menu** (dal 23/11/2026, chiesto dall'utente per il PC). */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun aRightClickOpensTheSameMenu() {
+        cell(null)
+        compose.onNodeWithText(bulbapedia).performMouseInput { rightClick() }
+        compose.waitForIdle()
+        compose.onNodeWithText("Copy link").assertExists()
     }
 
     /** **La matita** (13/11/2026, chiesto dall'utente): il titolo letto si corregge. */

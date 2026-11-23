@@ -19,6 +19,7 @@ import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -177,6 +178,39 @@ class DesktopBlockSelectionTest {
         onWindowThread { key(scene, Key.Delete) }
         frames(5)
         waitForBlocks(listOf("divisore", "tre"))
+    }
+
+    /**
+     * **Con Ctrl, blocchi non attaccati** (chiesto dall'utente il 19/11/2026: "la selezione manuale di
+     * più blocchi ma non attaccati l'uno con l'altro semplicemente tenendo premuto CTRL"): Ctrl + clic
+     * sulla prima e sulla terza riga le sceglie tutte e due, un altro Ctrl + clic toglie quella
+     * cliccata, e Canc elimina solo quelle scelte.
+     */
+    @Test
+    fun ctrlClickChoosesBlocksThatAreNotTogether() = withPage { scene, frames, picture ->
+        val rows = textRows(picture())
+        assertEquals("righe trovate: $rows", 7, rows.size)
+        fun ctrlClick(y: Float) {
+            val at = Offset(100f, y)
+            val ctrl = PointerKeyboardModifiers(isCtrlPressed = true)
+            onWindowThread {
+                scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse, keyboardModifiers = ctrl)
+                scene.sendPointerEvent(PointerEventType.Press, at, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true),
+                    keyboardModifiers = ctrl, button = PointerButton.Primary)
+                scene.sendPointerEvent(PointerEventType.Release, at, type = PointerType.Mouse, buttons = PointerButtons(),
+                    keyboardModifiers = ctrl, button = PointerButton.Primary)
+            }
+            frames(4)
+        }
+        ctrlClick(rows[3].center())
+        ctrlClick(rows[6].center())
+        ctrlClick(rows[5].center())
+        // Di nuovo sulla seconda riga: esce dalla scelta.
+        ctrlClick(rows[5].center())
+        File("build/desktop-screenshots", "blocks_ctrl.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(picture()).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        onWindowThread { key(scene, Key.Delete) }
+        frames(5)
+        waitForBlocks(listOf("titolo", "due", "divisore"))
     }
 
     /** Un clic sul divisore lo sceglie, e Backspace lo elimina; le righe restano. */

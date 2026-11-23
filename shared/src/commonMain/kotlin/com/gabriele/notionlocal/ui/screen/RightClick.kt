@@ -29,7 +29,8 @@ fun Modifier.onRightClick(action: (() -> Unit)?): Modifier =
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
-                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                        // Uno dentro l'altro (una cella in una riga) se l'è già preso quello fuori: un menu solo.
+                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed && event.changes.none { it.isConsumed }) {
                             event.changes.forEach { it.consume() }
                             current()
                         }
