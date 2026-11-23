@@ -4804,20 +4804,21 @@ private fun MiniMonth(
                             // Oggi e i puntini solo nel suo mese, non due volte.
                             val ownDay = YearMonth.from(date) == month
                             Box(modifier = Modifier.weight(1f).height(YEAR_DAY_HEIGHT), contentAlignment = Alignment.Center) {
-                                // Oggi nel cerchio di Google, col numero arancione come nelle altre viste.
+                                // Oggi nel cerchio di Google, col numero blu come in Google (scelto dall'utente il 23/11/2026:
+                                // nella v0.155.50 era arancione come nelle altre viste).
                                 if (ownDay && date == today) Box(Modifier.size(YEAR_DAY_HEIGHT).background(DarkSurfaceVariant, CircleShape))
                                 Text(
                                     text = date.dayOfMonth.toString(),
                                     fontSize = YEAR_DAY_FONT,
                                     lineHeight = YEAR_DAY_FONT,
                                     fontWeight = if (ownDay && date == today) FontWeight.Bold else null,
-                                    color = if (ownDay && date == today) SamsungOrange else text,
+                                    color = if (ownDay && date == today) MaterialTheme.colorScheme.primary else text,
                                     maxLines = 1
                                 )
                                 if (ownDay && date in busyDays) {
                                     Box(
                                         Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp).size(3.dp)
-                                            .background(if (date == today) SamsungOrange else MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                                            .background(if (date == today) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
                                     )
                                 }
                             }

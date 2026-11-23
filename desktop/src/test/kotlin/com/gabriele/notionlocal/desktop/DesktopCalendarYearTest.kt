@@ -62,6 +62,8 @@ class DesktopCalendarYearTest {
     private val dir: File = Files.createTempDirectory("pageflow-year").toFile()
     private val context = DesktopContext(dir)
     private val today = LocalDate.now()
+    /** L'ultima foto fatta da [texts]. */
+    private var shot: Bitmap? = null
 
     private class ScreenOwner : LifecycleOwner, ViewModelStoreOwner {
         private val registry = LifecycleRegistry.createUnsafe(this).apply { currentState = Lifecycle.State.RESUMED }
@@ -121,6 +123,7 @@ class DesktopCalendarYearTest {
                 Thread.sleep(30)
             }
             val shot = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+            this.shot = shot
             File("build/desktop-screenshots").mkdirs()
             File("build/desktop-screenshots", "$name.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(shot).encodeToData(EncodedImageFormat.PNG)!!.bytes)
             return onWindowThread {
@@ -156,6 +159,20 @@ class DesktopCalendarYearTest {
         // Il primo lunedì della griglia c'è anche se è di dicembre: le sei righe partono da lì.
         val firstDay = shown.filter { (text, r) -> text == firstMonday.dayOfMonth.toString() && r.center.x in (january.left + 24f)..(january.left + 60f) && r.top > january.bottom + 15f }
         assertTrue("il ${firstMonday.dayOfMonth} in alto a sinistra di gennaio", firstDay.isNotEmpty())
+
+        // Oggi col numero blu, come in Google (scelto dall'utente il 23/11/2026; nella v0.155.50 arancione).
+        val monthWidth = shown.at("February").left - january.left
+        val title = shown.at(months[today.monthValue - 1])
+        val number = shown.filter { (text, r) ->
+            text == today.dayOfMonth.toString() && r.center.x in (title.left + 24f)..(title.left + monthWidth) && r.top in title.bottom..(title.bottom + 170f)
+        }.single().second
+        val bitmap = shot!!
+        val blue = (number.top.toInt()..number.bottom.toInt()).sumOf { y ->
+            (number.left.toInt()..number.right.toInt()).count { x ->
+                bitmap.getColor(x, y).let { c -> (c and 0xFF) > 170 && (c and 0xFF) - ((c shr 16) and 0xFF) > 90 }
+            }
+        }
+        assertTrue("il numero di oggi è blu: $blue punti", blue > 5)
     }
 
     @Test

@@ -1126,6 +1126,17 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.51 — 24/11/2026 · 00:12 — Today in blue in the Year view, like Google Calendar
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1364 tests passed)*
+
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **Today in blue in the Year view
+  of the calendar**: the number of today, in its grey circle, is blue like in
+  Google Calendar, and so is the dot under it when today has pages (in
+  v0.155.50 they were orange like in the other views, which stay orange)
+- **[Project]** `MiniMonth` uses `MaterialTheme.colorScheme.primary` for
+  today. `DesktopCalendarYearTest` also checks that the number of today is
+  blue
+
 ### ✏️ v0.155.50 — 23/11/2026 · 23:53 — The Year view of the calendar like Google Calendar
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1364 tests passed)*
 
