@@ -3190,7 +3190,8 @@ private fun PageEditorContent(
                                 // metà sotto, come fa l'altezza di riga nei campi di testo.
                                 val islandSpacing = paragraphLook.spacingOf(item.block)
                                 // Un database dice qual è la sua prima riga (il titolo), per i sei puntini (`BlockHandle.kt`).
-                                val firstLine = remember(item.block.id) { if (item.block.type == BlockType.DATABASE_LINK) FirstLine() else null }
+                                // Il titolo di un database, e dal 23/11/2026 quello di un'immagine: i puntini sulla sua riga.
+                                val firstLine = remember(item.block.id) { if (item.block.type == BlockType.DATABASE_LINK || item.block.type == BlockType.IMAGE) FirstLine() else null }
                                 Column(
                                     (if (sideScroll != null) Modifier.nestedScroll(KeepSidewaysInside) else Modifier)
                                         .padding(vertical = (islandSpacing / 2f).sp.toDpIn(LocalDensity.current))
@@ -3449,7 +3450,13 @@ private fun PageEditorContent(
                     layout = { listState.layoutInfo.visibleItemsInfo.map { Triple(it.key, it.offset, it.size) } },
                     spot = blockSpot
                 )
-                BlockHandle(blockSpot, endsAt = pageLeftInset + PAGE_SIDE_PADDING, drag = blockDrag) { id -> blockMenuFor = id }
+                BlockHandle(
+                    blockSpot,
+                    endsAt = pageLeftInset + PAGE_SIDE_PADDING,
+                    drag = blockDrag,
+                    // Uno scatto, un ventesimo della pagina, come la striscia fra le colonne qui sotto.
+                    onWheel = { notches -> listState.dispatchRawDelta(notches * (pageListCoordinates.get()?.size?.height ?: 0) / 20f) }
+                ) { id -> blockMenuFor = id }
                 ColumnEdgeLayer(columnEdges, { pageListCoordinates.get() }) { notches ->
                     // Uno scatto, un ventesimo della pagina, come la rotella sulla pagina.
                     listState.dispatchRawDelta(notches * (pageListCoordinates.get()?.size?.height ?: 0) / 20f)
@@ -5732,7 +5739,7 @@ private fun ColumnLines(
         key(child.id) {
             // Un database dice qual è la sua prima riga (il titolo): lì i suoi sei puntini,
             // come nella pagina (trovato dall'utente: "i sei puntini sono stortissimi").
-            val lineFirst = remember(child.type) { if (child.type == BlockType.DATABASE_LINK) FirstLine() else null }
+            val lineFirst = remember(child.type) { if (child.type == BlockType.DATABASE_LINK || child.type == BlockType.IMAGE) FirstLine() else null }
             // **Una colonna, non un `Box`** (dal 12/11/2026, trovato dall'utente: "si sono
             // creati dei divider sopra i database"): il database disegna anche la riga alla
             // sua fine, e nel `Box` finiva sopra di lui, in cima. Lo stesso errore del 20/10
@@ -5745,7 +5752,10 @@ private fun ColumnLines(
                     // Col mouse la riga ha i suoi sei puntini, accanto al suo testo (dal 12/11/2026).
                     .pickableAs(
                         "line:" + child.id,
-                        lineOf = { _, c -> lineFirst?.boundsIn(c) ?: LineBounds(0f, minOf(c.size.height.toFloat(), lineHandleSpan), sidePaddingPx) },
+                        lineOf = { _, c ->
+                            lineFirst?.boundsIn(c)?.let { line -> if (line.start == null) LineBounds(line.top, line.bottom, sidePaddingPx) else line }
+                                ?: LineBounds(0f, minOf(c.size.height.toFloat(), lineHandleSpan), sidePaddingPx)
+                        },
                         nested = true,
                         textInset = sidePaddingPx
                     ) { child.id }

@@ -284,7 +284,9 @@ fun ImageBlockContent(
                     focus = focusText == kind,
                     onFocused = { focusText = null },
                     onChange = { new -> viewModel.updateImageText(block.id) { if (caption) it.copy(caption = new) else it.copy(imageTitle = new) } },
-                    onLeftEmpty = { viewModel.updateBlockAttrs(block.id) { if (caption) it.copy(caption = null) else it.copy(imageTitle = null) } }
+                    onLeftEmpty = { viewModel.updateBlockAttrs(block.id) { if (caption) it.copy(caption = null) else it.copy(imageTitle = null) } },
+                    // I sei puntini a metà del titolo, nel margine (dal 23/11/2026, trovato dall'utente: "è storta").
+                    modifier = if (caption) Modifier else Modifier.reportsFirstLine(start = null)
                 )
             }
             Column(

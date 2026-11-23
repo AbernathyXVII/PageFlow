@@ -147,7 +147,14 @@ fun FollowPageLayout(
  * cadeva fra un pixel e l'altro e i puntini venivano di grandezze diverse.
  */
 @Composable
-fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, drag: BlockDrag? = null, onClick: (String) -> Unit) {
+fun BlockHandle(
+    spotState: State<BlockSpot?>,
+    endsAt: Dp,
+    drag: BlockDrag? = null,
+    /** La rotella sopra i puntini quando non si trascina: scatti, in giù se più di zero (la pagina scorre). */
+    onWheel: (Float) -> Unit = {},
+    onClick: (String) -> Unit
+) {
     val spot = spotState.value ?: return
     val color = MaterialTheme.colorScheme.onSurfaceVariant
     val place = remember { arrayOfNulls<LayoutCoordinates>(1) }
@@ -169,16 +176,21 @@ fun BlockHandle(spotState: State<BlockSpot?>, endsAt: Dp, drag: BlockDrag? = nul
             .size(HANDLE_WIDTH, HANDLE_HEIGHT)
             .clip(RoundedCornerShape(4.dp))
             .onGloballyPositioned { place[0] = it }
+            .pointerInput(drag) {
+                // La rotella sopra i puntini arriva qui, non alla pagina: gliela si passa. Mentre si trascina
+                // la usa il trascinamento; se no la pagina scorre come altrove (dal 23/11/2026, chiesto
+                // dall'utente: "quando la puntina del mouse è sopra l'icona dei sei puntini, non posso scrollare").
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.type != PointerEventType.Scroll) continue
+                        val notches = event.changes.sumOf { it.scrollDelta.y.toDouble() }.toFloat()
+                        if (drag?.dragged != null) drag.wheel(notches) else onWheel(notches)
+                    }
+                }
+            }
             .then(
                 if (drag == null) Modifier else Modifier.pointerInput(drag) {
-                    // Finché si tiene premuto la rotella arriva qui, non alla pagina: gliela si passa.
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            if (event.type == PointerEventType.Scroll) drag.wheel(event.changes.sumOf { it.scrollDelta.y.toDouble() }.toFloat())
-                        }
-                    }
-                }.pointerInput(drag) {
                     // Il blocco di quando si comincia: lo stato, perché il gesto dura più di un giro.
                     detectDragGestures(
                         onDragStart = { at ->
@@ -223,9 +235,10 @@ private fun DrawScope.drawSixDots(color: Color) {
  */
 class FirstLine {
     private var coordinates: LayoutCoordinates? = null
-    private var startPx = 0f
+    private var startPx: Float? = 0f
 
-    fun report(coordinates: LayoutCoordinates, startPx: Float) {
+    /** [startPx] null: i puntini restano dove stanno di solito, nel margine; si prende solo l'altezza. */
+    fun report(coordinates: LayoutCoordinates, startPx: Float?) {
         this.coordinates = coordinates
         this.startPx = startPx
     }
@@ -234,17 +247,21 @@ class FirstLine {
     fun boundsIn(block: LayoutCoordinates): LineBounds? {
         val line = coordinates?.takeIf { it.isAttached && block.isAttached } ?: return null
         val box = block.localBoundingBoxOf(line, clipBounds = false)
-        return LineBounds(box.top, box.bottom, box.left + startPx)
+        return LineBounds(box.top, box.bottom, startPx?.let { box.left + it })
     }
 }
 
 val LocalFirstLine = staticCompositionLocalOf<FirstLine?> { null }
 
-/** Questa è la prima riga del blocco che la contiene ([FirstLine]); il contenuto comincia [start] più a destra. */
+/**
+ * Questa è la prima riga del blocco che la contiene ([FirstLine]); il contenuto comincia [start] più
+ * a destra. Con [start] null i puntini restano nel margine e prendono solo l'altezza (il titolo di
+ * un'immagine, dal 23/11/2026).
+ */
 @Composable
-fun Modifier.reportsFirstLine(start: Dp = 0.dp): Modifier {
+fun Modifier.reportsFirstLine(start: Dp? = 0.dp): Modifier {
     val line = LocalFirstLine.current ?: return this
-    val startPx = with(LocalDensity.current) { start.toPx() }
+    val startPx = with(LocalDensity.current) { start?.toPx() }
     return onGloballyPositioned { line.report(it, startPx) }
 }
 

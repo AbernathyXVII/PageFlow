@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.gabriele.notionlocal.data.AppDatabase
+import com.gabriele.notionlocal.data.entity.BlockAttrs
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
 import com.gabriele.notionlocal.data.entity.DatabaseLayout
@@ -607,6 +608,34 @@ class DesktopBlockSelectionTest {
     }
 
     /**
+     * **La rotella sopra i sei puntini fa scorrere la pagina** (chiesto dall'utente il 23/11/2026:
+     * "quando la puntina del mouse è sopra l'icona dei sei puntini, non posso scrollare"), senza
+     * premere niente: le righe sullo schermo cambiano.
+     */
+    @Test
+    fun theWheelOverTheSixDotsScrollsThePage() {
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "rotella", title = "Rotella"))
+            for (i in 0 until 60) repo.saveBlock(BlockEntity(id = "rotella-$i", pageId = "rotella", textJson = """[{"text":"Riga numero $i"}]""", orderIndex = i))
+        }
+        withPage("rotella") { scene, frames, picture ->
+            val before = picture()
+            val lineY = textRows(before)[3].center()
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, lineY), pressed = false) }
+            frames(3)
+            val dots = Offset(41f, lineY)
+            onWindowThread { mouse(scene, PointerEventType.Move, dots, pressed = false) }
+            frames(3)
+            onWindowThread { scene.sendPointerEvent(PointerEventType.Scroll, dots, scrollDelta = Offset(0f, 3f), type = PointerType.Mouse) }
+            frames(5)
+            val after = picture()
+            val changed = (100 until 600 step 4).count { y -> (53 until 300).any { x -> bright(before.getColor(x, y)) != bright(after.getColor(x, y)) } }
+            assertTrue("la pagina è scorsa: $changed righe di pixel cambiate", changed > 20)
+        }
+    }
+
+    /**
      * **Un database si sposta tenendo i puntini del suo titolo** (chiesto
      * dall'utente il 12/11/2026): uno vero, con una proprietà e delle righe,
      * portato sopra la prima riga va in cima, e poi sotto l'ultima in fondo.
@@ -886,6 +915,41 @@ class DesktopBlockSelectionTest {
             val dotsRight = DOTS_X.last { x -> (title.first..title.last).any { y -> shown.getColor(x, y) != clean.getColor(x, y) } }
             val titleLeft = (0 until 300).first { x -> (title.first..title.last).any { y -> bright(clean.getColor(x, y)) } }
             assertTrue("puntini fino a $dotsRight, titolo da $titleLeft", dotsRight < titleLeft - 9)
+        }
+    }
+
+    /**
+     * **I puntini di un'immagine col titolo stanno a metà del titolo** (trovato dall'utente il
+     * 23/11/2026: "l'icona dei sei puntini appartenente all'immagine che ho in home è storta"),
+     * nel margine come per le altre righe.
+     */
+    @Test
+    fun theSixDotsSitOnTheTitleOfAnImage() {
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "immagine", title = "Immagine"))
+            val image = java.awt.image.BufferedImage(200, 100, java.awt.image.BufferedImage.TYPE_INT_RGB)
+            image.createGraphics().apply { color = java.awt.Color(0xE02020); fillRect(0, 0, 200, 100); dispose() }
+            val bytes = java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(image, "png", it) }.toByteArray()
+            val file = PageImageStore(context).saveImageBytes(bytes)!!
+            repo.saveBlock(BlockEntity(id = "sopra", pageId = "immagine", textJson = """[{"text":"CIAO"}]""", orderIndex = 0))
+            repo.saveBlock(
+                BlockEntity(
+                    id = "foto", pageId = "immagine", type = BlockType.IMAGE, textJson = "[]", orderIndex = 1,
+                    attrsJson = BlockAttrs.encode(BlockAttrs(file = file, name = "rosso.png", imageTitle = "TITOLO FOTO"))
+                )
+            )
+        }
+        withPage("immagine") { scene, frames, picture ->
+            frames(20)
+            val clean = picture()
+            val title = textRows(clean)[4]
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, title.center()), pressed = false) }
+            frames(5)
+            val shown = picture()
+            File("build/desktop-screenshots", "dots_image_title.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(shown).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            val dots = dotsRows(shown, clean)
+            assertTrue("puntini $dots, titolo $title", dots.isNotEmpty() && abs(dots.average() - title.center()) <= 1.5)
         }
     }
 

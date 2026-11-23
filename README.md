@@ -1126,6 +1126,20 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.47 — 23/11/2026 · 18:10 — The wheel scrolls over the six dots; the dots of an image sit on its title
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1352 tests passed)*
+
+- **[Change]** **[💻 PC]** **The wheel scrolls the page also with the mouse
+  on the six dots**: before, the wheel there did something only while
+  dragging a block, and the page stood still
+- **[Bug fix]** **[💻 PC]** **The six dots of an image with a title sit in the
+  middle of the title**, in the margin as for the other lines: they were
+  higher, at the top of the block. Found by the user on the main page
+- **[Project]** `BlockHandle(onWheel)`; `FirstLine` also for images, with
+  `reportsFirstLine(start = null)` (only the height, the dots stay in the
+  margin). Tests: `DesktopBlockSelectionTest.theWheelOverTheSixDotsScrollsThePage`
+  and `theSixDotsSitOnTheTitleOfAnImage`
+
 ### ✏️ v0.155.46 — 23/11/2026 · 17:49 — The right-click menu in order: Delete at the bottom, Duplicate under Paste, Color, every type in Turn into
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1350 tests passed)*
 
