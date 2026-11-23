@@ -1126,6 +1126,22 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.50 — 23/11/2026 · 23:53 — The Year view of the calendar like Google Calendar
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1364 tests passed)*
+
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **The Year view of the calendar
+  is drawn like Google Calendar's**: four months a row on the PC (two on the
+  phone, or three when there is room), each with its full name, the initials
+  of the days, the week numbers in a frame on the left and always six rows of
+  days, with those of the months before and after too. Today is in a circle,
+  with its number in orange like in the other views; under the days with at
+  least one page there is a small dot. Before: three small months a row, with
+  8-point numbers and no days of the other months
+- **[Project]** `CalendarYearGrid` and `MiniMonth` (`DatabaseViewScreen.kt`):
+  the months a row come from the width (`YEAR_MONTH_MIN_WIDTH`), the week
+  numbers from `WeekFields` with the first day of the week. Test:
+  `DesktopCalendarYearTest`
+
 ### 🔧 v0.155.49.1 — 23/11/2026 · 23:16 — The sidebar opens again after being unpinned
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1362 tests passed)*
 

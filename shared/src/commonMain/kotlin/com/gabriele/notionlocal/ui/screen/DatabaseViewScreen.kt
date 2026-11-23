@@ -462,12 +462,14 @@ private val CALENDAR_BAR_HEIGHT = 18.dp
 private const val CALENDAR_MAX_ROWS = 20
 
 /**
- * Un giorno nella vista dell'anno: dodici mesi affiancati tre per riga
- * lasciano poco più di un centimetro a testa, quindi le misure sono
- * quelle minime in cui due cifre restano leggibili.
+ * Le misure della vista dell'anno, prese da Google Calendar (dal 23/11/2026, vedi
+ * `CalendarYearGrid`): un mese non diventa più stretto di [YEAR_MONTH_MIN_WIDTH], così sul
+ * telefono i mesi sono due per riga e sul PC fino a quattro.
  */
-private val MINI_DAY_SIZE = 13.dp
-private val MINI_DAY_FONT = 8.sp
+private val YEAR_MONTH_MIN_WIDTH = 160.dp
+private val YEAR_DAY_HEIGHT = 22.dp
+private val YEAR_WEEK_COLUMN = 24.dp
+private val YEAR_DAY_FONT = 11.sp
 
 /**
  * Quante settimane si possono sfogliare col dito, e da quale si parte.
@@ -4673,13 +4675,15 @@ private fun CalendarWeekSwiper(
 }
 
 /**
- * L'anno intero: dodici mesi in miniatura, tre per riga.
+ * L'anno intero, **come in Google Calendar** (dal 23/11/2026, chiesto dall'utente con una
+ * foto: "non mi piace affatto"; prima tre mesi per riga, numeri da 8 punti e niente giorni
+ * dei mesi accanto): il nome intero del mese, le iniziali dei giorni, i numeri delle
+ * settimane in un riquadro a sinistra e sempre sei righe, anche coi giorni dei mesi accanto.
+ * Sul PC quattro mesi per riga, sul telefono due (vedi [YEAR_MONTH_MIN_WIDTH]).
  *
- * A questa scala le barre non si leggerebbero, quindi non ci sono: i
- * giorni con almeno una pagina sono cerchiati, e basta a far vedere a
- * colpo d'occhio dove si concentra il lavoro. Toccando un mese lo si
- * apre da vicino, che è l'unica cosa sensata da fare con un mese alto
- * un centimetro.
+ * A questa scala le barre non si leggerebbero, quindi non ci sono: sotto i giorni con almeno
+ * una pagina c'è un puntino (Google non li segna, ma qui sono il contenuto del database).
+ * Toccando un mese lo si apre da vicino.
  */
 @Composable
 private fun CalendarYearGrid(
@@ -4691,19 +4695,23 @@ private fun CalendarYearGrid(
 ) {
     val busyDays = remember(year, dated) { busyDaysOfYear(year, dated) }
 
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp)) {
-        repeat(4) { rowIndex ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                repeat(3) { columnIndex ->
-                    val month = YearMonth.of(year, rowIndex * 3 + columnIndex + 1)
-                    MiniMonth(
-                        month = month,
-                        today = today,
-                        firstDayOfWeek = firstDayOfWeek,
-                        busyDays = busyDays,
-                        onClick = { onOpenMonth(month) },
-                        modifier = Modifier.weight(1f)
-                    )
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        // 2, 3 e 4 dividono 12: le righe sono sempre piene.
+        val perRow = (maxWidth / YEAR_MONTH_MIN_WIDTH).toInt().coerceIn(2, 4)
+        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            (1..12).chunked(perRow).forEach { months ->
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    months.forEach { number ->
+                        val month = YearMonth.of(year, number)
+                        MiniMonth(
+                            month = month,
+                            today = today,
+                            firstDayOfWeek = firstDayOfWeek,
+                            busyDays = busyDays,
+                            onClick = { onOpenMonth(month) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
@@ -4747,49 +4755,71 @@ private fun MiniMonth(
     modifier: Modifier = Modifier
 ) {
     val gridStart = startOfWeek(month.atDay(1), firstDayOfWeek)
-    Column(
-        modifier = modifier
-            .pointerInput(month) { detectTapGestures(onTap = { onClick() }) }
-            .padding(horizontal = 2.dp, vertical = 5.dp)
-    ) {
+    // Le settimane cominciano dal primo giorno scelto; col lunedì sono quelle ISO, come in Google.
+    val weekOfYear = WeekFields.of(firstDayOfWeek, 4).weekOfWeekBasedYear()
+    val text = MaterialTheme.colorScheme.onBackground
+    Column(modifier = modifier.pointerInput(month) { detectTapGestures(onTap = { onClick() }) }) {
         Text(
-            text = month.month.getDisplayName(TextStyle.SHORT, displayLocale),
-            style = MaterialTheme.typography.labelSmall,
-            color = if (YearMonth.from(today) == month) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onBackground
-            },
+            text = month.month.getDisplayName(TextStyle.FULL, displayLocale).replaceFirstChar { it.titlecase(displayLocale) },
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = text,
             maxLines = 1,
-            modifier = Modifier.padding(start = 2.dp, bottom = 2.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
-        repeat(6) { week ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                repeat(7) { dayOfWeek ->
-                    val date = gridStart.plusDays((week * 7 + dayOfWeek).toLong())
-                    Box(
-                        modifier = Modifier.weight(1f).height(MINI_DAY_SIZE),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // I giorni del mese prima e dopo restano vuoti:
-                        // dodici griglie affiancate diventano illeggibili
-                        // se ognuna sconfina in quella accanto.
-                        if (YearMonth.from(date) == month) {
-                            Box(
-                                modifier = Modifier
-                                    .size(MINI_DAY_SIZE)
-                                    .background(if (date in busyDays) DarkSurfaceVariant else Color.Transparent, CircleShape)
-                                    // Oggi col contorno arancione (dal 23/11/2026, chiesto dall'utente; dal 18/11 un cerchio bianco).
-                                    .then(if (date == today) Modifier.border(1.5.dp, SamsungOrange, RoundedCornerShape(3.dp)) else Modifier),
-                                contentAlignment = Alignment.Center
-                            ) {
+        Row(modifier = Modifier.padding(bottom = 2.dp)) {
+            Spacer(modifier = Modifier.width(YEAR_WEEK_COLUMN + 4.dp))
+            repeat(7) { offset ->
+                Text(
+                    text = firstDayOfWeek.plus(offset.toLong()).getDisplayName(TextStyle.NARROW, displayLocale),
+                    fontSize = YEAR_DAY_FONT,
+                    color = text,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        Row {
+            // I numeri delle settimane in un riquadro appena più chiaro della pagina.
+            Column(
+                modifier = Modifier
+                    .width(YEAR_WEEK_COLUMN)
+                    .background(text.copy(alpha = 0.06f), RoundedCornerShape(4.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+            ) {
+                repeat(6) { week ->
+                    Box(modifier = Modifier.fillMaxWidth().height(YEAR_DAY_HEIGHT), contentAlignment = Alignment.Center) {
+                        Text(gridStart.plusWeeks(week.toLong()).get(weekOfYear).toString(), fontSize = YEAR_DAY_FONT, color = text, maxLines = 1)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                repeat(6) { week ->
+                    Row {
+                        repeat(7) { dayOfWeek ->
+                            val date = gridStart.plusDays((week * 7 + dayOfWeek).toLong())
+                            // Anche i giorni dei mesi accanto, dello stesso colore: in Google è così.
+                            // Oggi e i puntini solo nel suo mese, non due volte.
+                            val ownDay = YearMonth.from(date) == month
+                            Box(modifier = Modifier.weight(1f).height(YEAR_DAY_HEIGHT), contentAlignment = Alignment.Center) {
+                                // Oggi nel cerchio di Google, col numero arancione come nelle altre viste.
+                                if (ownDay && date == today) Box(Modifier.size(YEAR_DAY_HEIGHT).background(DarkSurfaceVariant, CircleShape))
                                 Text(
                                     text = date.dayOfMonth.toString(),
-                                    fontSize = MINI_DAY_FONT,
-                                    lineHeight = MINI_DAY_FONT,
-                                    color = MaterialTheme.colorScheme.onBackground,
+                                    fontSize = YEAR_DAY_FONT,
+                                    lineHeight = YEAR_DAY_FONT,
+                                    fontWeight = if (ownDay && date == today) FontWeight.Bold else null,
+                                    color = if (ownDay && date == today) SamsungOrange else text,
                                     maxLines = 1
                                 )
+                                if (ownDay && date in busyDays) {
+                                    Box(
+                                        Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp).size(3.dp)
+                                            .background(if (date == today) SamsungOrange else MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                                    )
+                                }
                             }
                         }
                     }
