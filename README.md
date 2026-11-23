@@ -1126,6 +1126,18 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.155.47.1 — 23/11/2026 · 18:37 — The six dots stay on their block when the wheel scrolls the page
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1353 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The six dots follow their block when the page
+  scrolls under them**: with the wheel over the dots, the page moved but the
+  dots stayed where they were, beside another part of the block (in the
+  middle of an image instead of on its title). They were worked out again as
+  soon as the page knew it had moved, before its lines were drawn in their
+  new place; now two frames later. Found by the user
+- **[Project]** `FollowPageLayout` waits two frames (`collectLatest`). Test:
+  `DesktopBlockSelectionTest.theDotsFollowTheirBlockWhenTheWheelScrolls`
+
 ### ✏️ v0.155.47 — 23/11/2026 · 18:10 — The wheel scrolls over the six dots; the dots of an image sit on its title
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1352 tests passed)*
 

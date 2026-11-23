@@ -954,6 +954,52 @@ class DesktopBlockSelectionTest {
     }
 
     /**
+     * **Con la rotella sui puntini, i puntini restano sul loro blocco** (trovato dall'utente il
+     * 23/11/2026: "scrollo verso il basso, capita che l'icona stessa venga spostata"): sopra il titolo
+     * di un'immagine, la pagina scorre e i puntini vanno dove sta il titolo adesso, o via.
+     */
+    @Test
+    fun theDotsFollowTheirBlockWhenTheWheelScrolls() {
+        runBlocking {
+            val repo = PageRepository(AppDatabase.getInstance(context))
+            repo.createPage(PageEntity(id = "scorre", title = "Scorre"))
+            val image = java.awt.image.BufferedImage(300, 300, java.awt.image.BufferedImage.TYPE_INT_RGB)
+            image.createGraphics().apply { color = java.awt.Color(0xE02020); fillRect(0, 0, 300, 300); dispose() }
+            val bytes = java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(image, "png", it) }.toByteArray()
+            val file = PageImageStore(context).saveImageBytes(bytes)!!
+            repo.saveBlock(BlockEntity(id = "sopra", pageId = "scorre", textJson = """[{"text":"CIAO"}]""", orderIndex = 0))
+            repo.saveBlock(
+                BlockEntity(
+                    id = "foto", pageId = "scorre", type = BlockType.IMAGE, textJson = "[]", orderIndex = 1,
+                    attrsJson = BlockAttrs.encode(BlockAttrs(file = file, name = "rosso.png", imageTitle = "TITOLO FOTO"))
+                )
+            )
+            for (i in 0 until 40) repo.saveBlock(BlockEntity(id = "sotto-$i", pageId = "scorre", textJson = """[{"text":"Riga sotto $i"}]""", orderIndex = 2 + i))
+        }
+        withPage("scorre") { scene, frames, picture ->
+            frames(20)
+            val clean = picture()
+            val title = textRows(clean)[4]
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(200f, title.center()), pressed = false) }
+            frames(3)
+            onWindowThread { mouse(scene, PointerEventType.Move, Offset(41f, title.center()), pressed = false) }
+            frames(3)
+            onWindowThread { scene.sendPointerEvent(PointerEventType.Scroll, Offset(41f, title.center()), scrollDelta = Offset(0f, 1f), type = PointerType.Mouse) }
+            frames(10)
+            val shown = picture()
+            File("build/desktop-screenshots", "dots_after_wheel.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(shown).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            // Dove sta adesso il titolo (le lettere bianche a destra dei puntini), e dove i puntini.
+            val titleNow = (0 until shown.height).filter { y -> (150 until 400).any { x -> bright(shown.getColor(x, y)) } }
+                .let { ys -> ys.takeWhile { it <= ys.first() + 30 } }
+            val dots = (TOP_BAR until shown.height).filter { y -> DOTS_X.any { x -> ((shown.getColor(x, y) shr 16) and 0xFF) > 90 } }
+            assertTrue("titolo $titleNow", titleNow.isNotEmpty())
+            if (dots.isNotEmpty()) {
+                assertTrue("puntini $dots, titolo $titleNow", abs(dots.average() - titleNow.average()) <= 3.0)
+            }
+        }
+    }
+
+    /**
      * **I puntini seguono il database che si sposta sotto il mouse fermo**
      * (trovato dall'utente il 12/11/2026: "un'icona dei sei puntini è sbucata
      * dal nulla a sinistra del primo database", a metà del suo elenco). Col

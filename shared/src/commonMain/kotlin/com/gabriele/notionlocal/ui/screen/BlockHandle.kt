@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.gabriele.notionlocal.ui.i18n.EditorStrings
 import kotlin.math.roundToInt
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.flow.collectLatest
 
 // ---------------------------------------------------------------------------
 // **I sei puntini accanto al blocco sotto il mouse** (dal 11/11/2026, chiesto
@@ -127,9 +129,14 @@ fun FollowPageLayout(
 ) {
     val islandLine = with(LocalDensity.current) { HANDLE_HEIGHT.toPx() }
     LaunchedEffect(picker) {
-        androidx.compose.runtime.snapshotFlow { layout() }.collect {
-            if (dragging() || spot.value == null) return@collect
-            val list = page()?.takeIf { it.isAttached } ?: return@collect
+        androidx.compose.runtime.snapshotFlow { layout() }.collectLatest {
+            // **Due fotogrammi dopo** (dal 23/11/2026, trovato dall'utente: con la rotella sopra i puntini
+            // "l'icona stessa viene spostata"): la lista sa di essersi spostata prima che le sue voci siano
+            // posate al posto nuovo, e i puntini prendevano la riga dov'era prima.
+            withFrameNanos { }
+            withFrameNanos { }
+            if (dragging() || spot.value == null) return@collectLatest
+            val list = page()?.takeIf { it.isAttached } ?: return@collectLatest
             spot.value = pointer()?.let { spotAt(picker, list, it, islandLine) }
         }
     }
