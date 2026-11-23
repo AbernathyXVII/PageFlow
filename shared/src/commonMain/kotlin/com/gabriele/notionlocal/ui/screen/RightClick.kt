@@ -11,6 +11,11 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.ViewConfiguration
 
 /**
  * **Il clic destro come la pressione lunga** (dal 09/11/2026, per il PC): dove
@@ -74,3 +79,21 @@ fun Modifier.onLongPressFirst(action: (() -> Unit)?): Modifier =
             }
         }
     }
+
+/**
+ * **Sul PC niente pressione lunga** (dal 23/11/2026, chiesto dall'utente: "togli il tasto sinistro
+ * prolungato, quello destro mi basta"): dentro [content] tenere premuto il tasto sinistro non apre
+ * più i menu, che si aprono col clic destro ([onRightClick]). La pressione lunga dura un giorno.
+ */
+@Composable
+fun NoLongPress(content: @Composable () -> Unit) {
+    val base = LocalViewConfiguration.current
+    val never = remember(base) {
+        object : ViewConfiguration by base {
+            override val longPressTimeoutMillis: Long get() = NEVER_MS
+        }
+    }
+    CompositionLocalProvider(LocalViewConfiguration provides never, content = content)
+}
+
+private const val NEVER_MS = 24L * 60 * 60 * 1000

@@ -1126,6 +1126,34 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.45 — 23/11/2026 · 17:15 — A menu for the chosen blocks, the block options in the right-click menu, no more long press on the PC
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1350 tests passed)*
+
+- **[Change]** **[💻 PC]** **A menu for the chosen blocks**: with blocks
+  chosen with Ctrl (or with the mouse), the right click on one of them opens
+  Copy, Cut, Delete, Outdent, Indent, Turn into, Text formatting (bold,
+  italic, underline, strikethrough, subscript, superscript, spoiler) and Text
+  and background color, for all of them. Bold and the others work as on a
+  piece of text: if all the blocks already have it, it goes away from all,
+  otherwise all get it
+- **[Change]** **[💻 PC]** **The block options in the right-click menu**: on
+  a line, the items of "Block options" are now at the top of the menu itself
+  instead of behind an item of their own: Add above, Add below, Pin as link
+  target, Flag (for Table of contents), Turn into, Color (for a callout also
+  Edit icon and Background color), Duplicate, Delete. Some are there twice,
+  for now: the user will choose which to remove
+- **[Change]** **[💻 PC]** **No more long press with the left button**:
+  holding the left button down no longer opens the menus; the right click
+  opens them
+- **[Project]** `PcSelectionMenu`; `PageEditorViewModel.formatBlocks`,
+  `colorBlocks` (also used by `colorWholeBlock`), `indentBlocks` (one block
+  after the other, each waiting for the page to change), `formatFlag` shared
+  with `applyFormatToRun`; `BlockActionsHost(initialStep)`;
+  `turnIntoEntries`; `NoLongPress` (a long press that lasts a day) around the
+  PC window. Tests: `DesktopBlockSelectionTest.theMenuOfTheChosenBlocksIndentsThem`
+  and `formatAndColorReachEveryChosenBlock`,
+  `DesktopPcMenuTest.theBlockItemsAreInTheMenu`, `DesktopNoLongPressTest`
+
 ### ✏️ v0.155.44 — 23/11/2026 · 16:37 — Ctrl chooses blocks that aren't together; the right click opens the menus of the long press
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1346 tests passed)*
 

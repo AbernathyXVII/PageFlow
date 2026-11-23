@@ -188,8 +188,8 @@ class DesktopPcMenuTest {
         frames(5)
         val menu = shot("pcmenu_open")
         val top = firstRow(menu, 110, terza)
-        // Block options, una riga, quattro voci (copia…), una riga, Outdent, Indent, Move up.
-        val moveUp = top + 30 + 9 + 4 * 30 + 9 + 2 * 30 + 15
+        // Le voci del blocco (dal 23/11/2026: due, una riga, sei, una riga), quattro voci (copia…), una riga, Outdent, Indent, Move up.
+        val moveUp = top + BLOCK_ITEMS + 4 * 30 + 9 + 2 * 30 + 15
         click(190f, moveUp.toFloat())
         frames(10)
         assertEquals(listOf("prima", "terza", "seconda"), lines().map { it.id })
@@ -211,7 +211,7 @@ class DesktopPcMenuTest {
         frames(5)
         val menu = shot("pcmenu_open2")
         val top = firstRow(menu, 110, seconda)
-        val aaTop = top + 11 * 30 + 3 * 9
+        val aaTop = top + BLOCK_ITEMS + 10 * 30 + 2 * 9
         move(190f, aaTop + 15f)
         frames(5)
         val open = shot("pcmenu_aa")
@@ -232,7 +232,28 @@ class DesktopPcMenuTest {
         assertTrue("SECONDA RIGA in grassetto: $text", text.contains("bold", ignoreCase = true))
     }
 
+    /**
+     * **Le voci di "Block options" nel menu** (dal 23/11/2026, chiesto dall'utente): "Duplicate"
+     * fa la copia della riga cliccata, subito sotto.
+     */
+    @Test
+    fun theBlockItemsAreInTheMenu() = withPage {
+        val y = textLines(shot("pcmenu_page3"))
+        val terza = y.last()
+        click(110f, terza.toFloat(), right = true)
+        frames(5)
+        val top = firstRow(shot("pcmenu_open3"), 110, terza)
+        // Add above, Add below, una riga, Pin, Flag, Turn into, Color, Duplicate.
+        click(190f, (top + 6 * 30 + 9 + 15).toFloat())
+        frames(10)
+        val now = lines()
+        assertEquals(4, now.size)
+        assertEquals(now[2].textJson, now[3].textJson)
+    }
+
     private companion object {
+        /** Le voci del blocco in cima al menu (dal 23/11/2026): Add above e below, una riga, sei voci, una riga. */
+        const val BLOCK_ITEMS = 8 * 30 + 2 * 9
         val MENU_BACKGROUND = 0xFF2C2C2C.toInt()
         val MENU_BORDER = 0xFF454545.toInt()
     }

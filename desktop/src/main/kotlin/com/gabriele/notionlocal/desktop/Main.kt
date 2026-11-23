@@ -47,6 +47,7 @@ import com.gabriele.notionlocal.ui.screen.AppRollupFormatter
 import com.gabriele.notionlocal.ui.screen.Biometrics
 import com.gabriele.notionlocal.ui.screen.notePresses
 import com.gabriele.notionlocal.ui.i18n.WifiSyncStrings
+import com.gabriele.notionlocal.ui.screen.NoLongPress
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 import kotlinx.coroutines.delay
@@ -167,7 +168,8 @@ fun main() {
                     // laterale attaccata al bordo sinistro, la pagina larga quanto lo spazio che resta.
                     // I clic segnati: le finestrelle si aprono lì accanto (vedi `PcPanel.desktop.kt`).
                     Surface(modifier = Modifier.fillMaxSize().notePresses().ctrlWheelZoom { bigger -> pcWindow.shortcuts.resizeSelection(bigger) }) {
-                        AppNavHost(factory = factory, windowTabs = pcWindow.tabs)
+                        // Sul PC i menu si aprono col clic destro: tenere premuto non fa niente (vedi `NoLongPress`).
+                        NoLongPress { AppNavHost(factory = factory, windowTabs = pcWindow.tabs) }
                     }
                 }
             }

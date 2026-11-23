@@ -53,6 +53,9 @@ import com.gabriele.notionlocal.viewmodel.ViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancel
+import androidx.lifecycle.viewModelScope
+import com.gabriele.notionlocal.viewmodel.FormatType
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.EncodedImageFormat
 import org.junit.After
@@ -211,6 +214,75 @@ class DesktopBlockSelectionTest {
         onWindowThread { key(scene, Key.Delete) }
         frames(5)
         waitForBlocks(listOf("titolo", "due", "divisore"))
+    }
+
+    /**
+     * **Il menu dei blocchi scelti** (chiesto dall'utente il 23/11/2026: "servono Copy, Outdent e
+     * Indent, Turn into, Text formatting e Text and background color"): Ctrl + clic sulla prima e
+     * sulla seconda riga, clic destro su una delle due, "Indent": rientrano solo loro.
+     */
+    @Test
+    fun theMenuOfTheChosenBlocksIndentsThem() = withPage { scene, frames, picture ->
+        val rows = textRows(picture())
+        val ctrl = PointerKeyboardModifiers(isCtrlPressed = true)
+        fun press(at: Offset, buttons: PointerButtons, button: PointerButton, modifiers: PointerKeyboardModifiers? = null) = onWindowThread {
+            scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse, keyboardModifiers = modifiers)
+            scene.sendPointerEvent(PointerEventType.Press, at, type = PointerType.Mouse, buttons = buttons, keyboardModifiers = modifiers, button = button)
+            scene.sendPointerEvent(PointerEventType.Release, at, type = PointerType.Mouse, buttons = PointerButtons(), keyboardModifiers = modifiers, button = button)
+        }
+        press(Offset(100f, rows[3].center()), PointerButtons(isPrimaryPressed = true), PointerButton.Primary, ctrl)
+        frames(4)
+        press(Offset(100f, rows[5].center()), PointerButtons(isPrimaryPressed = true), PointerButton.Primary, ctrl)
+        frames(4)
+        val at = Offset(100f, rows[5].center())
+        press(at, PointerButtons(isSecondaryPressed = true), PointerButton.Secondary)
+        frames(5)
+        val menu = picture()
+        File("build/desktop-screenshots", "blocks_ctrl_menu.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(menu).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        val inside = (at.y.toInt() - 4 until at.y.toInt() + 60).firstOrNull { menu.getColor(at.x.toInt() + 80, it) == 0xFF2C2C2C.toInt() }
+        assertTrue("il menu dei blocchi scelti sotto il clic", inside != null)
+        // Copy, Cut, Delete, una riga, Outdent, Indent.
+        val indent = inside!! + 7 + 4 * 30 + 9 + 15
+        onWindowThread { mouse(scene, PointerEventType.Move, Offset(at.x + 60f, indent.toFloat()), pressed = false) }
+        frames(2)
+        onWindowThread {
+            mouse(scene, PointerEventType.Press, Offset(at.x + 60f, indent.toFloat()), pressed = true)
+            mouse(scene, PointerEventType.Release, Offset(at.x + 60f, indent.toFloat()), pressed = false)
+        }
+        frames(10)
+        val end = System.currentTimeMillis() + 5_000
+        fun levels() = runBlocking { AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce("blocchi") }.associate { it.id to it.indentLevel }
+        while (System.currentTimeMillis() < end && levels()["due"] != 1) Thread.sleep(50)
+        assertEquals(mapOf("uno" to 1, "titolo" to 0, "due" to 1, "divisore" to 0, "tre" to 0), levels())
+    }
+
+    /**
+     * **Grassetto e colore su tutti i blocchi scelti** (dal 23/11/2026): "Un titolo grande" è già in
+     * grassetto e "Prima riga" no, quindi il primo Bold lo mette a tutti e due, il secondo lo toglie a
+     * tutti e due. Il colore va a tutti, le altre righe restano com'erano.
+     */
+    @Test
+    fun formatAndColorReachEveryChosenBlock() {
+        val viewModel = PageEditorViewModel(PageRepository(AppDatabase.getInstance(context)))
+        viewModel.load("blocchi")
+        fun text(id: String) = runBlocking { AppDatabase.getInstance(context).blockDao().getBlocksForPageOnce("blocchi") }.single { it.id == id }.textJson
+        fun waitFor(what: String, condition: () -> Boolean) {
+            val end = System.currentTimeMillis() + 5_000
+            while (System.currentTimeMillis() < end && !condition()) Thread.sleep(30)
+            assertTrue(what, condition())
+        }
+        waitFor("la pagina") { viewModel.blocks.value.size == 5 }
+        val chosen = setOf("uno", "titolo")
+        viewModel.formatBlocks(chosen, FormatType.BOLD)
+        waitFor("tutti e due in grassetto") { "\"bold\":true" in text("uno") && "\"bold\":true" in text("titolo") }
+        waitFor("letto dalla pagina") { viewModel.blocks.value.single { it.id == "uno" }.textJson == text("uno") }
+        viewModel.formatBlocks(chosen, FormatType.BOLD)
+        waitFor("tutti e due senza") { "bold" !in text("uno") && "bold" !in text("titolo") }
+        waitFor("letto dalla pagina") { viewModel.blocks.value.single { it.id == "titolo" }.textJson == text("titolo") }
+        viewModel.colorBlocks(chosen, background = false, hex = "#E03E3E")
+        waitFor("il colore a tutti e due") { "#E03E3E" in text("uno") && "#E03E3E" in text("titolo") }
+        assertTrue("le altre righe no", "#E03E3E" !in text("due") && "bold" !in text("due"))
+        viewModel.viewModelScope.cancel()
     }
 
     /** Un clic sul divisore lo sceglie, e Backspace lo elimina; le righe restano. */

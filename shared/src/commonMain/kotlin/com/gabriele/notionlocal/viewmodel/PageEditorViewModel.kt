@@ -171,6 +171,9 @@ class PageEditorViewModel(
         // fotogramma; mezzo secondo è largo apposta.
         private const val FOCUS_HANDOFF_TIMEOUT_MS = 500L
 
+        /** Il rientro di più blocchi: quanto si aspetta un passo che forse non cambia niente (già in cima). */
+        private const val BLOCK_STEP_TIMEOUT_MS = 400L
+
         /** Quanto resta "preso" un divisore dopo il primo backspace sotto di lui. */
         const val ARMED_DIVIDER_MS = 3_000L
 
@@ -3645,21 +3648,76 @@ class PageEditorViewModel(
             val overlapEnd = minOf(blockEnd, selEnd) - blockStart
             if (overlapStart >= overlapEnd) continue
 
-            val spans = spansOf(block)
-            val newSpans = when (type) {
-                FormatType.BOLD -> toggleFormatInRange(spans, overlapStart, overlapEnd, { it.bold }) { s, v -> s.copy(bold = v) }
-                FormatType.ITALIC -> toggleFormatInRange(spans, overlapStart, overlapEnd, { it.italic }) { s, v -> s.copy(italic = v) }
-                FormatType.UNDERLINE -> toggleFormatInRange(spans, overlapStart, overlapEnd, { it.underline }) { s, v -> s.copy(underline = v) }
-                FormatType.STRIKETHROUGH -> toggleFormatInRange(spans, overlapStart, overlapEnd, { it.strikethrough }) { s, v -> s.copy(strikethrough = v) }
-                FormatType.SPOILER -> toggleFormatInRange(spans, overlapStart, overlapEnd, { it.spoiler }) { s, v -> s.copy(spoiler = v) }
-                FormatType.SUBSCRIPT -> toggleFormatInRange(spans, overlapStart, overlapEnd, { it.subscript }) { s, v -> s.withSubscript(v) }
-                FormatType.SUPERSCRIPT -> toggleFormatInRange(spans, overlapStart, overlapEnd, { it.superscript }) { s, v -> s.withSuperscript(v) }
-            }
+            val (flag, setFlag) = formatFlag(type)
+            val newSpans = toggleFormatInRange(spansOf(block), overlapStart, overlapEnd, flag, setFlag)
             updates.add(block.copy(textJson = json.encodeToString(newSpans)))
         }
 
         viewModelScope.launch {
             updates.forEach { repository.saveBlock(it) }
+        }
+    }
+
+    /** Come si legge e come si mette la formattazione [type] su un pezzo di testo. */
+    private fun formatFlag(type: FormatType): Pair<(RichTextSpan) -> Boolean, (RichTextSpan, Boolean) -> RichTextSpan> = when (type) {
+        FormatType.BOLD -> Pair({ it.bold }, { s, v -> s.copy(bold = v) })
+        FormatType.ITALIC -> Pair({ it.italic }, { s, v -> s.copy(italic = v) })
+        FormatType.UNDERLINE -> Pair({ it.underline }, { s, v -> s.copy(underline = v) })
+        FormatType.STRIKETHROUGH -> Pair({ it.strikethrough }, { s, v -> s.copy(strikethrough = v) })
+        FormatType.SPOILER -> Pair({ it.spoiler }, { s, v -> s.copy(spoiler = v) })
+        FormatType.SUBSCRIPT -> Pair({ it.subscript }, { s, v -> s.withSubscript(v) })
+        FormatType.SUPERSCRIPT -> Pair({ it.superscript }, { s, v -> s.withSuperscript(v) })
+    }
+
+    // --- I blocchi scelti col mouse (dal 23/11/2026, chiesto dall'utente per quelli scelti con Ctrl) ---
+
+    /** I blocchi [ids] con del testo, com'è adesso. */
+    private fun textBlocks(ids: Collection<String>) = _blocks.value.filter { it.id in ids && plainTextOf(it).isNotEmpty() }
+
+    /**
+     * **La formattazione su tutto il testo dei blocchi scelti**: se ce l'hanno già tutti
+     * si toglie, se no si mette a tutti (come su un pezzo di testo). Un passo di Annulla.
+     */
+    fun formatBlocks(ids: Collection<String>, type: FormatType) {
+        val targets = textBlocks(ids)
+        if (targets.isEmpty()) return
+        val (flag, setFlag) = formatFlag(type)
+        val allHave = targets.all { block -> spansOf(block).filter { it.text.isNotEmpty() }.all(flag) }
+        snapshotForStructuralChange()
+        // `{ allHave }`: la scelta fra mettere e togliere è una per tutti, non una per blocco.
+        saveSpans(targets) { block -> toggleFormatInRange(spansOf(block), 0, plainTextOf(block).length, { allHave }, setFlag) }
+    }
+
+    /** **Il colore del testo (o dello sfondo) di tutti i blocchi scelti**; [hex] null lo toglie. */
+    fun colorBlocks(ids: Collection<String>, background: Boolean, hex: String?) {
+        val targets = textBlocks(ids)
+        if (targets.isEmpty()) return
+        snapshotForStructuralChange()
+        saveSpans(targets) { block -> setColorInRange(spansOf(block), 0, plainTextOf(block).length, background, hex) }
+    }
+
+    private fun saveSpans(targets: List<BlockEntity>, change: (BlockEntity) -> List<RichTextSpan>) {
+        val updates = targets.map { block ->
+            val spans = change(block)
+            // I campi di testo con queste righe le ridisegnano subito (vedi `applyColorToRun`).
+            _externalSpans.tryEmit(block.id to spans)
+            block.copy(textJson = json.encodeToString(spans))
+        }
+        viewModelScope.launch { updates.forEach { repository.saveBlock(it) } }
+    }
+
+    /**
+     * **Il rientro dei blocchi scelti** ([ordered]: nell'ordine della pagina): uno dopo l'altro,
+     * verso destra dal primo, verso sinistra dall'ultimo, e ognuno aspetta che quello prima sia
+     * arrivato nella pagina, perché il suo posto dipende da lui.
+     */
+    fun indentBlocks(ordered: List<String>, inward: Boolean) {
+        viewModelScope.launch {
+            for (id in if (inward) ordered else ordered.asReversed()) {
+                val block = _blocks.value.find { it.id == id } ?: continue
+                if (inward) indentBlock(block) else outdentBlock(block)
+                withTimeoutOrNull(BLOCK_STEP_TIMEOUT_MS) { blocks.first { list -> list.find { it.id == id } != block } }
+            }
         }
     }
 
@@ -5122,7 +5180,7 @@ class PageEditorViewModel(
             viewModelScope.launch { blocksDb.setBlockText(block.id, json.encodeToString(listOf(colored))) }
             return
         }
-        applyColorToRun(listOf(block.id), 0, plainTextOf(block).length, background, hex)
+        colorBlocks(listOf(block.id), background, hex)
     }
 
     /** "Duplicate" dal menu di un blocco: la copia nasce subito sotto. Vedi `PageRepository.duplicateBlock`. */

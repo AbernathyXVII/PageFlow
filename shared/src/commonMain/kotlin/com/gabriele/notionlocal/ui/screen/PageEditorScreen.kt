@@ -174,6 +174,15 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.VerticalAlignTop
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.outlined.Flag as FlagOutlined
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.TableChart
@@ -1716,13 +1725,6 @@ private fun PageEditorContent(
     // **Il menu del tasto destro sul PC** (dal 13/11/2026, vedi `PcContextMenu.kt`):
     // i campi di testo lo aprono da `LocalPageTextMenu`.
     var pcMenu by remember { mutableStateOf<PcMenuOpen?>(null) }
-    val pcMenuHost = remember {
-        PageTextMenuHost(
-            open = { at, edit -> pcMenu = PcMenuOpen(at, edit) },
-            isOpen = { pcMenu != null },
-            close = { pcMenu = null }
-        )
-    }
     // **Tutta la pagina selezionata** (dal 20/10/2026, vedi `PageSelection.kt`).
     var pageSelected by remember(pageId) { mutableStateOf(false) }
     // **I blocchi selezionati col mouse** (dal 10/11/2026, vedi `BlockSelection.kt`).
@@ -1732,6 +1734,28 @@ private fun PageEditorContent(
     // Il rettangolo azzurro mentre si trascina fuori dal testo (dal 17/11/2026, vedi `mouseBlockSelection`).
     val marquee = remember(pageId) { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     val blockPicker = remember(pageId) { BlockPicker() }
+    // **Il menu dei blocchi scelti** (dal 23/11/2026, chiesto dall'utente per quelli scelti con Ctrl):
+    // il clic destro su uno di loro apre questo, dove si è cliccato, invece di quello del testo.
+    var selectionMenuAt by remember { mutableStateOf<Offset?>(null) }
+    // "Text and background color" dal menu dei blocchi scelti: i colori vanno a tutti loro.
+    var colorForBlocks by remember { mutableStateOf<Set<String>?>(null) }
+    val pcMenuHost = remember {
+        PageTextMenuHost(
+            open = { at, edit ->
+                val chosen = selectedBlocks.value
+                if (chosen.isNotEmpty() && runCatching { blockPicker.at(at)?.second }.getOrNull() in chosen) {
+                    selectionMenuAt = at
+                } else {
+                    pcMenu = PcMenuOpen(at, edit)
+                }
+            },
+            isOpen = { pcMenu != null || selectionMenuAt != null },
+            close = {
+                pcMenu = null
+                selectionMenuAt = null
+            }
+        )
+    }
     val pageListCoordinates = remember { AtomicReference<LayoutCoordinates?>(null) }
     val selectionKeys = remember { FocusRequester() }
     var confirmPageDelete by remember { mutableStateOf(false) }
@@ -1753,6 +1777,8 @@ private fun PageEditorContent(
     // Il menu del blocco (sei puntini): su quale blocco è aperto. Vedi
     // `BlockActionsHost`, che si occupa di tutto il resto.
     var blockMenuFor by remember { mutableStateOf<String?>(null) }
+    // Da dove parte il menu del blocco: il menu, o "Color" e le altre finestre dal clic destro (dal 23/11/2026).
+    var blockMenuStep by remember { mutableStateOf(BlockMenuStep.MENU) }
     // Sul PC: il blocco sotto il mouse, coi sei puntini accanto (vedi `BlockHandle.kt`).
     val blockSpot = remember(pageId) { mutableStateOf<BlockSpot?>(null) }
     // L'ultimo punto del mouse sulla pagina, nella finestra (vedi `FollowPageLayout`).
@@ -1773,6 +1799,44 @@ private fun PageEditorContent(
         linkableDatabases = null
         linkedViewRequest = LinkedViewRequest(block, keepText)
         viewModel.loadLinkableDatabases { linkableDatabases = it }
+    }
+
+    // **Il "Turn into" del menu del blocco** (sei puntini, e dal 23/11/2026 anche il clic destro).
+    //
+    // "Turn into" fa quello che fa la stessa voce dei menu "/" e "+", con
+    // due differenze che vengono dal punto da cui si parte: la riga ha già
+    // del testo, e non lo si deve perdere — diventa il nome della pagina o
+    // del database, la prima cella della tabella, la riga sotto il
+    // divisore — e si resta qui invece di entrare nella pagina nuova, come
+    // su Notion.
+    val applyTurnInto: (BlockEntity, SlashEntry) -> Unit = { block, entry ->
+        val text = viewModel.plainTextOf(block)
+        when (val action = entry.action) {
+            is SlashAction.Type -> if (action.type == BlockType.TABLE) {
+                viewModel.convertToTableKeepingText(block)
+            } else if (action.type == BlockType.NOTIFICATION) {
+                viewModel.makeNotification(block, null)
+                NotificationPermission.request()
+            } else {
+                viewModel.updateBlockType(block, action.type)
+            }
+            SlashAction.PageLink -> viewModel.convertToPageLink(block, title = text) {}
+            SlashAction.Divider -> viewModel.convertToDividerAndFocusNext(block, keepText = true)
+            is SlashAction.Database ->
+                viewModel.convertToDatabaseLink(block, simple = action.simple, title = text) { databaseId ->
+                    action.layout?.let { viewModel.setDatabaseLayout(databaseId, it) }
+                }
+            SlashAction.LinkedView -> askLinkedViewSource(block, true)
+            // Il testo della riga diventa il nome del database, e si resta qui.
+            SlashAction.FullPageDatabase -> viewModel.convertToFullPageDatabase(block, title = text) {}
+            // Il testo della riga diventa il nome del bottone.
+            SlashAction.Button -> viewModel.convertToButton(block, name = text)
+            // Il testo della riga diventa la prima riga del blocco.
+            SlashAction.Synced -> viewModel.makeSyncedBlock(block)
+            // Non sono in "Turn into" (vedi `TurnIntoList`): il testo andrebbe perso.
+            is SlashAction.Media, SlashAction.LinkToPage, SlashAction.LinkButton, SlashAction.Record, SlashAction.Scan, is SlashAction.Columns,
+            SlashAction.NotYet -> Unit
+        }
     }
 
     // Il menu dei tre puntini e le due cose che può aprire.
@@ -3196,6 +3260,29 @@ private fun PageEditorContent(
             // Sul PC, nello spazio fra due colonne, la striscia che le allarga (vedi `ColumnEdges.kt`).
             val columnEdges = remember(pageId) { ColumnEdges() }
             val pcEditing = isPc && !readOnlyPage && !drawingMode
+            // Tutta la pagina, o i blocchi scelti col mouse (null): Copy, Cut, Delete per tutti e due.
+            val chosenBlocks = selectedBlocks.value.takeIf { it.isNotEmpty() }
+            val anySelection = pageSelected || chosenBlocks != null
+            fun endSelection() {
+                pageSelected = false
+                blockEnds = null
+                selectedBlocks.value = emptySet()
+            }
+            fun copySelection(thenDelete: Boolean) {
+                jumpScope.launch {
+                    copyPageToClipboard(context, viewModel.pageCopyLines(chosenBlocks))
+                    if (thenDelete) viewModel.deletePageContent(chosenBlocks)
+                    endSelection()
+                }
+            }
+            fun deleteSelection() {
+                if (chosenBlocks == null) {
+                    confirmPageDelete = true
+                } else {
+                    viewModel.deletePageContent(chosenBlocks)
+                    endSelection()
+                }
+            }
             // Sul PC il tasto destro sulle righe apre il menu della pagina (vedi `PcContextMenu.kt`).
             CompositionLocalProvider(
                 LocalPageTextMenu provides pcMenuHost.takeIf { pcEditing },
@@ -3382,9 +3469,17 @@ private fun PageEditorContent(
                                 currentSize = selectionTypography.size ?: DEFAULT_PAGE_FONT_SIZE,
                                 onKind = { kind -> pcMenu = open.copy(kind = kind) },
                                 onClose = { pcMenu = null },
-                                onBlockMenu = { block ->
+                                onTurnInto = applyTurnInto,
+                                onBlockStep = { block, step ->
                                     focusManager.clearFocus()
+                                    blockMenuStep = step
                                     blockMenuFor = block.id
+                                },
+                                onDuplicate = { block -> viewModel.duplicateBlock(block.id, imageStore) },
+                                // Prima il cursore se ne va: il campo della riga può sparire con lei (come nel menu del blocco).
+                                onDelete = { block ->
+                                    focusManager.clearFocus()
+                                    viewModel.deleteBlock(block)
                                 },
                                 onSelectAll = selectWholePage,
                                 onTypeEntry = applyTypeMenuEntry,
@@ -3412,30 +3507,32 @@ private fun PageEditorContent(
                         }
                     }
                 }
+                selectionMenuAt?.let { at ->
+                    val local = pageListCoordinates.get()?.takeIf { it.isAttached }?.windowToLocal(at)
+                    val chosen = chosenBlocks
+                    if (local != null && chosen != null) {
+                        Box(modifier = Modifier.offset { IntOffset(local.x.roundToInt(), local.y.roundToInt()) }.size(0.dp)) {
+                            PcSelectionMenu(
+                                editable = !readOnlyPage,
+                                onCopy = { copySelection(thenDelete = false) },
+                                onCut = { copySelection(thenDelete = true) },
+                                onDelete = { deleteSelection() },
+                                onIndent = { inward ->
+                                    val order = latestRenderItems.value.flatMap { renderItemBlockIds(it) }
+                                    viewModel.indentBlocks(order.filter { it in chosen }, inward)
+                                },
+                                onTurnInto = { type -> viewModel.updateBlockTypes(viewModel.blocks.value.filter { it.id in chosen }, type) },
+                                onFormat = { type -> viewModel.formatBlocks(chosen, type) },
+                                onColors = {
+                                    colorForBlocks = chosen
+                                    showColorPicker = true
+                                },
+                                onClose = { selectionMenuAt = null }
+                            )
+                        }
+                    }
+                }
                 BlockDragLayer(blockDrag, { pageListCoordinates.get() }) { listState.scrollBy(it) }
-            }
-            // Tutta la pagina, o i blocchi scelti col mouse (null): Copy, Cut, Delete per tutti e due.
-            val chosenBlocks = selectedBlocks.value.takeIf { it.isNotEmpty() }
-            val anySelection = pageSelected || chosenBlocks != null
-            fun endSelection() {
-                pageSelected = false
-                blockEnds = null
-                selectedBlocks.value = emptySet()
-            }
-            fun copySelection(thenDelete: Boolean) {
-                jumpScope.launch {
-                    copyPageToClipboard(context, viewModel.pageCopyLines(chosenBlocks))
-                    if (thenDelete) viewModel.deletePageContent(chosenBlocks)
-                    endSelection()
-                }
-            }
-            fun deleteSelection() {
-                if (chosenBlocks == null) {
-                    confirmPageDelete = true
-                } else {
-                    viewModel.deletePageContent(chosenBlocks)
-                    endSelection()
-                }
             }
             // I tasti della selezione li prende un punto invisibile col fuoco: Canc e Backspace, Ctrl+C, Ctrl+X, Ctrl+A, Esc.
             Box(
@@ -4062,52 +4159,23 @@ private fun PageEditorContent(
         ColorPickerSheet(
             initialHex = lastPickedHex,
             background = colorOnBackground,
-            onDismiss = { showColorPicker = false },
+            onDismiss = {
+                showColorPicker = false
+                colorForBlocks = null
+            },
             onSwitchTarget = { colorOnBackground = it },
             onPick = { hex ->
                 showColorPicker = false
                 lastPickedHex = hex ?: lastPickedHex
-                viewModel.applyCapturedColor(colorOnBackground, hex)
+                val blocksToColor = colorForBlocks
+                colorForBlocks = null
+                if (blocksToColor != null) {
+                    viewModel.colorBlocks(blocksToColor, colorOnBackground, hex)
+                } else {
+                    viewModel.applyCapturedColor(colorOnBackground, hex)
+                }
             }
         )
-    }
-
-    // --- Il menu del blocco (sei puntini) ---
-    //
-    // "Turn into" fa quello che fa la stessa voce dei menu "/" e "+", con
-    // due differenze che vengono dal punto da cui si parte: la riga ha già
-    // del testo, e non lo si deve perdere — diventa il nome della pagina o
-    // del database, la prima cella della tabella, la riga sotto il
-    // divisore — e si resta qui invece di entrare nella pagina nuova, come
-    // su Notion.
-    val applyTurnInto: (BlockEntity, SlashEntry) -> Unit = { block, entry ->
-        val text = viewModel.plainTextOf(block)
-        when (val action = entry.action) {
-            is SlashAction.Type -> if (action.type == BlockType.TABLE) {
-                viewModel.convertToTableKeepingText(block)
-            } else if (action.type == BlockType.NOTIFICATION) {
-                viewModel.makeNotification(block, null)
-                NotificationPermission.request()
-            } else {
-                viewModel.updateBlockType(block, action.type)
-            }
-            SlashAction.PageLink -> viewModel.convertToPageLink(block, title = text) {}
-            SlashAction.Divider -> viewModel.convertToDividerAndFocusNext(block, keepText = true)
-            is SlashAction.Database ->
-                viewModel.convertToDatabaseLink(block, simple = action.simple, title = text) { databaseId ->
-                    action.layout?.let { viewModel.setDatabaseLayout(databaseId, it) }
-                }
-            SlashAction.LinkedView -> askLinkedViewSource(block, true)
-            // Il testo della riga diventa il nome del database, e si resta qui.
-            SlashAction.FullPageDatabase -> viewModel.convertToFullPageDatabase(block, title = text) {}
-            // Il testo della riga diventa il nome del bottone.
-            SlashAction.Button -> viewModel.convertToButton(block, name = text)
-            // Il testo della riga diventa la prima riga del blocco.
-            SlashAction.Synced -> viewModel.makeSyncedBlock(block)
-            // Non sono in "Turn into" (vedi `TurnIntoList`): il testo andrebbe perso.
-            is SlashAction.Media, SlashAction.LinkToPage, SlashAction.LinkButton, SlashAction.Record, SlashAction.Scan, is SlashAction.Columns,
-            SlashAction.NotYet -> Unit
-        }
     }
 
     linkToPageFor?.let { block ->
@@ -4156,6 +4224,7 @@ private fun PageEditorContent(
     }
 
     blockMenuFor?.let { id ->
+        key(id, blockMenuStep) {
         BlockActionsHost(
             blockId = id,
             blocks = blocks,
@@ -4166,8 +4235,13 @@ private fun PageEditorContent(
             onNavigateToDatabase = onNavigateToDatabase,
             onNavigateToPage = onNavigateToPage,
             onParagraph = { block -> paragraphLines = listOf(block) },
-            onDismiss = { blockMenuFor = null }
+            initialStep = blockMenuStep,
+            onDismiss = {
+                blockMenuFor = null
+                blockMenuStep = BlockMenuStep.MENU
+            }
         )
+        }
     }
 
     // --- Il menu dei tre puntini ---
@@ -9104,6 +9178,67 @@ fun TableBlockContent(
 }
 
 /**
+ * **Il menu dei blocchi scelti col mouse** (dal 23/11/2026, chiesto dall'utente per quelli scelti
+ * con Ctrl: "servono Copy, Outdent e Indent, Turn into, Text formatting e Text and background
+ * color"): col clic destro su uno di loro, e vale per tutti.
+ */
+@Composable
+private fun PcSelectionMenu(
+    editable: Boolean,
+    onCopy: () -> Unit,
+    onCut: () -> Unit,
+    onDelete: () -> Unit,
+    /** Vero: verso destra (Indent). */
+    onIndent: (Boolean) -> Unit,
+    onTurnInto: (BlockType) -> Unit,
+    onFormat: (FormatType) -> Unit,
+    onColors: () -> Unit,
+    onClose: () -> Unit
+) {
+    fun icon(vector: ImageVector): @Composable () -> Unit = { Icon(vector, contentDescription = null, modifier = Modifier.size(16.dp)) }
+    fun glyph(text: String, weight: FontWeight? = null, style: FontStyle? = null, decoration: TextDecoration? = null): @Composable () -> Unit = {
+        Text(text, color = LocalContentColor.current, fontSize = 13.sp, fontWeight = weight, fontStyle = style, textDecoration = decoration)
+    }
+    // Solo i tipi di riga: una tabella o una notifica non si fanno da tante righe insieme.
+    val types = turnIntoEntries().mapNotNull { entry ->
+        (entry.action as? SlashAction.Type)?.type?.takeIf { it != BlockType.TABLE && it != BlockType.NOTIFICATION }?.let { entry to it }
+    }
+    val entries = buildList {
+        add(PcMenuItem(EditorStrings.copy, icon(Icons.Filled.ContentCopy), hint = "Ctrl+C", onClick = onCopy))
+        if (editable) {
+            add(PcMenuItem(EditorStrings.cut, icon(Icons.Filled.ContentCut), hint = "Ctrl+X", onClick = onCut))
+            add(PcMenuItem(Strings.delete, icon(Icons.Filled.Delete), hint = "Del", onClick = onDelete))
+            add(PcMenuSeparator)
+            add(PcMenuItem(EditorStrings.outdent, icon(Icons.Filled.FormatIndentDecrease), onClick = { onIndent(false) }))
+            add(PcMenuItem(EditorStrings.indent, icon(Icons.Filled.FormatIndentIncrease), onClick = { onIndent(true) }))
+            add(PcMenuSeparator)
+            add(
+                PcMenuItem(
+                    EditorStrings.turnInto, icon(Icons.Filled.Autorenew),
+                    submenu = types.map { (entry, type) -> PcMenuItem(EditorStrings.blockType(entry.label), icon(entry.icon), onClick = { onTurnInto(type) }) }
+                )
+            )
+            add(
+                PcMenuItem(
+                    EditorStrings.textFormatting, glyph("Aa", weight = FontWeight.Bold),
+                    submenu = listOf(
+                        PcMenuItem(EditorStrings.bold, glyph("B", weight = FontWeight.Bold), onClick = { onFormat(FormatType.BOLD) }),
+                        PcMenuItem(EditorStrings.italic, glyph("I", style = FontStyle.Italic), onClick = { onFormat(FormatType.ITALIC) }),
+                        PcMenuItem(EditorStrings.underline, glyph("U", decoration = TextDecoration.Underline), onClick = { onFormat(FormatType.UNDERLINE) }),
+                        PcMenuItem(EditorStrings.strikethrough, glyph("S", decoration = TextDecoration.LineThrough), onClick = { onFormat(FormatType.STRIKETHROUGH) }),
+                        PcMenuItem(EditorStrings.subscript, glyph("x₂"), onClick = { onFormat(FormatType.SUBSCRIPT) }),
+                        PcMenuItem(EditorStrings.superscript, glyph("x²"), onClick = { onFormat(FormatType.SUPERSCRIPT) }),
+                        PcMenuItem(EditorStrings.spoiler, icon(Icons.Filled.VisibilityOff), onClick = { onFormat(FormatType.SPOILER) })
+                    )
+                )
+            )
+            add(PcMenuItem(EditorStrings.textAndBackgroundColor, icon(Icons.Filled.Brush), onClick = onColors))
+        }
+    }
+    PcContextMenu(entries, onDismiss = onClose)
+}
+
+/**
  * **Il menu del tasto destro sul PC** (dal 13/11/2026, chiesto dall'utente:
  * "mostrami le stesse identiche impostazioni della toolbar sopra la tastiera
  * del telefono"): le voci della barra, nello stesso ordine, una sotto l'altra,
@@ -9125,7 +9260,12 @@ private fun PcPageMenu(
     currentSize: Int,
     onKind: (PcMenuKind) -> Unit,
     onClose: () -> Unit,
-    onBlockMenu: (BlockEntity) -> Unit,
+    /** Le voci di "Block options" (dal 23/11/2026 qui dentro, chiesto dall'utente): "Turn into"… */
+    onTurnInto: (BlockEntity, SlashEntry) -> Unit,
+    /** …"Color" e, di un riquadro, icona e sfondo: la finestra del menu del blocco. */
+    onBlockStep: (BlockEntity, BlockMenuStep) -> Unit,
+    onDuplicate: (BlockEntity) -> Unit,
+    onDelete: (BlockEntity) -> Unit,
     onSelectAll: () -> Unit,
     onTypeEntry: (BlockEntity, SlashEntry) -> Unit,
     onParagraph: (BlockEntity?) -> Unit,
@@ -9161,9 +9301,52 @@ private fun PcPageMenu(
                 clipboard?.nextPasteMode = mode
                 open.edit.paste()
             }
+            val turnInto = turnIntoEntries()
             val entries = buildList {
-                add(PcMenuItem(EditorStrings.blockOptions, icon(Icons.Filled.DragIndicator), enabled = focused != null, onClick = onLine(onBlockMenu)))
-                add(PcMenuSeparator)
+                // **Le voci di "Block options" insieme alle altre** (dal 23/11/2026, chiesto dall'utente:
+                // "so già che ce ne saranno alcune doppie, poi ti dico quali togliere").
+                if (focused != null) {
+                    add(PcMenuItem(EditorStrings.addAbove, icon(Icons.Filled.VerticalAlignTop), onClick = { viewModel.addLineNextTo(focused, false) }))
+                    add(PcMenuItem(EditorStrings.addBelow, icon(Icons.Filled.VerticalAlignBottom), onClick = { viewModel.addLineNextTo(focused, true) }))
+                    add(PcMenuSeparator)
+                    val pinned = focused.attrs.linkTarget
+                    add(
+                        PcMenuItem(
+                            if (pinned) EditorStrings.unpinLinkTarget else EditorStrings.pinAsLinkTarget,
+                            icon(if (pinned) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder),
+                            onClick = { viewModel.setLinkTarget(focused, !pinned) }
+                        )
+                    )
+                    val flagged = focused.attrs.tocFlag
+                    add(
+                        PcMenuItem(
+                            if (flagged) EditorStrings.unflagForContents else EditorStrings.flagForContents,
+                            icon(if (flagged) Icons.Filled.Flag else Icons.Outlined.FlagOutlined),
+                            onClick = { viewModel.setTocFlag(focused, !flagged) }
+                        )
+                    )
+                    add(
+                        PcMenuItem(
+                            EditorStrings.turnInto, icon(Icons.Filled.Autorenew),
+                            submenu = turnInto.map { entry ->
+                                PcMenuItem(EditorStrings.blockType(entry.label), icon(entry.icon), enabled = entry.enabled, onClick = {
+                                    if ((entry.action as? SlashAction.Type)?.type != focused.type) onTurnInto(focused, entry)
+                                })
+                            }
+                        )
+                    )
+                    // Il codice ha i colori del suo linguaggio: niente "Color", come nel menu del blocco.
+                    if (focused.type != BlockType.CODE) {
+                        add(PcMenuItem(EditorStrings.color, icon(Icons.Filled.Brush), onClick = { onBlockStep(focused, BlockMenuStep.COLOR) }))
+                    }
+                    if (focused.type == BlockType.CALLOUT) {
+                        add(PcMenuItem(EditorStrings.editIcon, icon(Icons.Filled.EmojiEmotions), onClick = { onBlockStep(focused, BlockMenuStep.CALLOUT_ICON) }))
+                        add(PcMenuItem(EditorStrings.backgroundColor, icon(Icons.Filled.FormatColorFill), onClick = { onBlockStep(focused, BlockMenuStep.CALLOUT_COLOR) }))
+                    }
+                    add(PcMenuItem(Strings.duplicate, icon(Icons.Filled.ContentCopy), onClick = { onDuplicate(focused) }))
+                    add(PcMenuItem(Strings.delete, icon(Icons.Filled.Delete), onClick = { onDelete(focused) }))
+                    add(PcMenuSeparator)
+                }
                 add(PcMenuItem(EditorStrings.copy, icon(Icons.Filled.ContentCopy), hint = "Ctrl+C", onClick = open.edit.copy))
                 // Come sul telefono: il clic incolla, e il modo si sceglie a parte (lì tenendo premuto, qui passando sopra).
                 add(

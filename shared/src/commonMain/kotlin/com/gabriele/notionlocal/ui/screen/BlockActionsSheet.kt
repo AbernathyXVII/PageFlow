@@ -184,6 +184,8 @@ fun BlockActionsHost(
     onNavigateToPage: (String) -> Unit = {},
     /** "Paragraph" di questa riga (dal 21/10/2026): lo apre la schermata. Null = la voce non c'è. */
     onParagraph: ((BlockEntity) -> Unit)? = null,
+    /** Da dove si comincia: il menu, o una sua finestra (dal 23/11/2026, "Color" dal clic destro sul PC). */
+    initialStep: BlockMenuStep = BlockMenuStep.MENU,
     onDismiss: () -> Unit
 ) {
     val block = blocks.find { it.id == blockId }
@@ -229,7 +231,7 @@ fun BlockActionsHost(
     }.collectAsStateWithLifecycle(initialValue = null)
     val dataPage = if (sourceId != null) sourcePage else page
 
-    var step by remember { mutableStateOf(BlockMenuStep.MENU) }
+    var step by remember { mutableStateOf(initialStep) }
     val menuScope = rememberCoroutineScope()
     var moveExclusions by remember { mutableStateOf<PageRepository.MoveExclusions?>(null) }
     var rowPagesToLose by remember { mutableIntStateOf(0) }
@@ -884,7 +886,17 @@ fun BlockActionsHost(
 private class Loaded(val page: PageEntity?)
 
 /** Le schermate del menu del blocco: il menu, la lista di "Turn into", e le finestre che si aprono dalle voci. */
-private enum class BlockMenuStep {
+/**
+ * Le voci di "Turn into": quelle dei menu "/" e "+" meno "Link to page", le immagini e gli altri
+ * file, con cui il testo della riga andrebbe perso (dal 06/10/2026).
+ */
+@Composable
+internal fun turnIntoEntries(): List<SlashEntry> = slashEntries().filter {
+    it.action != SlashAction.LinkToPage && it.action !is SlashAction.Media && it.action != SlashAction.LinkButton &&
+        it.action != SlashAction.Record && it.action != SlashAction.Scan && it.action !is SlashAction.Columns
+}
+
+enum class BlockMenuStep {
     MENU, TURN_INTO, COLOR, EDIT_ICON, RENAME, DUPLICATE, MOVE_TO, MOVE_TO_DATABASE, TRASH, CONFIRM_SIMPLE,
     /** L'icona e lo sfondo di un riquadro (dal 06/10/2026). */
     CALLOUT_ICON, CALLOUT_COLOR,
@@ -1334,12 +1346,7 @@ private fun TurnIntoList(
             fontWeight = FontWeight.Bold
         )
     }
-    // "Link to page", le immagini e gli altri file non ci sono: il testo
-    // della riga andrebbe perso (dal 06/10/2026).
-    val entries = slashEntries().filter {
-        it.action != SlashAction.LinkToPage && it.action !is SlashAction.Media && it.action != SlashAction.LinkButton &&
-            it.action != SlashAction.Record && it.action != SlashAction.Scan && it.action !is SlashAction.Columns
-    }
+    val entries = turnIntoEntries()
     OptionsGroup {
         entries.forEachIndexed { index, entry ->
             if (index > 0) HorizontalDivider()
