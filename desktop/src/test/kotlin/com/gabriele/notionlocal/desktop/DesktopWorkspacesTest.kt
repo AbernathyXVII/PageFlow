@@ -82,7 +82,8 @@ class DesktopWorkspacesTest {
         dir.deleteRecursively()
     }
 
-    private suspend fun titles(found: List<PageRepository.SearchHit>) = found.map { it.title }
+    /** I risultati come titolo → Workspace. */
+    private fun where(found: List<PageRepository.SearchHit>) = found.associate { it.title to it.workspaceId }
 
     @Test
     fun everythingIsSeparatedByWorkspace() = runBlocking {
@@ -100,8 +101,8 @@ class DesktopWorkspacesTest {
         assertEquals(work, repo.workspaceOf(beta))
         assertEquals(PageEntity.ROOT_PAGE_ID, repo.workspaceOf(alpha))
 
-        // La ricerca: solo il Workspace aperto.
-        assertEquals(listOf("Beta nota"), titles(repo.search("nota", inContent = false, inTrash = false)))
+        // La ricerca: tutti i Workspace, ogni risultato col suo (dal 24/11/2026, prima solo quello aperto).
+        assertEquals(mapOf("Beta nota" to work, "Alpha nota" to PageEntity.ROOT_PAGE_ID), where(repo.search("nota", inContent = false, inTrash = false)))
         // Preferiti e template.
         repo.setFavorite(beta, true)
         assertEquals(listOf(beta), repo.observeFavorites().first().map { it.id })
@@ -115,7 +116,8 @@ class DesktopWorkspacesTest {
 
         // Di nuovo quello di sempre: le sue cose, e niente di "Lavoro".
         AppSettings.currentWorkspaceId = null
-        assertEquals(listOf("Alpha nota"), titles(repo.search("nota", inContent = false, inTrash = true)))
+        // Anche dal Workspace di sempre, e anche nel cestino: la pagina buttata in "Lavoro" resta sua.
+        assertEquals(mapOf("Alpha nota" to PageEntity.ROOT_PAGE_ID, "Beta nota" to work), where(repo.search("nota", inContent = false, inTrash = true)))
         assertEquals(listOf(alpha), repo.observeFavorites().first().map { it.id })
         assertEquals(listOf(oldTemplate), repo.observeTemplates().first().map { it.id })
         assertTrue("il cestino di Lavoro non si vede qui", repo.observeTrash().first().isEmpty())
@@ -127,6 +129,54 @@ class DesktopWorkspacesTest {
         repo.restoreFromTrash(beta)
         assertEquals(work, repo.workspaceOf(beta))
         assertTrue(repo.treeChildren(work).any { it.pageId == beta })
+    }
+
+    /** La pagina della ricerca: i risultati a gruppi, prima il Workspace aperto, ognuno col suo titolo. */
+    @Test
+    fun searchShowsEveryWorkspaceInItsGroup() {
+        runBlocking {
+            repo.renamePage(repo.createQuickNote(PageEntity.ROOT_PAGE_ID).first, "Casa nota")
+            val id = repo.createWorkspace("Lavoro")
+            repo.renamePage(repo.createQuickNote(id).first, "Lavoro nota")
+            AppSettings.currentWorkspaceId = id
+        }
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(com.gabriele.notionlocal.viewmodel.SearchViewModel::class, androidx.lifecycle.viewmodel.CreationExtras.Empty)
+        val owner = ScreenOwner()
+        fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 700, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        com.gabriele.notionlocal.ui.screen.SearchScreen(factory = factory, onBack = {}, onOpenHit = {}, viewModel = viewModel)
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        try {
+            frames(10)
+            onWindowThread { viewModel.onQueryChange("nota") }
+            frames(30)
+            onWindowThread { Bitmap.makeFromImage(scene.render(time)) }.also {
+                File("build/desktop-screenshots").mkdirs()
+                File("build/desktop-screenshots", "workspaces_search.png").writeBytes(org.jetbrains.skia.Image.makeFromBitmap(it).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+            }
+            val shown = onWindowThread {
+                scene.semanticsOwners.flatMap { it.getAllSemanticsNodes(mergingEnabled = false) }
+                    .mapNotNull { node -> node.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }?.let { it to node.boundsInRoot.top } }
+                    .filter { it.first in setOf("Lavoro", "Lavoro nota", "My Space", "Casa nota") }
+                    .sortedBy { it.second }.map { it.first }
+            }
+            assertEquals("prima Lavoro (aperto), poi quello di sempre", listOf("Lavoro", "Lavoro nota", "My Space", "Casa nota"), shown)
+        } finally {
+            onWindowThread { scene.close() }
+        }
     }
 
     /** Il selettore in cima alla barra fissata: si passa a "Lavoro" e si vede il suo menu principale. */

@@ -1126,6 +1126,21 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.1 — 24/11/2026 · 10:31 — Search finds in every workspace, in groups
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1373 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Search finds in every
+  workspace again**, from wherever one is, the trash too when "Search in
+  trash" is on: the results are in groups, one per workspace, first the one
+  that is open and then the others, each with its icon and its name, and a
+  divider between a group and the next (with a single workspace, no names).
+  Opening a result of another workspace, that workspace becomes the open one,
+  with its tree and its main menu. Favorites, Recents, the Library, Templates
+  and the Trash stay of the workspace that is open (v0.156)
+- **[Project]** `SearchHit.workspaceId`; `SearchViewModel.workspaces`;
+  `WorkspaceHeader` in `SearchScreen`; `onEnterWorkspace` of `AppRoutes`.
+  Test: `DesktopWorkspacesTest.searchShowsEveryWorkspaceInItsGroup`
+
 ### 🆕 v0.156 — 24/11/2026 · 09:46 — Workspaces
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1372 tests passed)*
 

@@ -2,6 +2,7 @@ package com.gabriele.notionlocal.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.repository.PageRepository
 import com.gabriele.notionlocal.data.settings.AppSettings
 import kotlinx.coroutines.Job
@@ -17,6 +18,10 @@ class SearchViewModel(private val repository: PageRepository) : ViewModel() {
 
     private val _results = MutableStateFlow<List<PageRepository.SearchHit>>(emptyList())
     val results: StateFlow<List<PageRepository.SearchHit>> = _results
+
+    /** I Workspace, per il titolo dei gruppi dei risultati (dal 24/11/2026). */
+    private val _workspaces = MutableStateFlow<List<PageEntity>>(emptyList())
+    val workspaces: StateFlow<List<PageEntity>> = _workspaces
 
     private var searchJob: Job? = null
 
@@ -40,6 +45,7 @@ class SearchViewModel(private val repository: PageRepository) : ViewModel() {
         // ogni singolo carattere digitato.
         searchJob = viewModelScope.launch {
             if (debounce) delay(250)
+            _workspaces.value = repository.workspaces()
             _results.value = repository.search(
                 query,
                 inContent = AppSettings.searchContent,

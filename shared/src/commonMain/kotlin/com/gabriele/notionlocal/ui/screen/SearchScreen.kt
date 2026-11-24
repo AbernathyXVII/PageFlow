@@ -49,6 +49,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.repository.PageRepository.SearchHit
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.ui.i18n.Strings
@@ -84,6 +85,16 @@ fun SearchScreen(
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
+    val workspaces by viewModel.workspaces.collectAsStateWithLifecycle()
+    // **I risultati a gruppi, un Workspace per volta** (dal 24/11/2026, chiesto dall'utente): prima quello
+    // aperto, poi gli altri nel loro ordine, ognuno col suo titolo. Con un Workspace solo, niente titoli.
+    val home = AppSettings.homePageId
+    val groups = remember(results, workspaces, home) {
+        val order = listOf(home) + workspaces.map { it.id }.filter { it != home }
+        results.groupBy { it.workspaceId }.entries
+            .sortedBy { (id, _) -> order.indexOf(id).let { if (it < 0) Int.MAX_VALUE else it } }
+            .map { (id, hits) -> workspaces.firstOrNull { it.id == id } to hits }
+    }
     val focusRequester = remember { FocusRequester() }
     var showOptions by rememberSaveable { mutableStateOf(false) }
 
@@ -145,11 +156,43 @@ fun SearchScreen(
                     // database — o il database stesso trovato per nome —
                     // avrebbero avuto la stessa chiave, cosa che una
                     // `LazyColumn` non perdona: l'app si chiude.
-                    items(results, key = { it.rowId?.let { id -> "row:$id" } ?: it.pageId.orEmpty() }) { hit ->
-                        SearchResultRow(hit = hit, onClick = { onOpenHit(hit) })
+                    groups.forEachIndexed { index, (workspace, hits) ->
+                        if (workspaces.size > 1) {
+                            item(key = "workspace:${hits.first().workspaceId}") {
+                                WorkspaceHeader(workspace, divider = index > 0)
+                            }
+                        }
+                        items(hits, key = { it.rowId?.let { id -> "row:$id" } ?: it.pageId.orEmpty() }) { hit ->
+                            SearchResultRow(hit = hit, onClick = { onOpenHit(hit) })
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+/** Il titolo di un gruppo di risultati: un divisore (non sopra il primo) e il nome del Workspace con la sua icona. */
+@Composable
+private fun WorkspaceHeader(workspace: PageEntity?, divider: Boolean) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (divider) HorizontalDivider(color = NotionGray900, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (workspace != null) {
+                PageIconView(emoji = workspace.icon, iconImage = workspace.iconImage, isDatabase = false, size = 18.dp, iconSymbol = workspace.iconSymbol)
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(
+                text = workspace?.title?.ifBlank { Strings.untitled } ?: Strings.untitled,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = NotionGray400,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

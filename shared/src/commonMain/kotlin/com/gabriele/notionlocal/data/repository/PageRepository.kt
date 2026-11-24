@@ -747,7 +747,9 @@ class PageRepository(private val db: AppDatabase) {
         val inTrash: Boolean,
         val iconSymbol: String? = null,
         /** Il blocco dove sta il testo trovato: aprendo il risultato la pagina scorre fin lì (dal 19/11/2026). */
-        val blockId: String? = null
+        val blockId: String? = null,
+        /** Il Workspace della pagina (dal 24/11/2026): la ricerca li mostra a gruppi. */
+        val workspaceId: String = PageEntity.ROOT_PAGE_ID
     )
 
     /**
@@ -871,16 +873,17 @@ class PageRepository(private val db: AppDatabase) {
         suspend fun closedBy(id: String): String? = closedBy.getOrPut(id) {
             lockingPageOf(id)?.takeIf { !AppLock.isUnlocked(it) }
         }
-        // Solo il Workspace aperto (dal 24/11/2026): una volta per pagina, le righe guardano il loro database.
-        val home = homeId()
+        // **Tutti i Workspace, ognuno col suo** (dal 24/11/2026, chiesto dall'utente: la mattina solo quello
+        // aperto, poi "ovunque io sia, concedimi di cercare anche negli altri"): una volta per pagina, le
+        // righe guardano il loro database. La schermata li mette a gruppi (vedi `SearchScreen`).
         val workspaceOfId = HashMap<String, String>()
-        return hits.entries.mapNotNull { (key, hit) ->
+        return hits.entries.mapNotNull { (key, found) ->
             val containerId = if (key.startsWith("row:")) {
                 db.databaseDao().getRowById(key.removePrefix("row:"))?.pageId
             } else {
-                hit.pageId
-            } ?: return@mapNotNull hit
-            if (workspaceOfId.getOrPut(containerId) { workspaceOf(containerId) } != home) return@mapNotNull null
+                found.pageId
+            } ?: return@mapNotNull found
+            val hit = found.copy(workspaceId = workspaceOfId.getOrPut(containerId) { workspaceOf(containerId) })
             val lockedBy = closedBy(containerId) ?: return@mapNotNull hit
             when {
                 key.startsWith("row:") -> null

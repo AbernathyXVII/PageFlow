@@ -731,6 +731,13 @@ private fun AppTab(
                                 onOpenSidebar = ::openSidebar,
                                 onOpenRowPage = { rowId, then ->
                                     scope.launch { factory.pageRepository.ensureRowPage(rowId)?.let(then) }
+                                },
+                                // Un risultato della ricerca di un altro Workspace: si entra in quello (dal 24/11/2026).
+                                onEnterWorkspace = { id ->
+                                    if (id != AppSettings.homePageId) {
+                                        AppSettings.currentWorkspaceId = id.takeIf { it != PageEntity.ROOT_PAGE_ID }
+                                        sidebar.refresh()
+                                    }
                                 }
                             )
                             }
@@ -805,7 +812,8 @@ private fun AppRoutes(
     factory: ViewModelFactory,
     animations: AnimationLevel,
     onOpenSidebar: () -> Unit,
-    onOpenRowPage: (rowId: String, then: (String) -> Unit) -> Unit
+    onOpenRowPage: (rowId: String, then: (String) -> Unit) -> Unit,
+    onEnterWorkspace: (String) -> Unit = {}
 ) {
     // Le dissolvenze fra una schermata e l'altra seguono l'impostazione
     // delle animazioni: piene come di serie, brevi, o nessuna.
@@ -919,6 +927,8 @@ private fun AppRoutes(
                 factory = factory,
                 onBack = { navController.popBackStack() },
                 onOpenHit = { hit ->
+                    // La pagina di un altro Workspace: si passa a quello, col suo albero e il suo menu principale.
+                    onEnterWorkspace(hit.workspaceId)
                     // Via la ricerca prima di aprire la pagina, così
                     // "indietro" dalla pagina torna da dove si era partiti
                     // e non alla ricerca vuota.
