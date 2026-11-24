@@ -37,6 +37,7 @@ import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
 import com.gabriele.notionlocal.data.entity.PageEditEntity
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.entity.PageParagraph
+import com.gabriele.notionlocal.data.entity.isWorkspaceRoot
 import com.gabriele.notionlocal.data.entity.PersonalWordEntity
 import com.gabriele.notionlocal.data.entity.RichTextSpan
 import com.gabriele.notionlocal.data.entity.TableCellEntity
@@ -75,6 +76,7 @@ import kotlinx.coroutines.withContext
 import java.time.ZoneId
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
@@ -152,11 +154,13 @@ class PageRepository(private val db: AppDatabase) {
     // --- Template (dal 26/09/2026, vedi `PageEntity.isTemplate`) ---
 
     /** I template, per la voce "Templates" della barra laterale e per le pagine nuove. */
-    fun observeTemplates(): Flow<List<PageEntity>> = pageDao.observeTemplates()
+    fun observeTemplates(): Flow<List<PageEntity>> = inCurrentWorkspace(pageDao.observeTemplates())
 
     /** Un template nuovo, vuoto e senza nome. Restituisce il suo id, per aprirlo e scriverlo. */
     suspend fun createTemplate(): String {
-        val template = PageEntity(title = "", isTemplate = true)
+        // Del Workspace aperto (dal 24/11/2026): un template non sta nell'albero, se lo porta scritto.
+        val home = homeId().takeIf { it != PageEntity.ROOT_PAGE_ID }
+        val template = PageEntity(title = "", isTemplate = true, paragraphJson = home?.let { PageParagraph.encode(PageParagraph(workspaceId = it)) })
         pageDao.insert(template)
         return template.id
     }
@@ -289,7 +293,7 @@ class PageRepository(private val db: AppDatabase) {
     fun observePages(pageIds: List<String>): Flow<List<PageEntity>> = pageDao.observeByIds(pageIds)
 
     /** Le pagine e i database messi fra i preferiti, tranne quelli nel cestino. */
-    fun observeFavorites(): Flow<List<PageEntity>> = pageDao.observeFavorites()
+    fun observeFavorites(): Flow<List<PageEntity>> = inCurrentWorkspace(pageDao.observeFavorites())
 
     /**
      * Mette o toglie una pagina dai preferiti, segnando quando.
@@ -301,7 +305,7 @@ class PageRepository(private val db: AppDatabase) {
      * da una strada nuova.
      */
     suspend fun setFavorite(pageId: String, favorite: Boolean) {
-        if (pageId == PageEntity.ROOT_PAGE_ID) return
+        if (isWorkspaceRoot(pageId)) return
         pageDao.setFavorite(pageId, favorite, if (favorite) System.currentTimeMillis() else null)
     }
 
@@ -334,8 +338,14 @@ class PageRepository(private val db: AppDatabase) {
      * ripristina o la cancella per davvero.
      */
     suspend fun moveToTrash(pageId: String): PageChange.Trashed? {
-        if (pageId == PageEntity.ROOT_PAGE_ID) return null
+        if (isWorkspaceRoot(pageId)) return null
         return db.withTransaction {
+            // Il suo Workspace, finché i collegamenti ci sono: nel cestino si vede solo lì, e lì torna.
+            val page = pageDao.getById(pageId)
+            if (page != null && !page.isTemplate) {
+                val home = workspaceOf(page)
+                if (home != PageEntity.ROOT_PAGE_ID) pageDao.setParagraph(pageId, PageParagraph.encode(PageParagraph.parse(page.paragraphJson).copy(workspaceId = home)))
+            }
             val links = blockDao.getBlocksLinkingTo(pageId)
             pageDao.setTrashedAt(pageId, System.currentTimeMillis())
             links.forEach { blockDao.delete(it) }
@@ -347,7 +357,7 @@ class PageRepository(private val db: AppDatabase) {
     // --- Cestino ---
 
     /** Le pagine nel cestino, dall'ultima buttata. */
-    fun observeTrash(): Flow<List<PageEntity>> = pageDao.observeTrash()
+    fun observeTrash(): Flow<List<PageEntity>> = inCurrentWorkspace(pageDao.observeTrash())
 
     /**
      * Tira fuori una pagina dal cestino e la rimette **in fondo al menu
@@ -369,7 +379,13 @@ class PageRepository(private val db: AppDatabase) {
             if (rowGone) pageDao.setRowPage(pageId, false)
             // Un template torna fra i template, non nel menu principale.
             if ((!page.isRowPage || rowGone) && !page.isTemplate && blockDao.getBlocksLinkingTo(pageId).isEmpty()) {
-                appendLink(PageEntity.ROOT_PAGE_ID, pageId, page.isDatabase)
+                // In fondo al menu principale del suo Workspace, se c'è ancora; e da lì in poi si ritrova risalendo.
+                val home = PageParagraph.parse(page.paragraphJson).workspaceId
+                    ?.takeIf { id -> pageDao.getById(id)?.takeIf { it.trashedAt == null } != null } ?: PageEntity.ROOT_PAGE_ID
+                appendLink(home, pageId, page.isDatabase)
+                if (PageParagraph.parse(page.paragraphJson).workspaceId != null) {
+                    pageDao.setParagraph(pageId, PageParagraph.encode(PageParagraph.parse(page.paragraphJson).copy(workspaceId = null)))
+                }
             }
         }
     }
@@ -426,7 +442,7 @@ class PageRepository(private val db: AppDatabase) {
      * repository non sa dov'è.
      */
     suspend fun deletePermanently(pageId: String): List<String> {
-        if (pageId == PageEntity.ROOT_PAGE_ID) return emptyList()
+        if (isWorkspaceRoot(pageId)) return emptyList()
         val databaseDao = db.databaseDao()
         return db.withTransaction {
             val doomed = linkedSetOf(pageId)
@@ -485,7 +501,11 @@ class PageRepository(private val db: AppDatabase) {
     }
 
     /** Svuota il cestino adesso. */
-    suspend fun emptyTrash(): List<String> = pageDao.getAllTrashedIds().flatMap { deletePermanently(it) }
+    /** Svuota il cestino del Workspace aperto: quello degli altri non si vede, e resta (dal 24/11/2026). */
+    suspend fun emptyTrash(): List<String> {
+        val home = homeId()
+        return pageDao.getAllTrashedIds().filter { workspaceOf(it) == home }.flatMap { deletePermanently(it) }
+    }
 
     // --- L'albero delle pagine (barra laterale) ---
 
@@ -511,8 +531,9 @@ class PageRepository(private val db: AppDatabase) {
         val key: String get() = pageId ?: "row:$rowId"
     }
 
+    /** La pagina principale del Workspace aperto, in cima all'albero. */
     suspend fun treeRoot(): PageTreeNode? =
-        pageDao.getById(PageEntity.ROOT_PAGE_ID)?.let { nodeFor(it) }
+        pageDao.getById(validHomeId())?.let { nodeFor(it) }
 
     /**
      * I figli di una pagina nell'albero, nell'ordine in cui compaiono.
@@ -589,6 +610,63 @@ class PageRepository(private val db: AppDatabase) {
         }
         return path.reversed()
     }
+
+    // --- I Workspace (dal 24/11/2026, chiesto dall'utente come in Notion; vedi `PageParagraph.workspace`) ---
+    //
+    // Un Workspace è una pagina principale con il suo albero: quella di sempre (`ROOT_PAGE_ID`) e quelle
+    // create dopo. Una pagina sta nel Workspace a cui si arriva risalendo i suoi collegamenti, come il
+    // percorso in alto (`ancestorsOf`); un template o una pagina nel cestino, che nell'albero non stanno,
+    // se lo portano scritto (`PageParagraph.workspaceId`). Ricerca, preferiti, recenti, template e cestino
+    // mostrano solo quelle del Workspace aperto (`AppSettings.currentWorkspaceId`).
+
+    /** La pagina principale del Workspace aperto. */
+    fun homeId(): String = AppSettings.homePageId
+
+    /** Il Workspace aperto, se c'è ancora; se no si torna a quello di sempre (es. cancellato dall'altro dispositivo). */
+    suspend fun validHomeId(): String {
+        val chosen = AppSettings.currentWorkspaceId ?: return PageEntity.ROOT_PAGE_ID
+        if (pageDao.getById(chosen)?.takeIf { it.trashedAt == null && isWorkspaceRoot(it) } != null) return chosen
+        AppSettings.currentWorkspaceId = null
+        return PageEntity.ROOT_PAGE_ID
+    }
+
+    /** I Workspace: quello di sempre per primo, poi gli altri nell'ordine in cui sono nati. */
+    suspend fun workspaces(): List<PageEntity> {
+        val others = pageDao.getAllLivePages()
+            .filter { it.id != PageEntity.ROOT_PAGE_ID && isWorkspaceRoot(it) }
+            .sortedBy { it.createdAt }
+        return listOfNotNull(pageDao.getById(PageEntity.ROOT_PAGE_ID)) + others
+    }
+
+    /** Un Workspace nuovo, con la sua pagina principale vuota. Restituisce il suo id. */
+    suspend fun createWorkspace(title: String): String {
+        val page = PageEntity(title = title, icon = "🗂️", paragraphJson = PageParagraph.encode(PageParagraph(workspace = true)))
+        pageDao.insert(page)
+        return page.id
+    }
+
+    /** Se [page] è la pagina principale di un Workspace. */
+    fun isWorkspaceRoot(page: PageEntity): Boolean = page.isWorkspaceRoot
+
+    suspend fun isWorkspaceRoot(pageId: String): Boolean =
+        pageId == PageEntity.ROOT_PAGE_ID || pageDao.getById(pageId)?.let { isWorkspaceRoot(it) } == true
+
+    /** Il Workspace di [page]: la pagina principale a cui si arriva risalendo, o quella scritta sulla pagina. */
+    suspend fun workspaceOf(page: PageEntity): String {
+        if (isWorkspaceRoot(page)) return page.id
+        PageParagraph.parse(page.paragraphJson).workspaceId?.let { return it }
+        val top = ancestorsOf(page.id).firstOrNull() ?: return PageEntity.ROOT_PAGE_ID
+        return if (isWorkspaceRoot(top)) top.id else PageEntity.ROOT_PAGE_ID
+    }
+
+    suspend fun workspaceOf(pageId: String): String = pageDao.getById(pageId)?.let { workspaceOf(it) } ?: PageEntity.ROOT_PAGE_ID
+
+    /** Solo le pagine del Workspace aperto, e di nuovo ogni volta che se ne apre un altro. */
+    fun inCurrentWorkspace(pages: Flow<List<PageEntity>>): Flow<List<PageEntity>> =
+        combine(pages, AppSettings.currentWorkspaceFlow) { list, chosen ->
+            val home = chosen ?: PageEntity.ROOT_PAGE_ID
+            list.filter { workspaceOf(it) == home }
+        }
 
     /** Le pagine fra cui scegliere quella da aprire all'avvio: tutte, tranne il cestino e la principale. */
     suspend fun startupCandidates(): List<PageEntity> = pageDao.getAllLivePages().filter { it.viewHostId == null }
@@ -793,12 +871,16 @@ class PageRepository(private val db: AppDatabase) {
         suspend fun closedBy(id: String): String? = closedBy.getOrPut(id) {
             lockingPageOf(id)?.takeIf { !AppLock.isUnlocked(it) }
         }
+        // Solo il Workspace aperto (dal 24/11/2026): una volta per pagina, le righe guardano il loro database.
+        val home = homeId()
+        val workspaceOfId = HashMap<String, String>()
         return hits.entries.mapNotNull { (key, hit) ->
             val containerId = if (key.startsWith("row:")) {
                 db.databaseDao().getRowById(key.removePrefix("row:"))?.pageId
             } else {
                 hit.pageId
             } ?: return@mapNotNull hit
+            if (workspaceOfId.getOrPut(containerId) { workspaceOf(containerId) } != home) return@mapNotNull null
             val lockedBy = closedBy(containerId) ?: return@mapNotNull hit
             when {
                 key.startsWith("row:") -> null
@@ -906,7 +988,7 @@ class PageRepository(private val db: AppDatabase) {
      *   restava anche nel database, cioè in due posti insieme.
      */
     suspend fun movePageTo(pageId: String, destination: PageTreeNode, asInline: Boolean = false): PageChange.Moved? {
-        if (pageId == PageEntity.ROOT_PAGE_ID) return null
+        if (isWorkspaceRoot(pageId)) return null
         val inside = pagesInside(pageId)
         val destinationPageId = when {
             destination.pageId != null -> destination.pageId
@@ -978,7 +1060,7 @@ class PageRepository(private val db: AppDatabase) {
         rowTitle: String? = null,
         copyImage: suspend (String) -> String? = imageCopier
     ): PageChange.MovedToDatabase? {
-        if (pageId == PageEntity.ROOT_PAGE_ID) return null
+        if (isWorkspaceRoot(pageId)) return null
         val page = pageDao.getById(pageId) ?: return null
         val chosen = pageDao.getById(databaseId)?.takeIf { it.isDatabase } ?: return null
         val target = (chosen.sourceDatabaseId?.let { pageDao.getById(it) } ?: chosen)
@@ -1259,7 +1341,7 @@ class PageRepository(private val db: AppDatabase) {
         }
         if (!placed && fallbackToMainMenu && blockDao.getBlocksLinkingTo(pageId).isEmpty()) {
             val page = pageDao.getById(pageId) ?: return
-            appendLink(PageEntity.ROOT_PAGE_ID, pageId, page.isDatabase)
+            appendLink(homeId(), pageId, page.isDatabase)
         }
     }
 
@@ -1313,7 +1395,7 @@ class PageRepository(private val db: AppDatabase) {
         besideLinkBlockId: String? = null,
         copyImage: suspend (String) -> String?
     ): String? {
-        if (pageId == PageEntity.ROOT_PAGE_ID) return null
+        if (isWorkspaceRoot(pageId)) return null
         val original = pageDao.getById(pageId) ?: return null
         val databaseDao = db.databaseDao()
         return db.withTransaction {
@@ -1414,7 +1496,7 @@ class PageRepository(private val db: AppDatabase) {
                 }
                 // Scelta una pagina, o un originale che non sta da nessuna
                 // parte: in fondo, dove la si ritrova di sicuro.
-                else -> appendLink(destinationPageId ?: PageEntity.ROOT_PAGE_ID, copyId, original.isDatabase)
+                else -> appendLink(destinationPageId ?: homeId(), copyId, original.isDatabase)
             }
             copyId
         }
@@ -1668,7 +1750,7 @@ class PageRepository(private val db: AppDatabase) {
         copies: MutableMap<String, String>,
         copyImage: suspend (String) -> String?
     ): String? {
-        if (pageId == PageEntity.ROOT_PAGE_ID) return pageId
+        if (isWorkspaceRoot(pageId)) return pageId
         val page = pageDao.getById(pageId) ?: return null
         if (page.trashedAt != null) return pageId
         return copyPageDeep(pageId, copies, copyImage)
@@ -1716,7 +1798,8 @@ class PageRepository(private val db: AppDatabase) {
             } else {
                 blockDao.getBlocksLinkingTo(page.id).firstOrNull()?.let { pageDao.getById(it.pageId) }
             }
-            val isRoot = page.id == PageEntity.ROOT_PAGE_ID
+            // Anche la pagina principale degli altri Workspace (dal 24/11/2026): così una pagina ci si sposta.
+            val isRoot = isWorkspaceRoot(page)
             if (!isRoot && (container == null || container.trashedAt != null)) continue
             hits += DestinationHit(nodeFor(page), container?.title)
         }
@@ -3648,7 +3731,7 @@ class PageRepository(private val db: AppDatabase) {
         if (page != null && page.trashedAt == null && !page.isDatabase) return@withTransaction page.id
         val inbox = PageEntity(title = inboxTitle, icon = "📥")
         pageDao.insert(inbox)
-        appendLink(PageEntity.ROOT_PAGE_ID, inbox.id, false)
+        appendLink(homeId(), inbox.id, false)
         inbox.id
     }
 

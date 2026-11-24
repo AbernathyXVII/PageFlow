@@ -35,9 +35,17 @@ class SidebarViewModel(private val repository: PageRepository) : ViewModel() {
     private val _expanded = MutableStateFlow(setOf(PageEntity.ROOT_PAGE_ID))
     val expanded: StateFlow<Set<String>> = _expanded
 
+    /** La pagina principale che l'albero mostrava: cambiato Workspace, la nuova parte aperta. */
+    private var shownHome: String? = null
+
     fun refresh() {
         viewModelScope.launch {
             _root.value = repository.treeRoot()
+            val home = _root.value?.pageId
+            if (home != null && home != shownHome) {
+                shownHome = home
+                _expanded.value = _expanded.value + home
+            }
             val loaded = mutableMapOf<String, List<PageTreeNode>>()
             for (key in _expanded.value) {
                 if (key.startsWith("row:")) continue
@@ -94,11 +102,13 @@ class PagePickerViewModel(private val repository: PageRepository) : ViewModel() 
 
     /** Si riparte da capo a ogni apertura: l'albero può essere cambiato, e la ricerca di prima non serve più. */
     fun reset() {
-        _expanded.value = setOf(PageEntity.ROOT_PAGE_ID)
+        // Dalla pagina principale del Workspace aperto (dal 24/11/2026).
+        val home = repository.homeId()
+        _expanded.value = setOf(home)
         setQuery("")
         viewModelScope.launch {
             _root.value = repository.treeRoot()
-            _children.value = mapOf(PageEntity.ROOT_PAGE_ID to repository.treeChildren(PageEntity.ROOT_PAGE_ID))
+            _children.value = mapOf(home to repository.treeChildren(home))
         }
     }
 

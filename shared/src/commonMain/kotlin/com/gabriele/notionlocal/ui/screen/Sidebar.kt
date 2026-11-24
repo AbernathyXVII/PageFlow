@@ -148,7 +148,9 @@ fun SidebarContent(
     /** "Recents" sotto l'albero delle pagine: vedi `RecentsSidebarSection`. */
     recents: @Composable () -> Unit = {},
     /** A destra di "Main menu": sul PC il pulsante per fissarla o richiuderla (vedi `AppNavHost`). */
-    header: @Composable () -> Unit = {}
+    header: @Composable () -> Unit = {},
+    /** In cima a tutto, il Workspace aperto e la scelta degli altri (vedi `WorkspaceSwitcher`). */
+    workspace: @Composable () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -159,12 +161,14 @@ fun SidebarContent(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 16.dp)
     ) {
-        // 1. Il menu principale, **in cima a tutto** (chiesto dall'utente
-        // l'11/11/2026), e sul PC accanto il pulsante per fissare la barra.
+        // 0. Il Workspace, in cima a tutto come in Notion (dal 24/11/2026, chiesto dall'utente), e sul PC
+        // accanto il pulsante per fissare la barra.
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-            SidebarItem(Icons.Filled.Home, Strings.mainMenu, onClick = actions.onMainMenu, modifier = Modifier.weight(1f))
+            Box(modifier = Modifier.weight(1f)) { workspace() }
             header()
         }
+        // 1. Il menu principale (in cima a tutto dall'11/11/2026, chiesto dall'utente).
+        SidebarItem(Icons.Filled.Home, Strings.mainMenu, onClick = actions.onMainMenu)
         HorizontalDivider(
             color = NotionGray900,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
@@ -281,8 +285,8 @@ fun RecentsSidebarSection(
     onOpen: (PageEntity) -> Unit,
     onViewAll: () -> Unit
 ) {
-    // Qualcuna in più delle dieci: una nel cestino o sparita non lascia la lista corta.
-    val ids = AppSettings.recentVisits.take(SIDEBAR_RECENTS * 3).map { it.pageId }
+    // Qualcuna in più delle dieci: una nel cestino, sparita o di un altro Workspace non lascia la lista corta.
+    val ids = AppSettings.recentVisits.take(SIDEBAR_RECENTS * 6).map { it.pageId }
     val pages by remember(ids) { observePages(ids) }.collectAsStateWithLifecycle(emptyList())
     val byId = pages.associateBy { it.id }
     val shown = ids.mapNotNull { byId[it] }.filter { it.trashedAt == null && it.viewHostId == null }.take(SIDEBAR_RECENTS)
@@ -534,7 +538,8 @@ private fun SidebarPageMenu(node: PageTreeNode, actions: SidebarPageActions, onD
                         }
                     )
                     OptionRow(icon = Icons.Filled.Edit, label = EditorStrings.rename, onClick = { renaming = true })
-                    if (pageId != PageEntity.ROOT_PAGE_ID) {
+                    // La pagina principale, anche di un altro Workspace, non si butta.
+                    if (pageId != PageEntity.ROOT_PAGE_ID && pageId != AppSettings.homePageId) {
                         OptionRow(
                             icon = Icons.Filled.Delete,
                             label = Strings.moveToTrash,

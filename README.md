@@ -1126,6 +1126,43 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🆕 v0.156 — 24/11/2026 · 09:46 — Workspaces
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1372 tests passed)*
+
+- **[New feature]** **[📱 Mobile]** **[💻 PC]** **Workspaces**, as in
+  Notion: at the top of the sidebar the name and icon of the workspace that
+  is open (on the PC beside the pin); a click opens the list of the
+  workspaces, with a check on the open one, and **New workspace**, which asks
+  for its name. Every workspace is a main page with its own tree: the Main
+  menu and the tree of the sidebar become those of the workspace chosen. The
+  pages there were before stay all in the first workspace, the one of
+  always. The name and the icon of a workspace are those of its main page,
+  and they change from there like for any page
+- **[New feature]** **[📱 Mobile]** **[💻 PC]** **Each workspace has its
+  own**: search (and Ctrl+F) finds only its pages; Favorites, Recents and the
+  Library show only its pages; Templates has its templates (the ones made
+  there); the Trash shows only what was thrown away there, a page restored
+  goes back to the main menu of its workspace, and **Empty trash** empties
+  only that one. A new page from the main menu (Ctrl+N, the + of the tree, a
+  duplicate) goes into the workspace that is open; the quick notes and the
+  things shared go on into the page chosen in Settings, as before
+- **[New feature]** **[📱 Mobile]** **[💻 PC]** **A page goes from a
+  workspace to another** with **Move to**: searching, the main pages of the
+  other workspaces can be chosen too
+- **[Change]** **[📱 Mobile]** **[💻 PC]** The main page of a workspace, like the one of always, cannot
+  be thrown away, moved, duplicated, locked with the password or put among
+  the favorites. The workspace open is of each device: the phone and the PC
+  can have a different one open; the workspaces themselves go from one to
+  the other with the Wi‑Fi sync
+- **[Project]** `PageParagraph.workspace` (the main page of a workspace) and
+  `workspaceId` (the workspace of a template or of a page in the trash), with
+  no change to the database; `AppSettings.currentWorkspaceId`/`homePageId`;
+  in `PageRepository` `workspaces`, `createWorkspace`, `workspaceOf` (going
+  up the links, like the breadcrumb), `inCurrentWorkspace`, `validHomeId`,
+  `homeId` in place of `ROOT_PAGE_ID` where a page goes "in the main menu";
+  `WorkspaceSwitcher` at the top of `SidebarContent`. Test:
+  `DesktopWorkspacesTest`
+
 ### ✏️ v0.155.54 — 24/11/2026 · 09:06 — A torn-off tab opens in its window, the keyboard arrows in the peek
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1370 tests passed)*
 
@@ -1221,7 +1258,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopCalendarYearTest`
 
 ### 🔧 v0.155.49.1 — 23/11/2026 · 23:16 — The sidebar opens again after being unpinned
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1362 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1362 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **The sidebar opens again after being unpinned**:
   with the sidebar pinned beside the page, unpinning it and then pressing the
@@ -1233,7 +1270,7 @@ say that **they still have to be verified on the phone**: when they are,
   Test: `DesktopEditorTest.theSidebarComesBackWithItsButton`
 
 ### ✏️ v0.155.49 — 23/11/2026 · 22:53 — Matches on one line, a wider Center peek, "Load limit" for each database
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1361 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1361 tests passed)*
 
 - **[Change]** **[💻 PC]** **A match on one line in the sports widget**:
   crest, team, goals – goals, team, crest, with crests of 24 points instead
@@ -1257,7 +1294,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopLoadLimitTest`
 
 ### ✏️ v0.155.48 — 23/11/2026 · 22:20 — Lines in columns chosen with the mouse, Ctrl+Z there too; arrows between cells; today in orange
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1358 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1358 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **The lines inside columns are chosen with the
   mouse**: dragging from a line of a column to another line of the same
@@ -1289,7 +1326,7 @@ say that **they still have to be verified on the phone**: when they are,
   outline (`todayCell`)
 
 ### 🔧 v0.155.47.1 — 23/11/2026 · 18:37 — The six dots stay on their block when the wheel scrolls the page
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1353 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1353 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **The six dots follow their block when the page
   scrolls under them**: with the wheel over the dots, the page moved but the
@@ -1301,7 +1338,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopBlockSelectionTest.theDotsFollowTheirBlockWhenTheWheelScrolls`
 
 ### ✏️ v0.155.47 — 23/11/2026 · 18:10 — The wheel scrolls over the six dots; the dots of an image sit on its title
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1352 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1352 tests passed)*
 
 - **[Change]** **[💻 PC]** **The wheel scrolls the page also with the mouse
   on the six dots**: before, the wheel there did something only while
@@ -1315,7 +1352,7 @@ say that **they still have to be verified on the phone**: when they are,
   and `theSixDotsSitOnTheTitleOfAnImage`
 
 ### ✏️ v0.155.46 — 23/11/2026 · 17:49 — The right-click menu in order: Delete at the bottom, Duplicate under Paste, Color, every type in Turn into
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1350 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1350 tests passed)*
 
 - **[Change]** **[💻 PC]** **The right-click menu of a line, in the user's
   order**: Delete is at the bottom, in red like "Move to trash"; Duplicate is
@@ -1331,7 +1368,7 @@ say that **they still have to be verified on the phone**: when they are,
   last, Duplicate under Paste, Turn into scrolls)
 
 ### ✏️ v0.155.45 — 23/11/2026 · 17:15 — A menu for the chosen blocks, the block options in the right-click menu, no more long press on the PC
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1350 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1350 tests passed)*
 
 - **[Change]** **[💻 PC]** **A menu for the chosen blocks**: with blocks
   chosen with Ctrl (or with the mouse), the right click on one of them opens
@@ -1359,7 +1396,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopPcMenuTest.theBlockItemsAreInTheMenu`, `DesktopNoLongPressTest`
 
 ### ✏️ v0.155.44 — 23/11/2026 · 16:37 — Ctrl chooses blocks that aren't together; the right click opens the menus of the long press
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1346 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1346 tests passed)*
 
 - **[Change]** **[💻 PC]** **Ctrl chooses blocks that aren't next to
   each other**: Ctrl + click on a block adds it to the blocks already chosen
@@ -1387,7 +1424,7 @@ say that **they still have to be verified on the phone**: when they are,
   month too (they failed on Mondays at the end of the month)
 
 ### ✏️ v0.155.43 — 19/11/2026 · 22:48 — A back arrow in the peek; the rows of a database in a page are dragged again
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1343 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1343 tests passed)*
 
 - **[Change]** **[💻 PC]** **A back arrow in the peek**, on the right of the
   button that chooses how the page is open: it goes back to the page opened
@@ -1406,7 +1443,7 @@ say that **they still have to be verified on the phone**: when they are,
   closes), `DesktopRowDragTest.aRowOfADatabaseInAPageIsDragged`
 
 ### ✏️ v0.155.42 — 19/11/2026 · 22:20 — A search result opens the page where the text is
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1342 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1342 tests passed)*
 
 - **[Change]** **[💻 PC]** **[📱 Mobile]** **A search result opens the page
   where the text is**: when the words were found in the page (in a line, a
@@ -1420,7 +1457,7 @@ say that **they still have to be verified on the phone**: when they are,
   scrolls to a to-do and to a line of text, which lights up)
 
 ### ✏️ v0.155.41 — 19/11/2026 · 15:28 — The counter heard on the PC, "/" and Backspace in columns, a question before changing a type
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1339 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1339 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **The clicks of the Counter widget are heard on
   the PC**: its sounds last from 20 to 180 thousandths of a second, often too

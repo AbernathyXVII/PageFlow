@@ -74,7 +74,8 @@ fun LibraryScreen(
     val visits = AppSettings.recentVisits
     val visitedAt = remember(visits) { visits.associate { it.pageId to it.at } }
     val ids = remember(visits) { visits.map { it.pageId } }
-    val recent by remember(ids) { repository.observePages(ids) }.collectAsStateWithLifecycle(emptyList())
+    // Solo quelle del Workspace aperto (dal 24/11/2026), come i preferiti.
+    val recent by remember(ids) { repository.inCurrentWorkspace(repository.observePages(ids)) }.collectAsStateWithLifecycle(emptyList())
     val favorites by remember(repository) { repository.observeFavorites() }.collectAsStateWithLifecycle(emptyList())
     val shown = when (tab) {
         LibraryTab.RECENTS -> recent.filter { it.trashedAt == null && it.viewHostId == null }.sortedByDescending { visitedAt[it.id] ?: 0L }

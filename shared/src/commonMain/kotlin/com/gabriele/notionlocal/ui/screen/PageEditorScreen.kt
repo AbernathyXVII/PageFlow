@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.isWorkspaceRoot
 import com.gabriele.notionlocal.ui.navigation.verticalResizeCursor
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import kotlinx.coroutines.flow.first
@@ -1950,7 +1951,8 @@ private fun PageEditorContent(
     val showBar = !readOnlyPage && !drawingMode &&
         (((focusedBlockId != null || barHeld) && imeVisible) || showTypeMenu)
 
-    val isRootPage = pageId == PageEntity.ROOT_PAGE_ID
+    // Anche la pagina principale di un altro Workspace (dal 24/11/2026).
+    val isRootPage = pageId == PageEntity.ROOT_PAGE_ID || page?.isWorkspaceRoot == true
     // La pagina di una riga il cui nome viene da una colonna del database (vedi `TitleColumn.kt`).
     val titleFromColumn by produceState(false, pageId) { value = factory.pageRepository.titleFromColumn(pageId) }
     // Sul PC le pagine che contengono questa, per il percorso in alto (`PageBreadcrumb`).

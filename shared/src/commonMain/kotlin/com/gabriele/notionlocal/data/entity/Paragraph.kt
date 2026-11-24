@@ -107,6 +107,14 @@ data class PageParagraph(
      */
     val coveredColumns: List<String>? = null,
     /**
+     * **I Workspace** (dal 24/11/2026, chiesto dall'utente come in Notion): [workspace] = questa pagina è
+     * la pagina principale di un Workspace creato dopo (quella di sempre è `PageEntity.ROOT_PAGE_ID`).
+     * [workspaceId] = il Workspace di una pagina che non sta nell'albero, un template o una pagina nel
+     * cestino; null = quello di sempre. Vedi `PageRepository.workspaceOf`.
+     */
+    val workspace: Boolean? = null,
+    val workspaceId: String? = null,
+    /**
      * **La copertina sul PC** (dal 13/11/2026, chiesto dall'utente: le
      * modifiche fatte sul PC non devono cambiarla sul telefono): l'altezza in
      * dp, scelta trascinandone il bordo di sotto, e ingrandimento e
@@ -217,3 +225,7 @@ fun spacingStartsOf(
 
 /** Come comincia la chiave del campo di un gruppo di righe con uno spazio suo. */
 const val SPACING_KEY_PREFIX = "space:"
+
+/** La pagina principale di un Workspace: quella di sempre o una creata dopo (vedi `PageParagraph.workspace`). */
+val PageEntity.isWorkspaceRoot: Boolean
+    get() = id == PageEntity.ROOT_PAGE_ID || PageParagraph.parse(paragraphJson).workspace == true

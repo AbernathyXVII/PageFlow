@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.isWorkspaceRoot
 import com.gabriele.notionlocal.platform.isPc
 import com.gabriele.notionlocal.ui.theme.NoRowLinesOnPc
 import com.gabriele.notionlocal.ui.theme.pcOr
@@ -206,7 +207,8 @@ fun PageOptionsSheet(
      */
     onWebClipper: (() -> Unit)? = null
 ) {
-    val isRoot = page.id == PageEntity.ROOT_PAGE_ID
+    // Anche la pagina principale di un altro Workspace (dal 24/11/2026): non si sposta e non si butta.
+    val isRoot = page.isWorkspaceRoot
 
     NoteBottomSheet(
         onDismissRequest = onDismiss,

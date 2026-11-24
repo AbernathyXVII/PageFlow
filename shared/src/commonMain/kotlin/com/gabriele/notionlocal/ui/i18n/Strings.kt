@@ -266,6 +266,11 @@ object Strings {
     val widgets get() = t("Widgets", "Widget", "Widgets", "Widgets", "Widgets", "小组件", "위젯", "ウィジェット")
     val notebook get() = t("Notebook", "Quaderno", "Notizbuch", "Carnet", "Cuaderno", "笔记本", "노트북", "ノートブック")
     val mainMenu get() = t("Main menu", "Menu principale", "Hauptmenü", "Menu principal", "Menú principal", "主菜单", "메인 메뉴", "メインメニュー")
+    // I Workspace (dal 24/11/2026, vedi `WorkspaceSwitcher`).
+    val newWorkspace get() = t("New workspace", "Nuovo Workspace", "Neuer Workspace", "Nouvel espace de travail", "Nuevo espacio de trabajo", "新建工作区", "새 워크스페이스", "新しいワークスペース")
+    val workspaceName get() = t("Workspace name", "Nome del Workspace", "Name des Workspace", "Nom de l'espace de travail", "Nombre del espacio de trabajo", "工作区名称", "워크스페이스 이름", "ワークスペース名")
+    val switchWorkspace get() = t("Switch workspace", "Cambia Workspace", "Workspace wechseln", "Changer d'espace de travail", "Cambiar de espacio de trabajo", "切换工作区", "워크스페이스 전환", "ワークスペースを切り替え")
+    val create get() = t("Create", "Crea", "Erstellen", "Créer", "Crear", "创建", "만들기", "作成")
     val favoritePages get() = t("Favorite pages", "Pagine preferite", "Favorisierte Seiten", "Pages favorites", "Páginas favoritas", "收藏的页面", "즐겨찾는 페이지", "お気に入りのページ")
     val pages get() = t("Pages", "Pagine", "Seiten", "Pages", "Páginas", "页面", "페이지", "ページ")
     val search get() = t("Search", "Cerca", "Suchen", "Rechercher", "Buscar", "搜索", "검색", "検索")

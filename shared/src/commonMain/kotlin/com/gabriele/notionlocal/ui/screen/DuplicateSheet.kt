@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.settings.AppSettings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -78,7 +79,7 @@ fun DuplicateFlow(
             isRowPage = page.isRowPage,
             onDismiss = onDismiss,
             onNextToOriginal = { onChosen(DuplicateTarget.NextToOriginal, null) },
-            onMainMenu = { onChosen(DuplicateTarget.IntoPage(PageEntity.ROOT_PAGE_ID), Strings.mainMenu) },
+            onMainMenu = { onChosen(DuplicateTarget.IntoPage(AppSettings.homePageId), Strings.mainMenu) },
             onChoosePage = { picking = true }
         )
     } else {

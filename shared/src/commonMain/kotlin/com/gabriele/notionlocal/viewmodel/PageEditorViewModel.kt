@@ -1,5 +1,6 @@
 package com.gabriele.notionlocal.viewmodel
 
+import com.gabriele.notionlocal.data.entity.isWorkspaceRoot
 import com.gabriele.notionlocal.data.symbolField
 import com.gabriele.notionlocal.data.replacedImage
 import com.gabriele.notionlocal.data.imageField
@@ -2001,7 +2002,7 @@ class PageEditorViewModel(
      */
     fun setPasswordLocked(wanted: Boolean) {
         val current = _page.value ?: return
-        if (current.id == PageEntity.ROOT_PAGE_ID) return
+        if (current.isWorkspaceRoot) return
         _page.value = current.copy(isProtected = wanted)
         if (wanted) AppLock.lock(current.id)
         viewModelScope.launch { repository.setProtected(current.id, wanted) }
@@ -2126,7 +2127,7 @@ class PageEditorViewModel(
      */
     fun toggleFavorite() {
         val current = _page.value ?: return
-        if (current.id == PageEntity.ROOT_PAGE_ID) return
+        if (current.isWorkspaceRoot) return
         val wanted = !current.isFavorite
         _page.value = current.copy(isFavorite = wanted)
         viewModelScope.launch { repository.setFavorite(current.id, wanted) }

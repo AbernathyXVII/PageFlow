@@ -344,7 +344,8 @@ private fun tabShift(tabs: PcTabs, tab: PcTab, drag: TabDrag, gap: Float): Float
 
 @Composable
 private fun TabItem(tab: PcTab, active: Boolean, tabs: PcTabs, repository: PageRepository, modifier: Modifier = Modifier) {
-    val pageId = remember(tab.route) { if (tab.route == Routes.HOME) PageEntity.ROOT_PAGE_ID else Routes.pageIdOf(tab.route) }
+    val home = AppSettings.homePageId
+    val pageId = remember(tab.route, home) { if (tab.route == Routes.HOME) home else Routes.pageIdOf(tab.route) }
     val page by remember(pageId) { pageId?.let { repository.observePage(it) } ?: flowOf(null) }.collectAsState(null)
     val title = page?.title?.ifBlank { Strings.untitled } ?: tabLabelOf(tab.route)
     val interaction = remember { MutableInteractionSource() }

@@ -5,10 +5,12 @@ import com.gabriele.notionlocal.data.SKIN_TONE_COUNT
 import com.gabriele.notionlocal.data.entity.TimeFormatKind
 import com.gabriele.notionlocal.data.entity.BLOCK_SPACING_STEPS
 import com.gabriele.notionlocal.data.entity.ListGaps
+import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.platform.PlatformContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.ZoneId
 import java.util.Locale
 
@@ -139,6 +141,8 @@ object AppSettings {
             ?: DEFAULT_TIME_ZONE
         startupModeState.value = enumOr(KEY_STARTUP_MODE, StartupMode.HOME)
         startupPageIdState.value = prefs.getString(KEY_STARTUP_PAGE, null)
+        currentWorkspaceState.value = prefs.getString(KEY_CURRENT_WORKSPACE, null)
+        currentWorkspaceFlow.value = currentWorkspaceState.value
         sharePageIdState.value = prefs.getString(KEY_SHARE_PAGE, null)
         trashPolicyState.value = enumOr(KEY_TRASH_POLICY, TrashPolicy.KEEP_30_DAYS)
         favoritesSortState.value = enumOr(KEY_FAVORITES_SORT, FavoritesSort.DATE_ADDED)
@@ -386,6 +390,24 @@ object AppSettings {
             startupPageIdState.value = value
             prefs.edit().putString(KEY_STARTUP_PAGE, value).apply()
         }
+
+    /**
+     * **Il Workspace aperto** (dal 24/11/2026, vedi `PageParagraph.workspace`): la sua pagina principale;
+     * null = quello di sempre (`PageEntity.ROOT_PAGE_ID`). Di questo dispositivo: telefono e PC ne
+     * possono avere aperto uno diverso. [currentWorkspaceFlow] per chi lo segue fuori dalle schermate.
+     */
+    private val currentWorkspaceState = mutableStateOf<String?>(null)
+    val currentWorkspaceFlow = MutableStateFlow<String?>(null)
+    var currentWorkspaceId: String?
+        get() = currentWorkspaceState.value
+        set(value) {
+            currentWorkspaceState.value = value
+            currentWorkspaceFlow.value = value
+            prefs.edit().putString(KEY_CURRENT_WORKSPACE, value).apply()
+        }
+
+    /** La pagina principale del Workspace aperto: il menu principale di adesso. */
+    val homePageId: String get() = currentWorkspaceId ?: PageEntity.ROOT_PAGE_ID
 
     /**
      * **Dove finiscono le cose condivise e le note al volo** (dal 02/11/2026):
@@ -728,6 +750,7 @@ object AppSettings {
     private const val KEY_TIME_ZONE = "time_zone"
     private const val KEY_STARTUP_MODE = "startup_mode"
     private const val KEY_STARTUP_PAGE = "startup_page"
+    private const val KEY_CURRENT_WORKSPACE = "current_workspace"
     private const val KEY_SHARE_PAGE = "share_page"
     private const val KEY_LAST_ROUTE = "last_route"
     private const val KEY_RECENT_VISITS = "recent_visits"

@@ -114,6 +114,7 @@ import com.gabriele.notionlocal.platform.showMessage
 import com.gabriele.notionlocal.ui.screen.SearchScreen
 import com.gabriele.notionlocal.ui.screen.SidebarActions
 import com.gabriele.notionlocal.ui.screen.SidebarContent
+import com.gabriele.notionlocal.ui.screen.WorkspaceSwitcher
 import com.gabriele.notionlocal.ui.screen.StartupScreen
 import com.gabriele.notionlocal.ui.screen.TemplatesScreen
 import com.gabriele.notionlocal.ui.screen.TrashScreen
@@ -221,8 +222,10 @@ private fun AppTab(
     val notebooks: NotebooksViewModel = viewModel(factory = factory)
 
     // La pagina aperta adesso, per evidenziarla nell'albero.
+    // Il menu principale è la pagina principale del Workspace aperto (dal 24/11/2026, vedi `PageRepository.homeId`).
+    val homeId = AppSettings.homePageId
     val currentPageId = when (backStackEntry?.destination?.route) {
-        Routes.HOME -> PageEntity.ROOT_PAGE_ID
+        Routes.HOME -> homeId
         Routes.PAGE_EDITOR, Routes.DATABASE_VIEW -> backStackEntry?.arguments?.read { getStringOrNull("pageId") }
         else -> null
     }
@@ -350,6 +353,8 @@ private fun AppTab(
     LaunchedEffect(Unit) {
         if (startupHandled) return@LaunchedEffect
         startupHandled = true
+        // Un Workspace che non c'è più (cancellato dall'altro dispositivo): si torna a quello di sempre.
+        factory.pageRepository.validHomeId()
         // Le pagine ci sono solo dal primo disegno della finestra: una finestra appena staccata arrivava
         // prima e si chiudeva con "Navigation graph has not been set" (trovato dall'utente il 24/11/2026).
         navController.currentBackStackEntryFlow.first()
@@ -380,7 +385,7 @@ private fun AppTab(
         // Solo se la pagina c'è ancora e non sta nel cestino: altrimenti si
         // resta sul menu principale, che è meglio di una pagina vuota.
         val target = targetId
-            ?.takeIf { it != PageEntity.ROOT_PAGE_ID }
+            ?.takeIf { it != PageEntity.ROOT_PAGE_ID && it != AppSettings.homePageId }
             ?.let { repository.getPage(it) }
             ?.takeIf { it.trashedAt == null }
         if (target != null) navController.navigate(Routes.forPage(target.id, target.isDatabase))
@@ -399,7 +404,7 @@ private fun AppTab(
         NotificationTarget.pending.value = null
         val repository = factory.pageRepository
         suspend fun routeOf(pageId: String): String? = when (pageId) {
-            PageEntity.ROOT_PAGE_ID -> Routes.HOME
+            AppSettings.homePageId -> Routes.HOME
             else -> repository.getPage(pageId)?.takeIf { it.trashedAt == null }?.let { Routes.forPage(it.id, it.isDatabase) }
         }
         val rowPage = request.rowId?.let { rowId -> repository.ensureRowPage(rowId)?.let(Routes::pageEditor) }
@@ -483,7 +488,7 @@ private fun AppTab(
             }
             // Le pagine aperte, per "Recents" (dal 13/11/2026): anche quella principale, che è il menu principale.
             when (entry.destination.route) {
-                Routes.HOME -> AppSettings.recordVisit(PageEntity.ROOT_PAGE_ID)
+                Routes.HOME -> AppSettings.recordVisit(AppSettings.homePageId)
                 Routes.PAGE_EDITOR, Routes.DATABASE_VIEW -> id?.let { AppSettings.recordVisit(it) }
             }
             // La scheda (sul PC) ricorda dove è arrivata: pagine e schermate senza argomenti.
@@ -535,7 +540,7 @@ private fun AppTab(
             val open = navController.currentBackStackEntry?.takeIf { it.destination.route == Routes.PAGE_EDITOR }
                 ?.arguments?.read { getStringOrNull("pageId") }
             scope.launch(Dispatchers.Main.immediate) {
-                val note = withContext(Dispatchers.IO) { factory.pageRepository.createQuickNote(open ?: PageEntity.ROOT_PAGE_ID) }
+                val note = withContext(Dispatchers.IO) { factory.pageRepository.createQuickNote(open ?: AppSettings.homePageId) }
                 QuickNotes.created(note.first, note.second)
                 closeSidebar()
                 navController.navigate(Routes.pageEditor(note.first))
@@ -547,6 +552,17 @@ private fun AppTab(
         }
     }
 
+    // **Un altro Workspace** (dal 24/11/2026): il suo menu principale e il suo albero; il peek si chiude.
+    fun switchWorkspace(id: String) {
+        AppSettings.currentWorkspaceId = id.takeIf { it != PageEntity.ROOT_PAGE_ID }
+        // Il menu principale di sotto resta lo stesso nella cronologia: la visita la si segna qui.
+        AppSettings.recordVisit(id)
+        peek = null
+        closeSidebar()
+        goHome()
+        sidebar.refresh()
+    }
+
     val actions = SidebarActions(
         onMainMenu = { closeSidebar(); goHome() },
         onFavorites = { closeSidebar(); navController.navigate(Routes.FAVORITES) { launchSingleTop = true } },
@@ -555,7 +571,7 @@ private fun AppTab(
             val pageId = node.pageId
             val rowId = node.rowId
             when {
-                pageId == PageEntity.ROOT_PAGE_ID -> goHome()
+                pageId == AppSettings.homePageId -> goHome()
                 pageId != null -> jumpTo(Routes.forPage(pageId, node.isDatabase))
                 rowId != null -> sidebar.openRow(rowId) { id -> jumpTo(Routes.pageEditor(id)) }
             }
@@ -617,13 +633,15 @@ private fun AppTab(
                     actions = actions,
                     widgetsActive = widgetsActive,
                     header = pinButton,
+                    workspace = { WorkspaceSwitcher(factory.pageRepository, onSwitch = ::switchWorkspace) },
                     recents = {
                         RecentsSidebarSection(
-                            observePages = factory.pageRepository::observePages,
+                            // Solo quelle del Workspace aperto (dal 24/11/2026).
+                            observePages = { ids -> factory.pageRepository.inCurrentWorkspace(factory.pageRepository.observePages(ids)) },
                             currentPageId = currentPageId,
                             onOpen = { page ->
                                 closeSidebar()
-                                if (page.id == PageEntity.ROOT_PAGE_ID) goHome() else jumpTo(Routes.forPage(page.id, page.isDatabase))
+                                if (page.id == AppSettings.homePageId) goHome() else jumpTo(Routes.forPage(page.id, page.isDatabase))
                             },
                             onViewAll = { closeSidebar(); navController.navigate(Routes.LIBRARY) { launchSingleTop = true } }
                         )
@@ -818,9 +836,13 @@ private fun AppRoutes(
         // si chiede impronta o password (vedi `LockGate`). La pagina
         // principale non si blocca, ma passandoci le altre si richiudono.
         composable(Routes.HOME) {
-            LockGate(PageEntity.ROOT_PAGE_ID, factory.pageRepository, fullScreen = true) {
+            // La pagina principale del Workspace aperto: cambiandolo, un'altra pagina col suo ViewModel.
+            val home = AppSettings.homePageId
+            key(home) {
+            LockGate(home, factory.pageRepository, fullScreen = true) {
             PageEditorScreen(
-                pageId = PageEntity.ROOT_PAGE_ID,
+                pageId = home,
+                viewModel = viewModel(factory = factory, key = "home-$home"),
                 factory = factory,
                 onBack = { navController.popBackStack() },
                 onOpenSearch = { navController.navigate(Routes.SEARCH) },
@@ -829,6 +851,7 @@ private fun AppRoutes(
                 onNavigateToDatabase = { pageId -> navController.navigate(Routes.databaseView(pageId)) },
                 onOpenSidebar = onOpenSidebar
             )
+            }
             }
         }
 
