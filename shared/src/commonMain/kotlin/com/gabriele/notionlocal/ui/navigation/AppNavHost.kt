@@ -26,6 +26,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
@@ -54,6 +55,7 @@ import com.gabriele.notionlocal.ui.theme.NotionGray400
 import com.gabriele.notionlocal.ui.theme.NotionGray900
 import kotlin.math.roundToInt
 import androidx.compose.material3.DrawerValue
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
@@ -755,6 +757,12 @@ private fun AppTab(
             }
             // Center peek: sopra tutta la finestra, barra laterale compresa.
             peek?.takeIf { it.mode == OpenMode.CENTER_PEEK }?.let { CenterPeekLayer(it, factory, peekActions) }
+            // **Mentre la barra si apre la pagina sotto non si tocca** (dal 24/11/2026, trovato dall'utente sul
+            // telefono: con la barra appena aperta un tocco a destra apriva la pagina dietro). Il velo del cassetto
+            // risponde solo a barra del tutto aperta; in quel terzo di secondo il tocco la chiude da qui.
+            if (!pinned && (drawerState.isOpen || drawerState.targetValue == DrawerValue.Open)) {
+                Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { closeSidebar() } })
+            }
             }
         }
     }

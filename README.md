@@ -1126,6 +1126,23 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.156.4.2 — 24/11/2026 · 18:59 — While the sidebar opens, the page under it can't be touched
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1377 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **While the sidebar is opening,
+  a touch beside it closes it instead of reaching the page**: the veil over
+  the page answers only once the sidebar is fully open, so in the third of
+  a second while it slides in a touch on the right went to the page behind
+  and opened what was there (on the phone, a database page of the Notebook).
+  Measured on the phone: a touch 0.05, 0.15 and 0.3 seconds after "☰" went
+  through, at 0.6 seconds it didn't. Now from the moment the sidebar starts
+  to open the page can't be touched, and a touch there closes the sidebar.
+  Found by the user, after the v0.156.4.1 that had fixed "back"
+- **[Project]** In `AppNavHost`, over the page, a `Box` with
+  `detectTapGestures { closeSidebar() }` while the drawer is open or opening
+  (not with the sidebar pinned). Checked on the phone with taps sent right
+  after "☰"
+
 ### 🔧 v0.156.4.1 — 24/11/2026 · 18:17 — "Back" with the sidebar open closes it
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1377 tests passed)*
 
