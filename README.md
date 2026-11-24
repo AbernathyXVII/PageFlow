@@ -1126,6 +1126,27 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.4 — 24/11/2026 · 16:24 — The hand over links, the days of each month together in the Year view
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1377 tests passed)*
+
+- **[Change]** **[💻 PC]** **The hand over links**: with the mouse over the
+  letters of a link in a page (a web address, a link to a line of the page,
+  an "@" mention) the pointer becomes the hand that points with the
+  forefinger, as in Windows; on the rest of the text it stays the "I" for
+  writing. Also over a URL cell of a database with an address in it, where
+  the click opens the link
+- **[Change]** **[💻 PC]** **The Year view keeps the days of each month
+  together**, as Google Calendar does: on a wide window a column of days is
+  never wider than 26 points, and the space left over stays between one month
+  and the next instead of spreading the days apart. On the phone, where there
+  is no space left over, nothing changes
+- **[Project]** `linkTaps` also follows the mouse (`PointerEventType`) and
+  sets `pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)` over a
+  link; the URL cell uses `PointerIcon.Hand`. `YEAR_DAY_MAX_WIDTH` and
+  `YEAR_MONTH_GAP` in `CalendarYearGrid`, `MiniMonth(dayWidth)`. Tests:
+  `DesktopLinkHandTest` (a scene with its own `PlatformContext` that records
+  the pointer), `DesktopCalendarYearTest.theDaysOfAMonthStayTogetherWhenItIsWide`
+
 ### ✏️ v0.156.3 — 24/11/2026 · 16:05 — Right-click a group's name to rename its tag
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1375 tests passed)*
 

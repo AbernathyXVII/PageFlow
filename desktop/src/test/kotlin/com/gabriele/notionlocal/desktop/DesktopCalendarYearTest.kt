@@ -190,6 +190,23 @@ class DesktopCalendarYearTest {
         assertTrue("il numero di oggi è blu: $blue punti", blue > 5)
     }
 
+    /**
+     * **Su uno schermo largo i giorni di un mese restano vicini** (24/11/2026, chiesto dall'utente con la
+     * foto di Google Calendar): le colonne dei giorni non si allargano, lo spazio va fra un mese e l'altro.
+     */
+    @Test
+    fun theDaysOfAMonthStayTogetherWhenItIsWide() {
+        val shown = texts(1800, 1100, "calendar_year_wide")
+        val january = shown.at("January")
+        val february = shown.at("February")
+        val initials = shown.filter { (text, r) ->
+            text.length == 1 && text[0].isLetter() && r.center.x in january.left..february.left && r.top in january.bottom..(january.bottom + 25f)
+        }.map { it.second.center.x }.sorted()
+        assertEquals("le sette iniziali di gennaio: $initials", 7, initials.size)
+        assertTrue("da lunedì a domenica al massimo sei colonne da 26: ${initials.last() - initials.first()}", initials.last() - initials.first() <= 6 * 26f + 1f)
+        assertTrue("fra gennaio e febbraio lo spazio che avanza: ${february.left - initials.last()}", february.left - initials.last() > 100f)
+    }
+
     @Test
     fun twoMonthsARowWhenItIsNarrow() {
         val shown = texts(420, 1900, "calendar_year_narrow")

@@ -42,6 +42,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -362,6 +364,8 @@ fun TextLikeCell(
                     .fillMaxWidth()
                     // Sul PC il clic destro su un link dà lo stesso menu della pressione lunga (dal 23/11/2026).
                     .onRightClick(if (link) ({ linkMenu = true }) else null)
+                    // La manina col mouse sopra (dal 24/11/2026, chiesto dall'utente): il clic apre il link.
+                    .then(if (link) Modifier.pointerHoverIcon(PointerIcon.Hand) else Modifier)
                     .pointerInput(cellKey, cut, wrap, showsVisual, link) {
                         detectTapGestures(
                             onTap = { if (link) openLink(context, localValue) else startEditing() },

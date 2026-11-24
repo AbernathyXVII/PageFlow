@@ -469,6 +469,13 @@ private const val CALENDAR_MAX_ROWS = 20
 private val YEAR_MONTH_MIN_WIDTH = 160.dp
 private val YEAR_DAY_HEIGHT = 22.dp
 private val YEAR_WEEK_COLUMN = 24.dp
+/**
+ * **I giorni di un mese restano vicini** (dal 24/11/2026, chiesto dall'utente con la foto di Google):
+ * su uno schermo largo una colonna di giorni non supera questa misura, e lo spazio che avanza resta
+ * fra un mese e l'altro invece di allargare i mesi. Sul telefono le colonne sono più strette di così.
+ */
+private val YEAR_DAY_MAX_WIDTH = 26.dp
+private val YEAR_MONTH_GAP = 16.dp
 private val YEAR_DAY_FONT = 11.sp
 
 /**
@@ -4734,9 +4741,11 @@ private fun CalendarYearGrid(
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
         // 2, 3 e 4 dividono 12: le righe sono sempre piene.
         val perRow = (maxWidth / YEAR_MONTH_MIN_WIDTH).toInt().coerceIn(2, 4)
+        val slot = (maxWidth - YEAR_MONTH_GAP * (perRow - 1)) / perRow
+        val dayWidth = ((slot - YEAR_WEEK_COLUMN - 4.dp) / 7).coerceAtMost(YEAR_DAY_MAX_WIDTH)
         Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
             (1..12).chunked(perRow).forEach { months ->
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(YEAR_MONTH_GAP)) {
                     months.forEach { number ->
                         val month = YearMonth.of(year, number)
                         MiniMonth(
@@ -4744,6 +4753,7 @@ private fun CalendarYearGrid(
                             today = today,
                             firstDayOfWeek = firstDayOfWeek,
                             busyDays = busyDays,
+                            dayWidth = dayWidth,
                             onClick = { onOpenMonth(month) },
                             modifier = Modifier.weight(1f)
                         )
@@ -4787,6 +4797,8 @@ private fun MiniMonth(
     today: LocalDate,
     firstDayOfWeek: DayOfWeek,
     busyDays: Set<LocalDate>,
+    /** Quanto è larga la colonna di un giorno: vedi [YEAR_DAY_MAX_WIDTH]. */
+    dayWidth: Dp,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -4797,7 +4809,8 @@ private fun MiniMonth(
     // Le settimane cominciano dal primo giorno scelto; col lunedì sono quelle ISO, come in Google.
     val weekOfYear = WeekFields.of(firstDayOfWeek, 4).weekOfWeekBasedYear()
     val text = MaterialTheme.colorScheme.onBackground
-    Column(modifier = modifier.pointerInput(month) { detectTapGestures(onTap = { onClick() }) }) {
+    Box(modifier = modifier) {
+    Column(modifier = Modifier.pointerInput(month) { detectTapGestures(onTap = { onClick() }) }) {
         Text(
             text = month.month.getDisplayName(TextStyle.FULL, displayLocale).replaceFirstChar { it.titlecase(displayLocale) },
             fontSize = 14.sp,
@@ -4815,7 +4828,7 @@ private fun MiniMonth(
                     color = text,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.width(dayWidth)
                 )
             }
         }
@@ -4834,7 +4847,7 @@ private fun MiniMonth(
                 }
             }
             Spacer(modifier = Modifier.width(4.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            Column {
                 repeat(weeks) { week ->
                     Row {
                         repeat(7) { dayOfWeek ->
@@ -4842,7 +4855,7 @@ private fun MiniMonth(
                             // Anche i giorni dei mesi accanto, ma scuriti (dal 24/11/2026, chiesto dall'utente; nella
                             // v0.155.50 dello stesso colore, come in Google). Oggi e i puntini solo nel suo mese.
                             val ownDay = YearMonth.from(date) == month
-                            Box(modifier = Modifier.weight(1f).height(YEAR_DAY_HEIGHT), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.width(dayWidth).height(YEAR_DAY_HEIGHT), contentAlignment = Alignment.Center) {
                                 // Oggi nel cerchio di Google, col numero blu come in Google (scelto dall'utente il 23/11/2026:
                                 // nella v0.155.50 era arancione; dal 24/11 blu anche nelle altre viste).
                                 if (ownDay && date == today) Box(Modifier.size(YEAR_DAY_HEIGHT).background(DarkSurfaceVariant, CircleShape))
@@ -4870,6 +4883,7 @@ private fun MiniMonth(
                 }
             }
         }
+    }
     }
 }
 

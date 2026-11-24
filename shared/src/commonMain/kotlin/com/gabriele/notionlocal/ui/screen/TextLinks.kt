@@ -47,7 +47,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -117,8 +121,30 @@ fun linkAt(layout: TextLayoutResult, position: Offset): String? {
  * sotto non lo riceve: niente cursore né tastiera, come un link in una
  * pagina web. Tenendo premuto, invece, il dito arriva al campo come sempre
  * e seleziona il testo (per cambiare o togliere il link).
+ *
+ * **Col mouse sopra le lettere di un link, la manina** (dal 24/11/2026, chiesto dall'utente sul PC:
+ * "l'icona classica di apertura dei link come in Windows"); sul resto del testo resta la I del campo.
  */
 fun Modifier.linkTaps(
+    layout: () -> TextLayoutResult?,
+    onLink: (String) -> Unit
+): Modifier = composed {
+    var overLink by remember { mutableStateOf(false) }
+    pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val at = event.changes.firstOrNull()?.position ?: continue
+                overLink = event.type != PointerEventType.Exit && layout()?.let { linkAt(it, at) } != null
+            }
+        }
+    }
+        // Sopra un link vince sulla I del campo di testo (che sta dentro); altrove decide il campo.
+        .pointerHoverIcon(if (overLink) PointerIcon.Hand else PointerIcon.Text, overrideDescendants = overLink)
+        .linkTapGestures(layout, onLink)
+}
+
+private fun Modifier.linkTapGestures(
     layout: () -> TextLayoutResult?,
     onLink: (String) -> Unit
 ): Modifier = pointerInput(Unit) {
