@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### 🆕 v0.156 — 24/11/2026 · 09:46 — Workspaces
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1372 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1372 tests passed)*
 
 - **[New feature]** **[📱 Mobile]** **[💻 PC]** **Workspaces**, as in
   Notion: at the top of the sidebar the name and icon of the workspace that
