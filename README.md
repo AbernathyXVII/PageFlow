@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.156.4 — 24/11/2026 · 16:24 — The hand over links, the days of each month together in the Year view
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1377 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1377 tests passed)*
 
 - **[Change]** **[💻 PC]** **The hand over links**: with the mouse over the
   letters of a link in a page (a web address, a link to a line of the page,
@@ -1148,7 +1148,7 @@ say that **they still have to be verified on the phone**: when they are,
   the pointer), `DesktopCalendarYearTest.theDaysOfAMonthStayTogetherWhenItIsWide`
 
 ### ✏️ v0.156.3 — 24/11/2026 · 16:05 — Right-click a group's name to rename its tag
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1375 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 24/11/2026, not yet on the phone; installed on the phone; 1375 tests passed)*
 
 - **[Change]** **[💻 PC]** **[📱 Mobile]** **Right-click on the name of a
   group** (on the phone, a long press) opens that tag's editor, the same one
