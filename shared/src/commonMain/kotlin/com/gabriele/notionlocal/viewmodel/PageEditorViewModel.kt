@@ -5284,6 +5284,22 @@ class PageEditorViewModel(
         viewModelScope.launch { repository.setLocked(pageId, locked) }
     }
 
+    /** "Lock with password" di un'altra pagina, dal menu del suo blocco (dal 24/11/2026): come `setPasswordLocked`. */
+    fun setPasswordLockedFor(pageId: String, wanted: Boolean) {
+        if (wanted) AppLock.lock(pageId)
+        viewModelScope.launch { if (!repository.isWorkspaceRoot(pageId)) repository.setProtected(pageId, wanted) }
+    }
+
+    /**
+     * **"Delete linked page"** (dal 24/11/2026, chiesto dall'utente): via dalla pagina il blocco del
+     * collegamento a un database; l'originale resta dov'è. Una vista collegata, che vive solo in quel
+     * blocco, va nel cestino con lui.
+     */
+    fun deleteLinkedPage(block: BlockEntity, linked: PageEntity) {
+        deleteBlock(block)
+        if (linked.sourceDatabaseId != null) moveLinkedPageToTrash(linked.id)
+    }
+
     fun loadMoveExclusionsFor(pageId: String, onReady: (PageRepository.MoveExclusions) -> Unit) {
         viewModelScope.launch { onReady(repository.moveExclusions(pageId)) }
     }

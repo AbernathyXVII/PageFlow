@@ -17,6 +17,7 @@ import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.entity.defaultColumnWidth
 import com.gabriele.notionlocal.data.entity.fitMinColumnWidth
 import com.gabriele.notionlocal.data.entity.minColumnWidth
+import com.gabriele.notionlocal.data.entity.MIN_REACHABLE_COLUMN_WIDTH_DP
 import com.gabriele.notionlocal.data.entity.parseColumnWidths
 import com.gabriele.notionlocal.data.repository.DatabaseRepository
 import com.gabriele.notionlocal.data.repository.PageRepository
@@ -134,8 +135,12 @@ class WrapCellsTest {
         assertEquals(40.dp, shown(manual = 40.dp))
         // Allargata a mano oltre il contenuto: resta com'è.
         assertEquals(300.dp, shown(manual = 300.dp))
-        // Mentre si trascina comanda il dito; "Fit to content" acceso vince sulla misura.
-        assertEquals(20.dp, shown(dragging = 20.dp, manual = 40.dp))
+        // Mentre si trascina comanda il dito, fino alla larghezza che si tocca ancora (dal 24/11/2026);
+        // "Fit to content" acceso vince sulla misura.
+        assertEquals(36.dp, shown(dragging = 36.dp, manual = 40.dp))
+        assertEquals(MIN_REACHABLE_COLUMN_WIDTH_DP.dp, shown(dragging = 20.dp, manual = 40.dp))
+        // Una misura salvata prima più stretta (Name a 5, trovata dall'utente) si disegna larga così: si ritocca.
+        assertEquals(MIN_REACHABLE_COLUMN_WIDTH_DP.dp, shown(manual = 5.dp))
         assertEquals(230.dp, shown(fit = 230.dp, manual = 40.dp))
         // Negli altri modi, come prima.
         assertEquals(150.dp, shown(widen = false))
@@ -158,9 +163,10 @@ class WrapCellsTest {
 
     @Test
     fun theMinimumWidthsOfFitToContent() {
-        // A mano si stringe fino a niente (dal 18/10/2026); i minimi restano per "Fit to content".
-        assertEquals(0, minColumnWidth(NAME_COLUMN_KEY))
-        assertEquals(0, minColumnWidth("c", ColumnType.TEXT))
+        // A mano si stringe fin quasi a niente (dal 18/10/2026), ma si tocca ancora (dal 24/11/2026);
+        // i minimi più larghi restano per "Fit to content".
+        assertEquals(MIN_REACHABLE_COLUMN_WIDTH_DP, minColumnWidth(NAME_COLUMN_KEY))
+        assertEquals(MIN_REACHABLE_COLUMN_WIDTH_DP, minColumnWidth("c", ColumnType.TEXT))
         assertEquals(MIN_NAME_COLUMN_WIDTH_DP, fitMinColumnWidth(NAME_COLUMN_KEY))
         listOf(ColumnType.TEXT, ColumnType.NUMBER, ColumnType.URL, ColumnType.EMAIL, ColumnType.PHONE, ColumnType.COLOR).forEach {
             assertEquals(it.name, MIN_WRITABLE_COLUMN_WIDTH_DP, fitMinColumnWidth("c", it))
@@ -171,13 +177,14 @@ class WrapCellsTest {
     }
 
     @Test
-    fun anyColumnShrinksAsMuchAsYouWant() {
-        // Dal 18/10/2026, chiesto dall'utente: niente minimo trascinando.
-        viewModel.setColumnWidth(notes.id, 10)
-        waitFor("il testo a 10") { parseColumnWidths(saved().columnWidths)[notes.id] == 10 }
+    fun anyColumnShrinksDownToAFingertip() {
+        // Dal 18/10/2026, chiesto dall'utente: quasi niente minimo trascinando. Dal 24/11/2026 non sotto
+        // la larghezza che si tocca ancora: stretta a niente, la colonna non si poteva più riallargare.
+        viewModel.setColumnWidth(notes.id, 40)
+        waitFor("il testo a 40") { parseColumnWidths(saved().columnWidths)[notes.id] == 40 }
         viewModel.setColumnWidth(NAME_COLUMN_KEY, 0)
-        waitFor("Name a niente") { parseColumnWidths(saved().columnWidths)[NAME_COLUMN_KEY] == 0 }
+        waitFor("Name al minimo") { parseColumnWidths(saved().columnWidths)[NAME_COLUMN_KEY] == MIN_REACHABLE_COLUMN_WIDTH_DP }
         viewModel.setColumnWidth(done.id, 3)
-        waitFor("la casella a 3") { parseColumnWidths(saved().columnWidths)[done.id] == 3 }
+        waitFor("la casella al minimo") { parseColumnWidths(saved().columnWidths)[done.id] == MIN_REACHABLE_COLUMN_WIDTH_DP }
     }
 }

@@ -62,7 +62,7 @@ object Strings {
     val turnIntoPage get() = t("Turn into page", "Trasforma in pagina", "In Seite umwandeln", "Convertir en page", "Convertir en página", "转换为页面", "페이지로 전환", "ページに変換")
     val moveToTrash get() = t("Move to trash", "Sposta nel cestino", "In den Papierkorb", "Mettre à la corbeille", "Mover a la papelera", "移到回收站", "휴지통으로 이동", "ゴミ箱に移動")
     val lockView get() = t("Lock view", "Blocca la vista", "Ansicht sperren", "Verrouiller la vue", "Bloquear vista", "锁定视图", "보기 잠금", "ビューをロック")
-    val lockPage get() = t("Lock page", "Blocca la pagina", "Seite sperren", "Verrouiller la page", "Bloquear página", "锁定页面", "페이지 잠금", "ページをロック")
+    val lockPage get() = t("Read only", "Sola lettura", "Schreibgeschützt", "Lecture seule", "Solo lectura", "只读", "읽기 전용", "読み取り専用")
     val updates get() = t("Updates", "Modifiche", "Änderungen", "Modifications", "Cambios", "更新记录", "변경 내역", "更新履歴")
 
     // --- Conteggio del testo, in fondo al menu dei tre puntini ---

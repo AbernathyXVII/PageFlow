@@ -21,6 +21,7 @@ import com.gabriele.notionlocal.data.entity.encodeFitColumns
 import com.gabriele.notionlocal.data.entity.parseColumnWidths
 import com.gabriele.notionlocal.data.entity.parseFitColumns
 import com.gabriele.notionlocal.data.entity.snapColumnWidth
+import com.gabriele.notionlocal.data.entity.MIN_REACHABLE_COLUMN_WIDTH_DP
 import com.gabriele.notionlocal.data.repository.DatabaseRepository
 import com.gabriele.notionlocal.data.repository.PageRepository
 import com.gabriele.notionlocal.data.repository.PageRepository.DuplicateTarget
@@ -116,11 +117,12 @@ class ColumnWidthTest {
         settled("la prima") { parseColumnWidths(it.columnWidths)[platform.id] == 220 }
         viewModel.setColumnWidth(NAME_COLUMN_KEY, 310)
         settled("salvate") { parseColumnWidths(it.columnWidths) == mapOf(platform.id to 220, NAME_COLUMN_KEY to 310) }
-        // Dentro i limiti: a mano fino a niente (dal 18/10/2026), non oltre la massima.
-        viewModel.setColumnWidth(platform.id, 5)
-        settled("stretta stretta") { parseColumnWidths(it.columnWidths)[platform.id] == 5 }
+        // Dentro i limiti: a mano fin quasi a niente (dal 18/10/2026), ma ancora da toccare (dal 24/11/2026),
+        // e non oltre la massima.
+        viewModel.setColumnWidth(platform.id, 40)
+        settled("stretta stretta") { parseColumnWidths(it.columnWidths)[platform.id] == 40 }
         viewModel.setColumnWidth(platform.id, -20)
-        settled("niente") { parseColumnWidths(it.columnWidths)[platform.id] == 0 }
+        settled("la più stretta") { parseColumnWidths(it.columnWidths)[platform.id] == MIN_REACHABLE_COLUMN_WIDTH_DP }
         viewModel.setColumnWidth(platform.id, 99_999)
         settled("la massima") { parseColumnWidths(it.columnWidths)[platform.id] == MAX_COLUMN_WIDTH_DP }
     }

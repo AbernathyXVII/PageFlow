@@ -1126,6 +1126,36 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.2 — 24/11/2026 · 15:44 — "Read only" and "Lock with password" kept apart, "Delete linked page", narrowed columns that can be touched
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1374 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"Read only" in place of "Lock
+  database" and "Lock page"**: the switch that only stops writing, with no
+  password, now says so, and it can no longer be taken for "Lock with
+  password" (the one with the password and the fingerprint, also asked to
+  take it off). In the menu of a database's block (from the page that holds
+  it) "Lock with password" is now right next to "Read only". The user had
+  switched off "Lock database" thinking it was the password lock, so the
+  password stayed
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"Delete linked page"** in the
+  menu of every block that shows a database (a link, the link with the lock,
+  a linked view), above "Move to trash": it takes away from the page only
+  that link, and the original database stays where it is; a linked view,
+  which lives only in its block, goes to the trash with it. "Move to trash"
+  still throws away the database itself
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **A column narrowed by hand stops
+  at 32 points**, enough to touch its title again: narrowed "down to nothing"
+  (as asked on 18/10), its title couldn't be touched any more, and with it
+  the menu to widen it again. The widths saved before, narrower than that,
+  are drawn 32 points wide, so those columns can be widened again. Found by
+  the user in the Collaudo
+- **[Project]** `EditorStrings.lockDatabase` and `Strings.lockPage` say
+  "Read only"; `BlockMenuStep.PASSWORD_LOCK` with `PasswordLockFlow`,
+  `PageEditorViewModel.setPasswordLockedFor` and `deleteLinkedPage`;
+  `MIN_REACHABLE_COLUMN_WIDTH_DP` (32) as the minimum of `minColumnWidth` and
+  `tableColumnWidth`. Tests: `DesktopLinkedPageTest`, `WrapCellsTest`,
+  `ColumnWidthTest`
+
 ### ✏️ v0.156.1 — 24/11/2026 · 10:31 — Search finds in every workspace, in groups
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1373 tests passed)*
 

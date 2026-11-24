@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.gabriele.notionlocal.data.entity.CellAlignment
+import com.gabriele.notionlocal.data.entity.MIN_REACHABLE_COLUMN_WIDTH_DP
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
 import com.gabriele.notionlocal.data.entity.LinkLabel
@@ -118,8 +119,9 @@ fun shownColumnWidth(chosen: Dp, fitted: Dp?, widen: Boolean, min: Dp): Dp =
  * mano; se no quella di sempre. "Widen the column" allarga solo le colonne
  * senza una misura scelta a mano (dal 20/10/2026, chiesto dall'utente: la
  * prima colonna del Pokédex, stretta col segnalino, al rilascio tornava
- * larga quanto il suo contenuto). Il minimo vale solo per "Fit to content":
- * a mano si stringe fino a niente.
+ * larga quanto il suo contenuto). Il minimo di "Fit to content" vale solo per
+ * lui: a mano si stringe fin quasi a niente, ma non sotto la larghezza che si
+ * tocca ancora (`MIN_REACHABLE_COLUMN_WIDTH_DP`, dal 24/11/2026).
  */
 fun tableColumnWidth(
     dragging: Dp?,
@@ -132,7 +134,7 @@ fun tableColumnWidth(
 ): Dp {
     val chosen = dragging ?: fit ?: manual ?: default
     val grows = widen && dragging == null && manual == null
-    return shownColumnWidth(chosen, fitted, grows, if (dragging == null && fit != null) fitMin else 0.dp)
+    return shownColumnWidth(chosen, fitted, grows, if (dragging == null && fit != null) fitMin else MIN_REACHABLE_COLUMN_WIDTH_DP.dp)
 }
 
 /** Se il testo di una cella è stato tagliato coi tre puntini. */

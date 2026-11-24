@@ -48,7 +48,10 @@ object EditorStrings {
     val rename get() = t("Rename", "Rinomina", "Umbenennen", "Renommer", "Cambiar nombre", "重命名", "이름 바꾸기", "名前を変更")
     val turnIntoSimpleDatabase get() = t("Turn into simple database", "Trasforma in database semplice", "In einfache Datenbank umwandeln", "Convertir en base de données simple", "Convertir en base de datos simple", "转换为简单数据库", "단순 데이터베이스로 전환", "シンプルなデータベースに変換")
     val turnIntoComplexDatabase get() = t("Turn into complex database", "Trasforma in database complesso", "In komplexe Datenbank umwandeln", "Convertir en base de données complexe", "Convertir en base de datos compleja", "转换为复杂数据库", "복합 데이터베이스로 전환", "複合データベースに変換")
-    val lockDatabase get() = t("Lock database", "Blocca il database", "Datenbank sperren", "Verrouiller la base de données", "Bloquear base de datos", "锁定数据库", "데이터베이스 잠금", "データベースをロック")
+    // **"Read only"** (dal 24/11/2026, scelto dall'utente; prima "Lock database", e si confondeva con
+    // "Lock with password"): impedisce solo di scrivere, senza password.
+    val deleteLinkedPage get() = t("Delete linked page", "Elimina la pagina collegata", "Verknüpfte Seite löschen", "Supprimer la page liée", "Eliminar la página vinculada", "删除链接的页面", "연결된 페이지 삭제", "リンクされたページを削除")
+    val lockDatabase get() = t("Read only", "Sola lettura", "Schreibgeschützt", "Lecture seule", "Solo lectura", "只读", "읽기 전용", "読み取り専用")
     val openAsPage get() = t("Open as page", "Apri come pagina", "Als Seite öffnen", "Ouvrir en tant que page", "Abrir como página", "以页面打开", "페이지로 열기", "ページとして開く")
     val simpleDatabaseLossTitle get() = t("Turn into simple database?", "Trasformare in database semplice?", "In einfache Datenbank umwandeln?", "Convertir en base de données simple ?", "¿Convertir en base de datos simple?", "转换为简单数据库？", "단순 데이터베이스로 전환할까요?", "シンプルなデータベースに変換しますか？")
 

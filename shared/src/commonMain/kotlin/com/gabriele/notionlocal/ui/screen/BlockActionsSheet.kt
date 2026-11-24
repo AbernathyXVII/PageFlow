@@ -38,6 +38,9 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.TableRows
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EditOff
+import androidx.compose.material.icons.filled.Fingerprint
+import com.gabriele.notionlocal.ui.i18n.LockStrings
 import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.NorthEast
 import com.gabriele.notionlocal.ui.i18n.ButtonStrings
@@ -585,6 +588,11 @@ fun BlockActionsHost(
                             val data = dataPage ?: page
                             viewModel.setLockedFor(data.id, !data.isLocked)
                         },
+                        onTogglePasswordLock = { step = BlockMenuStep.PASSWORD_LOCK },
+                        onDeleteLinked = {
+                            onDismiss()
+                            viewModel.deleteLinkedPage(block, page)
+                        },
                         onOpenAsPage = {
                             onDismiss()
                             onNavigateToDatabase(page.id)
@@ -848,6 +856,12 @@ fun BlockActionsHost(
             }
         }
 
+        BlockMenuStep.PASSWORD_LOCK -> (dataPage ?: page)?.let { data ->
+            // Deciso una volta: appena applicato, la pagina seguita cambia sotto e non deve rigirarlo.
+            val wanted = remember { !data.isProtected }
+            PasswordLockFlow(wanted = wanted, onFinished = onDismiss, apply = { viewModel.setPasswordLockedFor(data.id, it) })
+        }
+
         BlockMenuStep.TRASH -> if (page != null) {
             MoveToTrashDialog(
                 pageTitle = page.title,
@@ -909,7 +923,9 @@ enum class BlockMenuStep {
     /** "Link in another page" di un bottone: in quale pagina va la copia collegata (dal 27/10/2026). */
     LINK_BUTTON,
     /** "Sync to another page" di un blocco sincronizzato: in quale pagina va la copia (dal 03/11/2026). */
-    SYNC_TO_PAGE
+    SYNC_TO_PAGE,
+    /** "Lock with password" del database dal menu del suo blocco (dal 24/11/2026): la password o l'impronta. */
+    PASSWORD_LOCK
 }
 
 /**
@@ -1191,6 +1207,10 @@ private fun PageBlockMenu(
     onTurnIntoSimple: () -> Unit,
     onTurnIntoComplex: () -> Unit,
     onToggleLock: () -> Unit,
+    /** "Lock with password" del database (dal 24/11/2026). */
+    onTogglePasswordLock: () -> Unit,
+    /** "Delete linked page": via solo questo collegamento, l'originale resta (dal 24/11/2026). */
+    onDeleteLinked: () -> Unit,
     onOpenAsPage: () -> Unit,
     onColor: () -> Unit,
     onEditIcon: () -> Unit,
@@ -1256,11 +1276,21 @@ private fun PageBlockMenu(
                 onClick = onTurnIntoComplex
             )
             HorizontalDivider()
+            // **"Read only" e "Lock with password", uno accanto all'altro** (dal 24/11/2026, scelto
+            // dall'utente): il primo impedisce solo di scrivere, senza password; il secondo chiude il
+            // database con la password o l'impronta, e le chiede anche per toglierlo.
             OptionRow(
-                icon = if (data.isLocked) Icons.Filled.Lock else Icons.Filled.LockOpen,
+                icon = Icons.Filled.EditOff,
                 label = EditorStrings.lockDatabase,
                 trailing = { Switch(checked = data.isLocked, onCheckedChange = { onToggleLock() }) },
                 onClick = onToggleLock
+            )
+            HorizontalDivider()
+            OptionRow(
+                icon = Icons.Filled.Fingerprint,
+                label = LockStrings.passwordLock,
+                trailing = { Switch(checked = data.isProtected, onCheckedChange = { onTogglePasswordLock() }) },
+                onClick = onTogglePasswordLock
             )
             HorizontalDivider()
             OptionRow(icon = Icons.Filled.OpenInFull, label = EditorStrings.openAsPage, onClick = onOpenAsPage)
@@ -1316,6 +1346,17 @@ private fun PageBlockMenu(
         HorizontalDivider()
         OptionRow(icon = Icons.Filled.TableRows, label = Strings.moveToDatabase, onClick = onMoveToDatabase)
         HorizontalDivider()
+        // **"Delete linked page"** (dal 24/11/2026, chiesto dall'utente): via da questa pagina solo il
+        // collegamento al database (o la vista collegata), mentre "Move to trash" butta il database.
+        if (page.isDatabase) {
+            OptionRow(
+                icon = Icons.Filled.LinkOff,
+                label = EditorStrings.deleteLinkedPage,
+                tint = MaterialTheme.colorScheme.error,
+                onClick = onDeleteLinked
+            )
+            HorizontalDivider()
+        }
         OptionRow(
             icon = Icons.Filled.Delete,
             label = Strings.moveToTrash,
