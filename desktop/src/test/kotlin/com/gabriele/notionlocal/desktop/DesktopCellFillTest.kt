@@ -156,17 +156,19 @@ class DesktopCellFillTest {
             shot("fill_chosen")
             val grip = handle() ?: error("dopo Esc il pallino non c'è")
 
-            // Il pallino in giù fino all'ultima riga: le tre celle sotto prendono il 7.
+            // Il pallino in giù fino all'ultima riga: le tre celle sotto prendono il 7. Preso dalla metà che sporge
+            // fuori dalla cella, sull'angolo: anche lì si afferra.
             val bottom = at("Riga D").center.y
-            mouse(PointerEventType.Move, grip.center, false)
-            mouse(PointerEventType.Press, grip.center, true)
+            val outside = Offset(grip.center.x + 2f, grip.center.y + 2f)
+            mouse(PointerEventType.Move, outside, false)
+            mouse(PointerEventType.Press, outside, true)
             frames(2)
             for (step in 1..10) {
-                mouse(PointerEventType.Move, Offset(grip.center.x, grip.center.y + (bottom - grip.center.y) * step / 10f), true)
+                mouse(PointerEventType.Move, Offset(outside.x, outside.y + (bottom - outside.y) * step / 10f), true)
                 frames(1)
             }
             shot("fill_dragging")
-            mouse(PointerEventType.Release, Offset(grip.center.x, bottom), false)
+            mouse(PointerEventType.Release, Offset(outside.x, bottom), false)
             frames(10)
             shot("fill_done")
             val end = System.currentTimeMillis() + 5_000

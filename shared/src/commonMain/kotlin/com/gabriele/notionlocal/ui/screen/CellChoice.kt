@@ -8,7 +8,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +41,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.gabriele.notionlocal.ui.theme.DarkBackground
 
 // ---------------------------------------------------------------------------
@@ -155,6 +156,8 @@ fun ChoosableCell(key: String, modifier: Modifier, content: @Composable BoxScope
     val chosen = choice.chosen == key
     Box(
         modifier
+            // Scelta, sta sopra le celle accanto: il pallino sporge sul suo angolo (anche la sua riga sta sopra le altre).
+            .then(if (chosen) Modifier.zIndex(1f) else Modifier)
             .onGloballyPositioned { choice.bounds[key] = it.boundsInWindow() }
             .then(if (key in choice.filling) Modifier.background(blue.copy(alpha = 0.14f)) else Modifier)
             .then(if (chosen) Modifier.border(2.dp, blue) else Modifier)
@@ -171,7 +174,8 @@ private fun FillHandle(choice: CellChoice, modifier: Modifier) {
     var at by remember { mutableStateOf<LayoutCoordinates?>(null) }
     Box(
         modifier
-            .padding(2.dp)
+            // **Sull'angolo, come in Excel e Notion** (dal 24/11/2026, chiesto dall'utente): metà dentro e metà fuori.
+            .offset(FILL_HANDLE_SIZE / 2 - 1.dp, FILL_HANDLE_SIZE / 2 - 1.dp)
             .size(FILL_HANDLE_SIZE)
             .background(DarkBackground, CircleShape)
             .border(1.5.dp, blue, CircleShape)

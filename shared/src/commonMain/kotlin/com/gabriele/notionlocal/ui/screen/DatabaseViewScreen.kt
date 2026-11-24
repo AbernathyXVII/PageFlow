@@ -261,6 +261,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.zIndex
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -3578,7 +3579,9 @@ private fun TableBodyRow(
     // **"Wrap cells"**: la riga è alta quanto la sua cella più alta, e
     // tutte le celle (e le linee fra loro) si allungano fin lì.
     val wrap = LocalWrapCells.current
-    RowDragBox(row, group) {
+    // La riga della cella scelta sta sopra le altre: il pallino per riempire sporge sull'angolo (vedi `CellChoice`).
+    val raised = LocalCellChoice.current?.chosen?.substringBefore(':') == row.id
+    RowDragBox(row, group, modifier = if (raised) Modifier.zIndex(1f) else Modifier) {
     Row(modifier = Modifier.foundInside(row.id).then(if (wrap) Modifier.height(IntrinsicSize.Min) else Modifier)) {
         TableSlots(
             columns = columns,
