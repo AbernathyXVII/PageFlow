@@ -260,6 +260,7 @@ import com.gabriele.notionlocal.data.entity.parseFitColumns
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -1424,6 +1425,19 @@ private fun DatabaseViewBody(
 
     // Le frecce da una cella all'altra mentre si scrive (vedi `CellGrid`).
     val cellGrid = remember { CellGrid() }
+    // La cella scelta con Esc e il pallino per riempire (vedi `CellChoice`); bloccato il database, niente.
+    val cellChoice = remember { CellChoice() }
+    SideEffect {
+        cellChoice.valueOf = { key -> state.cellValues[key.substringBefore(':') to key.substringAfter(':')].orEmpty() }
+        cellChoice.apply = { keys, value ->
+            for (key in keys) {
+                val row = state.rows.find { it.id == key.substringBefore(':') } ?: continue
+                val column = state.columns.find { it.id == key.substringAfter(':') } ?: continue
+                viewModel.setCellValue(row, column, value)
+            }
+        }
+        cellChoice.edit = { key -> cellGrid.edit(key) }
+    }
     CompositionLocalProvider(
         LocalFormulaValues provides state.formulas,
         LocalFormulaEditor provides formulaEditor,
@@ -1444,7 +1458,8 @@ private fun DatabaseViewBody(
         LocalTitleEditRequest provides TitleEditRequest(editTitleOf, viewModel::consumeEditTitle),
         LocalRowLimits provides rowLimits,
         LocalCellGrid provides cellGrid,
-        LocalGroupTagEditor provides groupTagEditor.takeUnless { contentLocked }
+        LocalGroupTagEditor provides groupTagEditor.takeUnless { contentLocked },
+        LocalCellChoice provides cellChoice.takeUnless { contentLocked }
     ) {
     Column(
         modifier = modifier
@@ -1454,6 +1469,7 @@ private fun DatabaseViewBody(
             // fa il riquadro delle righe, più sotto.
             .then(if (embedded) Modifier.keepFocusedAboveKeyboard() else Modifier.fillMaxSize())
     ) {
+        if (!contentLocked) CellChoiceKeys(cellChoice)
         // Il titolo si può nascondere, ma **solo dentro una pagina**:
         // lì la pagina ha già un suo titolo e un database che si
         // chiama "Untitled" sopra al contenuto è solo una riga di
@@ -3589,7 +3605,8 @@ private fun TableBodyRow(
             // dall'utente): il clic destro e la pressione lunga aprono le azioni della riga, come sul nome.
             val rowMenu = if (column.id == LocalTitleColumnId.current) ({ onRowLongPress(row) }) else null
             val cell: @Composable () -> Unit = {
-                Box(Modifier.cellSpoiler(row.id, column.id).onRightClick(rowMenu).onLongPressFirst(rowMenu)) {
+                // Scelta con Esc, col pallino per riempire le celle sotto (vedi `CellChoice`).
+                ChoosableCell("${row.id}:${column.id}", Modifier.cellSpoiler(row.id, column.id).onRightClick(rowMenu).onLongPressFirst(rowMenu)) {
                     CellEditor(
                         row = row,
                         column = column,

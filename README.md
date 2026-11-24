@@ -1126,6 +1126,22 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.8 — 24/11/2026 · 22:27 — The handle that fills the cells below, as in Excel and Notion
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1388 tests passed)*
+
+- **[Change]** **[💻 PC]** **The handle that fills the cells**, as in Excel
+  and Notion: writing in a cell of a database table (text, number, link,
+  email, phone), Esc leaves it chosen, with a blue border and a small circle
+  in its bottom right corner. Dragging the circle down (or up), the cells of
+  the same column get light blue, and letting go of the mouse they all take
+  the value of the chosen cell. With a cell chosen the arrows move the
+  choice, Enter (or F2) goes back to writing in it, Delete empties it, Esc
+  or a click elsewhere leave it. Not in a locked database
+- **[Project]** `CellChoice.kt`: `CellChoice` (the chosen cell, the cells
+  being filled, their places), `ChoosableCell` around the cells of
+  `TableBodyRow`, `FillHandle`, `CellChoiceKeys`; Esc in `TextLikeCell`;
+  `CellGrid.edit`. Test: `DesktopCellFillTest`
+
 ### ✏️ v0.156.7 — 24/11/2026 · 22:00 — A simple table as wide as you want: every column, the last too, has its own width
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1387 tests passed)*
 

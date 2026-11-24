@@ -266,6 +266,7 @@ fun TextLikeCell(
     val wrap = LocalWrapCells.current
     val alignment = LocalCellAlignment.current
     val grid = LocalCellGrid.current.takeIf { !LocalDatabaseLocked.current }
+    val choice = LocalCellChoice.current
     DisposableEffect(grid, cellKey) { onDispose { grid?.forget(cellKey) } }
     var localValue by remember(cellKey) { mutableStateOf(value) }
     var editing by remember(cellKey) { mutableStateOf(false) }
@@ -323,7 +324,16 @@ fun TextLikeCell(
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
                         .markFocusChanges()
-                        .onPreviewKeyEvent { cellArrow(it, fieldValue, grid, cellKey) }
+                        .onPreviewKeyEvent { event ->
+                            cellArrow(event, fieldValue, grid, cellKey) ||
+                                // Esc: la cella resta scelta, col pallino per riempire (vedi `CellChoice`).
+                                (choice != null && event.type == KeyEventType.KeyDown && event.key == Key.Escape).also { leave ->
+                                    if (leave) {
+                                        editing = false
+                                        choice?.chosen = cellKey
+                                    }
+                                }
+                        }
                         .onFocusChanged { state ->
                             if (state.isFocused) everFocused = true else if (everFocused) editing = false
                         }
@@ -529,6 +539,13 @@ class CellGrid {
 
     fun forget(key: String) {
         slots.remove(key)
+    }
+
+    /** Si comincia a scrivere nella cella [key], se è una di quelle dove si scrive (vedi `CellChoice`). */
+    fun edit(key: String): Boolean {
+        val slot = slots[key]?.takeIf { it.coordinates.isAttached } ?: return false
+        slot.edit()
+        return true
     }
 
     /** Si comincia a scrivere nella cella accanto a [key] nel verso ([dx], [dy]); falso se lì non ce n'è una. */
