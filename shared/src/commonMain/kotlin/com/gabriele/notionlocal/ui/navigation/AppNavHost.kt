@@ -511,7 +511,13 @@ private fun AppTab(
         if (drawerState.isOpen) sidebar.refresh()
     }
 
-    BackHandler(enabled = drawerState.isOpen) { closeSidebar() }
+    // **"Indietro" con la barra aperta la chiude, e basta** (dal 24/11/2026, trovato dall'utente sul
+    // telefono: toccando il bordo destro, cioè col gesto "indietro", dietro la barra si apriva la pagina di
+    // prima). Vince l'ultimo gestore registrato: registrato all'avvio, questo perdeva contro quello della
+    // navigazione fra le pagine. Nasce quando la barra comincia ad aprirsi, così è sempre l'ultimo.
+    if (drawerState.isOpen || drawerState.targetValue == DrawerValue.Open) {
+        BackHandler { closeSidebar() }
+    }
 
     // Il codice della sincronizzazione Wi‑Fi, sopra qualunque schermata (vedi `SyncPrompts`).
     SyncPairingDialog()

@@ -1126,6 +1126,22 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.156.4.1 — 24/11/2026 · 18:17 — "Back" with the sidebar open closes it
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1377 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **"Back" with the sidebar open
+  closes it, and the page stays where it is**: with the sidebar open over a
+  page opened from another one, the "back" gesture (with gesture navigation
+  it starts from the right edge of the screen, so a touch there was enough)
+  or the back button took the page behind back to the one before, and the
+  sidebar stayed open; it looked like the touch went through the sidebar to
+  the screen behind. Now "back" first closes the sidebar, and only the next
+  one goes back. On the PC it is the same with Esc. Found by the user
+- **[Project]** The sidebar's `BackHandler` in `AppNavHost` is composed only
+  while the drawer is open or opening: the last handler registered wins, and
+  registered at launch it lost to the navigation's. Checked on the phone with
+  the back key (Football open, sidebar open, back)
+
 ### ✏️ v0.156.4 — 24/11/2026 · 16:24 — The hand over links, the days of each month together in the Year view
 *(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1377 tests passed)*
 
