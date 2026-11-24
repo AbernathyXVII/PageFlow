@@ -231,6 +231,10 @@ class PropertyMenuTest {
         assertTrue(numberEditAllowed("", "-"))
         assertTrue(numberEditAllowed("12", "12,5"))
         assertTrue(numberEditAllowed("12.", "12.75"))
+        // La ~ di un numero indicativo, solo davanti (dal 24/11/2026).
+        assertTrue(numberEditAllowed("", "~"))
+        assertTrue(numberEditAllowed("~12", "~12.5"))
+        assertTrue(!numberEditAllowed("12", "12~"))
         assertTrue(!numberEditAllowed("12", "12a"))
         assertTrue(!numberEditAllowed("1.5", "1.5.2"))
         assertTrue(!numberEditAllowed("", "Mario"))

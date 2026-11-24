@@ -70,5 +70,7 @@ class NumberStyleTest {
         assertEquals("2026", formatNumberValue("2026", NumberSettings()))
         settings { AppSettings.numberStyle = NumberStyle.SPACE_GROUPS }
         assertEquals("€1\u00A0500,25", formatNumberValue("1500.25", NumberSettings(format = NumberFormatKind.EUR)))
+        // Un prezzo indicativo (dal 24/11/2026): formattato, con la ~ davanti.
+        assertEquals("~€1\u00A0500,25", formatNumberValue("~1500.25", NumberSettings(format = NumberFormatKind.EUR)))
     }
 }

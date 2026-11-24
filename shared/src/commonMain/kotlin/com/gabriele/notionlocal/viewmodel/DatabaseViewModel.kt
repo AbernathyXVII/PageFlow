@@ -7,6 +7,7 @@ import com.gabriele.notionlocal.data.entity.linkShow
 import com.gabriele.notionlocal.data.entity.LinkColumnShow
 import com.gabriele.notionlocal.ui.screen.coverKey
 import com.gabriele.notionlocal.data.entity.withNameHidden
+import com.gabriele.notionlocal.data.entity.withoutEstimate
 import com.gabriele.notionlocal.data.entity.withLoadLimit
 import com.gabriele.notionlocal.data.entity.titleColumnId
 import com.gabriele.notionlocal.data.entity.nameColumnHidden
@@ -913,7 +914,7 @@ class DatabaseViewModel(
         val min = parts.getOrNull(0)?.toDoubleOrNull()
         val max = parts.getOrNull(1)?.toDoubleOrNull()
         if (min == null && max == null) return true
-        val number = cellValue.toDoubleOrNull() ?: return false
+        val number = cellValue.withoutEstimate().toDoubleOrNull() ?: return false
         if (min != null && number < min) return false
         if (max != null && number > max) return false
         return true
@@ -1086,7 +1087,7 @@ class DatabaseViewModel(
             ColumnType.ROLLUP -> rollups[row.id to column.id]?.let { SortValue(it.number, it.text) } ?: SortValue(null, "")
             // Una formula per il numero, la data o la casella che dà; un testo come un testo.
             ColumnType.FORMULA -> formulas[row.id to column.id]?.let { SortValue(FormulaEngine.sortNumber(it), raw) } ?: SortValue(null, "")
-            ColumnType.NUMBER -> SortValue(raw.toDoubleOrNull(), raw)
+            ColumnType.NUMBER -> SortValue(raw.withoutEstimate().toDoubleOrNull(), raw)
             // Il primo campo del valore di una data è l'istante di
             // inizio in millisecondi (il formato completo sta in
             // `parseDateRange`, nella schermata).
@@ -1665,6 +1666,23 @@ class DatabaseViewModel(
             pageRepository.updatePageParagraph(pageId) {
                 val cells = it.coveredCells.orEmpty()
                 it.copy(coveredCells = (if (key in cells) cells - key else cells + key).ifEmpty { null })
+            }
+        }
+    }
+
+    /**
+     * Copre o scopre per intero la colonna [columnKey] (dal 24/11/2026, vedi `CellSpoiler.kt`): le sue celle
+     * scoperte una a una tornano tutte come la colonna.
+     */
+    fun toggleColumnCover(columnKey: String) {
+        val pageId = _page.value?.id ?: return
+        viewModelScope.launch {
+            pageRepository.updatePageParagraph(pageId) {
+                val columns = it.coveredColumns.orEmpty()
+                it.copy(
+                    coveredColumns = (if (columnKey in columns) columns - columnKey else columns + columnKey).ifEmpty { null },
+                    coveredCells = it.coveredCells.orEmpty().filterNot { cell -> cell.endsWith("/$columnKey") }.ifEmpty { null }
+                )
             }
         }
     }

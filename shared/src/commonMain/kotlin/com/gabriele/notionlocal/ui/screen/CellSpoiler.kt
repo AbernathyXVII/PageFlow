@@ -28,37 +28,68 @@ import com.gabriele.notionlocal.ui.theme.SpoilerCover
  * scopre. Le celle coperte si ricordano (`PageParagraph.coveredCells`, sulla
  * pagina del database); spento, la tabella torna come sempre: si vede tutto e
  * le celle si toccano per scriverci, e riaccendendolo i veli tornano.
+ *
+ * **Una colonna intera** (dal 24/11/2026, chiesto dall'utente "tipo Anki"): "Spoiler" nel menu del suo
+ * titolo la copre tutta (`PageParagraph.coveredColumns`), anche col "Cell spoiler" spento; un tocco su
+ * una sua cella la scopre, un altro la ricopre. Lì le celle in `coveredCells` sono quelle scoperte.
  */
 
-/** Le celle coperte, come "idRiga/colonna" (Name = `NAME_COLUMN_KEY`), e chi ne copre o scopre una. */
-class CellSpoilers(val covered: Set<String>, val onToggle: (rowId: String, columnKey: String) -> Unit)
+/**
+ * Lo spoiler delle celle di un database: [all] = "Cell spoiler" acceso (si copre ogni cella col tocco);
+ * [covered] le celle segnate, come "idRiga/colonna" (Name = `NAME_COLUMN_KEY`); [columns] le colonne
+ * coperte per intero; e chi copre o scopre una cella o una colonna.
+ */
+class CellSpoilers(
+    val all: Boolean,
+    val covered: Set<String>,
+    val columns: Set<String>,
+    val onToggle: (rowId: String, columnKey: String) -> Unit,
+    val onToggleColumn: (columnKey: String) -> Unit
+) {
+    /** Se la cella si tocca per coprirla e scoprirla, invece che per scriverci. */
+    fun reaches(columnKey: String): Boolean = all || columnKey in columns
+
+    /** Coperta: segnata in una colonna scoperta, o non segnata in una colonna coperta. */
+    fun isCovered(rowId: String, columnKey: String): Boolean = (columnKey in columns) != (coverKey(rowId, columnKey) in covered)
+}
 
 /** La chiave di una cella fra quelle coperte. */
 fun coverKey(rowId: String, columnKey: String): String = "$rowId/$columnKey"
 
-/** Dato dalla tabella quando "Cell spoiler" è acceso; null = spento. */
+/** Dato dalla tabella; null fuori da una tabella. */
 val LocalCellSpoilers = compositionLocalOf<CellSpoilers?> { null }
 
-/** "Cell spoiler" di un database dal suo `paragraphJson`: null se è spento. */
+/** Lo spoiler delle celle di un database dal suo `paragraphJson`. */
 @Composable
-fun rememberCellSpoilers(paragraphJson: String?, onToggle: (rowId: String, columnKey: String) -> Unit): CellSpoilers? {
+fun rememberCellSpoilers(
+    paragraphJson: String?,
+    onToggle: (rowId: String, columnKey: String) -> Unit,
+    onToggleColumn: (columnKey: String) -> Unit
+): CellSpoilers {
     val toggle by rememberUpdatedState(onToggle)
+    val toggleColumn by rememberUpdatedState(onToggleColumn)
     return remember(paragraphJson) {
-        PageParagraph.parse(paragraphJson).takeIf { it.cellSpoiler == true }
-            ?.let { p -> CellSpoilers(p.coveredCells.orEmpty().toSet()) { row, column -> toggle(row, column) } }
+        val p = PageParagraph.parse(paragraphJson)
+        CellSpoilers(
+            all = p.cellSpoiler == true,
+            covered = p.coveredCells.orEmpty().toSet(),
+            columns = p.coveredColumns.orEmpty().toSet(),
+            onToggle = { row, column -> toggle(row, column) },
+            onToggleColumn = { column -> toggleColumn(column) }
+        )
     }
 }
 
 /**
- * La cella [columnKey] della riga [rowId] col "Cell spoiler" acceso: coperta
- * se è fra quelle coperte, e un tocco la copre o la scopre. Il tocco si prende
+ * La cella [columnKey] della riga [rowId] col "Cell spoiler" acceso o nella
+ * colonna coperta: coperta o no (vedi [CellSpoilers.isCovered]), e un tocco la copre o la scopre. Il tocco si prende
  * prima della cella (passaggio `Initial`), così non la apre e non ci scrive;
  * trascinando si scorre come sempre, e il tasto destro del mouse non conta.
  */
 @Composable
 fun Modifier.cellSpoiler(rowId: String, columnKey: String): Modifier {
-    val spoilers = LocalCellSpoilers.current ?: return this
-    val covered = coverKey(rowId, columnKey) in spoilers.covered
+    val spoilers = LocalCellSpoilers.current?.takeIf { it.reaches(columnKey) } ?: return this
+    val covered = spoilers.isCovered(rowId, columnKey)
     val toggle by rememberUpdatedState { spoilers.onToggle(rowId, columnKey) }
     val cover = SpoilerCover
     return this

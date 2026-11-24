@@ -67,6 +67,20 @@ class NumberFormatTest {
         assertEquals(CalculationResult.Percent(75.0), calculate(Calculation.PERCENT_NOT_EMPTY, ColumnType.NUMBER, values))
     }
 
+    /**
+     * **La ~ davanti a un numero lo toglie dai calcoli** (dal 24/11/2026, chiesto dall'utente per i
+     * prezzi della Wishlist): somma e media contano solo gli altri, ma la barra lo legge.
+     */
+    @Test
+    fun anEstimateIsLeftOutOfTheCalculations() {
+        val prices = listOf("10", "~25.50", "30")
+        assertEquals(CalculationResult.Number(BigDecimal(40)), calculate(Calculation.SUM, ColumnType.NUMBER, prices))
+        assertEquals(0, BigDecimal(20).compareTo((calculate(Calculation.AVERAGE, ColumnType.NUMBER, prices) as CalculationResult.Number).value))
+        assertEquals(CalculationResult.Count(3), calculate(Calculation.COUNT_NOT_EMPTY, ColumnType.NUMBER, prices))
+        assertEquals(0.255f, numberFill("~25.50"), 0.0001f)
+        assertEquals("25.50", "~ 25.50".withoutEstimate())
+    }
+
     @Test
     fun checkboxesAndMultiSelectCountTheirOwnWay() {
         val boxes = listOf("true", "false", "", "true")

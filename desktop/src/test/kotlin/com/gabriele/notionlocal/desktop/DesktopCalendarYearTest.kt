@@ -55,7 +55,7 @@ import java.time.temporal.TemporalAdjusters
 /**
  * **La vista Year come Google Calendar** (dal 23/11/2026, chiesto dall'utente con una foto):
  * quattro mesi per riga sul PC e due quando lo spazio è poco, il nome intero dei mesi, i
- * numeri delle settimane a sinistra e le sei righe di giorni.
+ * numeri delle settimane a sinistra e solo le settimane del mese, coi giorni degli altri mesi scuriti.
  */
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 class DesktopCalendarYearTest {
@@ -149,16 +149,31 @@ class DesktopCalendarYearTest {
         months.forEach { shown.at(it) }
         assertTrue("le iniziali dei giorni in tutti i mesi", shown.count { it.first == "M" } >= 12)
 
-        // Le sei settimane di gennaio, una sotto l'altra, nel riquadro a sinistra dei giorni.
-        val firstMonday = LocalDate.of(today.year, 1, 1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        val expected = (0L until 6L).map { firstMonday.plusWeeks(it).get(IsoFields.WEEK_OF_WEEK_BASED_YEAR).toString() }
-        val weekColumn = shown.filter { (_, r) -> r.center.x in january.left..(january.left + 24f) && r.top > january.bottom + 15f && r.top < january.bottom + 170f }
-            .sortedBy { it.second.top }.map { it.first }
-        assertEquals("i numeri delle settimane di gennaio", expected, weekColumn)
+        // Le settimane di ogni mese, una sotto l'altra nel riquadro a sinistra dei giorni: solo quelle con
+        // giorni del mese (dal 24/11/2026: prima sempre sei, e l'ultima poteva essere tutta del mese dopo).
+        months.forEachIndexed { index, name ->
+            val title = shown.at(name)
+            val first = LocalDate.of(today.year, index + 1, 1)
+            val monday = first.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            val lastMonday = first.withDayOfMonth(first.lengthOfMonth()).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            val expected = generateSequence(monday) { it.plusWeeks(1) }.takeWhile { !it.isAfter(lastMonday) }
+                .map { it.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR).toString() }.toList()
+            val weekColumn = shown.filter { (_, r) -> r.center.x in title.left..(title.left + 24f) && r.top > title.bottom + 15f && r.top < title.bottom + 170f }
+                .sortedBy { it.second.top }.map { it.first }
+            assertEquals("i numeri delle settimane di $name", expected, weekColumn)
+        }
 
-        // Il primo lunedì della griglia c'è anche se è di dicembre: le sei righe partono da lì.
+        // Il primo lunedì della griglia c'è anche se è di dicembre, ma scurito.
+        val firstMonday = LocalDate.of(today.year, 1, 1).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         val firstDay = shown.filter { (text, r) -> text == firstMonday.dayOfMonth.toString() && r.center.x in (january.left + 24f)..(january.left + 60f) && r.top > january.bottom + 15f }
         assertTrue("il ${firstMonday.dayOfMonth} in alto a sinistra di gennaio", firstDay.isNotEmpty())
+        fun brightest(r: Rect) = (r.top.toInt()..r.bottom.toInt()).maxOf { y ->
+            (r.left.toInt()..r.right.toInt()).maxOf { x -> shot!!.getColor(x, y).let { c -> minOf((c shr 16) and 0xFF, (c shr 8) and 0xFF, c and 0xFF) } }
+        }
+        if (firstMonday.year < today.year) {
+            val own = shown.first { (text, r) -> text == "15" && r.center.x in january.left..(january.left + 200f) && r.top > january.bottom }.second
+            assertTrue("il ${firstMonday.dayOfMonth} di dicembre più scuro del 15 di gennaio", brightest(firstDay.first().second) < brightest(own) - 60)
+        }
 
         // Oggi col numero blu, come in Google (scelto dall'utente il 23/11/2026; nella v0.155.50 arancione).
         val monthWidth = shown.at("February").left - january.left

@@ -100,6 +100,13 @@ data class PageParagraph(
     val cellSpoiler: Boolean? = null,
     val coveredCells: List<String>? = null,
     /**
+     * **Le colonne coperte per intero** (dal 24/11/2026, chiesto dall'utente "tipo Anki"): le chiavi
+     * delle colonne (Name = `NAME_COLUMN_KEY`) coperte dallo spoiler anche col "Cell spoiler" spento.
+     * In queste colonne una cella fra [coveredCells] è invece **scoperta**: un clic la mostra, uno la
+     * ricopre. Vedi `CellSpoiler.kt`.
+     */
+    val coveredColumns: List<String>? = null,
+    /**
      * **La copertina sul PC** (dal 13/11/2026, chiesto dall'utente: le
      * modifiche fatte sul PC non devono cambiarla sul telefono): l'altezza in
      * dp, scelta trascinandone il bordo di sotto, e ingrandimento e

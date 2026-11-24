@@ -3932,6 +3932,46 @@ class PageEditorViewModel(
         return BackspaceOutcome.MERGED_INTO_ISLAND
     }
 
+    /**
+     * **Canc in fondo a una riga porta su quella sotto** (dal 24/11/2026, trovato dall'utente sul PC: sulla
+     * riga vuota sotto una citazione, scritta più grande e quindi in un campo suo, Canc non faceva niente).
+     * Dentro un campo ci pensa il campo; questa è la riga in fondo al campo, e quella sotto sta in un altro.
+     * Una riga vuota se ne va e il cursore va all'inizio di quella che sale, che resta com'è; altrimenti
+     * il testo di sotto si attacca in fondo a questo, come col Backspace all'inizio della riga sotto
+     * ([mergeIntoIslandAbove]).
+     *
+     * @return null se non c'è niente da portare su; true se questa riga se ne va (chi chiama posa il
+     * fuoco altrove, vedi "il posteggio della tastiera"), false se resta col testo di sotto.
+     */
+    fun deleteAtLineEnd(blockId: String): Boolean? {
+        val block = _blocks.value.find { it.id == blockId } ?: return null
+        val siblings = _blocks.value.filter { it.parentBlockId == block.parentBlockId }.sortedBy { it.orderIndex }
+        val below = siblings.getOrNull(siblings.indexOfFirst { it.id == block.id } + 1) ?: return null
+        val text = spansOf(block)
+        if (text.plainText().isEmpty()) {
+            if (!isFocusableBlockType(below.type)) return null
+            snapshotForStructuralChange()
+            viewModelScope.launch {
+                structuralEdits.withLock { repository.applyBlockChanges(deleted = listOf(block)) }
+                withTimeoutOrNull(FOCUS_HANDOFF_TIMEOUT_MS) { _blocks.first { shown -> shown.none { it.id == block.id } } }
+                _pendingCaret.value = below.id to 0
+                _focusRequestBlockId.value = below.id
+            }
+            return true
+        }
+        // Solo una riga di testo senza niente dentro: una casella da aprire o una tabella non si svuotano qui.
+        if (!isFlowingTextType(below.type) || _blocks.value.any { it.parentBlockId == below.id }) return null
+        snapshotForStructuralChange()
+        viewModelScope.launch {
+            structuralEdits.withLock {
+                repository.applyBlockChanges(saved = listOf(block.copy(textJson = json.encodeToString(text + spansOf(below)))), deleted = listOf(below))
+            }
+            _pendingCaret.value = block.id to text.plainText().length
+            _focusRequestBlockId.value = block.id
+        }
+        return false
+    }
+
     // --- Il backspace sotto un divisore (corretto il 29/09/2026) ---
 
     private val _armedDivider = MutableStateFlow<String?>(null)

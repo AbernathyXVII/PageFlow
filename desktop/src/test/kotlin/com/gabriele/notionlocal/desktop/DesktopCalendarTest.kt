@@ -135,7 +135,7 @@ class DesktopCalendarTest {
         try {
             frames(50)
             val first = shot("calendar_pc")
-            // Il quadratino di oggi ha il contorno arancione (dal 23/11/2026; prima il numero cerchiato): è la sua colonna.
+            // Il quadratino di oggi ha il contorno blu (dal 23/11/2026 arancione, blu dal 24/11; prima il numero cerchiato): è la sua colonna.
             val ring = todayCell(first, 330)
             assertTrue("il numero di oggi", ring != null)
             val (dayX, ringY, radius) = ring!!

@@ -66,6 +66,8 @@ import com.gabriele.notionlocal.data.entity.durationUnits
 import java.time.LocalDateTime
 import com.gabriele.notionlocal.data.entity.ColumnType
 import com.gabriele.notionlocal.data.entity.DEFAULT_NUMBER_COLOR
+import com.gabriele.notionlocal.data.entity.ESTIMATE_MARK
+import com.gabriele.notionlocal.data.entity.withoutEstimate
 import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
 import com.gabriele.notionlocal.data.entity.NumberDisplay
 import com.gabriele.notionlocal.data.entity.NumberFormatKind
@@ -91,6 +93,8 @@ import java.math.BigDecimal
 
 /** Il numero di una cella come si legge: cifre scelte, separatori delle impostazioni, valuta o %. */
 fun formatNumberValue(raw: String, settings: NumberSettings): String {
+    // Un numero indicativo si scrive formattato, con la ~ davanti: "~€12.50".
+    if (raw.trim().startsWith(ESTIMATE_MARK)) return ESTIMATE_MARK + formatNumberValue(raw.withoutEstimate(), settings)
     val plain = numberWithDecimals(raw, settings.decimals) ?: return raw
     return settings.format.decorate(Formats.number(plain))
 }
@@ -101,7 +105,8 @@ fun formatNumberValue(raw: String, column: DatabaseColumnEntity): String = forma
  * **In una cella Number solo un numero** (dal 19/11/2026, l'utente nel collaudo: "posso
  * scriverci anche le lettere, non va bene"): dopo il tasto [after] è ancora un numero a
  * metà (segno, cifre, una virgola o un punto), oppure si è solo cancellato, anche da un
- * valore di prima che numero non è (una colonna che era Name).
+ * valore di prima che numero non è (una colonna che era Name). Davanti può avere la ~ di un
+ * numero indicativo ([ESTIMATE_MARK], dal 24/11/2026).
  */
 fun numberEditAllowed(before: String, after: String): Boolean {
     if (NUMBER_TYPING.matches(after)) return true
@@ -110,7 +115,7 @@ fun numberEditAllowed(before: String, after: String): Boolean {
     return after.length == prefix + suffix
 }
 
-private val NUMBER_TYPING = Regex("[-+]?\\d*([.,]\\d*)?")
+private val NUMBER_TYPING = Regex("~?[-+]?\\d*([.,]\\d*)?")
 
 // --- A sinistra, al centro, a destra (dal 26/09/2026) ---
 

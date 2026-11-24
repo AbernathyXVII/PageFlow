@@ -1763,7 +1763,11 @@ private fun DatabaseViewBody(
                     cellOverflow = CellOverflow.of(page?.cellOverflow ?: 0),
                     freezeFirstColumn = page?.freezeFirstColumn == true,
                     freezeFirstRow = page?.freezeFirstRow == true,
-                    cellSpoilers = rememberCellSpoilers(page?.paragraphJson) { rowId, key -> viewModel.toggleCellCover(rowId, key) },
+                    cellSpoilers = rememberCellSpoilers(
+                        page?.paragraphJson,
+                        onToggle = { rowId, key -> viewModel.toggleCellCover(rowId, key) },
+                        onToggleColumn = { key -> viewModel.toggleColumnCover(key) }
+                    ),
                     onOpenRow = openRow,
                     onRowLongPress = { row, place ->
                         focusManager.clearFocus()
@@ -2372,7 +2376,7 @@ private fun TableLayout(
     freezeFirstColumn: Boolean = false,
     /** "Freeze first row": la riga dei titoli resta in cima scorrendo in giù. */
     freezeFirstRow: Boolean = false,
-    /** "Cell spoiler" acceso: le celle coperte e il tocco che copre (vedi `CellSpoiler.kt`); null = spento. */
+    /** Lo spoiler delle celle: le celle e le colonne coperte, e il tocco che copre (vedi `CellSpoiler.kt`). */
     cellSpoilers: CellSpoilers? = null,
     /** A pagina intera: una lista che disegna solo le righe sullo schermo (vedi `LazyBody`). */
     lazy: LazyBody? = null,
@@ -4678,7 +4682,7 @@ private fun CalendarWeekSwiper(
  * L'anno intero, **come in Google Calendar** (dal 23/11/2026, chiesto dall'utente con una
  * foto: "non mi piace affatto"; prima tre mesi per riga, numeri da 8 punti e niente giorni
  * dei mesi accanto): il nome intero del mese, le iniziali dei giorni, i numeri delle
- * settimane in un riquadro a sinistra e sempre sei righe, anche coi giorni dei mesi accanto.
+ * settimane in un riquadro a sinistra e le settimane del mese, coi giorni dei mesi accanto scuriti.
  * Sul PC quattro mesi per riga, sul telefono due (vedi [YEAR_MONTH_MIN_WIDTH]).
  *
  * A questa scala le barre non si leggerebbero, quindi non ci sono: sotto i giorni con almeno
@@ -4755,6 +4759,9 @@ private fun MiniMonth(
     modifier: Modifier = Modifier
 ) {
     val gridStart = startOfWeek(month.atDay(1), firstDayOfWeek)
+    // Solo le settimane che hanno giorni del mese (dal 24/11/2026, chiesto dall'utente: prima sempre sei, e
+    // ottobre finiva con una settimana tutta di novembre): l'ultima comincia con un giorno del mese.
+    val weeks = ChronoUnit.DAYS.between(gridStart, month.atEndOfMonth()).toInt() / 7 + 1
     // Le settimane cominciano dal primo giorno scelto; col lunedì sono quelle ISO, come in Google.
     val weekOfYear = WeekFields.of(firstDayOfWeek, 4).weekOfWeekBasedYear()
     val text = MaterialTheme.colorScheme.onBackground
@@ -4788,7 +4795,7 @@ private fun MiniMonth(
                     .background(text.copy(alpha = 0.06f), RoundedCornerShape(4.dp))
                     .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
             ) {
-                repeat(6) { week ->
+                repeat(weeks) { week ->
                     Box(modifier = Modifier.fillMaxWidth().height(YEAR_DAY_HEIGHT), contentAlignment = Alignment.Center) {
                         Text(gridStart.plusWeeks(week.toLong()).get(weekOfYear).toString(), fontSize = YEAR_DAY_FONT, color = text, maxLines = 1)
                     }
@@ -4796,23 +4803,27 @@ private fun MiniMonth(
             }
             Spacer(modifier = Modifier.width(4.dp))
             Column(modifier = Modifier.weight(1f)) {
-                repeat(6) { week ->
+                repeat(weeks) { week ->
                     Row {
                         repeat(7) { dayOfWeek ->
                             val date = gridStart.plusDays((week * 7 + dayOfWeek).toLong())
-                            // Anche i giorni dei mesi accanto, dello stesso colore: in Google è così.
-                            // Oggi e i puntini solo nel suo mese, non due volte.
+                            // Anche i giorni dei mesi accanto, ma scuriti (dal 24/11/2026, chiesto dall'utente; nella
+                            // v0.155.50 dello stesso colore, come in Google). Oggi e i puntini solo nel suo mese.
                             val ownDay = YearMonth.from(date) == month
                             Box(modifier = Modifier.weight(1f).height(YEAR_DAY_HEIGHT), contentAlignment = Alignment.Center) {
                                 // Oggi nel cerchio di Google, col numero blu come in Google (scelto dall'utente il 23/11/2026:
-                                // nella v0.155.50 era arancione come nelle altre viste).
+                                // nella v0.155.50 era arancione; dal 24/11 blu anche nelle altre viste).
                                 if (ownDay && date == today) Box(Modifier.size(YEAR_DAY_HEIGHT).background(DarkSurfaceVariant, CircleShape))
                                 Text(
                                     text = date.dayOfMonth.toString(),
                                     fontSize = YEAR_DAY_FONT,
                                     lineHeight = YEAR_DAY_FONT,
                                     fontWeight = if (ownDay && date == today) FontWeight.Bold else null,
-                                    color = if (ownDay && date == today) MaterialTheme.colorScheme.primary else text,
+                                    color = when {
+                                        !ownDay -> text.copy(alpha = 0.35f)
+                                        date == today -> MaterialTheme.colorScheme.primary
+                                        else -> text
+                                    },
                                     maxLines = 1
                                 )
                                 if (ownDay && date in busyDays) {
@@ -5171,9 +5182,9 @@ private fun CalendarWeekRow(
             }
         }
 
-        // **Il quadratino di oggi col contorno arancione** (dal 23/11/2026, chiesto dall'utente, al posto
-        // del cerchietto bianco attorno al numero): l'arancione del giorno scelto nelle date. Sopra le barre,
-        // che altrimenti lo coprono; senza tocchi suoi, gli eventi sotto si cliccano come prima.
+        // **Il quadratino di oggi col contorno blu** (dal 23/11/2026, chiesto dall'utente, al posto del
+        // cerchietto bianco attorno al numero; arancione fino alla v0.155.51, blu dal 24/11 come nella vista
+        // Year). Sopra le barre, che altrimenti lo coprono; senza tocchi suoi, gli eventi sotto si cliccano.
         val todayIndex = java.time.temporal.ChronoUnit.DAYS.between(weekStart, today)
         if (todayIndex in 0..6) {
             Row(modifier = Modifier.matchParentSize()) {
@@ -5182,7 +5193,7 @@ private fun CalendarWeekRow(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .then(if (dayIndex.toLong() == todayIndex) Modifier.border(2.dp, SamsungOrange) else Modifier)
+                            .then(if (dayIndex.toLong() == todayIndex) Modifier.border(2.dp, MaterialTheme.colorScheme.primary) else Modifier)
                     )
                 }
             }
@@ -7159,9 +7170,14 @@ private fun NameHeaderCell(
                 )
             )
             PropertyMenuGroup(columnWidthRows(canResize, fit, onResize = pick(onResize), onFitChange = { menuOpen = false; onFitChange(it) }))
-            // **"Hide"**, come le altre (dal 13/11/2026): torna da "Property visibility".
+            // **"Hide"**, come le altre (dal 13/11/2026): torna da "Property visibility". E "Spoiler" (dal
+            // 24/11/2026): la colonna coperta per intero, le celle si scoprono una a una (vedi `CellSpoiler.kt`).
+            val spoilers = LocalCellSpoilers.current
             PropertyMenuGroup(
-                listOf({ OptionRow(Icons.Filled.VisibilityOff, DbStrings.hide, enabled = onHide != null, onClick = pick { onHide?.invoke() }) })
+                listOfNotNull(
+                    { OptionRow(Icons.Filled.VisibilityOff, DbStrings.hide, enabled = onHide != null, onClick = pick { onHide?.invoke() }) },
+                    spoilers?.let { s -> { ColumnSpoilerRow(NAME_COLUMN_KEY in s.columns, onClick = pick { s.onToggleColumn(NAME_COLUMN_KEY) }) } }
+                )
             )
         }
     }
@@ -7175,6 +7191,21 @@ private fun NameHeaderCell(
             }
         )
     }
+}
+
+/** "Spoiler" nel menu del titolo di una colonna: la spunta quando la colonna è coperta. */
+@Composable
+private fun ColumnSpoilerRow(covered: Boolean, onClick: () -> Unit) {
+    OptionRow(
+        icon = Icons.Filled.Visibility,
+        label = DbStrings.columnSpoiler,
+        onClick = onClick,
+        trailing = if (covered) {
+            { Icon(Icons.Filled.Check, contentDescription = DbStrings.selected, tint = MaterialTheme.colorScheme.primary) }
+        } else {
+            null
+        }
+    )
 }
 
 /**
@@ -7466,9 +7497,12 @@ private fun PropertyHeaderCell(
                 }
             )
             PropertyMenuGroup(columnWidthRows(canResize, fit, onResize = pick(onResize), onFitChange = { menuOpen = false; onFitChange(it) }))
+            val spoilers = LocalCellSpoilers.current
             PropertyMenuGroup(
                 listOfNotNull(
                     { OptionRow(Icons.Filled.VisibilityOff, DbStrings.hide, onClick = pick(onHide)) },
+                    // **"Spoiler"** (dal 24/11/2026, chiesto dall'utente "tipo Anki"): vedi `CellSpoiler.kt`.
+                    spoilers?.let { s -> { ColumnSpoilerRow(column.id in s.columns, onClick = pick { s.onToggleColumn(column.id) }) } },
                     // **"Hide icon"** (dal 27/10/2026, chiesto dall'utente): l'icona
                     // accanto al nome se ne va, o torna con "Show icon". Accanto, la
                     // sua stessa icona.

@@ -6695,6 +6695,18 @@ private fun MergedTextRunField(
         viewModel.arriveAtEdge(next.id, atEnd = !right)
         return true
     }
+    // **Canc in fondo all'ultima riga del campo** (dal 24/11/2026, trovato dall'utente sul PC): porta su
+    // la riga dopo, che sta in un altro campo (vedi `PageEditorViewModel.deleteAtLineEnd`).
+    fun deleteKey(event: KeyEvent): Boolean {
+        if (!isPc || pageLocked || event.type != KeyEventType.KeyDown || event.key != Key.Delete) return false
+        if (event.isCtrlPressed || event.isAltPressed || event.isShiftPressed) return false
+        if (!fieldValue.selection.collapsed || fieldValue.selection.end < fieldValue.text.length) return false
+        val here = runBlocks.lastOrNull() ?: return false
+        val gone = viewModel.deleteAtLineEnd(here.id) ?: return false
+        // La riga se ne va, e col campo se era la sola: il fuoco va posato prima (vedi il Backspace qui sotto).
+        if (gone) focusPark?.requestFocus()
+        return true
+    }
     // **Maiusc+Invio in un elenco** (dal 16/11/2026, chiesto dall'utente): la riga nuova sotto non
     // ha il numero o il pallino ma ne tiene il posto, come quella che lascia il Backspace (vedi
     // `BlockAttrs.listIndent`); Invio da lì continua l'elenco. Sulle altre righe è un Invio.
@@ -7129,7 +7141,7 @@ private fun MergedTextRunField(
                 // `TextLinks.kt`): prima del correttore, che così non apre
                 // il suo menu sopra il link.
                 .linkTaps(layout = { textLayout }, onLink = openLink)
-                .onPreviewKeyEvent { slashKey(it) || arrowKey(it) || sideKey(it) || softEnter(it) || tabKey(it) }
+                .onPreviewKeyEvent { slashKey(it) || arrowKey(it) || sideKey(it) || softEnter(it) || tabKey(it) || deleteKey(it) }
                 .proofingTaps(enabled = proofing != null && !pageLocked, layout = { textLayout }) { word, at ->
                     proofMenu = word to at
                 }

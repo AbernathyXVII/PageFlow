@@ -90,11 +90,22 @@ fun NumberFormatKind.decorate(grouped: String): String {
  * scegliere). 72 → tre quarti scarsi.
  */
 fun numberFill(raw: String): Float {
-    val value = raw.trim().toBigDecimalOrNullSafe() ?: return 0f
+    val value = raw.withoutEstimate().toBigDecimalOrNullSafe() ?: return 0f
     return (value.toFloat() / 100f).coerceIn(0f, 1f)
 }
 
 private fun String.toBigDecimalOrNullSafe(): BigDecimal? = runCatching { BigDecimal(this) }.getOrNull()
+
+/**
+ * **Un numero con la ~ davanti è indicativo** (dal 24/11/2026, chiesto dall'utente per i prezzi della
+ * Wishlist nel Kaikeibo, "solo per avere un'idea"): si legge, si ordina e si filtra come gli altri, ma
+ * non entra nei calcoli in fondo alla colonna (Sum, Average…), nei grafici e nei rollup, perché
+ * "~12" non si legge come numero.
+ */
+const val ESTIMATE_MARK = "~"
+
+/** Il numero senza la ~ di [ESTIMATE_MARK], per mostrarlo, ordinarlo e filtrarlo. */
+fun String.withoutEstimate(): String = trim().removePrefix(ESTIMATE_MARK).trim()
 
 // --- I calcoli sotto la tabella ("Calculate") ---
 

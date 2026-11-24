@@ -17,6 +17,9 @@ import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getAllSemanticsNodes
+import androidx.compose.ui.semantics.getOrNull
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -37,6 +40,7 @@ import com.gabriele.notionlocal.data.repository.PageRepository
 import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
+import com.gabriele.notionlocal.ui.i18n.DbStrings
 import com.gabriele.notionlocal.ui.screen.DatabaseViewScreen
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import com.gabriele.notionlocal.viewmodel.ViewModelFactory
@@ -530,6 +534,110 @@ class DesktopDatabaseTableTest {
             save(off, "cell_spoiler_off.png")
             assertTrue("spento, il nome si vede", !veiled(off, 80, 250, secondRow))
             assertEquals(listOf("r2/$NAME_COLUMN_KEY"), covered())
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **"Spoiler" su una colonna intera** (dal 24/11/2026, chiesto dall'utente "tipo Anki"): dal menu del
+     * titolo la colonna si copre tutta, anche col "Cell spoiler" spento; un clic su una cella la scopre e
+     * un altro la ricopre; di nuovo "Spoiler" nel menu e si vede tutto.
+     */
+    @Test
+    fun aWholeColumnUnderASpoiler() {
+        val db = AppDatabase.getInstance(context)
+        runBlocking {
+            db.databaseDao().insertColumn(DatabaseColumnEntity(id = "giorno", pageId = "giochi", name = "Day", type = ColumnType.TEXT, orderIndex = -1))
+            db.databaseDao().insertCell(DatabaseCellEntity(rowId = "r1", columnId = "giorno", value = "Monday"))
+            db.databaseDao().insertCell(DatabaseCellEntity(rowId = "r2", columnId = "giorno", value = "Tuesday"))
+        }
+        fun stored() = runBlocking { PageParagraph.parse(db.pageDao().getById("giochi")!!.paragraphJson) }
+        fun waitFor(what: String, check: (PageParagraph) -> Boolean) {
+            val end = System.currentTimeMillis() + 5_000
+            while (!check(stored()) && System.currentTimeMillis() < end) Thread.sleep(20)
+            assertTrue("$what: ${stored()}", check(stored()))
+        }
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 700, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize().notePresses()) {
+                            DatabaseViewScreen(
+                                pageId = "giochi", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
+                                onOpenUpdates = {}, onOpenPage = {}, onOpenDatabase = {}
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun picture(): Bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
+        fun save(bitmap: Bitmap, name: String) =
+            File("build/desktop-screenshots", name).apply { parentFile.mkdirs() }.writeBytes(Image.makeFromBitmap(bitmap).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        fun veiled(bitmap: Bitmap, fromX: Int, toX: Int, y: Int) =
+            (fromX until toX).count { x -> bitmap.getColor(x, y) == 0xFF4A4A4A.toInt() || bitmap.getColor(x, y) == 0xFFBDBDBA.toInt() } > (toX - fromX) * 0.8
+        fun textAt(text: String) = onWindowThread {
+            scene.semanticsOwners.flatMap { it.getAllSemanticsNodes(mergingEnabled = false) }
+                .firstOrNull { node -> node.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text } == text }?.boundsInRoot
+        }
+        try {
+            frames(40)
+            val before = picture()
+            val background = before.getColor(1100, before.height - 5)
+            val lines = (60 until before.height - 20).filter { y -> (1000..1100).all { x -> before.getColor(x, y) != background } }
+            val firstRow = (lines[0] + lines[1]) / 2
+            val secondRow = (lines[1] + lines[2]) / 2
+            // "Day" sta fra 266 e 416, Name fra 66 e 266.
+            assertTrue("prima si vede", !veiled(before, 280, 400, firstRow))
+
+            // "Spoiler" nel menu del titolo "Day": tutta la colonna coperta.
+            val header = textAt("Day") ?: error("manca il titolo Day")
+            click(scene, header.center)
+            frames(10)
+            val item = textAt(DbStrings.columnSpoiler) ?: error("manca Spoiler nel menu")
+            click(scene, item.center)
+            waitFor("colonna coperta") { it.coveredColumns == listOf("giorno") }
+            frames(10)
+            val covered = picture()
+            save(covered, "column_spoiler_on.png")
+            assertTrue("Monday coperto", veiled(covered, 280, 400, firstRow))
+            assertTrue("Tuesday coperto", veiled(covered, 280, 400, secondRow))
+            assertTrue("il nome si vede", !veiled(covered, 80, 250, firstRow))
+
+            // Un clic scopre solo Monday; un altro lo ricopre.
+            click(scene, Offset(330f, firstRow.toFloat()))
+            waitFor("Monday scoperto") { it.coveredCells == listOf("r1/giorno") }
+            frames(10)
+            val one = picture()
+            save(one, "column_spoiler_one.png")
+            assertTrue("Monday si vede", !veiled(one, 280, 400, firstRow))
+            assertTrue("Tuesday resta coperto", veiled(one, 280, 400, secondRow))
+            click(scene, Offset(330f, firstRow.toFloat()))
+            waitFor("Monday ricoperto") { it.coveredCells == null }
+            frames(10)
+            assertTrue("Monday di nuovo coperto", veiled(picture(), 280, 400, firstRow))
+
+            // Scoperto di nuovo Monday, "Spoiler" nel menu toglie tutto: si vede tutta la colonna.
+            click(scene, Offset(330f, firstRow.toFloat()))
+            waitFor("Monday scoperto") { it.coveredCells == listOf("r1/giorno") }
+            click(scene, (textAt("Day") ?: error("manca il titolo Day")).center)
+            frames(10)
+            click(scene, (textAt(DbStrings.columnSpoiler) ?: error("manca Spoiler nel menu")).center)
+            waitFor("colonna scoperta") { it.coveredColumns == null && it.coveredCells == null }
+            frames(10)
+            val off = picture()
+            save(off, "column_spoiler_off.png")
+            assertTrue("Monday si vede", !veiled(off, 280, 400, firstRow))
+            assertTrue("Tuesday si vede", !veiled(off, 280, 400, secondRow))
         } finally {
             onWindowThread { scene.close() }
         }

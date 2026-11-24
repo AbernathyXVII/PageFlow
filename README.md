@@ -1126,6 +1126,39 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.52 — 24/11/2026 · 08:07 — "~" numbers left out of the totals, a whole column under a spoiler, Delete under a quote, the Year view tidied and today in blue everywhere
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1368 tests passed)*
+
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **A "~" before a number leaves it
+  out of the totals**: in a Number property "~25.50" is an estimate; it is
+  shown formatted with its "~" ("~€25.50"), it sorts and filters like the
+  others, but the calculations under the column (Sum, Average, Median…),
+  charts and rollups don't count it. Useful for the prices of a wishlist
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **A whole column under a
+  spoiler**: "Spoiler" in the menu of a column's title (Name too) covers all
+  its cells, even with "Cell spoiler" off; a click on a cell uncovers just
+  that one, another click covers it again, like cards to turn. "Spoiler"
+  again shows the whole column
+- **[Bug fix]** **[💻 PC]** **Delete at the end of a line brings up the one
+  below** even when that is in another field: on the empty line under a
+  quote written larger, Delete did nothing. An empty line goes away; at the
+  end of a line with text, the line below joins it. Found by the user
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **The Year view of the calendar**:
+  the days of the months before and after are dimmed, and each month shows
+  only its own weeks (October no longer ends with a whole week of November)
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **Today in blue in all the views
+  of the calendar**: the outline of today in Month and Week is blue, like the
+  number in the Year view (it was orange)
+- **[Project]** `ESTIMATE_MARK` and `withoutEstimate` (`NumberFormat.kt`),
+  used by `formatNumberValue`, `numberFill`, sorting and the number filter;
+  `PageParagraph.coveredColumns`, `CellSpoilers.reaches`/`isCovered`,
+  `DatabaseViewModel.toggleColumnCover`; `PageEditorViewModel.deleteAtLineEnd`
+  and the `deleteKey` of the text fields; `MiniMonth` counts the weeks of the
+  month. Tests: `NumberFormatTest.anEstimateIsLeftOutOfTheCalculations`,
+  `DesktopDatabaseTableTest.aWholeColumnUnderASpoiler`,
+  `DesktopForwardDeleteTest`, `DesktopCalendarYearTest` (weeks of every month,
+  dimmed days), `todayCell` looks for the blue outline
+
 ### ✏️ v0.155.51 — 24/11/2026 · 00:12 — Today in blue in the Year view, like Google Calendar
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1364 tests passed)*
 
