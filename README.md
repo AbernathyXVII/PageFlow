@@ -1126,6 +1126,33 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.6 — 24/11/2026 · 21:36 — Simple tables: rows of the same height, Esc and the arrows as in Excel, column widths with the mouse
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1386 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The cells of a row of a simple
+  table are as tall as the tallest one**: going to a new line in a cell, the
+  other cells of its row stayed as tall as their own text, with their own
+  border, and the row looked broken. Now the whole row grows, and a tap
+  anywhere in a cell writes in it
+- **[Change]** **[💻 PC]** **Esc and the arrows as in Excel**: in a cell, Esc
+  leaves the cell chosen (light blue); the arrows then move from cell to
+  cell, Shift and the arrows widen the choice, Enter (or F2) goes back to
+  writing in the cell where you are. Delete, Ctrl+C, Ctrl+X and Ctrl+A work
+  on the chosen cells as before, Esc drops them
+- **[Change]** **[💻 PC]** **The width of the columns of a simple table with
+  the mouse**, as in databases: the border between two columns can be
+  dragged (the pointer becomes the double arrow), and what one column takes
+  the other one gives, so the table stays as wide as the page. A column
+  doesn't get narrower than 40 points. The widths stay in the table, also on
+  the phone
+- **[Project]** In `TableBlockContent`: rows with `height(IntrinsicSize.Min)`
+  and cells in a `Box` with `fillMaxHeight`; `anchor`/`active`/`pickCells`,
+  arrows, Enter and F2 in the keys of the chosen cells, Esc in
+  `onPreviewKeyEvent` of each cell (`focusOf`); `BlockAttrs.tableColWidths`
+  (proportions), `TableColumnEdge` with `draggable`, `dragEdge`,
+  `TABLE_MIN_COLUMN`; the mouse on the border doesn't choose cells. Test:
+  `DesktopSimpleTableTest`
+
 ### ✏️ v0.156.5 — 24/11/2026 · 21:10 — The problems found in the Collaudo: Read only everywhere, Delete, arrows, scroll bar, contents, palm
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1383 tests passed)*
 

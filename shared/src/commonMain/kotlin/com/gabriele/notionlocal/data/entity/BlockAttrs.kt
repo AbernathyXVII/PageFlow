@@ -127,7 +127,13 @@ data class BlockAttrs(
     /** La didascalia sotto l'immagine, che ne segue l'allineamento; null = nessuna. */
     val caption: String? = null,
     /** Il titolo sopra l'immagine, che ne segue l'allineamento; null = nessuno. */
-    val imageTitle: String? = null
+    val imageTitle: String? = null,
+    /**
+     * **Le larghezze delle colonne di una tabella** (dal 24/11/2026, chiesto dall'utente: trascinandone il bordo
+     * col mouse, come nei database): una per colonna, in proporzione fra loro (1 = la larghezza di partenza);
+     * quelle che mancano, come una colonna aggiunta dopo, valgono 1. Null = tutte uguali.
+     */
+    val tableColWidths: List<Float>? = null
 ) {
     /** L'elenco di cui questo paragrafo tiene il posto, o null. */
     val listIndentType: BlockType?

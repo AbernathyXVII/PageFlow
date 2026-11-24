@@ -109,6 +109,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.Orientation
+import com.gabriele.notionlocal.ui.navigation.horizontalResizeCursor
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -9144,6 +9150,32 @@ fun TableBlockContent(
     val veil = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
     val locked = LocalPageLocked.current
     LaunchedEffect(picked != null) { if (picked != null) runCatching { cellKeys.requestFocus() } }
+    // **Esc e le frecce come in Excel** (dal 24/11/2026, chiesto dall'utente): Esc lascia la cella scelta, le
+    // frecce si spostano fra le celle (Maiusc allarga la scelta), Invio o F2 tornano a scriverci. [anchor] è dove
+    // comincia la scelta, [active] la cella che si muove.
+    var anchor by remember(block.id) { mutableStateOf(0 to 0) }
+    var active by remember(block.id) { mutableStateOf(0 to 0) }
+    val cellFocus = remember(block.id) { HashMap<Pair<Int, Int>, FocusRequester>() }
+    fun focusOf(cell: Pair<Int, Int>) = cellFocus.getOrPut(cell) { FocusRequester() }
+    fun pickCells(from: Pair<Int, Int>, to: Pair<Int, Int>) {
+        anchor = from
+        active = to
+        picked = CellRange(minOf(from.first, to.first)..maxOf(from.first, to.first), minOf(from.second, to.second)..maxOf(from.second, to.second))
+    }
+    // **Le larghezze delle colonne col mouse** (dal 24/11/2026, chiesto dall'utente, come nei database): il bordo
+    // fra due colonne si trascina, e quello che una prende lo lascia l'altra. Vedi `BlockAttrs.tableColWidths`.
+    var widths by remember(block.id, block.attrsJson) { mutableStateOf(block.attrs.tableColWidths.orEmpty()) }
+    fun widthOf(c: Int) = widths.getOrNull(c)?.takeIf { it > 0f } ?: 1f
+    val density = LocalDensity.current
+    val resizable = isPc && !locked
+    fun dragEdge(c: Int, deltaPx: Float) {
+        val total = tableCoordinates.get()?.size?.width?.toFloat()?.takeIf { it > 0f } ?: return
+        val all = (0 until block.tableCols).map { widthOf(it) }
+        val sum = all.sum()
+        val least = sum * with(density) { TABLE_MIN_COLUMN.toPx() } / total
+        val change = (deltaPx / total * sum).coerceIn(least - all[c], all[c + 1] - least)
+        widths = all.toMutableList().also { it[c] += change; it[c + 1] -= change }
+    }
     fun clearPicked(range: CellRange) {
         if (range.rows == 0 until block.tableRows && range.cols == 0 until block.tableCols) {
             viewModel.deleteBlock(block)
@@ -9175,6 +9207,15 @@ fun TableBlockContent(
                         return cellBounds.entries.firstOrNull { it.value.contains(window) }?.key
                     }
                     picked = null
+                    // Sul bordo fra due colonne si allarga la colonna (vedi `TableColumnEdge`), non si scelgono celle.
+                    if (resizable) {
+                        val window = runCatching { table.localToWindow(down.position) }.getOrNull()
+                        val edge = with(density) { TABLE_EDGE_WIDTH.toPx() }
+                        if (window != null && cellBounds.any { (cell, box) ->
+                                cell.second < block.tableCols - 1 && window.y in box.top..box.bottom && kotlin.math.abs(window.x - box.right) <= edge
+                            }
+                        ) return@awaitEachGesture
+                    }
                     val start = cellAt(down.position) ?: return@awaitEachGesture
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -9187,7 +9228,7 @@ fun TableBlockContent(
                         if (now == start && picked == null) continue
                         change.consume()
                         if (picked == null) focusManager.clearFocus()
-                        picked = CellRange(minOf(start.first, now.first)..maxOf(start.first, now.first), minOf(start.second, now.second)..maxOf(start.second, now.second))
+                        pickCells(start, now)
                     }
                 }
             }
@@ -9200,6 +9241,28 @@ fun TableBlockContent(
                 .onFocusChanged { if (!it.isFocused) picked = null }
                 .focusable()
                 .onKeyEvent { event ->
+                    picked ?: return@onKeyEvent false
+                    if (event.type == KeyEventType.KeyDown && !event.isCtrlPressed && !event.isAltPressed) {
+                        val step = when (event.key) {
+                            Key.DirectionUp -> -1 to 0
+                            Key.DirectionDown -> 1 to 0
+                            Key.DirectionLeft -> 0 to -1
+                            Key.DirectionRight -> 0 to 1
+                            else -> null
+                        }
+                        if (step != null) {
+                            val next = (active.first + step.first).coerceIn(0, block.tableRows - 1) to
+                                (active.second + step.second).coerceIn(0, block.tableCols - 1)
+                            pickCells(if (event.isShiftPressed) anchor else next, next)
+                            return@onKeyEvent true
+                        }
+                        if ((event.key == Key.Enter || event.key == Key.NumPadEnter || event.key == Key.F2) && !locked) {
+                            val cell = active
+                            picked = null
+                            runCatching { focusOf(cell).requestFocus() }
+                            return@onKeyEvent true
+                        }
+                    }
                     val range = picked ?: return@onKeyEvent false
                     when (selectionKeyOf(event)) {
                         SelectionKey.DELETE -> if (!locked) {
@@ -9220,9 +9283,19 @@ fun TableBlockContent(
                 }
         )
         for (r in 0 until block.tableRows) {
-            Row(modifier = Modifier.fillMaxWidth()) {
+            // **Le celle di una riga sono alte uguali** (dal 24/11/2026, trovato dall'utente: andando a capo in una
+            // cella, le altre della riga restavano basse e la riga sembrava staccata): quanto la più alta.
+            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
                 for (c in 0 until block.tableCols) {
                     key(r, c, loaded) {
+                        Box(
+                            modifier = Modifier
+                                .weight(widthOf(c))
+                                .fillMaxHeight()
+                                .onGloballyPositioned { cellBounds[r to c] = it.boundsInWindow() }
+                                .background(if (picked?.contains(r, c) == true) veil else Color.Transparent)
+                                .border(0.5.dp, MaterialTheme.colorScheme.outline)
+                        ) {
                         AutoCaps {
                             BasicTextField(
                                 value = texts[r to c] ?: "",
@@ -9233,13 +9306,25 @@ fun TableBlockContent(
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = NotionWhite),
                                 cursorBrush = SolidColor(NotionWhite),
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .onGloballyPositioned { cellBounds[r to c] = it.boundsInWindow() }
-                                    .background(if (picked?.contains(r, c) == true) veil else Color.Transparent)
-                                    .border(0.5.dp, MaterialTheme.colorScheme.outline)
+                                    .fillMaxSize()
+                                    .focusRequester(focusOf(r to c))
+                                    // Esc: la cella resta scelta, e le frecce si muovono fra le celle.
+                                    .onPreviewKeyEvent { event ->
+                                        if (event.type != KeyEventType.KeyDown || event.key != Key.Escape) return@onPreviewKeyEvent false
+                                        pickCells(r to c, r to c)
+                                        true
+                                    }
                                     .padding(8.dp)
                                     .markFocusChanges()
                             )
+                        }
+                        if (resizable && c < block.tableCols - 1) {
+                            TableColumnEdge(
+                                modifier = Modifier.align(Alignment.CenterEnd),
+                                onDrag = { delta -> dragEdge(c, delta) },
+                                onDone = { viewModel.updateBlockAttrs(block.id) { it.copy(tableColWidths = widths) } }
+                            )
+                        }
                         }
                     }
                 }
@@ -9264,6 +9349,26 @@ fun TableBlockContent(
         }
     }
 }
+
+/** Il bordo destro di una cella che si trascina col mouse per allargare la colonna (vedi `TableBlockContent`). */
+@Composable
+private fun TableColumnEdge(modifier: Modifier, onDrag: (Float) -> Unit, onDone: () -> Unit) {
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(TABLE_EDGE_WIDTH)
+            .horizontalResizeCursor()
+            .draggable(
+                state = rememberDraggableState(onDrag),
+                orientation = Orientation.Horizontal,
+                onDragStopped = { onDone() }
+            )
+    )
+}
+
+/** Quanto è larga la presa sul bordo fra due colonne di una tabella, e quanto stretta può diventare una colonna. */
+private val TABLE_EDGE_WIDTH = 6.dp
+private val TABLE_MIN_COLUMN = 40.dp
 
 /**
  * **Il menu dei blocchi scelti col mouse** (dal 23/11/2026, chiesto dall'utente per quelli scelti
