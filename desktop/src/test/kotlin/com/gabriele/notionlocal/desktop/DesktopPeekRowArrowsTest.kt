@@ -11,6 +11,9 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -31,6 +34,7 @@ import com.gabriele.notionlocal.data.settings.AppSettings
 import com.gabriele.notionlocal.data.settings.OpenMode
 import com.gabriele.notionlocal.platform.DesktopContext
 import com.gabriele.notionlocal.platform.LocalPlatformContext
+import com.gabriele.notionlocal.ui.navigation.AppShortcuts
 import com.gabriele.notionlocal.ui.navigation.CenterPeekLayer
 import com.gabriele.notionlocal.ui.navigation.PagePeek
 import com.gabriele.notionlocal.ui.navigation.PeekActions
@@ -184,6 +188,68 @@ class DesktopPeekRowArrowsTest {
             assertTrue(!closed)
             click(backArrow())
             assertTrue("dalla prima pagina la freccia chiude il peek", closed)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **Su e giù della tastiera nel peek** (24/11/2026, chiesto dall'utente sul PC): senza cursore e senza
+     * niente di selezionato, giù porta alla riga dopo e su a quella prima, come le due frecce in alto. Col
+     * cursore nel titolo della pagina le frecce restano sue.
+     */
+    @Test
+    fun theKeyboardArrowsMoveThroughTheRowsInThePeek() {
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        var peek by mutableStateOf(PagePeek("p1", false, OpenMode.CENTER_PEEK))
+        val actions = PeekActions(
+            close = {}, back = {}, changeMode = {},
+            replace = { id, isDatabase -> peek = peek.replacedBy(id, isDatabase) },
+            openSearch = {}, openUpdates = {}, openOutside = { _, _, _ -> }
+        )
+        val scene = onWindowThread {
+            ImageComposeScene(width = 1200, height = 800, density = Density(1f)) {
+                CompositionLocalProvider(
+                    LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner
+                ) {
+                    NotionLocalTheme { CenterPeekLayer(peek, factory, actions) }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun arrow(down: Boolean): Boolean = onWindowThread {
+            AppShortcuts.unhandledKey(KeyEvent(if (down) Key.DirectionDown else Key.DirectionUp, KeyEventType.KeyDown))
+        }
+        try {
+            frames(40)
+            assertTrue("giù va alla riga dopo", arrow(down = true))
+            frames(30)
+            assertEquals("p2", peek.pageId)
+            assertTrue("su torna a quella prima", arrow(down = false))
+            frames(30)
+            assertEquals("p1", peek.pageId)
+
+            // Col cursore nel titolo ("Riga B") la pagina è occupata: le frecce non la cambiano.
+            val title = onWindowThread {
+                scene.semanticsOwners.flatMap { it.getAllSemanticsNodes(mergingEnabled = false) }
+                    .first { node -> node.config.getOrNull(SemanticsProperties.EditableText)?.text == "Riga B" }.boundsInRoot
+            }
+            onWindowThread {
+                val at = title.center
+                scene.sendPointerEvent(PointerEventType.Move, at, type = PointerType.Mouse)
+                scene.sendPointerEvent(PointerEventType.Press, at, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
+                scene.sendPointerEvent(PointerEventType.Release, at, type = PointerType.Mouse, buttons = PointerButtons(), button = PointerButton.Primary)
+            }
+            frames(20)
+            assertTrue("col cursore le frecce non sono del peek", !arrow(down = true))
+            frames(20)
+            assertEquals("p1", peek.pageId)
         } finally {
             onWindowThread { scene.close() }
         }

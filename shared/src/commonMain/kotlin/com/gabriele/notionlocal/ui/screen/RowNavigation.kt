@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -135,11 +136,17 @@ fun displayedRowIds(state: DatabaseTableState, view: ViewArrangement): List<Stri
     return out.toList()
 }
 
+/** La riga prima e quella dopo, lasciate da `RowNavigationButtons` per le frecce della tastiera (vedi `RowArrows`). */
+class SiblingRows {
+    var previous: String? = null
+    var next: String? = null
+}
+
 /**
  * Le due frecce nella pagina di una riga: la pagina prima e quella dopo
  * (vedi `RowNavigation`). Nella pagina di una riga sola, o se la riga non è
  * fra quelle che la vista mostra, non ci sono; in cima e in fondo la freccia
- * che non porta da nessuna parte è spenta.
+ * che non porta da nessuna parte è spenta. [siblings] riceve le due righe.
  */
 @Composable
 fun RowNavigationButtons(
@@ -149,23 +156,29 @@ fun RowNavigationButtons(
     iconSize: Dp,
     background: Color,
     tint: Color,
+    siblings: SiblingRows? = null,
     onOpenRow: (rowId: String) -> Unit
 ) {
     val row by remember(pageId) { factory.pageRepository.observeRowOfPage(pageId) }
         .collectAsStateWithLifecycle(initialValue = null)
-    val current = row ?: return
-    val databaseId = current.pageId
+    val current = row
+    val databaseId = current?.pageId
     // Lo stesso ViewModel "leggero" delle proprietà in cima alla pagina: le
     // righe col filtro e l'ordinamento del database, se non c'è un ordine
     // fotografato da una vista.
-    val viewModel: DatabaseViewModel = viewModel(factory = factory, key = "row-properties-$databaseId")
-    LaunchedEffect(databaseId) { viewModel.load(databaseId, light = true) }
+    val viewModel: DatabaseViewModel = viewModel(factory = factory, key = "row-properties-${databaseId.orEmpty()}")
+    LaunchedEffect(databaseId) { if (databaseId != null) viewModel.load(databaseId, light = true) }
     val state by viewModel.tableState.collectAsStateWithLifecycle()
-    val order = RowNavigation.order(databaseId) ?: state.rows.map { it.id }
-    val index = order.indexOf(current.id)
-    if (index < 0 || order.size < 2) return
-    val previous = order.getOrNull(index - 1)
-    val next = order.getOrNull(index + 1)
+    val order = databaseId?.let { RowNavigation.order(it) } ?: state.rows.map { it.id }
+    val index = current?.let { order.indexOf(it.id) } ?: -1
+    val shown = index >= 0 && order.size >= 2
+    val previous = if (shown) order.getOrNull(index - 1) else null
+    val next = if (shown) order.getOrNull(index + 1) else null
+    SideEffect {
+        siblings?.previous = previous
+        siblings?.next = next
+    }
+    if (!shown) return
 
     @Composable
     fun Arrow(target: String?, up: Boolean) {

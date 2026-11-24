@@ -79,6 +79,7 @@ import androidx.navigation.navArgument
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.platform.LocalPlatformContext
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import com.gabriele.notionlocal.data.entity.PageEntity
 import com.gabriele.notionlocal.data.notify.NotificationTarget
 import com.gabriele.notionlocal.data.settings.AnimationLevel
@@ -349,6 +350,9 @@ private fun AppTab(
     LaunchedEffect(Unit) {
         if (startupHandled) return@LaunchedEffect
         startupHandled = true
+        // Le pagine ci sono solo dal primo disegno della finestra: una finestra appena staccata arrivava
+        // prima e si chiudeva con "Navigation graph has not been set" (trovato dall'utente il 24/11/2026).
+        navController.currentBackStackEntryFlow.first()
         val repository = factory.pageRepository
         // Una scheda che non è la prima: la sua pagina, se c'è ancora, e niente avvio.
         if (!runStartup) {

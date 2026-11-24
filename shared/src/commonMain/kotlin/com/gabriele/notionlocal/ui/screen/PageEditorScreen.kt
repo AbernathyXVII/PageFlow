@@ -80,6 +80,7 @@ import com.gabriele.notionlocal.ui.theme.DEFAULT_PAGE_FONT_SIZE
 import com.gabriele.notionlocal.ui.theme.nextFontSize
 import com.gabriele.notionlocal.ui.navigation.LocalShortcuts
 import com.gabriele.notionlocal.ui.navigation.SelectionShortcuts
+import com.gabriele.notionlocal.ui.navigation.RowArrows
 import androidx.compose.material3.OutlinedButton
 import com.gabriele.notionlocal.ui.theme.MIN_PAGE_FONT_SIZE
 import com.gabriele.notionlocal.ui.theme.MAX_PAGE_FONT_SIZE
@@ -2094,6 +2095,32 @@ private fun PageEditorContent(
     // già chiusa: lì il gesto indietro arriva davvero.
     BackHandler(enabled = anythingFocused) { focusManager.clearFocus() }
 
+    // **Su e giù fra le pagine del database nel peek** (dal 24/11/2026, chiesto dall'utente sul PC): senza
+    // cursore e senza niente di selezionato, le frecce della tastiera fanno quello delle due frecce in alto.
+    val siblingRows = remember { SiblingRows() }
+    val inPeek = LocalPeekControls.current != null
+    val peekNow by rememberUpdatedState(inPeek)
+    val focusedAnything by rememberUpdatedState(anythingFocused)
+    val wholePageSelected by rememberUpdatedState(pageSelected)
+    val blocksChosenNow by rememberUpdatedState(selectedBlocks.value.isNotEmpty())
+    val openSibling by rememberUpdatedState(onOpenSiblingRow)
+    val rowArrows = remember {
+        object : RowArrows {
+            override fun busy(): Boolean = focusedAnything || wholePageSelected || blocksChosenNow
+
+            override fun move(down: Boolean): Boolean {
+                val open = openSibling?.takeIf { peekNow } ?: return false
+                val target = (if (down) siblingRows.next else siblingRows.previous) ?: return false
+                open(target)
+                return true
+            }
+        }
+    }
+    DisposableEffect(windowShortcuts, rowArrows) {
+        windowShortcuts.rowArrows += rowArrows
+        onDispose { windowShortcuts.rowArrows -= rowArrows }
+    }
+
     // **Niente barra in alto: la pagina comincia subito sotto quella del
     // telefono.** La barra occupava una fascia vuota fra l'orologio e la
     // copertina, che serviva solo a ospitare due icone. Adesso la
@@ -4023,6 +4050,7 @@ private fun PageEditorContent(
                         iconSize = FLOATING_ICON_SIZE,
                         background = if (isPc) Color.Transparent else FloatingButtonBackground,
                         tint = FloatingTint,
+                        siblings = siblingRows,
                         onOpenRow = { rowId ->
                             focusManager.clearFocus()
                             onOpenSiblingRow(rowId)

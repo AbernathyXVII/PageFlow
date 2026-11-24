@@ -130,7 +130,9 @@ fun main() {
             icon = icon,
             state = pcWindow.state,
             // Le scorciatoie da tastiera (vedi `AppShortcuts`): la finestra le riceve anche senza un cursore.
-            onPreviewKeyEvent = { event -> pcWindow.shortcuts.windowKey(event) }
+            onPreviewKeyEvent = { event -> pcWindow.shortcuts.windowKey(event) },
+            // E quelli che nessuno ha preso: su e giù fra le pagine di un database nel peek (vedi `RowArrows`).
+            onKeyEvent = { event -> pcWindow.shortcuts.unhandledKey(event) }
         ) {
             // Cliccando una notifica la finestra torna davanti, anche se era ridotta a icona.
             if (pcWindow.state === windowState) {

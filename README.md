@@ -1126,6 +1126,25 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.54 — 24/11/2026 · 09:06 — A torn-off tab opens in its window, the keyboard arrows in the peek
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1370 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **A tab dragged out of the bar opens in its own
+  window again**: the new window closed by itself with the error "Cannot
+  navigate to page/…: Navigation graph has not been set". The tab asked for
+  its page before the window had been drawn the first time; now it waits for
+  it. Found by the user
+- **[Change]** **[💻 PC]** **Up and down on the keyboard move through the
+  pages of a database in the Center and Side peek**: with nothing selected
+  and no text cursor in the pages (Esc takes it away), the arrows do what the
+  two arrows at the top of the peek do. With the cursor in a page, or in a
+  cell, they stay theirs
+- **[Project]** `AppTab` waits for `currentBackStackEntryFlow` before the
+  first navigation; `Shortcuts.unhandledKey` (from `Window.onKeyEvent`, so
+  only keys nobody took) and the `RowArrows` of the pages, with `SiblingRows`
+  filled by `RowNavigationButtons`. Tests: `DesktopTornWindowTest`,
+  `DesktopPeekRowArrowsTest.theKeyboardArrowsMoveThroughTheRowsInThePeek`
+
 ### ✏️ v0.155.53 — 24/11/2026 · 08:39 — The keyboard with the "~" in the Number cells, closer rows in the lists with icons
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1368 tests passed)*
 

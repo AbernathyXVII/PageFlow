@@ -27,6 +27,18 @@ interface SelectionShortcuts {
     fun resize(bigger: Boolean): Boolean
 }
 
+/**
+ * **Su e giù fra le pagine di un database nel peek** (dal 24/11/2026, chiesto dall'utente sul PC): ogni
+ * pagina aperta dice se la si sta usando e, se può, va alla riga prima o dopo (vedi `RowNavigation`).
+ */
+interface RowArrows {
+    /** Vero se la pagina ha il cursore o qualcosa di selezionato: allora le frecce sono sue. */
+    fun busy(): Boolean
+
+    /** Alla riga sotto ([down]) o sopra; falso se questa pagina non lo fa o lì non c'è una riga. */
+    fun move(down: Boolean): Boolean
+}
+
 /** Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+S e Ctrl+Maiusc+S: lo stile che chiedono, null per gli altri tasti. */
 fun selectionFormatOf(event: KeyEvent): FormatType? {
     if (event.type != KeyEventType.KeyDown || !event.isCtrlPressed || event.isAltPressed) return null
@@ -59,6 +71,24 @@ open class Shortcuts {
 
     /** Le pagine aperte (anche più di una, con un'anteprima di lato): l'ultima arrivata per prima. */
     val selection = mutableListOf<SelectionShortcuts>()
+
+    /** Le pagine aperte che sanno andare alla riga prima o dopo con le frecce (vedi [RowArrows]). */
+    val rowArrows = mutableListOf<RowArrows>()
+
+    /**
+     * Un tasto che nella finestra non ha preso nessuno (un campo col cursore o una cella prendono le frecce
+     * prima): su e giù, senza altri tasti e con le pagine libere, vanno alla riga prima o dopo nel peek.
+     */
+    fun unhandledKey(event: KeyEvent): Boolean {
+        if (event.type != KeyEventType.KeyDown || event.isCtrlPressed || event.isAltPressed || event.isShiftPressed) return false
+        val down = when (event.key) {
+            Key.DirectionDown -> true
+            Key.DirectionUp -> false
+            else -> return false
+        }
+        if (rowArrows.any { it.busy() }) return false
+        return rowArrows.asReversed().any { it.move(down) }
+    }
 
     /** Vero se una pagina aveva del testo selezionato e ci ha messo lo stile. */
     fun formatSelection(type: FormatType): Boolean = selection.asReversed().any { it.format(type) }
