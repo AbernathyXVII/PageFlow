@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### 🔧 v0.156.4.2 — 24/11/2026 · 18:59 — While the sidebar opens, the page under it can't be touched
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1377 tests passed)*
+*(Claude Code on the PC; tested by the user on the phone on 24/11/2026, not yet on the PC; installed on the phone; 1377 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **While the sidebar is opening,
   a touch beside it closes it instead of reaching the page**: the veil over
@@ -1144,7 +1144,7 @@ say that **they still have to be verified on the phone**: when they are,
   after "☰"
 
 ### 🔧 v0.156.4.1 — 24/11/2026 · 18:17 — "Back" with the sidebar open closes it
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1377 tests passed)*
+*(Claude Code on the PC; tested by the user on the phone on 24/11/2026, not yet on the PC; installed on the phone; 1377 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **"Back" with the sidebar open
   closes it, and the page stays where it is**: with the sidebar open over a
