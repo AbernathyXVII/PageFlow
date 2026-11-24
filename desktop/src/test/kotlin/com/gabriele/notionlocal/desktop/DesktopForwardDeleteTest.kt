@@ -178,4 +178,43 @@ class DesktopForwardDeleteTest {
         shot("after")
         assertEquals("\"due\" sale in fondo a \"uno\"", listOf("PARAG:unodue", "PARAG:tre"), texts())
     }
+
+    private fun typed(scene: ImageComposeScene, char: Char) = runBlocking(Dispatchers.Main) {
+        val awt = java.awt.event.KeyEvent(java.awt.Canvas(), java.awt.event.KeyEvent.KEY_TYPED, 0L, 0, java.awt.event.KeyEvent.VK_UNDEFINED, char)
+        scene.sendKeyEvent(KeyEvent(Key.Unknown, KeyEventType.Unknown, codePoint = char.code, nativeEvent = awt))
+    }
+
+    /**
+     * **Canc sulla riga vuota fra una citazione e un database** (24/11/2026, dal collaudo dell'utente, nel suo
+     * menu principale): sotto non c'è una riga dove scrivere, ma la riga vuota se ne va lo stesso e il cursore
+     * torna in fondo alla citazione, come col Backspace. Qui al posto del database un divisore.
+     */
+    @Test
+    fun deleteOnTheEmptyLineAboveADatabase() = run(
+        "abovedb",
+        listOf(item("q", BlockType.QUOTE, "Citazione"), item("e", BlockType.PARAGRAPH, ""), BlockEntity(id = "d", pageId = "prova", type = BlockType.DIVIDER))
+    ) { scene, frames, shot ->
+        val lines = bands(shot("before"), 170)
+        click(scene, Offset(700f, (lines[0].first + lines[0].last) / 2f)); frames(10)
+        key(scene, Key.DirectionDown); frames(10)
+        key(scene, Key.Delete); frames(20)
+        typed(scene, 'x'); frames(15)
+        shot("after")
+        assertEquals("via la riga vuota, e la x in fondo alla citazione", listOf("QUOTE:Citazionex", "DIVID:"), texts())
+    }
+
+    /** **Canc sull'ultima riga, vuota** (24/11/2026, dal collaudo): se ne va e il cursore torna in fondo a quella sopra. */
+    @Test
+    fun deleteOnTheLastEmptyLine() = run(
+        "last",
+        listOf(item("p", BlockType.PARAGRAPH, "uno"), item("e", BlockType.PARAGRAPH, "", 20))
+    ) { scene, frames, shot ->
+        val lines = bands(shot("before"), 170)
+        click(scene, Offset(700f, (lines[0].first + lines[0].last) / 2f)); frames(10)
+        key(scene, Key.DirectionDown); frames(10)
+        key(scene, Key.Delete); frames(20)
+        typed(scene, 'x'); frames(15)
+        shot("after")
+        assertEquals("via l'ultima riga, e la x in fondo a \"uno\"", listOf("PARAG:unox"), texts())
+    }
 }

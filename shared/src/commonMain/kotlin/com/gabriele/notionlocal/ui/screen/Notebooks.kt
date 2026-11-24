@@ -984,9 +984,10 @@ private fun NotebookIconSheet(
                 )
                 if (notebook.iconImage != null) {
                     HorizontalDivider()
+                    // **"Remove"** (dal 24/11/2026, chiesto dall'utente nel collaudo): torna il quaderno disegnato.
                     OptionRow(
-                        Icons.Filled.MenuBook,
-                        NotebookStrings.useDrawnNotebook,
+                        Icons.Filled.Delete,
+                        EditorStrings.remove,
                         enabled = !busy,
                         onClick = {
                             onPicked(null)

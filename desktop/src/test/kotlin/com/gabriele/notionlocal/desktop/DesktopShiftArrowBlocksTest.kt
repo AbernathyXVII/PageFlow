@@ -179,6 +179,24 @@ class DesktopShiftArrowBlocksTest {
             frames(6)
             assertEquals("Esc non toglie niente", listOf("titolo", "tre", "quattro", "cinque"), ids())
 
+            // **Le frecce da sole tolgono la scelta** (24/11/2026, dal collaudo): scelti "Tre" e "Quattro", giù
+            // rimette il cursore in fondo a "Quattro", e quello che si scrive va lì.
+            val (_, _, quattro2, _) = bands(shot("shiftblocks_before_plain")).takeLast(4)
+            click(center(quattro2))
+            key(Key.MoveEnd)
+            key(Key.DirectionUp, shift = true)
+            key(Key.DirectionUp, shift = true)
+            key(Key.DirectionDown)
+            frames(6)
+            onWindowThread {
+                val awt = java.awt.event.KeyEvent(java.awt.Canvas(), java.awt.event.KeyEvent.KEY_TYPED, 0L, 0, java.awt.event.KeyEvent.VK_UNDEFINED, 'x')
+                scene.sendKeyEvent(KeyEvent(Key.Unknown, KeyEventType.Unknown, codePoint = 'x'.code, nativeEvent = awt))
+            }
+            frames(15)
+            shot("shiftblocks_plain_arrow")
+            assertEquals("i blocchi ci sono tutti", listOf("titolo", "tre", "quattro", "cinque"), ids())
+            assertEquals("la x in fondo a Quattro", true, runBlocking { db.blockDao().getById("quattro") }!!.textJson.contains("Quattrox"))
+
             // Col mouse, trascinando dal testo di "Tre" a quello di "Quattro" (lo stesso campo): i due blocchi.
             val (_, tre, quattroAgain, _) = bands(shot("shiftblocks_before_mouse")).takeLast(4)
             val from = Offset(80f, center(tre))

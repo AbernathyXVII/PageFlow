@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.changedToDown
@@ -146,6 +147,16 @@ class InkPageState(val listState: LazyListState) {
 
     /** L'ultima volta che si è sentita la S Pen, anche sospesa (ms dall'avvio): per il palmo. */
     var lastPenAt: Long = Long.MIN_VALUE / 2
+
+    /**
+     * **La S Pen è nel raggio dello schermo** (dal 24/11/2026): da quando Android la sente arrivare a quando
+     * la sente andarsene, anche se resta ferma e non manda niente (vedi `isPalm`).
+     */
+    var penInRange: Boolean = false
+
+    /** Un tocco della mano a [at] (ms dall'avvio) è il palmo: la penna è vicina, o lo era da poco. */
+    fun isPalm(at: Long): Boolean =
+        (penInRange && at - lastPenAt < PEN_IN_RANGE_MAX_MS) || at - lastPenAt < PALM_WINDOW_MS
 
     fun remember(info: LazyListLayoutInfo) {
         for (item in info.visibleItemsInfo) heights[item.key] = item.size
@@ -382,7 +393,10 @@ fun Modifier.inkInput(
         awaitPointerEventScope {
             while (true) {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
-                event.changes.firstOrNull { it.type.isPen() }?.let { state.lastPenAt = it.uptimeMillis }
+                event.changes.firstOrNull { it.type.isPen() }?.let {
+                    state.lastPenAt = it.uptimeMillis
+                    state.penInRange = event.type != PointerEventType.Exit
+                }
             }
         }
     }
@@ -390,7 +404,7 @@ fun Modifier.inkInput(
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             down.consume()
-            if (!down.type.isPen() && down.uptimeMillis - state.lastPenAt < PALM_WINDOW_MS) {
+            if (!down.type.isPen() && state.isPalm(down.uptimeMillis)) {
                 // Il palmo, con la penna vicina: non disegna e non scorre.
                 swallowRest()
                 return@awaitEachGesture
@@ -450,6 +464,12 @@ fun Modifier.inkInput(
                     event.changes.forEach { it.consume() }
                     continue
                 }
+                // **La penna si avvicina mentre la mano disegna** (dal 24/11/2026, trovato dall'utente nel collaudo:
+                // col dito acceso il palmo lasciava i segni): la mano era il palmo, il suo segno si butta.
+                if (!stylus && drawing && event.changes.any { it.type.isPen() }) {
+                    dropCurrent()
+                    drawing = false
+                }
                 if (!stylus && event.changes.count { it.pressed } >= 2) {
                     // Due dita: non è un tratto, è scorrere.
                     dropCurrent()
@@ -458,6 +478,14 @@ fun Modifier.inkInput(
                     break
                 }
                 val change = event.changes.firstOrNull { it.id == trackedId } ?: break
+                // **Android ha annullato il tocco** (dal 24/11/2026, trovato dall'utente nel collaudo): lo fa col palmo
+                // quando arriva la S Pen, e il segno del palmo si salvava come un tratto finito. Compose lo manda come
+                // un "su" già preso, con l'ora di prima.
+                if (!change.pressed && change.isConsumed && change.uptimeMillis == change.previousUptimeMillis) {
+                    dropCurrent()
+                    drawing = false
+                    break
+                }
                 val pressure = pressureOf(change)
                 change.historical.forEach { take(it.position, pressure) }
                 take(change.position, pressure)
@@ -488,8 +516,14 @@ fun Modifier.inkInput(
 
 private fun PointerType.isPen() = this == PointerType.Stylus || this == PointerType.Eraser
 
-/** Per quanto la mano non conta dopo che la S Pen si è allontanata. */
-private const val PALM_WINDOW_MS = 600L
+/** Per quanto la mano non conta dopo che la S Pen si è allontanata (dal 24/11/2026 un secondo; prima 600 ms). */
+private const val PALM_WINDOW_MS = 1000L
+
+/**
+ * Per quanto "nel raggio" vale senza notizie della penna: se Android non dicesse mai che se n'è andata, il
+ * dito non resterebbe spento per sempre (lo era prima del 25/09/2026, e l'utente non capiva perché).
+ */
+private const val PEN_IN_RANGE_MAX_MS = 3000L
 
 /** Si prende il resto di un tocco che non deve fare niente, finché non si stacca. */
 private suspend fun AwaitPointerEventScope.swallowRest() {

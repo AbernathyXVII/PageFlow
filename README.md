@@ -1126,6 +1126,59 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.5 — 24/11/2026 · 21:10 — The problems found in the Collaudo: Read only everywhere, Delete, arrows, scroll bar, contents, palm
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1383 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"Read only" locks every
+  column**: with a database read only, tags, dates and checkboxes don't
+  change any more either (before, only the name and the text cells were
+  locked): a tap on a tag or a date opens nothing, a checkbox doesn't tick.
+  Also in the panel of a row (long press, or right click on the PC), which
+  didn't know the database was locked
+- **[Bug fix]** **[💻 PC]** **Delete on an empty line removes it even when
+  below there is no line to write in**: between a quote and a database (in
+  the main menu) or on the last line of the page, Delete did nothing; now
+  the empty line goes away and the cursor goes back to the end of the line
+  above, as with Backspace
+- **[Change]** **[💻 PC]** **The arrows alone undo the choice of blocks**:
+  after choosing blocks with Shift and the arrows, an arrow alone drops the
+  choice and puts the cursor back at the start of the chosen blocks (up and
+  left) or at their end (down and right), as in Notion
+- **[Change]** **[📱 Mobile]** **The scroll bar can be dragged with a
+  finger**: while it shows (while the page scrolls and a moment after), a
+  finger on it, with a little margin, drags the page. When it has faded,
+  the right edge is still the page's, as before. On the PC it could already
+  be dragged with the mouse
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The contents of a pasted page
+  take you to its titles**: copying a whole page and pasting it into
+  another one, the links of its contents still pointed to the lines of the
+  first page, and tapping them did nothing. Now a link to a line of another
+  page takes you to the line of this page with the same text (not to the
+  entry of the contents itself); this also fixes the pages pasted before
+- **[Change]** **[📱 Mobile]** **"Remove" in "Notebook icon"**: the option
+  that takes away the image chosen as a notebook's icon, giving back the
+  drawn notebook, is called "Remove" (with the bin), so it can be found; it
+  was "Use the drawn notebook"
+- **[Bug fix]** **[📱 Mobile]** **The palm doesn't draw with "Draw with
+  finger" on**: when the S Pen comes near, Android cancels the touch of the
+  palm resting on the screen, but the app saved that cancelled touch as a
+  finished stroke. Now a cancelled touch saves nothing; a stroke of the hand
+  that is still going on when the pen comes near is thrown away; while the
+  pen is in range the hand doesn't draw even if the pen stays still; after
+  the pen goes away the hand is ignored for one second (it was 0.6)
+- **[Project]** `TagCell`, `DateCell` and the checkbox of `CellContent` read
+  `LocalDatabaseLocked`, which also wraps `RowActionsSheet`;
+  `PageEditorViewModel.deleteAtLineEnd` removes the empty line when below
+  there's no field (`lineNextTo` for the caret); `PLAIN_ARROWS` in the keys
+  of the block selection with `arriveAtEdge`; `PageScrollIndicator` with a
+  grab handle on the phone (`PHONE_GRAB_WIDTH`, held still while dragging);
+  `PageEditorViewModel.sameLineHere` in `jumpToBlockFrom`;
+  `InkPageState.penInRange`, `isPalm`, `PALM_WINDOW_MS` = 1000,
+  `PEN_IN_RANGE_MAX_MS` = 3000 and the cancelled touch in `inkInput`. Tests:
+  `DesktopReadOnlyCellsTest`, `DesktopForwardDeleteTest` (two new),
+  `DesktopShiftArrowBlocksTest`, `PageScrollIndicatorTest` (the finger),
+  `DesktopLinkedPageTest.aContentsLinkFindsTheCopiedLine`, `DesktopInkPalmTest`
+
 ### 🔧 v0.156.4.2 — 24/11/2026 · 18:59 — While the sidebar opens, the page under it can't be touched
 *(Claude Code on the PC; tested by the user on the phone on 24/11/2026, not yet on the PC; installed on the phone; 1377 tests passed)*
 

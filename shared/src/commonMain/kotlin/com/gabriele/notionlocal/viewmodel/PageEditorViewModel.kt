@@ -1,6 +1,7 @@
 package com.gabriele.notionlocal.viewmodel
 
 import com.gabriele.notionlocal.data.entity.isWorkspaceRoot
+import com.gabriele.notionlocal.data.entity.blockLink
 import com.gabriele.notionlocal.data.symbolField
 import com.gabriele.notionlocal.data.replacedImage
 import com.gabriele.notionlocal.data.imageField
@@ -3947,10 +3948,24 @@ class PageEditorViewModel(
     fun deleteAtLineEnd(blockId: String): Boolean? {
         val block = _blocks.value.find { it.id == blockId } ?: return null
         val siblings = _blocks.value.filter { it.parentBlockId == block.parentBlockId }.sortedBy { it.orderIndex }
-        val below = siblings.getOrNull(siblings.indexOfFirst { it.id == block.id } + 1) ?: return null
+        val below = siblings.getOrNull(siblings.indexOfFirst { it.id == block.id } + 1)
         val text = spansOf(block)
+        // **Una riga vuota se ne va anche se sotto non si scrive** (dal 24/11/2026, trovato dall'utente nel collaudo: nel
+        // menu principale, fra una citazione e un database, Canc non faceva niente; e nemmeno sull'ultima riga). Il
+        // cursore torna in fondo alla riga sopra, come col Backspace.
+        if (text.plainText().isEmpty() && (below == null || !isFocusableBlockType(below.type))) {
+            val above = lineNextTo(block.id, down = false) ?: return null
+            snapshotForStructuralChange()
+            viewModelScope.launch {
+                structuralEdits.withLock { repository.applyBlockChanges(deleted = listOf(block)) }
+                withTimeoutOrNull(FOCUS_HANDOFF_TIMEOUT_MS) { _blocks.first { shown -> shown.none { it.id == block.id } } }
+                _pendingCaret.value = above.id to plainTextOf(above).length
+                _focusRequestBlockId.value = above.id
+            }
+            return true
+        }
+        below ?: return null
         if (text.plainText().isEmpty()) {
-            if (!isFocusableBlockType(below.type)) return null
             snapshotForStructuralChange()
             viewModelScope.launch {
                 structuralEdits.withLock { repository.applyBlockChanges(deleted = listOf(block)) }
@@ -4828,6 +4843,20 @@ class PageEditorViewModel(
 
     /** Estrae il testo semplice da un blocco, per mostrarlo nell'editor. */
     fun plainTextOf(block: BlockEntity): String = spansOf(block).plainText()
+
+    /**
+     * **Un link a una riga che sta in un'altra pagina** (dal 24/11/2026, trovato dall'utente nel collaudo:
+     * incollata una pagina intera, il sommario puntava ancora alle righe di quella di partenza, e toccandolo non
+     * succedeva niente): la riga di questa pagina con lo stesso testo di quella. Null se non c'è, o se è vuota.
+     */
+    suspend fun sameLineHere(blockId: String): String? {
+        if (_blocks.value.any { it.id == blockId }) return blockId
+        val original = repository.blockOf(blockId) ?: return null
+        val text = plainTextOf(original).trim().ifEmpty { return null }
+        // Le voci del sommario hanno lo stesso testo del titolo: non si va su chi porta il link stesso.
+        val link = blockLink(blockId)
+        return _blocks.value.firstOrNull { block -> plainTextOf(block).trim() == text && spansOf(block).none { it.link == link } }?.id
+    }
 
     // --- Tabelle semplici (BlockType.TABLE) ---
 

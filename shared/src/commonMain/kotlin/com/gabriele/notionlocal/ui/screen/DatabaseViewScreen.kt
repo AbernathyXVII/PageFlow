@@ -2197,75 +2197,79 @@ private fun DatabaseViewBody(
         } else {
             null
         }
-        RowActionsSheet(
-            row = live,
-            move = move,
-            onCreateSubRow = onCreateSubRow,
-            // **"Edit event"** (dal 30/09/2026): nel calendario, l'evento
-            // intero — ore, ripetizione, colore — nella finestra di "More options".
-            onEditEvent = if (page?.databaseLayout == DatabaseLayout.CALENDAR && !contentLocked) {
-                {
-                    rowActionsFor = null
-                    val range = viewModel.calendarDateColumn()?.let { column ->
-                        parseDateRange(state.cellValues[live.id to column.id].orEmpty())
+        // **Bloccato, anche qui le celle non si cambiano** (dal 24/11/2026, trovato dall'utente nel collaudo: "Read only"
+        // fermava solo il nome; questa finestra sta fuori dal `CompositionLocalProvider` della tabella).
+        CompositionLocalProvider(LocalDatabaseLocked provides contentLocked) {
+            RowActionsSheet(
+                row = live,
+                move = move,
+                onCreateSubRow = onCreateSubRow,
+                // **"Edit event"** (dal 30/09/2026): nel calendario, l'evento
+                // intero — ore, ripetizione, colore — nella finestra di "More options".
+                onEditEvent = if (page?.databaseLayout == DatabaseLayout.CALENDAR && !contentLocked) {
+                    {
+                        rowActionsFor = null
+                        val range = viewModel.calendarDateColumn()?.let { column ->
+                            parseDateRange(state.cellValues[live.id to column.id].orEmpty())
+                        }
+                        eventFullEditor = true
+                        eventDraft = EventDraft.of(live, range, AppSettings.zoneId, LocalDate.now().atTime(9, 0))
                     }
-                    eventFullEditor = true
-                    eventDraft = EventDraft.of(live, range, AppSettings.zoneId, LocalDate.now().atTime(9, 0))
-                }
-            } else {
-                null
-            },
-            columns = state.columns,
-            cellValues = state.cellValues,
-            onDismiss = { rowActionsFor = null },
-            onSetCellValue = { column, value -> viewModel.setCellValue(live, column, value) },
-            onAddOption = { column, label -> viewModel.addSelectOption(column.id, label) },
-            onRenameOption = { columnId, old, new ->
-                viewModel.renameSelectOption(columnId, old, new)
-            },
-            onSetOptionColor = { columnId, label, hex ->
-                viewModel.setSelectOptionColor(columnId, label, hex)
-            },
-            onDeleteOption = { columnId, label -> viewModel.deleteSelectOption(columnId, label) },
-            onMoveOptions = { columnId, labels -> viewModel.moveSelectOptions(columnId, labels) },
-            onSetOptionSecondColor = { columnId, label, hex, line -> viewModel.setSelectOptionSecondColor(columnId, label, hex, line) },
-            hasIcon = rowIcons[live.id] != null,
-            iconEditable = !contentLocked,
-            simple = simple,
-            nameField = titleColumnId == null,
-            onTitleChange = { title -> viewModel.updateRowTitle(live, title) },
-            onOpenAs = opener?.takeIf { !simple }?.let { pageOpener ->
-                { mode ->
+                } else {
+                    null
+                },
+                columns = state.columns,
+                cellValues = state.cellValues,
+                onDismiss = { rowActionsFor = null },
+                onSetCellValue = { column, value -> viewModel.setCellValue(live, column, value) },
+                onAddOption = { column, label -> viewModel.addSelectOption(column.id, label) },
+                onRenameOption = { columnId, old, new ->
+                    viewModel.renameSelectOption(columnId, old, new)
+                },
+                onSetOptionColor = { columnId, label, hex ->
+                    viewModel.setSelectOptionColor(columnId, label, hex)
+                },
+                onDeleteOption = { columnId, label -> viewModel.deleteSelectOption(columnId, label) },
+                onMoveOptions = { columnId, labels -> viewModel.moveSelectOptions(columnId, labels) },
+                onSetOptionSecondColor = { columnId, label, hex, line -> viewModel.setSelectOptionSecondColor(columnId, label, hex, line) },
+                hasIcon = rowIcons[live.id] != null,
+                iconEditable = !contentLocked,
+                simple = simple,
+                nameField = titleColumnId == null,
+                onTitleChange = { title -> viewModel.updateRowTitle(live, title) },
+                onOpenAs = opener?.takeIf { !simple }?.let { pageOpener ->
+                    { mode ->
+                        rowActionsFor = null
+                        viewModel.openRow(live) { id -> pageOpener.open(id, false, mode) }
+                    }
+                },
+                onEditIcon = {
                     rowActionsFor = null
-                    viewModel.openRow(live) { id -> pageOpener.open(id, false, mode) }
-                }
-            },
-            onEditIcon = {
-                rowActionsFor = null
-                iconForRow = live
-            },
-            // Solo dove la copertina si vede nella scheda: galleria con
-            // "Page cover", una copertina da spostare, e il contenuto non
-            // bloccato.
-            onRepositionCover = if (
-                page?.databaseLayout == DatabaseLayout.GALLERY &&
-                !simple &&
-                (page?.galleryCardPreview ?: GALLERY_DEFAULT_PREVIEW) == GalleryCardPreview.PAGE_COVER &&
-                rowCovers.containsKey(live.id) &&
-                !contentLocked
-            ) {
-                {
+                    iconForRow = live
+                },
+                // Solo dove la copertina si vede nella scheda: galleria con
+                // "Page cover", una copertina da spostare, e il contenuto non
+                // bloccato.
+                onRepositionCover = if (
+                    page?.databaseLayout == DatabaseLayout.GALLERY &&
+                    !simple &&
+                    (page?.galleryCardPreview ?: GALLERY_DEFAULT_PREVIEW) == GalleryCardPreview.PAGE_COVER &&
+                    rowCovers.containsKey(live.id) &&
+                    !contentLocked
+                ) {
+                    {
+                        rowActionsFor = null
+                        repositioningRowId = live.id
+                    }
+                } else {
+                    null
+                },
+                onDelete = {
                     rowActionsFor = null
-                    repositioningRowId = live.id
+                    rowPendingDeletion = live
                 }
-            } else {
-                null
-            },
-            onDelete = {
-                rowActionsFor = null
-                rowPendingDeletion = live
-            }
-        )
+            )
+        }
     }
 
     eventDraft?.let { draft ->
@@ -8063,7 +8067,7 @@ private fun CellContent(
                 Checkbox(
                     // Un evento che si ripete, appena spuntato: piena un attimo, poi vuota con la data dopo.
                     checked = value == "true" || cellKey in LocalCheckFlash.current,
-                    onCheckedChange = { onValueChange(it.toString()) },
+                    onCheckedChange = if (LocalDatabaseLocked.current) null else { checked -> onValueChange(checked.toString()) },
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -8272,6 +8276,8 @@ fun TagCell(
     onSetOptionSecondColor: (String, String, String?, Boolean) -> Unit
 ) {
     var showSheet by remember { mutableStateOf(false) }
+    // **"Read only" blocca anche i tag** (dal 24/11/2026, trovato dall'utente nel collaudo): la finestra non si apre.
+    val locked = LocalDatabaseLocked.current
     val options = parseSelectOptionsFull(column.optionsJson)
     val columnId = column.id
     val selected = if (allowMultiple) {
@@ -8285,7 +8291,7 @@ fun TagCell(
         FlowRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { showSheet = true }
+                .clickable { if (!locked) showSheet = true }
                 .cellWrapPadding(),
             horizontalArrangement = Arrangement.spacedBy(4.dp, LocalCellAlignment.current.horizontal),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -8303,7 +8309,7 @@ fun TagCell(
                 // apriva niente. Come la data; il minimo vale dove l'altezza non è fissata.
                 .fillMaxHeight()
                 .heightIn(min = 18.dp)
-                .clickable { showSheet = true },
+                .clickable { if (!locked) showSheet = true },
             horizontalArrangement = LocalCellAlignment.current.arrangement,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -8752,6 +8758,8 @@ private fun DateCell(
     contentPadding: Dp = 0.dp
 ) {
     var showPicker by remember { mutableStateOf(false) }
+    // Bloccato il database, niente calendario (dal 24/11/2026, vedi `TagCell`).
+    val locked = LocalDatabaseLocked.current
     val range = parseDateRange(value)
 
     // La zona toccabile è **tutta la cella**, non il testo.
@@ -8765,7 +8773,7 @@ private fun DateCell(
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight()
-            .clickable { showPicker = true }
+            .clickable { if (!locked) showPicker = true }
             .padding(horizontal = contentPadding)
             .cellWrapPadding(),
         contentAlignment = LocalCellAlignment.current.box

@@ -2,18 +2,23 @@ package com.gabriele.notionlocal.ui
 
 import android.app.Application
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
@@ -24,6 +29,7 @@ import com.gabriele.notionlocal.ui.screen.scrollThumb
 import com.gabriele.notionlocal.ui.theme.NotionLocalTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -89,6 +95,57 @@ class PageScrollIndicatorTest {
             // Poco dopo che la pagina si è fermata, se ne va.
             compose.mainClock.advanceTimeBy(5_000)
             compose.onNodeWithTag(PAGE_SCROLL_INDICATOR_TAG).assertDoesNotExist()
+        } finally {
+            compose.mainClock.autoAdvance = true
+            compose.waitForIdle()
+        }
+    }
+
+    /**
+     * **Sul telefono la barretta si trascina col dito** (24/11/2026, trovato dall'utente nel collaudo): mentre si
+     * vede, trascinata in giù porta giù la pagina; sparita, un tocco sul bordo destro arriva alla riga sotto.
+     */
+    @Test
+    fun onThePhoneTheBarCanBeDraggedWithAFinger() {
+        lateinit var list: LazyListState
+        var clicks = 0
+        compose.setContent {
+            NotionLocalTheme {
+                list = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(state = list, modifier = Modifier.fillMaxSize().testTag("page")) {
+                        items(100) { i -> Text("riga $i", modifier = Modifier.fillMaxWidth().height(40.dp).clickable { clicks++ }) }
+                    }
+                    PageScrollIndicator(list, modifier = Modifier.align(Alignment.TopEnd))
+                }
+            }
+        }
+        compose.waitForIdle()
+        // Sparita: il bordo destro è della pagina.
+        compose.onRoot().performTouchInput { click(Offset(width - 8f, 60f)) }
+        compose.waitForIdle()
+        assertEquals("il tocco sul bordo arriva alla riga", 1, clicks)
+
+        compose.mainClock.autoAdvance = false
+        try {
+            compose.onNodeWithTag("page").performTouchInput { swipeUp(durationMillis = 400) }
+            compose.mainClock.advanceTimeBy(200)
+            val before = list.firstVisibleItemIndex
+            compose.onRoot().performTouchInput {
+                // Dov'è la barretta adesso: alta un quinto della corsia, scesa quanto la pagina.
+                val item = height / 20f
+                val scrolled = list.firstVisibleItemIndex * item + list.firstVisibleItemScrollOffset
+                val margin = 4.dp.toPx()
+                val track = height - 2 * margin
+                val length = track / 5f
+                val top = margin + (track - length) * (scrolled / (100 * item - height))
+                down(Offset(width - 8f, top + length / 2f))
+                repeat(10) { moveBy(Offset(0f, 30f)) }
+                up()
+            }
+            compose.mainClock.advanceTimeBy(100)
+            assertTrue("la pagina è scesa con la barretta: da $before a ${list.firstVisibleItemIndex}", list.firstVisibleItemIndex > before + 10)
+            assertEquals("nessuna riga toccata trascinando", 1, clicks)
         } finally {
             compose.mainClock.autoAdvance = true
             compose.waitForIdle()

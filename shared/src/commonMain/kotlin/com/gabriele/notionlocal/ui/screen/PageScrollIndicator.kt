@@ -3,8 +3,23 @@ package com.gabriele.notionlocal.ui.screen
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.foundation.lazy.LazyListLayoutInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.MaterialTheme
@@ -38,7 +53,7 @@ const val PAGE_SCROLL_INDICATOR_TAG = "pageScrollIndicator"
  * **La barretta di scorrimento della pagina** (dal 20/10/2026, chiesta
  * dall'utente: "piccola, classica, come le impostazioni del telefono").
  * Sottile e chiara sul bordo destro: compare mentre la pagina scorre e svanisce
- * poco dopo che si è fermata. Non prende i tocchi, che passano alla pagina.
+ * poco dopo che si è fermata. Fuori dalla barretta non prende i tocchi, che passano alla pagina.
  *
  * La lista non sa quanto è alta la pagina: le sue voci (i pezzi di testo, le
  * immagini, i database) hanno altezze diverse e si misurano solo quando si
@@ -50,7 +65,7 @@ const val PAGE_SCROLL_INDICATOR_TAG = "pageScrollIndicator"
  * "permettimi di draggarla per spostarmi nella pagina"): compare anche col
  * mouse sopra, si prende e la pagina la segue; un clic sulla corsia porta lì
  * la barretta. La rotella sopra di lei fa scorrere la pagina come sempre. Sul
- * telefono resta solo da guardare.
+ * telefono, dal 24/11/2026, si trascina col dito (vedi sotto).
  */
 @Composable
 fun PageScrollIndicator(list: LazyListState, modifier: Modifier = Modifier) {
@@ -132,24 +147,70 @@ fun PageScrollIndicator(list: LazyListState, modifier: Modifier = Modifier) {
         }
     }
 
-    Canvas(
-        modifier = modifier
-            .fillMaxHeight()
-            .width(if (isPc) 14.dp else 10.dp)
-            .then(grab)
-            .then(if (alpha > 0f) Modifier.testTag(PAGE_SCROLL_INDICATOR_TAG) else Modifier)
-    ) {
-        if (alpha <= 0f) return@Canvas
-        val thumb = thumb(size.height) ?: return@Canvas
-        val width = 4.dp.toPx()
-        drawRoundRect(
-            color = color.copy(alpha = color.alpha * alpha),
-            topLeft = Offset(size.width - width - 3.dp.toPx(), thumb.top),
-            size = Size(width, thumb.length),
-            cornerRadius = CornerRadius(width / 2)
-        )
+    val bar: @Composable (Modifier) -> Unit = { barModifier ->
+        Canvas(
+            modifier = barModifier
+                .fillMaxHeight()
+                .width(if (isPc) 14.dp else 10.dp)
+                .then(grab)
+                .then(if (alpha > 0f) Modifier.testTag(PAGE_SCROLL_INDICATOR_TAG) else Modifier)
+        ) {
+            if (alpha <= 0f) return@Canvas
+            val thumb = thumb(size.height) ?: return@Canvas
+            val width = 4.dp.toPx()
+            drawRoundRect(
+                color = color.copy(alpha = color.alpha * alpha),
+                topLeft = Offset(size.width - width - 3.dp.toPx(), thumb.top),
+                size = Size(width, thumb.length),
+                cornerRadius = CornerRadius(width / 2)
+            )
+        }
+    }
+    if (isPc) return bar(modifier)
+
+    // **Sul telefono si trascina col dito** (dal 24/11/2026, trovato dall'utente nel collaudo: "è come se non
+    // riconoscesse per niente il mio tocco"): solo mentre si vede, e solo sopra la barretta con un dito di margine;
+    // il resto del bordo, e tutto quando è sparita, resta della pagina. Mentre la si trascina la presa sta ferma
+    // dove la si è presa (il dito la porta anche fuori), se no la barretta che scende le scapperebbe da sotto.
+    val density = LocalDensity.current
+    var height by remember(list) { mutableIntStateOf(0) }
+    var heldTop by remember(list) { mutableFloatStateOf(0f) }
+    Box(modifier = modifier.fillMaxHeight().width(PHONE_GRAB_WIDTH).onSizeChanged { height = it.height }) {
+        bar(Modifier.align(Alignment.TopEnd))
+        val thumb = if (alpha > 0f || dragging) with(density) { thumb(height.toFloat()) } else null
+        if (thumb != null) {
+            val slack = with(density) { PHONE_GRAB_SLACK.toPx() }
+            val top = if (dragging) heldTop else thumb.top - slack
+            val currentTop by rememberUpdatedState(top)
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(0, top.roundToInt()) }
+                    .width(PHONE_GRAB_WIDTH)
+                    .height(with(density) { (thumb.length + 2 * slack).toDp() })
+                    .pointerInput(list) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown()
+                            heldTop = currentTop
+                            dragging = true
+                            down.consume()
+                            drag(down.id) { change ->
+                                val now = with(density) { thumb(height.toFloat()) }
+                                if (now != null && now.track > now.length) {
+                                    list.dispatchRawDelta(change.positionChange().y * now.range / (now.track - now.length))
+                                }
+                                change.consume()
+                            }
+                            dragging = false
+                        }
+                    }
+            )
+        }
     }
 }
+
+/** Sul telefono: quanto è larga la presa della barretta, e quanto sporge sopra e sotto di lei. */
+private val PHONE_GRAB_WIDTH = 28.dp
+private val PHONE_GRAB_SLACK = 12.dp
 
 /**
  * La barretta: dalla cima [top] lunga [length] nella sua corsia [track], che

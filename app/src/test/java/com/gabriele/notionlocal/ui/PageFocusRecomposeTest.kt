@@ -194,7 +194,8 @@ class PageFocusRecomposeTest {
             "com.gabriele.notionlocal.ui.screen.ClearFocusWhenKeyboardCloses",
             "com.gabriele.notionlocal.ui.screen.PageScrollIndicator"
         )
-        assertEquals(emptyMap<String, Int>(), ours().filter { it !in allowed }.groupingBy { it }.eachCount())
+        // Anche le parti della barretta (dal 24/11/2026 sul telefono ha la presa per il dito, in una funzione sua).
+        assertEquals(emptyMap<String, Int>(), ours().filter { name -> allowed.none { name == it || name.startsWith("$it.") } }.groupingBy { it }.eachCount())
         // E la lista non riparte con tutte le sue voci.
         assertEquals(0, count("LazyLayoutItemContentFactory"))
         keyboard(0)

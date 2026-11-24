@@ -30,11 +30,6 @@ object NotebookStrings {
     val notebookColor get() = t("Notebook color", "Colore del quaderno", "Notizbuchfarbe", "Couleur du bloc-notes", "Color del bloc de notas", "笔记本颜色", "전자 필기장 색", "ノートブックの色")
     val sectionColor get() = t("Section color", "Colore della sezione", "Abschnittsfarbe", "Couleur de la section", "Color de la sección", "分区颜色", "섹션 색", "セクションの色")
     val notebookIcon get() = t("Notebook icon", "Icona del quaderno", "Notizbuchsymbol", "Icône du bloc-notes", "Icono del bloc de notas", "笔记本图标", "전자 필기장 아이콘", "ノートブックのアイコン")
-    val useDrawnNotebook get() = t(
-        "Use the drawn notebook", "Usa il quaderno disegnato", "Gezeichnetes Notizbuch verwenden",
-        "Utiliser le bloc-notes dessiné", "Usar el bloc de notas dibujado", "使用默认笔记本图标",
-        "기본 전자 필기장 사용", "描かれたノートブックを使う"
-    )
     val passwordProtectSection get() = t(
         "Password protect this section", "Proteggi questa sezione con la password",
         "Diesen Abschnitt mit Kennwort schützen", "Protéger cette section par mot de passe",

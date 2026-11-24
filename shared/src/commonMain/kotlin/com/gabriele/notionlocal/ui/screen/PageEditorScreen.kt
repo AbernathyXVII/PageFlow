@@ -534,6 +534,9 @@ private fun sideArrowDirection(event: KeyEvent): Boolean? {
 private fun TextFieldValue.caretPastLead(): TextFieldValue =
     if (selection.collapsed && selection.end < RUN_LEAD.length && text.startsWith(RUN_LEAD)) copy(selection = TextRange(RUN_LEAD.length)) else this
 
+/** Le quattro frecce: da sole tolgono la scelta dei blocchi. */
+private val PLAIN_ARROWS = setOf(Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight)
+
 /** Freccia su o giù con Maiusc sul PC (si allarga la selezione): true = giù; null per gli altri tasti. */
 private fun shiftArrowDirection(event: KeyEvent): Boolean? {
     if (!isPc || event.type != KeyEventType.KeyDown || !event.isShiftPressed || event.isCtrlPressed || event.isAltPressed) return null
@@ -2300,8 +2303,10 @@ private fun PageEditorContent(
             val nestedSpots = remember(pageId) { NestedSpots() }
             // [withReturn]: un collegamento lascia "Back" per tornare dov'era la pagina; la ricerca no.
             val jumpToBlockFrom: (String, Boolean) -> Unit = remember(listState, visibleRunLines) {
-                { blockId, withReturn ->
+                { linkedId, withReturn ->
                     jumpScope.launch {
+                        // Un link copiato da un'altra pagina: la riga di qui con lo stesso testo (vedi `sameLineHere`).
+                        val blockId = viewModel.sameLineHere(linkedId) ?: linkedId
                         val byId = latestBlocks.value.associateBy { it.id }
                         var anchor = byId[blockId]
                         while (anchor?.parentBlockId != null) anchor = byId[anchor.parentBlockId]
@@ -3593,6 +3598,20 @@ private fun PageEditorContent(
                             if (next != null) {
                                 blockEnds = ends.first to next
                                 selectedBlocks.value = blockRange(order, ends.first, next)
+                            }
+                            return@onKeyEvent true
+                        }
+                        // **Le frecce da sole tolgono la scelta** (dal 24/11/2026, trovato dall'utente nel collaudo): il
+                        // cursore torna all'inizio dei blocchi scelti con su e sinistra, in fondo con giù e destra, come su Notion.
+                        if (event.type == KeyEventType.KeyDown && !event.isShiftPressed && !event.isCtrlPressed && !event.isAltPressed &&
+                            event.key in PLAIN_ARROWS
+                        ) {
+                            val chosen = chosenBlocks
+                            endSelection()
+                            if (chosen != null) {
+                                val inOrder = latestRenderItems.value.flatMap { renderItemBlockIds(it) }.filter { it in chosen }
+                                val atEnd = event.key == Key.DirectionDown || event.key == Key.DirectionRight
+                                (if (atEnd) inOrder.lastOrNull() else inOrder.firstOrNull())?.let { viewModel.arriveAtEdge(it, atEnd) }
                             }
                             return@onKeyEvent true
                         }

@@ -81,4 +81,34 @@ class DesktopLinkedPageTest {
         assertNotNull(page("x"))
         assertEquals(null, runBlocking { repo.lockingPageOf("x") })
     }
+
+    /**
+     * **Il sommario di una pagina incollata** (24/11/2026, dal collaudo: "se ci clicco sopra non funziona il
+     * reindirizzamento ai titoli"): i suoi link puntano ancora alle righe della pagina di partenza; toccandoli si
+     * va alla riga di qui con lo stesso testo.
+     */
+    @Test
+    fun aContentsLinkFindsTheCopiedLine() {
+        AppSettings.init(context)
+        val db = AppDatabase.getInstance(context)
+        val repo = PageRepository(db)
+        runBlocking {
+            repo.createPage(PageEntity(id = "origine", title = "Origine"))
+            repo.createPage(PageEntity(id = "copia", title = "Copia"))
+            repo.saveBlock(BlockEntity(id = "h1", pageId = "origine", textJson = """[{"text":"Capitolo 1","size":29}]""", orderIndex = 0))
+            repo.saveBlock(BlockEntity(id = "s2", pageId = "copia", textJson = """[{"text":"Capitolo 1","link":"note://block/h1"}]""", orderIndex = 0))
+            repo.saveBlock(BlockEntity(id = "h2", pageId = "copia", textJson = """[{"text":"Capitolo 1","size":29}]""", orderIndex = 1))
+            repo.saveBlock(BlockEntity(id = "vuota", pageId = "origine", textJson = """[{"text":""}]""", orderIndex = 1))
+        }
+        val factory = ViewModelFactory(context)
+        val viewModel = onWindowThread { factory.create(PageEditorViewModel::class, CreationExtras.Empty) }
+        onWindowThread { viewModel.load("copia") }
+        val end = System.currentTimeMillis() + 5_000
+        while (viewModel.blocks.value.size < 2 && System.currentTimeMillis() < end) Thread.sleep(20)
+        // Il primo con quel testo è la voce del sommario stessa: si va al titolo.
+        assertEquals("il titolo copiato, non la voce del sommario", "h2", runBlocking { viewModel.sameLineHere("h1") })
+        assertEquals("una riga di questa pagina resta lei", "h2", runBlocking { viewModel.sameLineHere("h2") })
+        assertEquals("una riga vuota non si cerca", null, runBlocking { viewModel.sameLineHere("vuota") })
+        assertEquals("una riga che non c'è più", null, runBlocking { viewModel.sameLineHere("sparita") })
+    }
 }
