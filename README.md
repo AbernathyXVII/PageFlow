@@ -1181,7 +1181,7 @@ say that **they still have to be verified on the phone**: when they are,
   the pointer), `DesktopCalendarYearTest.theDaysOfAMonthStayTogetherWhenItIsWide`
 
 ### ✏️ v0.156.3 — 24/11/2026 · 16:05 — Right-click a group's name to rename its tag
-*(Claude Code on the PC; tested by the user on the PC on 24/11/2026, not yet on the phone; installed on the phone; 1375 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 24/11/2026 and on the phone on 24/11/2026; installed on the phone; 1375 tests passed)*
 
 - **[Change]** **[💻 PC]** **[📱 Mobile]** **Right-click on the name of a
   group** (on the phone, a long press) opens that tag's editor, the same one
@@ -1228,7 +1228,7 @@ say that **they still have to be verified on the phone**: when they are,
   `ColumnWidthTest`
 
 ### ✏️ v0.156.1 — 24/11/2026 · 10:31 — Search finds in every workspace, in groups
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1373 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1373 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **Search finds in every
   workspace again**, from wherever one is, the trash too when "Search in
@@ -1243,7 +1243,7 @@ say that **they still have to be verified on the phone**: when they are,
   Test: `DesktopWorkspacesTest.searchShowsEveryWorkspaceInItsGroup`
 
 ### 🆕 v0.156 — 24/11/2026 · 09:46 — Workspaces
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1372 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1372 tests passed)*
 
 - **[New feature]** **[📱 Mobile]** **[💻 PC]** **Workspaces**, as in
   Notion: at the top of the sidebar the name and icon of the workspace that
@@ -1280,7 +1280,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopWorkspacesTest`
 
 ### ✏️ v0.155.54 — 24/11/2026 · 09:06 — A torn-off tab opens in its window, the keyboard arrows in the peek
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1370 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1370 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **A tab dragged out of the bar opens in its own
   window again**: the new window closed by itself with the error "Cannot
@@ -1299,7 +1299,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopPeekRowArrowsTest.theKeyboardArrowsMoveThroughTheRowsInThePeek`
 
 ### ✏️ v0.155.53 — 24/11/2026 · 08:39 — The keyboard with the "~" in the Number cells, closer rows in the lists with icons
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1368 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1368 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **The keyboard of the Number cells has the
   "~"**: it is the whole keyboard, with the symbols, instead of the one with
@@ -1314,7 +1314,7 @@ say that **they still have to be verified on the phone**: when they are,
   NUMBER, without autocorrect; `ListRow(tight)` and `LIST_ROW_TIGHT_PADDING`
 
 ### ✏️ v0.155.52 — 24/11/2026 · 08:07 — "~" numbers left out of the totals, a whole column under a spoiler, Delete under a quote, the Year view tidied and today in blue everywhere
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1368 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026, except Delete under a quote (still to fix); installed on the phone; 1368 tests passed)*
 
 - **[Change]** **[💻 PC]** **[📱 Mobile]** **A "~" before a number leaves it
   out of the totals**: in a Number property "~25.50" is an estimate; it is
@@ -1347,7 +1347,7 @@ say that **they still have to be verified on the phone**: when they are,
   dimmed days), `todayCell` looks for the blue outline
 
 ### ✏️ v0.155.51 — 24/11/2026 · 00:12 — Today in blue in the Year view, like Google Calendar
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1364 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1364 tests passed)*
 
 - **[Change]** **[💻 PC]** **[📱 Mobile]** **Today in blue in the Year view
   of the calendar**: the number of today, in its grey circle, is blue like in
@@ -1358,7 +1358,7 @@ say that **they still have to be verified on the phone**: when they are,
   blue
 
 ### ✏️ v0.155.50 — 23/11/2026 · 23:53 — The Year view of the calendar like Google Calendar
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1364 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1364 tests passed)*
 
 - **[Change]** **[💻 PC]** **[📱 Mobile]** **The Year view of the calendar
   is drawn like Google Calendar's**: four months a row on the PC (two on the
@@ -1612,7 +1612,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopLinkTitlesTest` (a Link property showing page titles, on the PC)
 
 ### ✏️ v0.155.40 — 18/11/2026 · 22:57 — "Flag (for Table of contents)", and the table of contents on the phone too
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1332 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1332 tests passed)*
 
 - **[Change]** **[💻 PC]** **[📱 Mobile]** **"Flag (for Table of contents)"
   in the menu of the six dots** of a line (text, title, quote, callout…),
@@ -1634,7 +1634,7 @@ say that **they still have to be verified on the phone**: when they are,
   with flagged lines
 
 ### 🔧 v0.155.39.1 — 18/11/2026 · 22:38 — A link to a line inside columns lights that line only
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1329 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1329 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **[📱 Mobile]** **The table of contents (and a
   link "In this page") going to a line inside another block lights that line
@@ -1651,7 +1651,7 @@ say that **they still have to be verified on the phone**: when they are,
   line itself. Test: `DesktopTocColumnsTest`
 
 ### ✏️ v0.155.39 — 18/11/2026 · 22:16 — An empty Color cell stays empty
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1328 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1328 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **No dash in the empty cells of a
   "Color cell" property**: a new property, or a cell without color and
@@ -1662,7 +1662,7 @@ say that **they still have to be verified on the phone**: when they are,
   `ColorCellEmptyTest`
 
 ### 🔧 v0.155.38.1 — 18/11/2026 · 21:59 — Pasted from OneNote with images, the lines are close at once
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1327 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1327 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **[📱 Mobile]** **Pasting from OneNote text with
   big titles and an image (or a table), the lines have their usual spacing
@@ -1680,7 +1680,7 @@ say that **they still have to be verified on the phone**: when they are,
   image: the step between the normal lines right after Ctrl+V and later)
 
 ### ✏️ v0.155.38 — 18/11/2026 · 19:36 — The People property
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1326 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1326 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **"People"**, a new type of
   property, right after "Multi-select" in the list of types, with the icon
@@ -1703,7 +1703,7 @@ say that **they still have to be verified on the phone**: when they are,
   converter, groups and export, the cell choosing two people)
 
 ### ✏️ v0.155.37 — 18/11/2026 · 19:06 — The main column keeps being the main column after "Change type"
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1322 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1322 tests passed)*
 
 - **[Change]** **[💻 PC]** **[📱 Mobile]** **After "Change type" on the main
   column (Name), the column of the new type is the main column in
@@ -1732,7 +1732,7 @@ say that **they still have to be verified on the phone**: when they are,
   `ExportExtrasTest.withATitleColumnNameIsNotExportedTwice`
 
 ### ✏️ v0.155.36 — 18/11/2026 · 18:44 — Pasting brings the images in the copied text too
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1317 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1317 tests passed)*
 
 - **[Change]** **[💻 PC]** **[📱 Mobile]** **The images among the copied text
   arrive with it**: pasting (with the formatting of the source, as Ctrl+V on
@@ -1760,7 +1760,7 @@ say that **they still have to be verified on the phone**: when they are,
   the page)
 
 ### ✏️ v0.155.35 — 18/11/2026 · 18:19 — Groups in the List views of databases too
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1315 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1315 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **The List view has "Group" too**,
   in the database settings, like the table: the pages are split by one or
@@ -1779,7 +1779,7 @@ say that **they still have to be verified on the phone**: when they are,
   `RowOrderTest.aGroupedListGoesGroupByGroupToo`, `DesktopListGroupsTest`
 
 ### 🔧 v0.155.34.1 — 18/11/2026 · 17:45 — A file dropped on a peek goes into the peek's page
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1312 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1312 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **An image (or any file) dragged from File
   Explorer onto a page in Center peek goes into that page**, no longer into
@@ -1796,7 +1796,7 @@ say that **they still have to be verified on the phone**: when they are,
   Center peek and with the Side peek)
 
 ### ✏️ v0.155.34 — 18/11/2026 · 17:28 — Room for three empty lines at the end of every page
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1311 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1311 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **Three empty lines at the end of
   every page, no longer two**: scrolled all the way down, the last line has
@@ -1807,7 +1807,7 @@ say that **they still have to be verified on the phone**: when they are,
   72 points between the last line and the edge)
 
 ### ✏️ v0.155.33 — 18/11/2026 · 17:11 — Backup: no more "Upload to Proton Drive"
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1310 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1310 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **The Backup page without "Upload
   to Proton Drive"**: the big button, the line "Last upload to Proton Drive",
@@ -1827,7 +1827,7 @@ say that **they still have to be verified on the phone**: when they are,
   tests of the upload are gone with it
 
 ### ✏️ v0.155.32 — 18/11/2026 · 16:52 — The line reached with a link stays lit one second more
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1313 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1313 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **The line reached with a link
   stays lit one second more**: following a link to a line of the same page
@@ -1866,7 +1866,7 @@ say that **they still have to be verified on the phone**: when they are,
   with », it is back)
 
 ### ✏️ v0.155.30 — 18/11/2026 · 14:48 — PC: the bar of the databases goes away after half a second
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1311 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1311 tests passed)*
 
 - **[Change]** **[💻 PC]** **Half a second, no longer 2**: the bar to
   scroll a database sideways goes away half a second after the mouse stops
@@ -1875,7 +1875,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopHoverScrollBarTest` (gone half a second after the mouse stopped)
 
 ### ✏️ v0.155.29 — 18/11/2026 · 14:28 — PC: the bar to scroll a database sideways
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1311 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1311 tests passed)*
 
 - **[Change]** **[💻 PC]** **The bar to scroll a database sideways**: when a
   table has more properties than fit, or a board more columns, with the
@@ -1892,7 +1892,7 @@ say that **they still have to be verified on the phone**: when they are,
   table scrolls, gone 2 seconds later; where the thumb is)
 
 ### ✏️ v0.155.28 — 18/11/2026 · 14:11 — PC: the table of contents on the right of the page
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1309 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1309 tests passed)*
 
 - **[Change]** **[💻 PC]** **The table of contents on the right of the
   page**, as on Notion: in the right margin of a page (also in the Center
@@ -1913,7 +1913,7 @@ say that **they still have to be verified on the phone**: when they are,
   brightens the second; at the end of the page the third)
 
 ### ✏️ v0.155.27 — 18/11/2026 · 13:49 — Today circled in white in the calendars
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1308 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1308 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **Today is circled in white in
   the calendars**: in the calendar where a date (and the time of a
@@ -1932,7 +1932,7 @@ say that **they still have to be verified on the phone**: when they are,
   of today by its circle (`todayRing`), no longer by its blue
 
 ### ✏️ v0.155.26 — 18/11/2026 · 11:41 — Images on the left, in the center or on the right, with a caption and a title
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1307 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1307 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **An image goes on the left, in
   the center or on the right**, as on Notion: in its menu, right under
@@ -1959,7 +1959,7 @@ say that **they still have to be verified on the phone**: when they are,
   empty caption goes away)
 
 ### ✏️ v0.155.25 — 18/11/2026 · 11:14 — The dividers of Word: double, thick, dotted and wavy
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1306 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1306 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **Four more dividers, as in
   Word**: written alone at the start of a line, "===" makes a double line,
@@ -1978,7 +1978,7 @@ say that **they still have to be verified on the phone**: when they are,
   on the line under them)
 
 ### ✏️ v0.155.24 — 18/11/2026 · 10:57 — Ctrl+A chooses the block first, then the page
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1305 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone, which was disconnected; 1305 tests passed)*
 
 - **[Change]** **[💻 PC]** **Ctrl+A chooses the block first, then the
   page**, as on Notion: with the cursor in a block, the first Ctrl+A chooses
@@ -2012,7 +2012,7 @@ say that **they still have to be verified on the phone**: when they are,
   block has the link)
 
 ### ✏️ v0.155.23 — 18/11/2026 · 10:09 — PC: no halo around the knob of a switch
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1303 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1303 tests passed)*
 
 - **[Change]** **[💻 PC]** **No halo around the knob of a switch**: clicking
   a switch, such as "Full width", a bigger light and transparent circle
@@ -2028,7 +2028,7 @@ say that **they still have to be verified on the phone**: when they are,
   the circle around the knob, the one of the app not)
 
 ### ✏️ v0.155.22 — 18/11/2026 · 09:50 — PC: in the Center peek the margins don't change with Full width
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1302 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1302 tests passed)*
 
 - **[Change]** **[💻 PC]** **In the Center peek a page has the margins of
   "Full width" whether it is on or off**: with it off, the text went into
@@ -2042,7 +2042,7 @@ say that **they still have to be verified on the phone**: when they are,
   same point; it failed before the change)
 
 ### ✏️ v0.155.21 — 18/11/2026 · 09:33 — PC: the middle mouse button scrolls the page, as in a browser
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1301 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1301 tests passed)*
 
 - **[Change]** **[💻 PC]** **The middle mouse button scrolls the page, as
   in a browser**: a click with the middle button (the wheel pressed) leaves
@@ -2064,7 +2064,7 @@ say that **they still have to be verified on the phone**: when they are,
   the distance)
 
 ### ✏️ v0.155.20 — 18/11/2026 · 01:50 — PC: the views of a database in a row
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1299 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1299 tests passed)*
 
 - **[Change]** **[💻 PC]** **All the views of a database in a row**, as on
   Notion: under the title, one tab per view with the icon of its layout and
@@ -2088,7 +2088,7 @@ say that **they still have to be verified on the phone**: when they are,
   scrolled to the start, the first; the arrow opens the list)
 
 ### 🔧 v0.155.19.1 — 17/11/2026 · 20:16 — Enter on an empty line of a list, and Backspace on its last item
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1298 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1298 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **Enter on an empty line that
   keeps the place of a list makes it an item again**: on the line Backspace
@@ -2112,7 +2112,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopHeldEnterTest` (both failed before the fix), `LineBlocksTest`
 
 ### ✏️ v0.155.19 — 17/11/2026 · 19:42 — Still numbers with Enter pressed fast, and "- " starts a bulleted list
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1293 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1293 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The numbers of a list no longer
   jump with Enter pressed fast**: while the database was still behind by a
@@ -2202,7 +2202,7 @@ say that **they still have to be verified on the phone**: when they are,
   blinking cursor doesn't pass (in the whole suite it joined two lines)
 
 ### 🔧 v0.155.16.2 — 17/11/2026 · 13:47 — The lines pasted from OneNote are close together at once
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1289 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1289 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The lines pasted with a big
   title among them are close together at once**: pasting from OneNote a list
@@ -2242,7 +2242,7 @@ say that **they still have to be verified on the phone**: when they are,
   (with text, a tap below goes to the last line)
 
 ### ✏️ v0.155.16 — 17/11/2026 · 11:55 — PC: a real Tab in the text, Tab and Shift+Tab move list items
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1289 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1289 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **A Tab is as wide as in Word
   and OneNote**: a tab in the text reaches the next tab stop, one every three
@@ -2265,7 +2265,7 @@ say that **they still have to be verified on the phone**: when they are,
   list item Tab and Shift+Tab move it, in the middle they write a Tab)
 
 ### ✏️ v0.155.15 — 17/11/2026 · 11:23 — The calendar shows the properties of the events, in the order of Property visibility
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1288 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1288 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **The calendar shows the values of
   the properties under the name of each event**, as on Notion: in the month,
@@ -2295,7 +2295,7 @@ say that **they still have to be verified on the phone**: when they are,
   event)
 
 ### ✏️ v0.155.14 — 17/11/2026 · 10:54 — PC: no gray box under the mouse anywhere, submenus next to their entry
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1286 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1286 tests passed)*
 
 - **[Change]** **[💻 PC]** **No more light gray box under the mouse,
   anywhere in the app** (in v0.155.13 only in databases): the button of the
@@ -2320,7 +2320,7 @@ say that **they still have to be verified on the phone**: when they are,
   whose submenu covers its entry)
 
 ### ✏️ v0.155.13 — 17/11/2026 · 10:33 — PC: no gray box under the mouse in databases
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1284 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1284 tests passed)*
 
 - **[Change]** **[💻 PC]** **No more light gray box under the mouse in a
   database**: passing over a cell, the header of a property, a button of the
@@ -2350,7 +2350,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopPasteTest.ctrlVKeepsTheStylesAndColorsOfTheSource`
 
 ### ✏️ v0.155.11 — 17/11/2026 · 09:49 — Pasting with "Keep Source Formatting" keeps the colors too
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1282 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1282 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **The colors of the copied text
   come along**: pasting with "Keep Source Formatting" (the paste button of the
@@ -2377,7 +2377,7 @@ say that **they still have to be verified on the phone**: when they are,
   come back)
 
 ### ✏️ v0.155.10 — 17/11/2026 · 09:19 — PC: the six dots show only with the mouse on them
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1279 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1279 tests passed)*
 
 - **[Change]** **[💻 PC]** **The six dots show only with the mouse on
   them**: with the mouse on a block of the page, its six dots are still there
@@ -2396,7 +2396,7 @@ say that **they still have to be verified on the phone**: when they are,
   as before, since the hidden handle no longer gets in the way
 
 ### ✏️ v0.155.9 — 17/11/2026 · 08:41 — PC: a database's rows move by dragging them with the mouse
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1278 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1278 tests passed)*
 
 - **[Change]** **[💻 PC]** **A database's rows move by dragging them**, in
   the table and list views: with the mouse over a row, the handle ⋮⋮ appears
@@ -2415,7 +2415,7 @@ say that **they still have to be verified on the phone**: when they are,
   look for the dots of the block
 
 ### 🔧 v0.155.8.1 — 17/11/2026 · 00:34 — PC: the arrows of a database's pages also in the peek
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1277 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1277 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **The two arrows to go to the page before and
   after in a database are there also in Center peek and Side peek**, at the
@@ -2429,7 +2429,7 @@ say that **they still have to be verified on the phone**: when they are,
   third, up back to the second)
 
 ### ✏️ v0.155.8 — 16/11/2026 · 21:52 — PC: keyboard shortcuts for the selected text
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1276 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1276 tests passed)*
 
 - **[Change]** **[💻 PC]** **Shortcuts on the selected text of a page**:
   Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+S strikethrough and
@@ -2447,7 +2447,7 @@ say that **they still have to be verified on the phone**: when they are,
   once, the wheel; without a selection Ctrl+B does nothing and Ctrl + zooms)
 
 ### 🔧 v0.155.7.2 — 16/11/2026 · 21:20 — A bigger title no longer spreads out the lines around it
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1275 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1275 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **Changing the size of a line
   from the Aa bar, the lines above and below keep their space.** A text
@@ -2465,7 +2465,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopTitleSizeSpacingTest` (failed before the fix)
 
 ### 🔧 v0.155.7.1 — 16/11/2026 · 20:36 — Lines in the column of a list: lined up, and the cursor where the text goes
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1273 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1273 tests passed)*
 
 - **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The lines that keep the place
   of a numbered list line up with the text of its items also at the top of a
@@ -2486,7 +2486,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopListColumnTest` (failed before the fix)
 
 ### ✏️ v0.155.7 — 16/11/2026 · 20:08 — PC: left and right arrows past dividers and titles, Enter and Shift+Enter in lists
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1272 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; installed on the phone; 1272 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **The right and left arrows go on to the next or
   previous line also past a divider, a title written bigger than 16 or
@@ -2533,7 +2533,7 @@ say that **they still have to be verified on the phone**: when they are,
   `DesktopPasteKeysTest` (fake clipboard: the Windows one isn't touched)
 
 ### ✏️ v0.155.6 — 13/11/2026 · 23:18 — Link property: "Show as" in its menu, faster page titles, a pencil to correct them
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1269 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 24/11/2026, not yet on the phone; installed on the phone; 1269 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **"Show as" of a Link property is
   in the menu of the property**, right under the box with its name (only for
@@ -2607,7 +2607,7 @@ say that **they still have to be verified on the phone**: when they are,
   checked by the user
 
 ### ✏️ v0.155.4 — 13/11/2026 · 18:47 — "Cell spoiler": cover any cell of a table
-*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1261 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026 and on the phone on 24/11/2026; installed on the phone; 1261 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **"Cell spoiler"** in "Database
   settings" (the button with the sliders at the right of the database bar),
@@ -2632,7 +2632,7 @@ say that **they still have to be verified on the phone**: when they are,
   covers without opening the field, another uncovers)
 
 ### ✏️ v0.155.3 — 13/11/2026 · 18:16 — Room at the bottom of every page, and "Back" only far down
-*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1259 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026 and on the phone on 24/11/2026; installed on the phone; 1259 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **Every page ends with the room
   of two empty lines**, so what is written last is never stuck to the bottom
@@ -2654,7 +2654,7 @@ say that **they still have to be verified on the phone**: when they are,
   seconds still, back scrolling down again)
 
 ### ✏️ v0.155.2 — 13/11/2026 · 17:51 — The main property like the others: change its type, hide it
-*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1258 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026 (on the PC with the fix of v0.155.41); installed on the phone; 1258 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **The main property ("Aa Name")
   changes type**, from "Change type" in its menu, as the other properties:
@@ -2688,7 +2688,7 @@ say that **they still have to be verified on the phone**: when they are,
   and OPEN appears in its cell)
 
 ### ✏️ v0.155.1 — 13/11/2026 · 15:12 — No grey background in Recents
-*(Claude Code on the PC; tested by the user on the PC on 14/11/2026, not yet on the phone; installed on the phone; 1254 tests passed)*
+*(Claude Code on the PC; tested by the user on the PC on 14/11/2026 and on the phone on 24/11/2026; installed on the phone; 1254 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **No grey background in
   Recents**: the page open at the moment had the grey background of the tree
@@ -4022,7 +4022,7 @@ say that **they still have to be verified on the phone**: when they are,
   The Settings page drawn on the PC (`settings.png`) shows it
 
 ### ✏️ v0.153.27 — 10/11/2026 · 10:18 — On the PC the text in photos is read, to find them by searching
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone (not connected); 1140 tests passed)*
+*(Claude Code on the PC; tested by the user on 24/11/2026; not installed on the phone (not connected); 1140 tests passed)*
 
 - **[Project]** **The text of photos on the PC too**: the block photos
   added on the PC (images, scans, Web Clipper captures) are read in the
@@ -10764,7 +10764,7 @@ Calendar.
   back identical)
 
 ### 🆕 v0.62 — 26/09/2026 · 13:24 — The Number property: format, digits, bar and ring; "Calculate" under the table
-*(Claude Code on the PC; verified on the phone the same day, except what is listed at the bottom; 161 tests passed; commit only local)*
+*(Claude Code on the PC; verified on the phone the same day, and what is listed at the bottom tested by the user on 24/11/2026; 161 tests passed; commit only local)*
 
 - **[New feature]** **[📱 Mobile]** **"Change type"** in the menu that opens
   long-pressing a column's header, of **any** type: there is the list of
@@ -11195,7 +11195,7 @@ Calendar.
   database; no choice touched
 
 ### 🆕 v0.55 — 26/09/2026 · 00:14 — The "Color cell" property
-*(Claude Code on the PC; verified on the phone the same day, except the board's and gallery's tags; 131 tests passed; commit only local)*
+*(Claude Code on the PC; verified on the phone the same day, and the board's and gallery's tags tested by the user on 24/11/2026; 131 tests passed; commit only local)*
 
 - **[New feature]** **[📱 Mobile]** **"Color cell"** among the property
   types (with the paint bucket), in normal and simple databases. In the
@@ -11359,7 +11359,7 @@ Calendar.
   before the update: it wasn't the migration
 
 ### 🆕 v0.53 — 25/09/2026 · 23:12 — Notifications: "/notification", database dates, timers and pomodoro
-*(Claude Code on the PC; verified on the phone the same day, except the real reboot, see at the bottom; 114 tests passed; commit only local)*
+*(Claude Code on the PC; verified on the phone the same day, and the real reboot (see at the bottom) tested by the user on 24/11/2026; 114 tests passed; commit only local)*
 
 - **[New feature]** **[📱 Mobile]** **The "/notification" line.** You write
   `/notification 22.10.2026 19:41 Take out the trash` and press Enter: the
