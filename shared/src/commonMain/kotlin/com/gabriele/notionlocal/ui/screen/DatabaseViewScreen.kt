@@ -5225,6 +5225,10 @@ private fun ListLayout(
     /** A pagina intera: solo le righe sullo schermo (vedi `LazyBody`). */
     lazy: LazyBody? = null
 ) {
+    // **Righe più fitte quando hanno le icone** (dal 24/11/2026, chiesto dall'utente sul telefono: "con le
+    // icone sembra che ci sia troppo più spazio"): tutte, perché restino alte uguali (vedi `ListRow`).
+    val rowIcons = LocalRowIcons.current
+    val tight = remember(state.rows, rowIcons) { state.rows.any { it.id in rowIcons } }
     @Composable
     fun Header(group: RowGroup, depth: Int, level: GroupLevel, key: String, collapsed: Boolean) = GroupHeaderRow(
         group = group,
@@ -5244,7 +5248,7 @@ private fun ListLayout(
                 item(key = "group:$key") { Header(group, depth, level, key, collapsed) }
                 if (!collapsed) {
                     if (depth == groupLevels.lastIndex) {
-                        items(group.rows, key = { "g:$key:" + it.id }) { row -> ListRow(row, state, onOpenRow, onRowLongPress, keys) }
+                        items(group.rows, key = { "g:$key:" + it.id }) { row -> ListRow(row, state, onOpenRow, onRowLongPress, keys, tight) }
                         item(key = "g:$key:add") { GroupNewRowButton { onAddRowInGroups(keys) } }
                     } else {
                         groupsAt(depth + 1, group.rows, keys)
@@ -5255,7 +5259,7 @@ private fun ListLayout(
         }
         LazyColumn(modifier = Modifier.fillMaxSize().keepFocusedAboveKeyboard()) {
             if (groupLevels.isEmpty()) {
-                items(state.rows, key = { it.id }) { row -> ListRow(row, state, onOpenRow, onRowLongPress) }
+                items(state.rows, key = { it.id }) { row -> ListRow(row, state, onOpenRow, onRowLongPress, tight = tight) }
             } else {
                 groupsAt(0, state.rows, emptyList())
                 item(key = "groups-end") { Spacer(modifier = Modifier.size(12.dp)) }
@@ -5280,7 +5284,7 @@ private fun ListLayout(
                 if (depth == groupLevels.lastIndex) {
                     val rowsKey = "list-group:$key"
                     val shown = limits.limit(rowsKey, group.rows) { it.id }
-                    shown.items.forEach { row -> ListRow(row, state, onOpenRow, onRowLongPress, keys) }
+                    shown.items.forEach { row -> ListRow(row, state, onOpenRow, onRowLongPress, keys, tight) }
                     if (shown.hidden > 0) LoadMoreButton(shown.hidden, onClick = { limits?.more(rowsKey) })
                     GroupNewRowButton { onAddRowInGroups(keys) }
                 } else {
@@ -5299,10 +5303,13 @@ private fun ListLayout(
             return@Column
         }
         val shown = limits.limit("list", state.rows) { it.id }
-        shown.items.forEach { row -> ListRow(row, state, onOpenRow, onRowLongPress) }
+        shown.items.forEach { row -> ListRow(row, state, onOpenRow, onRowLongPress, tight = tight) }
         if (shown.hidden > 0) LoadMoreButton(shown.hidden, onClick = { limits?.more("list") })
     }
 }
+
+/** Sul telefono, sopra e sotto le righe di un elenco con le icone: 35 dp a riga coi caratteri a 0,8, invece di 47. */
+private val LIST_ROW_TIGHT_PADDING = 8.dp
 
 /** Quanto rientrano le intestazioni dei gruppi dell'elenco: la freccia sotto l'icona delle righe. */
 private val LIST_GROUP_INDENT = 12.dp
@@ -5315,7 +5322,9 @@ private fun ListRow(
     onOpenRow: (DatabaseRowEntity) -> Unit,
     onRowLongPress: (DatabaseRowEntity) -> Unit,
     /** Il gruppo (le chiavi dal primo livello): trascinandola, la riga resta fra quelle del suo gruppo. */
-    group: List<String> = emptyList()
+    group: List<String> = emptyList(),
+    /** Le righe dell'elenco hanno icone: sul telefono più fitte (vedi `ListLayout`). */
+    tight: Boolean = false
 ) {
     RowDragBox(row, group) {
     Row(
@@ -5329,7 +5338,7 @@ private fun ListRow(
                     onLongPress = { onRowLongPress(row) }
                 )
             }
-            .padding(horizontal = 16.dp, vertical = pcOr(5.dp, 14.dp)),
+            .padding(horizontal = 16.dp, vertical = pcOr(5.dp, if (tight) LIST_ROW_TIGHT_PADDING else 14.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RowIconBadge(row.id, ROW_ICON_SIZE)
@@ -8138,6 +8147,8 @@ private fun CellContent(
                     keyboardOptions = KeyboardOptions(
                         keyboardType = column.type.keyboardType(),
                         capitalization = column.type.capitalization(),
+                        // In un numero la tastiera non deve correggere niente (ora è quella delle lettere, vedi `keyboardType`).
+                        autoCorrect = column.type != ColumnType.NUMBER,
                         imeAction = ImeAction.Done
                     ),
                     // Un numero si legge nel formato delle impostazioni e della
@@ -11790,8 +11801,13 @@ private fun ColumnType.capitalization(): KeyboardCapitalization = when (this) {
     else -> KeyboardCapitalization.None
 }
 
+/**
+ * La tastiera proposta da una cella. Per un numero quella intera, coi simboli (dal 24/11/2026, chiesto
+ * dall'utente): la tastiera dei numeri non ha la ~ dei numeri indicativi (`ESTIMATE_MARK`). Le lettere
+ * comunque non entrano (vedi `numberEditAllowed`).
+ */
 private fun ColumnType.keyboardType(): KeyboardType = when (this) {
-    ColumnType.NUMBER -> KeyboardType.Number
+    ColumnType.NUMBER -> KeyboardType.Ascii
     ColumnType.URL -> KeyboardType.Uri
     ColumnType.EMAIL -> KeyboardType.Email
     ColumnType.PHONE -> KeyboardType.Phone

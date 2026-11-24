@@ -1126,6 +1126,21 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.155.53 — 24/11/2026 · 08:39 — The keyboard with the "~" in the Number cells, closer rows in the lists with icons
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1368 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **The keyboard of the Number cells has the
+  "~"**: it is the whole keyboard, with the symbols, instead of the one with
+  only the digits, which had no "~" for the estimates of v0.155.52. It
+  doesn't correct what you write, and the letters still don't go in
+- **[Change]** **[📱 Mobile]** **Closer rows in the lists with icons**: in
+  the List view of a database whose pages have icons, there are 8 points
+  above and below each row instead of 14 (about 35 points a row instead of
+  47 with small characters); all its rows stay the same height. Lists
+  without icons stay as they were
+- **[Project]** `ColumnType.keyboardType` gives `KeyboardType.Ascii` for
+  NUMBER, without autocorrect; `ListRow(tight)` and `LIST_ROW_TIGHT_PADDING`
+
 ### ✏️ v0.155.52 — 24/11/2026 · 08:07 — "~" numbers left out of the totals, a whole column under a spoiler, Delete under a quote, the Year view tidied and today in blue everywhere
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1368 tests passed)*
 
