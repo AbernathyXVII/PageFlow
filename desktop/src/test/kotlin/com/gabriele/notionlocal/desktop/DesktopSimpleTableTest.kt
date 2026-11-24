@@ -184,11 +184,11 @@ class DesktopSimpleTableTest {
         assertEquals("le altre come prima", listOf("A1", "B1", "A2"), listOf(now[0 to 0], now[0 to 1], now[1 to 0]))
     }
 
-    @Test
-    fun theEdgeBetweenTwoColumnsIsDraggedWithTheMouse() = table(1, 2, listOf("A1", "B1")) {
-        val (first, second) = cells().map { it.second }
-        val from = Offset(first.right + 6f, first.center.y)
-        val to = Offset(from.x + 150f, from.y)
+    /** Col mouse: dal bordo destro della colonna [column] (della prima riga), di [dx] punti. */
+    private fun Page.dragEdge(column: Int, dx: Float) {
+        val box = cells()[column].second
+        val from = Offset(box.right + 6f, box.center.y)
+        val to = Offset(from.x + dx, from.y)
         runBlocking(Dispatchers.Main) {
             scene.sendPointerEvent(PointerEventType.Move, from, type = PointerType.Mouse)
             scene.sendPointerEvent(PointerEventType.Press, from, type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true), button = PointerButton.Primary)
@@ -196,7 +196,7 @@ class DesktopSimpleTableTest {
         frames(2)
         for (step in 1..10) {
             runBlocking(Dispatchers.Main) {
-                scene.sendPointerEvent(PointerEventType.Move, Offset(from.x + (to.x - from.x) * step / 10f, from.y), type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true))
+                scene.sendPointerEvent(PointerEventType.Move, Offset(from.x + dx * step / 10f, from.y), type = PointerType.Mouse, buttons = PointerButtons(isPrimaryPressed = true))
             }
             frames(1)
         }
@@ -204,14 +204,45 @@ class DesktopSimpleTableTest {
             scene.sendPointerEvent(PointerEventType.Release, to, type = PointerType.Mouse, buttons = PointerButtons(), button = PointerButton.Primary)
         }
         frames(10)
-        shot("edge")
-        val (firstAfter, secondAfter) = cells().map { it.second }
-        assertTrue("la prima colonna si allarga: ${first.width} → ${firstAfter.width}", firstAfter.width > first.width + 100f)
-        assertTrue("la seconda si stringe: ${second.width} → ${secondAfter.width}", secondAfter.width < second.width - 100f)
+    }
+
+    private fun savedWidths(): String {
         val end = System.currentTimeMillis() + 5_000
         fun attrs() = runBlocking { AppDatabase.getInstance(context).blockDao().getById("t") }!!.attrsJson
-        while (System.currentTimeMillis() < end && "tableColWidths" !in attrs()) Thread.sleep(50)
-        assertTrue("le larghezze restano nel blocco: ${attrs()}", "tableColWidths" in attrs())
+        while (System.currentTimeMillis() < end && "tableColWidthsDp" !in attrs()) Thread.sleep(50)
+        return attrs()
+    }
+
+    /** Il bordo destro della prima colonna: si allarga solo lei, la seconda resta com'era (la tabella si allunga). */
+    @Test
+    fun theEdgeOfAColumnIsDraggedWithTheMouse() = table(1, 2, listOf("A1", "B1")) {
+        val (first, second) = cells().map { it.second }
+        dragEdge(0, 150f)
+        shot("edge")
+        val firstAfter = cells()[0].second
+        assertTrue("la prima colonna si allarga: ${first.width} → ${firstAfter.width}", firstAfter.width > first.width + 100f)
+        // La seconda ora esce in parte dalla pagina (la tabella scorre di lato): si guarda quanto è larga davvero.
+        val saved = Regex("\"tableColWidthsDp\":\\[([^\\]]*)\\]").find(savedWidths())?.groupValues?.get(1)
+            ?.split(",")?.map { it.trim().toFloat() } ?: error("larghezze non salvate: ${savedWidths()}")
+        // Le larghezze salvate sono delle celle intere: il campo di testo ha 8 punti di margine per lato.
+        assertEquals("la prima salvata più larga di 150", first.width + 16f + 150f, saved[0], 5f)
+        assertEquals("la seconda resta larga com'era", second.width + 16f, saved[1], 2f)
         assertEquals("nessuna cella scelta trascinando il bordo", listOf("A1", "B1"), cells().map { it.first })
+    }
+
+    /**
+     * **Anche l'ultima colonna si stringe** (24/11/2026, chiesto dall'utente: "Perché non posso rimpicciolire anche
+     * l'ultima colonna? Vorrei che la tabella sia larga fin quando desidero io, anche se del contenuto va a capo").
+     */
+    @Test
+    fun theLastColumnShrinksToo() = table(1, 2, listOf("A1", "una frase lunga che va a capo")) {
+        val (first, second) = cells().map { it.second }
+        dragEdge(1, -250f)
+        shot("last_edge")
+        val (firstAfter, secondAfter) = cells().map { it.second }
+        assertTrue("l'ultima colonna si stringe: ${second.width} → ${secondAfter.width}", secondAfter.width < second.width - 200f)
+        assertEquals("la prima resta com'era", first.width, firstAfter.width, 2f)
+        assertTrue("il testo va a capo: ${second.height} → ${secondAfter.height}", secondAfter.height > second.height + 10f)
+        assertTrue("le larghezze restano nel blocco: ${savedWidths()}", "tableColWidthsDp" in savedWidths())
     }
 }

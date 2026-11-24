@@ -9163,18 +9163,22 @@ fun TableBlockContent(
         picked = CellRange(minOf(from.first, to.first)..maxOf(from.first, to.first), minOf(from.second, to.second)..maxOf(from.second, to.second))
     }
     // **Le larghezze delle colonne col mouse** (dal 24/11/2026, chiesto dall'utente, come nei database): il bordo
-    // fra due colonne si trascina, e quello che una prende lo lascia l'altra. Vedi `BlockAttrs.tableColWidths`.
-    var widths by remember(block.id, block.attrsJson) { mutableStateOf(block.attrs.tableColWidths.orEmpty()) }
-    fun widthOf(c: Int) = widths.getOrNull(c)?.takeIf { it > 0f } ?: 1f
+    // destro di ogni colonna, anche dell'ultima, si trascina e cambia solo lei; la tabella è larga quanto le sue
+    // colonne (il testo va a capo), e più larga della pagina scorre di lato. Finché nessuno le ha toccate le
+    // colonne riempiono la pagina, in parti uguali o nelle proporzioni della v0.156.6 (`BlockAttrs.tableColWidths`).
+    var fixed by remember(block.id, block.attrsJson) { mutableStateOf(block.attrs.tableColWidthsDp) }
+    val proportions = remember(block.attrsJson) { block.attrs.tableColWidths.orEmpty() }
+    fun proportionOf(c: Int) = proportions.getOrNull(c)?.takeIf { it > 0f } ?: 1f
+    fun fixedOf(c: Int) = fixed?.getOrNull(c)?.takeIf { it > 0f } ?: TABLE_NEW_COLUMN.value
     val density = LocalDensity.current
     val resizable = isPc && !locked
+    val tableScroll = rememberScrollState()
     fun dragEdge(c: Int, deltaPx: Float) {
-        val total = tableCoordinates.get()?.size?.width?.toFloat()?.takeIf { it > 0f } ?: return
-        val all = (0 until block.tableCols).map { widthOf(it) }
-        val sum = all.sum()
-        val least = sum * with(density) { TABLE_MIN_COLUMN.toPx() } / total
-        val change = (deltaPx / total * sum).coerceIn(least - all[c], all[c + 1] - least)
-        widths = all.toMutableList().also { it[c] += change; it[c + 1] -= change }
+        // Alla prima presa le colonne passano dalle parti della pagina alla loro larghezza di adesso.
+        val now = (0 until block.tableCols).map { col ->
+            fixed?.getOrNull(col)?.takeIf { it > 0f } ?: cellBounds[0 to col]?.width?.div(density.density) ?: TABLE_NEW_COLUMN.value
+        }
+        fixed = now.toMutableList().also { it[c] = (it[c] + deltaPx / density.density).coerceAtLeast(TABLE_MIN_COLUMN.value) }
     }
     fun clearPicked(range: CellRange) {
         if (range.rows == 0 until block.tableRows && range.cols == 0 until block.tableCols) {
@@ -9212,7 +9216,7 @@ fun TableBlockContent(
                         val window = runCatching { table.localToWindow(down.position) }.getOrNull()
                         val edge = with(density) { TABLE_EDGE_WIDTH.toPx() }
                         if (window != null && cellBounds.any { (cell, box) ->
-                                cell.second < block.tableCols - 1 && window.y in box.top..box.bottom && kotlin.math.abs(window.x - box.right) <= edge
+                                window.y in box.top..box.bottom && kotlin.math.abs(window.x - box.right) <= edge
                             }
                         ) return@awaitEachGesture
                     }
@@ -9282,15 +9286,17 @@ fun TableBlockContent(
                     true
                 }
         )
+        val widthsSet = fixed != null
+        Column(modifier = if (widthsSet) Modifier.horizontalScroll(tableScroll) else Modifier) {
         for (r in 0 until block.tableRows) {
             // **Le celle di una riga sono alte uguali** (dal 24/11/2026, trovato dall'utente: andando a capo in una
             // cella, le altre della riga restavano basse e la riga sembrava staccata): quanto la più alta.
-            Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            Row(modifier = Modifier.then(if (widthsSet) Modifier else Modifier.fillMaxWidth()).height(IntrinsicSize.Min)) {
                 for (c in 0 until block.tableCols) {
                     key(r, c, loaded) {
                         Box(
                             modifier = Modifier
-                                .weight(widthOf(c))
+                                .then(if (widthsSet) Modifier.width(fixedOf(c).dp) else Modifier.weight(proportionOf(c)))
                                 .fillMaxHeight()
                                 .onGloballyPositioned { cellBounds[r to c] = it.boundsInWindow() }
                                 .background(if (picked?.contains(r, c) == true) veil else Color.Transparent)
@@ -9318,17 +9324,18 @@ fun TableBlockContent(
                                     .markFocusChanges()
                             )
                         }
-                        if (resizable && c < block.tableCols - 1) {
+                        if (resizable) {
                             TableColumnEdge(
                                 modifier = Modifier.align(Alignment.CenterEnd),
                                 onDrag = { delta -> dragEdge(c, delta) },
-                                onDone = { viewModel.updateBlockAttrs(block.id) { it.copy(tableColWidths = widths) } }
+                                onDone = { viewModel.updateBlockAttrs(block.id) { it.copy(tableColWidthsDp = fixed, tableColWidths = null) } }
                             )
                         }
                         }
                     }
                 }
             }
+        }
         }
 
         if (editing) Row(modifier = Modifier.padding(top = 4.dp)) {
@@ -9366,9 +9373,11 @@ private fun TableColumnEdge(modifier: Modifier, onDrag: (Float) -> Unit, onDone:
     )
 }
 
-/** Quanto è larga la presa sul bordo fra due colonne di una tabella, e quanto stretta può diventare una colonna. */
+/** Quanto è larga la presa sul bordo destro di una colonna di una tabella, e quanto stretta può diventare una colonna. */
 private val TABLE_EDGE_WIDTH = 6.dp
 private val TABLE_MIN_COLUMN = 40.dp
+/** Una colonna aggiunta a una tabella con le larghezze già scelte. */
+private val TABLE_NEW_COLUMN = 160.dp
 
 /**
  * **Il menu dei blocchi scelti col mouse** (dal 23/11/2026, chiesto dall'utente per quelli scelti

@@ -129,11 +129,17 @@ data class BlockAttrs(
     /** Il titolo sopra l'immagine, che ne segue l'allineamento; null = nessuno. */
     val imageTitle: String? = null,
     /**
-     * **Le larghezze delle colonne di una tabella** (dal 24/11/2026, chiesto dall'utente: trascinandone il bordo
-     * col mouse, come nei database): una per colonna, in proporzione fra loro (1 = la larghezza di partenza);
-     * quelle che mancano, come una colonna aggiunta dopo, valgono 1. Null = tutte uguali.
+     * Le larghezze delle colonne di una tabella in proporzione fra loro, come le scriveva la v0.156.6 (la tabella
+     * riempiva sempre la pagina). Si leggono ancora finché non c'è [tableColWidthsDp]; null = tutte uguali.
      */
-    val tableColWidths: List<Float>? = null
+    val tableColWidths: List<Float>? = null,
+    /**
+     * **Le larghezze delle colonne di una tabella, in punti** (dal 24/11/2026, chiesto dall'utente: "Vorrei che la
+     * tabella sia larga fin quando desidero io"): una per colonna, scelte trascinandone il bordo col mouse; la
+     * tabella è larga quanto la loro somma. Quelle che mancano, come una colonna aggiunta dopo, valgono 160.
+     * Null = le colonne riempiono la pagina.
+     */
+    val tableColWidthsDp: List<Float>? = null
 ) {
     /** L'elenco di cui questo paragrafo tiene il posto, o null. */
     val listIndentType: BlockType?

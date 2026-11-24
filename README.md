@@ -1126,6 +1126,24 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.7 — 24/11/2026 · 22:00 — A simple table as wide as you want: every column, the last too, has its own width
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1387 tests passed)*
+
+- **[Change]** **[💻 PC]** **Every column of a simple table has its own
+  width, the last one too**: the right border of each column can be dragged
+  with the mouse and changes only that column; the table is as wide as its
+  columns (the text goes to a new line) and doesn't have to fill the page.
+  If it gets wider than the page, it scrolls sideways. In the v0.156.6 the
+  widths were shares of the page: what a column took, the next one gave,
+  and the last one couldn't get narrower. A column added later is 160
+  points wide; the tables already resized keep their shares until their
+  first new drag. The widths also hold on the phone
+- **[Project]** `BlockAttrs.tableColWidthsDp` (points, one per column) in
+  place of the shares `tableColWidths`, still read until the first drag;
+  `TableColumnEdge` on every column; rows in a `horizontalScroll` when the
+  widths are set; `TABLE_NEW_COLUMN`. Tests: `DesktopSimpleTableTest`
+  (`theEdgeOfAColumnIsDraggedWithTheMouse`, `theLastColumnShrinksToo`)
+
 ### ✏️ v0.156.6 — 24/11/2026 · 21:36 — Simple tables: rows of the same height, Esc and the arrows as in Excel, column widths with the mouse
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1386 tests passed)*
 
