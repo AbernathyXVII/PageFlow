@@ -1126,6 +1126,23 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.3 — 24/11/2026 · 16:05 — Right-click a group's name to rename its tag
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1375 tests passed)*
+
+- **[Change]** **[💻 PC]** **[📱 Mobile]** **Right-click on the name of a
+  group** (on the phone, a long press) opens that tag's editor, the same one
+  of the tag picker: you rename it there (with "Done", or by closing it), and
+  every page with that tag follows, so the group keeps its pages. From there
+  also its colors and Delete. It works on the groups of the table and of the
+  list, on the bands and on the columns of the board, when the grouping
+  property is a Select, Multi-select or People. Not on the "No …" group or
+  on a tag already deleted, and not in a database that is read only. The
+  normal click still opens and closes the group
+- **[Project]** `LocalGroupTagEditor` (column, tag) provided by the database
+  screen, which opens `GroupTagSheet` with `TagOptionEditor`;
+  `rememberGroupTagEdit` in `GroupHeaderRow` (now with the grouping column)
+  and `BoardColumnHeader`. Test: `DesktopListGroupsTest.rightClickOnAGroupOpensItsTag`
+
 ### ✏️ v0.156.2 — 24/11/2026 · 15:44 — "Read only" and "Lock with password" kept apart, "Delete linked page", narrowed columns that can be touched
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1374 tests passed)*
 
@@ -4122,7 +4139,7 @@ say that **they still have to be verified on the phone**: when they are,
   "Export" window drawn on the PC (`export.png`)
 
 ### ✏️ v0.153.20 — 09/11/2026 · 22:25 — The full Backup on the PC, and a PC backup opens on the phone too
-*(Claude Code on the PC; tested on the PC by the user (backup and upload) and on the phone (a PC backup restored); restoring on the PC not yet; 1127 tests passed)*
+*(Claude Code on the PC; tested on the PC by the user (backup and upload) and on the phone (a PC backup restored); restoring on the PC tested by the user on 24/11/2026; 1127 tests passed)*
 
 - **[Project]** **The phone's Backup page on the PC too**, the same one
   (moved into the common code): "Back up now", "Upload to Proton Drive"
@@ -11090,7 +11107,7 @@ Calendar.
   install; the user had deleted them, it isn't an error
 
 ### 🆕 v0.56 — 26/09/2026 · 00:23 — Clearing the cache, deleting all content
-*(Claude Code on the PC; verified on the phone the same day, except the real deletion, see at the bottom; 133 tests passed; commit only local)*
+*(Claude Code on the PC; verified on the phone the same day; the real deletion, with a backup restored right after, tested by the user on 24/11/2026; 133 tests passed; commit only local)*
 
 - **[New feature]** **[📱 Mobile]** In Settings, **under "Time zone"** and
   separated by a line, two entries:

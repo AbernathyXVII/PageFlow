@@ -3,8 +3,17 @@ package com.gabriele.notionlocal.desktop
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.input.pointer.PointerButtons
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -34,6 +43,7 @@ import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Image
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -85,11 +95,10 @@ class DesktopListGroupsTest {
 
     private fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
 
-    @Test
-    fun theListHasTheGroupHeaders() {
+    private fun listScene(): ImageComposeScene {
         val factory = ViewModelFactory(context)
         val owner = ScreenOwner()
-        val scene = onWindowThread {
+        return onWindowThread {
             ImageComposeScene(width = 700, height = 600, density = Density(1f)) {
                 CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
                     NotionLocalTheme {
@@ -103,21 +112,87 @@ class DesktopListGroupsTest {
                 }
             }
         }
+    }
+
+    private var time = 0L
+
+    /** Qualche fotogramma, poi la foto (salvata in build/desktop-screenshots). */
+    private fun ImageComposeScene.settle(name: String): Bitmap {
+        repeat(40) {
+            onWindowThread { render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        val shot = onWindowThread { Bitmap.makeFromImage(render(time)) }
+        File("build/desktop-screenshots", "$name.png").apply { parentFile.mkdirs() }
+            .writeBytes(Image.makeFromBitmap(shot).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        return shot
+    }
+
+    /** Le righe di testo chiaro sotto la barra, a sinistra. */
+    private fun linesOf(shot: Bitmap): List<IntRange> {
+        fun bright(c: Int) = ((c shr 16) and 0xFF) > 120 && ((c shr 8) and 0xFF) > 120 && (c and 0xFF) > 120
+        return (125 until 600).filter { y -> (0 until 300).any { x -> bright(shot.getColor(x, y)) } }
+            .fold(mutableListOf<IntRange>()) { acc, y -> if (acc.isNotEmpty() && acc.last().last >= y - 3) acc[acc.lastIndex] = acc.last().first..y else acc += y..y; acc }
+    }
+
+    @Test
+    fun theListHasTheGroupHeaders() {
+        val scene = listScene()
         try {
-            var time = 0L
-            repeat(40) {
-                onWindowThread { scene.render(time) }
-                time += 100_000_000L
-                Thread.sleep(30)
-            }
-            val shot = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }
-            File("build/desktop-screenshots", "list_groups.png").apply { parentFile.mkdirs() }
-                .writeBytes(Image.makeFromBitmap(shot).encodeToData(EncodedImageFormat.PNG)!!.bytes)
-            // Le righe di testo chiaro sotto la barra: IPERPOLI, Cibo, Pasta, Sale, Lidl, Casa, Shampoo.
-            fun bright(c: Int) = ((c shr 16) and 0xFF) > 120 && ((c shr 8) and 0xFF) > 120 && (c and 0xFF) > 120
-            val lines = (125 until 600).filter { y -> (0 until 300).any { x -> bright(shot.getColor(x, y)) } }
-                .fold(mutableListOf<IntRange>()) { acc, y -> if (acc.isNotEmpty() && acc.last().last >= y - 3) acc[acc.lastIndex] = acc.last().first..y else acc += y..y; acc }
+            val lines = linesOf(scene.settle("list_groups"))
+            // IPERPOLI, Cibo, Pasta, Sale, Lidl, Casa, Shampoo.
             assertTrue("le righe dell'elenco coi gruppi: $lines", lines.size == 7)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **Il clic destro sul nome di un gruppo a tag** (24/11/2026, chiesto dall'utente: "Consentimi di
+     * rinominare quelle proprietà che si vedono raggruppate cliccandoci con il destro"): si apre la
+     * modifica del tag, e il gruppo non si chiude come col clic sinistro.
+     */
+    @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
+    @Test
+    fun rightClickOnAGroupOpensItsTag() {
+        val scene = listScene()
+        try {
+            val before = scene.settle("list_group_before")
+            val header = linesOf(before).first()
+            val at = Offset(150f, (header.first + header.last) / 2f)
+            fun click(at: Offset, right: Boolean = false) = onWindowThread {
+                val button = if (right) PointerButton.Secondary else PointerButton.Primary
+                scene.sendPointerEvent(PointerEventType.Move, at)
+                scene.sendPointerEvent(PointerEventType.Press, at, buttons = PointerButtons(isPrimaryPressed = !right, isSecondaryPressed = right), button = button)
+                scene.sendPointerEvent(PointerEventType.Release, at, buttons = PointerButtons(), button = button)
+            }
+            click(at, right = true)
+            val after = scene.settle("list_group_tag")
+            val changed = (0 until 700 step 2).sumOf { x -> (0 until 600 step 2).count { y -> before.getColor(x, y) != after.getColor(x, y) } }
+            assertTrue("si apre la finestra del tag: $changed punti cambiati", changed > 2_000)
+            val db = AppDatabase.getInstance(context)
+            val page = runBlocking { db.pageDao().getById("spesa") }
+            assertTrue("il gruppo resta aperto", page?.tableGroupRulesJson?.contains("IPERPOLI") != true)
+
+            // Il nome: in fondo al campo (vedi list_group_tag.png) " Sud", poi Done.
+            click(Offset(420f, 249f))
+            scene.settle("list_group_typing")
+            " Sud".forEach { char ->
+                onWindowThread {
+                    val awt = java.awt.event.KeyEvent(java.awt.Canvas(), java.awt.event.KeyEvent.KEY_TYPED, 0L, 0, java.awt.event.KeyEvent.VK_UNDEFINED, char)
+                    scene.sendKeyEvent(KeyEvent(Key.Unknown, KeyEventType.Unknown, codePoint = char.code, nativeEvent = awt))
+                    scene.render(time)
+                }
+            }
+            click(Offset(465f, 196f))
+            scene.settle("list_group_renamed")
+            val end = System.currentTimeMillis() + 5_000
+            fun shop(row: String) = runBlocking { db.databaseDao().getCell(row, "shop")?.value }
+            while (shop("pasta") != "IPERPOLI Sud" && System.currentTimeMillis() < end) Thread.sleep(30)
+            assertEquals("le righe col tag seguono il nome nuovo", "IPERPOLI Sud", shop("pasta"))
+            assertEquals("IPERPOLI Sud", shop("sale"))
+            assertEquals("Lidl", shop("shampoo"))
         } finally {
             onWindowThread { scene.close() }
         }

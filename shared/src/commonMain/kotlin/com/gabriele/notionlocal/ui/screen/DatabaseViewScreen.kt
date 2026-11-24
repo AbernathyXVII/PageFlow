@@ -1402,6 +1402,18 @@ private fun DatabaseViewBody(
     editingFormula?.let { (column, rowId) ->
         FormulaEditorFor(viewModel, column, rowId, onDismiss = { editingFormula = null })
     }
+    var editingGroupTag by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val groupTagEditor = remember { { columnId: String, label: String -> editingGroupTag = columnId to label } }
+    editingGroupTag?.let { (columnId, label) ->
+        val option = state.columns.find { it.id == columnId }?.let { column ->
+            parseSelectOptionsFull(column.optionsJson).find { it.label == label }
+        }
+        if (option == null) {
+            LaunchedEffect(Unit) { editingGroupTag = null }
+        } else {
+            GroupTagSheet(option, onDismiss = { editingGroupTag = null }, columnId = columnId, viewModel = viewModel)
+        }
+    }
 
     // Le frecce da una cella all'altra mentre si scrive (vedi `CellGrid`).
     val cellGrid = remember { CellGrid() }
@@ -1424,7 +1436,8 @@ private fun DatabaseViewBody(
         LocalCellLinkLabels provides cellLinkLabels,
         LocalTitleEditRequest provides TitleEditRequest(editTitleOf, viewModel::consumeEditTitle),
         LocalRowLimits provides rowLimits,
-        LocalCellGrid provides cellGrid
+        LocalCellGrid provides cellGrid,
+        LocalGroupTagEditor provides groupTagEditor.takeUnless { contentLocked }
     ) {
     Column(
         modifier = modifier
@@ -2553,6 +2566,7 @@ private fun TableLayout(
                 item(key = "group:$key") {
                     GroupHeaderRow(
                         group = group,
+                        column = level.column,
                         collapsed = isCollapsed,
                         width = tableWidth,
                         indent = SUB_GROUP_INDENT * depth,
@@ -2793,6 +2807,7 @@ private fun TableLayout(
                 val isCollapsed = key in level.collapsed
                 GroupHeaderRow(
                     group = group,
+                    column = level.column,
                     collapsed = isCollapsed,
                     width = tableWidth,
                     indent = SUB_GROUP_INDENT * depth,
@@ -3588,12 +3603,24 @@ private fun TableBodyRow(
 }
 
 /**
+ * Cosa fa il clic destro (o la pressione lunga) sul nome di un gruppo: la modifica del tag, se
+ * il gruppo è un tag che esiste ancora (non "senza valore", non un tag già cancellato); se no niente.
+ */
+@Composable
+private fun rememberGroupTagEdit(group: RowGroup, column: DatabaseColumnEntity): (() -> Unit)? {
+    val editor = LocalGroupTagEditor.current
+    return if (editor != null && column.type.isTag && group.color != null) ({ editor(column.id, group.key) }) else null
+}
+
+/**
  * L'intestazione di un gruppo: la freccia per chiuderlo, il valore
  * (come tag se la proprietà è a tag) e quante pagine contiene.
  */
 @Composable
 private fun GroupHeaderRow(
     group: RowGroup,
+    /** La proprietà dei gruppi: se è a tag, il clic destro apre la modifica del tag. */
+    column: DatabaseColumnEntity,
     collapsed: Boolean,
     /** Null: larga quanto c'è posto (nell'elenco). */
     width: Dp?,
@@ -3601,9 +3628,12 @@ private fun GroupHeaderRow(
     indent: Dp = 0.dp,
     onToggle: () -> Unit
 ) {
+    val editTag = rememberGroupTagEdit(group, column)
     Row(
         modifier = Modifier
             .then(if (width == null) Modifier.fillMaxWidth() else Modifier.width(width))
+            .onRightClick(editTag)
+            .onLongPressFirst(editTag)
             .clickable { onToggle() }
             .padding(start = indent, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -3749,7 +3779,7 @@ fun BoardLayout(
             groups.forEach { group ->
                 val tint = tints[group.key]
                 BoardColumnBox(tint) {
-                    BoardColumnHeader(group, tagged, tint, accentOf(tint))
+                    BoardColumnHeader(group, groupColumn, tagged, tint, accentOf(tint))
                     BoardColumnCards(
                         rows = group.rows,
                         limitKey = "board:" + group.key,
@@ -3793,6 +3823,7 @@ fun BoardLayout(
             Box(modifier = Modifier.offset { IntOffset(boardScroll.value, 0) }) {
                 GroupHeaderRow(
                     group = band,
+                    column = level.column,
                     collapsed = isCollapsed,
                     width = BOARD_COLUMN_WIDTH,
                     indent = 6.dp + SUB_GROUP_INDENT * depth,
@@ -3844,7 +3875,7 @@ fun BoardLayout(
             groups.forEach { group ->
                 val tint = tints[group.key]
                 BoardColumnBox(tint) {
-                    BoardColumnHeader(group, tagged, tint, accentOf(tint))
+                    BoardColumnHeader(group, groupColumn, tagged, tint, accentOf(tint))
                 }
             }
             moreColumns()
@@ -3881,10 +3912,11 @@ private fun BoardColumnBox(
 
 /** In cima a una colonna della bacheca: il suo valore (il tag, con "Color columns") e quante schede ha. */
 @Composable
-private fun BoardColumnHeader(group: RowGroup, tagged: Boolean, tint: Color?, accent: Color?) {
+private fun BoardColumnHeader(group: RowGroup, column: DatabaseColumnEntity, tagged: Boolean, tint: Color?, accent: Color?) {
     val onPage = MaterialTheme.colorScheme.onBackground
+    val editTag = rememberGroupTagEdit(group, column)
     Row(
-        modifier = Modifier.padding(vertical = 10.dp),
+        modifier = Modifier.onRightClick(editTag).onLongPressFirst(editTag).padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (tint != null && tagged && group.key.isNotEmpty()) {
@@ -5232,6 +5264,7 @@ private fun ListLayout(
     @Composable
     fun Header(group: RowGroup, depth: Int, level: GroupLevel, key: String, collapsed: Boolean) = GroupHeaderRow(
         group = group,
+        column = level.column,
         collapsed = collapsed,
         width = null,
         indent = LIST_GROUP_INDENT + SUB_GROUP_INDENT * depth,
@@ -8298,6 +8331,29 @@ fun TagCell(
     }
 }
 
+/** La modifica di un tag aperta dal nome del suo gruppo (vedi `LocalGroupTagEditor`). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GroupTagSheet(option: SelectOption, onDismiss: () -> Unit, columnId: String, viewModel: DatabaseViewModel) {
+    NoteBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = DarkSheet
+    ) {
+        TagOptionEditor(
+            option = option,
+            onDone = onDismiss,
+            onRename = { viewModel.renameSelectOption(columnId, option.label, it) },
+            onSetColor = { viewModel.setSelectOptionColor(columnId, option.label, it) },
+            onSetSecondColor = { hex, line -> viewModel.setSelectOptionSecondColor(columnId, option.label, hex, line) },
+            onDelete = {
+                viewModel.deleteSelectOption(columnId, option.label)
+                onDismiss()
+            }
+        )
+    }
+}
+
 /**
  * La schermata per modificare un tag: nome, eliminazione e colore.
  *
@@ -10015,6 +10071,12 @@ private val LocalSimpleDatabase = staticCompositionLocalOf { false }
 
 /** La colonna da cui le righe prendono il nome, se c'è (vedi `TitleColumn.kt`): nella tabella fa da Name. */
 private val LocalTitleColumnId = staticCompositionLocalOf<String?> { null }
+
+/**
+ * **Il clic destro sul nome di un gruppo a tag** (dal 24/11/2026, chiesto dall'utente): apre la
+ * modifica di quel tag (colonna, tag). Null col database bloccato: lì i tag non si toccano.
+ */
+private val LocalGroupTagEditor = staticCompositionLocalOf<((String, String) -> Unit)?> { null }
 
 /**
  * Le icone delle pagine delle righe del database aperto: riga → immagine o
