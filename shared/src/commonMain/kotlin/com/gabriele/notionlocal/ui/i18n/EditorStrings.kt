@@ -275,7 +275,9 @@ object EditorStrings {
     val beginNewList get() = t("Begin a new list here", "Inizia qui un nuovo elenco", "Hier eine neue Liste beginnen", "Commencer une nouvelle liste ici", "Empezar una lista nueva aquí", "从这里开始新列表", "여기서 새 목록 시작", "ここから新しいリストを開始")
     val renumberContinuation get() = t("Renumber as continuation of previous list", "Rinumera come continuazione dell'elenco precedente", "Als Fortsetzung der vorherigen Liste nummerieren", "Renuméroter à la suite de la liste précédente", "Renumerar como continuación de la lista anterior", "接续上一个列表编号", "이전 목록에 이어서 번호 매기기", "前のリストの続きとして番号を振り直す")
     val removeNumber get() = t("Remove number", "Rimuovi il numero", "Nummer entfernen", "Supprimer le numéro", "Quitar el número", "移除编号", "번호 제거", "番号を削除")
-    val changeToBullet get() = t("Change to bullet", "Cambia in elenco puntato", "In Aufzählungspunkt ändern", "Changer en puce", "Cambiar a viñeta", "改为项目符号", "글머리 기호로 변경", "箇条書きに変更")
+    val listSymbol get() = t("Symbol", "Simbolo", "Symbol", "Symbole", "Símbolo", "符号", "기호", "記号")
+    val listSymbolAuto get() = t("Automatic", "Automatico", "Automatisch", "Automatique", "Automático", "自动", "자동", "自動")
+    val changeToBullet get() =t("Change to bullet", "Cambia in elenco puntato", "In Aufzählungspunkt ändern", "Changer en puce", "Cambiar a viñeta", "改为项目符号", "글머리 기호로 변경", "箇条書きに変更")
 
     // --- Il pennello ---
 

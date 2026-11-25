@@ -85,6 +85,13 @@ data class BlockAttrs(
      */
     val tocFlag: Boolean = false,
     /**
+     * **Il segno scelto di una voce di elenco** (dal 25/11/2026, chiesto
+     * dall'utente: "anche se l'indentazione non lo rispetta, io vorrei scrivere
+     * 1), 1. o il resto"): quale dei pallini (`BULLET_MARKERS`) o dei modi di
+     * scrivere i numeri (`NUMBERED_STYLES`); null = quello del livello di rientro.
+     */
+    val listMarker: Int? = null,
+    /**
      * **"Paragraph" di un gruppo di righe** (dal 21/10/2026, chiesto
      * dall'utente, come su Word): lo spazio in più fra questo blocco e quelli
      * vicini, in punti; null = quello della pagina. Vedi `ParagraphLook`.
@@ -197,10 +204,16 @@ fun BlockEntity.attrsForNewLine(): String {
     val kept = BlockAttrs(
         listIndent = heldListType?.name,
         spacing = paragraph?.spacing,
-        markerGap = paragraph?.markerGap
+        markerGap = paragraph?.markerGap,
+        // La voce dopo ha lo stesso segno scelto (vedi `BlockAttrs.listMarker`).
+        listMarker = listMarker
     )
     return if (kept == BlockAttrs()) "{}" else BlockAttrs.encode(kept)
 }
+
+/** Il segno scelto di una voce di elenco (`BlockAttrs.listMarker`); il JSON si apre solo se c'è. */
+val BlockEntity.listMarker: Int?
+    get() = if (attrsJson.contains("\"listMarker\"")) attrs.listMarker else null
 
 /**
  * Le voci del blocco, solo se ha un "Paragraph" suo; null altrimenti. Si

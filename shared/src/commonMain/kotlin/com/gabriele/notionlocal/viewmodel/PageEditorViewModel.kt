@@ -53,6 +53,7 @@ import com.gabriele.notionlocal.data.entity.CopiedLine
 import com.gabriele.notionlocal.data.entity.applyPaste
 import com.gabriele.notionlocal.data.entity.sliceSpans
 import com.gabriele.notionlocal.data.entity.applyTextEdit
+import com.gabriele.notionlocal.data.entity.listMarker
 import com.gabriele.notionlocal.data.entity.bareLinkAt
 import com.gabriele.notionlocal.data.entity.joinLines
 import com.gabriele.notionlocal.data.entity.linkInRange
@@ -617,7 +618,7 @@ class PageEditorViewModel(
      */
     private fun markerSizeOf(block: BlockEntity): Float =
         if (block.type == BlockType.BULLET_LIST_ITEM || block.heldListType == BlockType.BULLET_LIST_ITEM) {
-            bulletMarkerSizeFor(block.indentLevel.coerceAtLeast(0)).value
+            bulletMarkerSizeFor(block.indentLevel.coerceAtLeast(0), block.listMarker).value
         } else {
             0f
         }
@@ -2529,6 +2530,32 @@ class PageEditorViewModel(
         }
     }
 
+    /**
+     * **Il segno scelto di un elenco** (dal 25/11/2026, chiesto dall'utente: col tasto destro sul
+     * numero o sul pallino): [chosen] (null = quello del rientro) va alla voce e alle altre dello
+     * stesso elenco allo stesso rientro, sopra e sotto finché l'elenco continua; le voci più rientrate
+     * in mezzo non cambiano, né lo fermano. Vedi `BlockAttrs.listMarker`.
+     */
+    fun setListMarker(blockId: String, chosen: Int?) {
+        val block = _blocks.value.find { it.id == blockId } ?: return
+        val siblings = _blocks.value.filter { it.parentBlockId == block.parentBlockId }.sortedBy { it.orderIndex }
+        val at = siblings.indexOfFirst { it.id == blockId }
+        fun same(b: BlockEntity) = b.type == block.type && b.indentLevel == block.indentLevel
+        fun deeper(b: BlockEntity) = (b.type == BlockType.BULLET_LIST_ITEM || b.type == BlockType.NUMBERED_LIST_ITEM || b.heldListType != null) &&
+            b.indentLevel > block.indentLevel
+        val list = mutableListOf(block)
+        for (step in listOf(-1, 1)) {
+            var i = at + step
+            while (i in siblings.indices) {
+                val b = siblings[i]
+                if (same(b)) list += b else if (!deeper(b)) break
+                i += step
+            }
+        }
+        snapshotForStructuralChange()
+        viewModelScope.launch { list.forEach { b -> repository.updateBlockAttrs(b.id) { it.copy(listMarker = chosen) } } }
+    }
+
     /** Da numero a pallino, testo compreso. */
     fun changeToBullet(blockId: String) {
         if (_blocks.value.none { it.id == blockId }) return
@@ -4313,9 +4340,9 @@ class PageEditorViewModel(
      * titolo, non si converte niente. Restituisce true se ha convertito,
      * così il campo sa che deve togliere il testo digitato.
      */
-    fun startNumberedListAtLine(runBlockIds: List<String>, lineIndex: Int, startNumber: Int, bullet: Boolean = false): Boolean {
+    fun startNumberedListAtLine(runBlockIds: List<String>, lineIndex: Int, startNumber: Int, bullet: Boolean = false, rest: String = ""): Boolean {
         val block = resolveRun(runBlockIds)?.getOrNull(lineIndex) ?: return false
-        return startNumberedList(block, startNumber, bullet)
+        return startNumberedList(block, startNumber, bullet, rest)
     }
 
     /**
@@ -4334,13 +4361,16 @@ class PageEditorViewModel(
      * nel testo condiviso — e l'utente ha trovato che dentro un toggle
      * "le Numbered list non vengono attivate".
      */
-    fun startNumberedListInBlock(blockId: String, startNumber: Int, bullet: Boolean = false): Boolean {
+    fun startNumberedListInBlock(blockId: String, startNumber: Int, bullet: Boolean = false, rest: String = ""): Boolean {
         val block = _blocks.value.find { it.id == blockId } ?: return false
-        return startNumberedList(block, startNumber, bullet)
+        return startNumberedList(block, startNumber, bullet, rest)
     }
 
-    /** "5." fa un elenco numerato che parte da 5; con [bullet] ("- ", dal 17/11/2026) un elenco puntato. */
-    private fun startNumberedList(block: BlockEntity, startNumber: Int, bullet: Boolean = false): Boolean {
+    /**
+     * "5." fa un elenco numerato che parte da 5; con [bullet] ("- ", dal 17/11/2026) un elenco puntato.
+     * [rest] è il testo che la riga aveva già dopo il numero (dal 25/11/2026): resta, col suo formato.
+     */
+    private fun startNumberedList(block: BlockEntity, startNumber: Int, bullet: Boolean = false, rest: String = ""): Boolean {
         if (block.type != BlockType.PARAGRAPH) return false
         snapshotForStructuralChange()
         viewModelScope.launch {
@@ -4348,7 +4378,7 @@ class PageEditorViewModel(
                 block.copy(
                     type = if (bullet) BlockType.BULLET_LIST_ITEM else BlockType.NUMBERED_LIST_ITEM,
                     numberStartsAt = if (bullet) null else startNumber,
-                    textJson = json.encodeToString(listOf(RichTextSpan(text = "")))
+                    textJson = json.encodeToString(applyTextEdit(spansOf(block), plainTextOf(block), rest))
                 )
             )
         }
@@ -4588,35 +4618,41 @@ class PageEditorViewModel(
         // inserisce.
         val referenceBlock = oldMiddleBlocks.lastOrNull()
             ?: runBlocks.getOrNull(oldMiddleStart - 1)
-        val indentLevel = referenceBlock?.indentLevel ?: 0
+        // **Invio all'inizio di una riga** (dal 25/11/2026, trovato dall'utente: sotto un "6." la riga
+        // vuota nuova diventava un "7."): le righe vuote nascono sopra quella col cursore, che scende
+        // intera, e prendono tipo e rientro da lei, come su Notion, non da quella sopra.
+        val pushedDown = oldMiddleBlocks.isEmpty() && suffixCount > 0 && newMiddleLines.all { it.isEmpty() } &&
+            caretLine == prefixCount + newMiddleLines.size
+        val typeSource = if (pushedDown) runBlocks.getOrNull(oldMiddleEnd) ?: referenceBlock else referenceBlock
+        val indentLevel = typeSource?.indentLevel ?: 0
         // I titoli non si propagano: premere Invio dopo un titolo dà un
         // paragrafo normale, come in qualsiasi editor. Gli elenchi
         // invece sì, così continuare una lista crea altri elementi.
         // L'elenco di cui la riga di riferimento è una voce, o di cui tiene il posto.
-        val listOfReference = referenceBlock?.type?.takeIf { it == BlockType.BULLET_LIST_ITEM || it == BlockType.NUMBERED_LIST_ITEM }
-            ?: referenceBlock?.heldListType
+        val listOfReference = typeSource?.type?.takeIf { it == BlockType.BULLET_LIST_ITEM || it == BlockType.NUMBERED_LIST_ITEM }
+            ?: typeSource?.heldListType
         val inheritedType = when {
             // Maiusc+Invio in un elenco: una riga che ne tiene il posto.
             holdNewLine && listOfReference != null -> BlockType.PARAGRAPH
             // **Invio da una riga che tiene il posto di un elenco continua
             // l'elenco** (dal 16/11/2026, chiesto dall'utente sul PC: prima
             // la riga nuova teneva il posto anche lei), col numero dopo.
-            referenceBlock?.heldListType != null -> referenceBlock.heldListType!!
-            else -> when (referenceBlock?.type) {
+            typeSource?.heldListType != null -> typeSource.heldListType!!
+            else -> when (typeSource?.type) {
                 BlockType.BULLET_LIST_ITEM,
                 BlockType.NUMBERED_LIST_ITEM,
                 // Andando a capo su una casella se ne ottiene un'altra, come
                 // su Notion: è una lista di cose da fare, non una riga sola.
                 // La nuova nasce **non spuntata**, ovviamente.
-                BlockType.CHECKBOX -> referenceBlock.type
+                BlockType.CHECKBOX -> typeSource.type
                 else -> BlockType.PARAGRAPH
             }
         }
-        val inheritedAttrs = referenceBlock?.attrsForNewLine()?.let { attrs ->
+        val inheritedAttrs = typeSource?.attrsForNewLine()?.let { attrs ->
             when {
                 holdNewLine && listOfReference != null ->
                     BlockAttrs.encode(BlockAttrs.parse(attrs).copy(listIndent = listOfReference.name))
-                referenceBlock?.heldListType != null -> BlockAttrs.encode(BlockAttrs.parse(attrs).copy(listIndent = null))
+                typeSource?.heldListType != null -> BlockAttrs.encode(BlockAttrs.parse(attrs).copy(listIndent = null))
                 else -> attrs
             }
         } ?: "{}"

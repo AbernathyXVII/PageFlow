@@ -55,6 +55,7 @@ import com.gabriele.notionlocal.data.entity.paragraph
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -175,6 +176,7 @@ import com.gabriele.notionlocal.data.notify.NotificationPermission
 import com.gabriele.notionlocal.ui.format.Formats
 import com.gabriele.notionlocal.ui.i18n.NotifyStrings
 import com.gabriele.notionlocal.ui.theme.AccentBlue
+import com.gabriele.notionlocal.ui.theme.DarkSurface
 import com.gabriele.notionlocal.ui.theme.TextLinkColor
 import java.time.Instant
 import java.time.LocalDateTime
@@ -270,6 +272,7 @@ import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.MULTILINE_TYPES
 import com.gabriele.notionlocal.data.entity.attrs
 import com.gabriele.notionlocal.data.entity.heldListType
+import com.gabriele.notionlocal.data.entity.listMarker
 import com.gabriele.notionlocal.ui.i18n.BlockStrings
 import com.gabriele.notionlocal.ui.theme.CalloutBackground
 import com.gabriele.notionlocal.data.entity.BlockType
@@ -1228,8 +1231,9 @@ private fun bodyOf(fieldText: String): String =
 /**
  * Dove comincia la riga e da che numero deve partire l'elenco appena
  * richiesto scrivendo "5."; con [bullet] un elenco puntato, chiesto con "- ".
+ * [rest] è il testo che la riga aveva già dopo il cursore, e che resta.
  */
-private data class NumberedListPrefix(val lineIndex: Int, val startNumber: Int, val lineStart: Int, val bullet: Boolean = false)
+private data class NumberedListPrefix(val lineIndex: Int, val startNumber: Int, val lineStart: Int, val bullet: Boolean = false, val rest: String = "")
 
 /**
  * Riconosce "ho appena digitato il punto di un `5.` a inizio blocco".
@@ -1245,17 +1249,18 @@ private fun numberedListPrefixJustTyped(oldBody: String, newBody: String, caret:
     if (caret < 2 || caret > newBody.length) return null
     // **"- " fa un elenco puntato** (dal 17/11/2026, chiesto dall'utente, come su Notion): lo
     // spazio appena scritto dopo un trattino che è tutto quello che c'è nella riga.
+    // **Anche in una riga che ha già del testo dopo il cursore** (dal 25/11/2026, trovato dall'utente:
+    // "scrivendo un numero con il punto dopo, non mi crea la numbered list"): la riga diventa la voce
+    // e il suo testo resta. Prima il numero o il trattino dovevano essere tutto quello che c'era.
+    val lineEnd = newBody.indexOf('\n', caret).let { if (it < 0) newBody.length else it }
+    val rest = newBody.substring(caret, lineEnd)
     if (newBody[caret - 1] == ' ') {
         val lineStart = newBody.lastIndexOf('\n', caret - 2) + 1
-        val lineEnd = newBody.indexOf('\n', caret).let { if (it < 0) newBody.length else it }
-        if (caret != lineEnd || newBody.substring(lineStart, lineEnd) != "- ") return null
+        if (newBody.substring(lineStart, caret) != "- ") return null
         if (newBody.removeRange(caret - 1, caret) != oldBody) return null
-        return NumberedListPrefix(lineIndex = newBody.take(lineStart).count { it == '\n' }, startNumber = 0, lineStart = lineStart, bullet = true)
+        return NumberedListPrefix(lineIndex = newBody.take(lineStart).count { it == '\n' }, startNumber = 0, lineStart = lineStart, bullet = true, rest = rest)
     }
     if (newBody[caret - 1] != '.') return null
-    // Dopo il punto la riga deve finire: il numero dev'essere tutto
-    // quello che c'è scritto.
-    if (caret < newBody.length && newBody[caret] != '\n') return null
     if (newBody.removeRange(caret - 1, caret) != oldBody) return null
 
     val lineStart = newBody.lastIndexOf('\n', caret - 2) + 1
@@ -1273,7 +1278,8 @@ private fun numberedListPrefixJustTyped(oldBody: String, newBody: String, caret:
     return NumberedListPrefix(
         lineIndex = newBody.take(lineStart).count { it == '\n' },
         startNumber = startNumber,
-        lineStart = lineStart
+        lineStart = lineStart,
+        rest = rest
     )
 }
 
@@ -5285,6 +5291,8 @@ fun runPrefixes(
     var carriedType: BlockType? = null
     var carriedIndent = 0
     var carriedOrdinal: Int? = null
+    // Il segno scelto della riga sopra (vedi `BlockAttrs.listMarker`): la riga appena nata lo eredita.
+    var carriedMarker: Int? = null
     // L'elenco di cui la riga sopra teneva il posto: una riga appena nata
     // sotto, che il database non conosce ancora, lo tiene anche lei.
     var carriedHeld: BlockType? = null
@@ -5312,6 +5320,7 @@ fun runPrefixes(
             else -> inheritedListType(carriedType)
         }
         val indent = (block?.indentLevel ?: carriedIndent).coerceAtLeast(0)
+        val chosen = if (block != null) block.listMarker else carriedMarker
         val held = if (block != null) block.heldListType else carriedList.takeIf { heldBelow }
         // A che numero è arrivata questa riga. Per una riga che il
         // database non conosce ancora — appena creata con un Invio — si
@@ -5334,26 +5343,27 @@ fun runPrefixes(
         } else {
             null
         }
-        val label = ordinal?.let { numberedMarkerFor(indent, it) }
+        val label = ordinal?.let { numberedMarkerFor(indent, it, chosen) }
         if (ordinal != null) lastNumberAt[indent] = ordinal
 
         carriedType = type
         carriedIndent = indent
         carriedOrdinal = ordinal
         carriedHeld = held
+        carriedMarker = chosen
 
         if (held != null) {
             // Il posto dell'elenco: lo stesso marcatore, invisibile.
             val ghost = when (held) {
-                BlockType.BULLET_LIST_ITEM -> bulletMarkerFor(indent) + "  "
+                BlockType.BULLET_LIST_ITEM -> bulletMarkerFor(indent, chosen) + "  "
                 // Il numero che verrebbe dopo nell'elenco intero (vedi `numberedOrdinals`).
-                else -> numberedMarkerFor(indent, block?.let { ordinals[it.id] } ?: ((lastNumberAt[indent] ?: 0) + 1)) + "  "
+                else -> numberedMarkerFor(indent, block?.let { ordinals[it.id] } ?: ((lastNumberAt[indent] ?: 0) + 1), chosen) + "  "
             }
             return@map LinePrefix(indent = INDENT_SPACES.repeat(indent), marker = ghost, hidden = true, listType = held)
         }
 
         val marker = when (type) {
-            BlockType.BULLET_LIST_ITEM -> bulletMarkerFor(indent) + "  "
+            BlockType.BULLET_LIST_ITEM -> bulletMarkerFor(indent, chosen) + "  "
             BlockType.NUMBERED_LIST_ITEM -> "$label  "
             BlockType.CHECKBOX -> CHECKBOX_MARKER
             else -> ""
@@ -6986,7 +6996,8 @@ private fun MergedTextRunField(
                             runBlocks.map { it.id },
                             listPrefix.lineIndex,
                             listPrefix.startNumber,
-                            bullet = listPrefix.bullet
+                            bullet = listPrefix.bullet,
+                            rest = listPrefix.rest
                         )
 
                     // **"---" da solo in una riga di testo fa un divisore**
@@ -7179,11 +7190,7 @@ private fun MergedTextRunField(
                         if (block.id !in chosen || range == null) return@forEachIndexed
                         val top = layout.getLineTop(layout.getLineForOffset(range.first.coerceIn(0, last)))
                         val bottom = layout.getLineBottom(layout.getLineForOffset(range.last.coerceIn(0, last)))
-                        drawRect(
-                            color = selectionLook.veil.copy(alpha = 0.18f),
-                            topLeft = Offset(-6.dp.toPx(), top),
-                            size = Size(size.width + 12.dp.toPx(), bottom - top)
-                        )
+                        drawBlockVeil(selectionLook.veil, Offset(-6.dp.toPx(), top), Size(size.width + 12.dp.toPx(), bottom - top))
                     }
                 }
                 // L'indice navigabile (vedi `PageAnchors.kt`): la freccia dei
@@ -7367,7 +7374,7 @@ private fun MergedTextRunField(
             val markerStart = displayStart + prefix.indent.length
             val markerEnd = displayStart + prefix.text.length
             if (block != null &&
-                block.type == BlockType.NUMBERED_LIST_ITEM &&
+                (block.type == BlockType.NUMBERED_LIST_ITEM || block.type == BlockType.BULLET_LIST_ITEM) &&
                 prefix.marker.isNotEmpty() &&
                 markerEnd <= layout.layoutInput.text.length
             ) {
@@ -7405,13 +7412,17 @@ private fun MergedTextRunField(
 
     val menuBlockId = numberMenuFor
     if (menuBlockId != null) {
+        val menuBlock = runBlocks.find { it.id == menuBlockId }
         NumberedListMenu(
-            hasReset = runBlocks.find { it.id == menuBlockId }?.numberStartsAt != null,
+            hasReset = menuBlock?.numberStartsAt != null,
             onDismiss = { numberMenuFor = null },
             onBeginNewList = { viewModel.beginNewListHere(menuBlockId) },
             onContinuePrevious = { viewModel.continuePreviousList(menuBlockId) },
             onRemoveNumber = { viewModel.removeNumber(menuBlockId) },
-            onChangeToBullet = { viewModel.changeToBullet(menuBlockId) }
+            onChangeToBullet = { viewModel.changeToBullet(menuBlockId) },
+            type = menuBlock?.type ?: BlockType.NUMBERED_LIST_ITEM,
+            chosen = menuBlock?.listMarker,
+            onChoose = { viewModel.setListMarker(menuBlockId, it) }
         )
     }
 }
@@ -7425,7 +7436,7 @@ private fun MergedTextRunField(
  * farebbe ballare il menu fra un'apertura e l'altra, e una voce
  * grigia dice anche *perché* non si può fare.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun NumberedListMenu(
     hasReset: Boolean,
@@ -7433,8 +7444,14 @@ private fun NumberedListMenu(
     onBeginNewList: () -> Unit,
     onContinuePrevious: () -> Unit,
     onRemoveNumber: () -> Unit,
-    onChangeToBullet: () -> Unit
+    onChangeToBullet: () -> Unit,
+    /** Dal 25/11/2026 il menu c'è anche sul pallino: allora ha solo i segni. */
+    type: BlockType = BlockType.NUMBERED_LIST_ITEM,
+    /** Il segno scelto adesso (vedi `BlockAttrs.listMarker`); null = quello del rientro. */
+    chosen: Int? = null,
+    onChoose: (Int?) -> Unit = {}
 ) {
+    val bullet = type == BlockType.BULLET_LIST_ITEM
     NoteBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -7442,11 +7459,40 @@ private fun NumberedListMenu(
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Text(
-                text = EditorStrings.blockType("Numbered list"),
+                text = EditorStrings.blockType(if (bullet) "Bulleted list" else "Numbered list"),
                 style = MaterialTheme.typography.titleMedium,
                 color = NotionWhite,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
+            // **Il segno, scelto** (dal 25/11/2026, chiesto dall'utente: "anche se l'indentazione non lo
+            // rispetta, io vorrei scrivere 1), 1. o il resto"): per tutto l'elenco a quel rientro.
+            Text(EditorStrings.listSymbol, style = MaterialTheme.typography.labelLarge, color = NotionGray400)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
+            ) {
+                val samples = if (bullet) BULLET_MARKERS else NUMBERED_STYLES.map { it(1) }
+                (listOf<Int?>(null) + samples.indices).forEach { index ->
+                    Text(
+                        text = index?.let { samples[it] } ?: EditorStrings.listSymbolAuto,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = NotionWhite,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (index == chosen) AccentBlue.copy(alpha = 0.45f) else DarkSurface)
+                            .clickable {
+                                onChoose(index)
+                                onDismiss()
+                            }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    )
+                }
+            }
+            if (bullet) {
+                Spacer(modifier = Modifier.size(24.dp))
+                return@Column
+            }
             NumberedListMenuItem(EditorStrings.beginNewList) {
                 onBeginNewList()
                 onDismiss()
@@ -8107,12 +8153,16 @@ private fun BlockRow(
                 // un toggle non deve avere un segno diverso da uno
                 // fuori, allo stesso rientro.
                 Text(
-                    bulletMarkerFor(block.indentLevel),
+                    bulletMarkerFor(block.indentLevel, block.listMarker),
                     style = textStyle.copy(
-                        fontSize = bulletMarkerSizeFor(block.indentLevel),
+                        fontSize = bulletMarkerSizeFor(block.indentLevel, block.listMarker),
                         baselineShift = BULLET_MARKER_DROP
                     ),
-                    modifier = Modifier.padding(end = markerGap(BlockType.BULLET_LIST_ITEM, 8.dp))
+                    modifier = Modifier
+                        .padding(end = markerGap(BlockType.BULLET_LIST_ITEM, 8.dp))
+                        // Il menu del segno, come sul numero (dal 25/11/2026).
+                        .onRightClick { numberMenuFor = block.id }
+                        .pointerInput(block.id) { detectTapGestures(onLongPress = { numberMenuFor = block.id }) }
                 )
             }
 
@@ -8123,7 +8173,8 @@ private fun BlockRow(
                     // diversamente da uno fuori, allo stesso rientro.
                     numberedMarkerFor(
                         block.indentLevel,
-                        viewModel.numberedListOrdinal(allBlocks, block)
+                        viewModel.numberedListOrdinal(allBlocks, block),
+                        block.listMarker
                     ),
                     // Stesso stile del testo accanto, e nessuno spazio in
                     // più sopra: così il numero sta sulla sua stessa riga.
@@ -8181,9 +8232,9 @@ private fun BlockRow(
             // testo resta allineato al loro.
             BlockType.PARAGRAPH -> when (block.heldListType) {
                 BlockType.BULLET_LIST_ITEM -> Text(
-                    bulletMarkerFor(block.indentLevel),
+                    bulletMarkerFor(block.indentLevel, block.listMarker),
                     style = textStyle.copy(
-                        fontSize = bulletMarkerSizeFor(block.indentLevel),
+                        fontSize = bulletMarkerSizeFor(block.indentLevel, block.listMarker),
                         baselineShift = BULLET_MARKER_DROP,
                         color = Color.Transparent
                     ),
@@ -8198,7 +8249,7 @@ private fun BlockRow(
                         }
                         .maxByOrNull { it.orderIndex }
                     Text(
-                        numberedMarkerFor(block.indentLevel, (above?.let { viewModel.numberedListOrdinal(allBlocks, it) } ?: 0) + 1),
+                        numberedMarkerFor(block.indentLevel, (above?.let { viewModel.numberedListOrdinal(allBlocks, it) } ?: 0) + 1, above?.listMarker),
                         style = textStyle.copy(color = Color.Transparent),
                         modifier = Modifier.padding(end = markerGap(BlockType.NUMBERED_LIST_ITEM, 8.dp))
                     )
@@ -8583,11 +8634,11 @@ private fun BlockRow(
                             null
                         }
                         if (listPrefix != null &&
-                            viewModel.startNumberedListInBlock(block.id, listPrefix.startNumber, bullet = listPrefix.bullet)
+                            viewModel.startNumberedListInBlock(block.id, listPrefix.startNumber, bullet = listPrefix.bullet, rest = listPrefix.rest)
                         ) {
                             val stripped = newText.removeRange(listPrefix.lineStart, caretInBody)
                             editState = BlockEditState(
-                                listOf(RichTextSpan(text = stripped)),
+                                applyTextEdit(editState.spans, editState.spans.plainText(), stripped),
                                 TextFieldValue(RUN_LEAD + stripped, TextRange(RUN_LEAD.length + listPrefix.lineStart))
                             )
                             return@BasicTextField
@@ -8749,7 +8800,10 @@ private fun BlockRow(
             onBeginNewList = { viewModel.beginNewListHere(menuBlockId) },
             onContinuePrevious = { viewModel.continuePreviousList(menuBlockId) },
             onRemoveNumber = { viewModel.removeNumber(menuBlockId) },
-            onChangeToBullet = { viewModel.changeToBullet(menuBlockId) }
+            onChangeToBullet = { viewModel.changeToBullet(menuBlockId) },
+            type = block.type,
+            chosen = block.listMarker,
+            onChoose = { viewModel.setListMarker(menuBlockId, it) }
         )
     }
 

@@ -1126,6 +1126,37 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.11 — 25/11/2026 · 19:11 — The symbol of a list chosen with a right-click, selected blocks apart, Enter under a list
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1398 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **Enter at the start of a line
+  under a list no longer makes a new item**: the empty line that appears
+  above takes the type of the line you are on, as in Notion, and the line
+  goes down whole. Before, under a "6." the new line became a "7."
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **"7." (or "- ") typed at the
+  start of a line that already has text makes it an item**, and the text
+  stays: before, the number or the dash had to be all there was in the line
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The symbol of a list,
+  chosen**: a right-click on the number or the bullet (on the phone,
+  holding it) opens the list's menu, now also for bulleted lists, with
+  the symbols to choose from: "Automatic" (the one of the indent, as
+  before), 1., i., 1), i), a., One., a), First. for numbered lists and the
+  eight bullets for bulleted ones. The choice goes to all the items of
+  that list at that indent, stays when an item is moved right or left,
+  and the new items made with Enter keep it
+- **[Change]** **[💻 PC]** **Selected blocks one by one, as in Notion**:
+  each selected block has its own blue, with rounded corners and a thin
+  space from the next one, so you see where a whole block starts and
+  where a line inside a column does
+- **[Project]** `writeRunChange` takes type and indent from the line below
+  when the new empty lines are pushed above it (`pushedDown`);
+  `NumberedListPrefix.rest` and `startNumberedList(rest)`;
+  `BlockAttrs.listMarker` (kept by `attrsForNewLine`), the `chosen`
+  parameter of `bulletMarkerFor`, `bulletMarkerSizeFor` and
+  `numberedMarkerFor`, `PageEditorViewModel.setListMarker`, the symbols in
+  `NumberedListMenu`; `drawBlockVeil` in `PageSelection.kt`. Test:
+  `DesktopListMarkersTest`
+
 ### ✏️ v0.156.10 — 25/11/2026 · 18:37 — Blocks dragged into a toggle, Tab inside toggles
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1395 tests passed)*
 

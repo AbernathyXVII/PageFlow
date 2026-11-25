@@ -56,11 +56,14 @@ fun bulletIndexFor(indent: Int): Int =
 /**
  * Il segno da mettere davanti a un elenco puntato rientrato di `indent`
  * livelli. `internal` per la stessa ragione di `numberedMarkerFor`.
+ * Con [chosen] quello scelto dal clic destro, qualunque sia il rientro (dal 25/11/2026,
+ * vedi `BlockAttrs.listMarker`).
  */
-fun bulletMarkerFor(indent: Int): String = BULLET_MARKERS[bulletIndexFor(indent)]
+fun bulletMarkerFor(indent: Int, chosen: Int? = null): String = BULLET_MARKERS[chosen?.mod(BULLET_MARKERS.size) ?: bulletIndexFor(indent)]
 
 /**
  * Con che corpo va scritto quel segno. `internal` per i pezzi delle pagine
  * lunghe: vedi `PageEditorViewModel.markerSizeOf`.
  */
-fun bulletMarkerSizeFor(indent: Int): TextUnit = BULLET_MARKER_SIZES[bulletIndexFor(indent)]
+fun bulletMarkerSizeFor(indent: Int, chosen: Int? = null): TextUnit =
+    BULLET_MARKER_SIZES[chosen?.mod(BULLET_MARKER_SIZES.size) ?: bulletIndexFor(indent)]

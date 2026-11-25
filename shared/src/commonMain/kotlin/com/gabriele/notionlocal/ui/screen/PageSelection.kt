@@ -25,7 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -62,8 +66,30 @@ const val PAGE_SELECTION_BAR_TAG = "pageSelectionBar"
 fun Modifier.pageVeil(selected: Boolean, color: Color): Modifier =
     if (!selected) this else drawWithContent {
         drawContent()
-        drawRect(color.copy(alpha = 0.18f))
+        drawBlockVeil(color, Offset.Zero, size)
     }
+
+/**
+ * **Il velo di un blocco scelto, staccato dai vicini** (dal 25/11/2026, chiesto dall'utente: "come
+ * Notion, con un piccolo spazio tra un blocco e l'altro"): ogni blocco ha il suo, con gli angoli
+ * tondi, e fra due blocchi scelti di seguito resta una riga sottile scura. Così si vede dove comincia
+ * un blocco intero (il gruppo di colonne, un velo solo) e dove una riga dentro una colonna.
+ */
+fun DrawScope.drawBlockVeil(color: Color, topLeft: Offset, size: Size) {
+    val half = BLOCK_VEIL_GAP.toPx() / 2f
+    drawRoundRect(
+        color = color.copy(alpha = 0.18f),
+        topLeft = Offset(topLeft.x, topLeft.y + half),
+        size = Size(size.width, (size.height - 2 * half).coerceAtLeast(0f)),
+        cornerRadius = CornerRadius(BLOCK_VEIL_CORNER.toPx())
+    )
+}
+
+/** Lo spazio fra i veli di due blocchi scelti uno sotto l'altro. */
+private val BLOCK_VEIL_GAP = 3.dp
+
+/** Gli angoli dei veli dei blocchi scelti. */
+private val BLOCK_VEIL_CORNER = 4.dp
 
 /**
  * Mentre la pagina è selezionata, **un tocco la toglie** e non arriva al

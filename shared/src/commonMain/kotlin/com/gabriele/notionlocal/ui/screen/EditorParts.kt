@@ -599,8 +599,9 @@ internal val NUMBERED_STYLES: List<(Int) -> String> = listOf(
  * perché lo usa anche l'anteprima delle schede della galleria: un elenco
  * deve leggersi uguale nella pagina e nella scheda.
  */
-fun numberedMarkerFor(indent: Int, ordinal: Int): String {
-    val i = ((indent % NUMBERED_STYLES.size) + NUMBERED_STYLES.size) % NUMBERED_STYLES.size
+fun numberedMarkerFor(indent: Int, ordinal: Int, chosen: Int? = null): String {
+    // [chosen]: il modo scelto col clic destro, qualunque sia il rientro (vedi `BlockAttrs.listMarker`).
+    val i = chosen?.mod(NUMBERED_STYLES.size) ?: (((indent % NUMBERED_STYLES.size) + NUMBERED_STYLES.size) % NUMBERED_STYLES.size)
     return NUMBERED_STYLES[i](ordinal.coerceAtLeast(1))
 }
 
