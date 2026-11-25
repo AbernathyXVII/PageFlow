@@ -34,6 +34,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
 import com.gabriele.notionlocal.ui.i18n.DbStrings
@@ -159,13 +160,20 @@ fun RowDragBox(
     Box(
         modifier = modifier
             .then(if (selection != null) Modifier.bleedStart(gutter).widthIn(min = LocalTableLineWidth.current + gutter) else Modifier)
+            .then(if (selection != null) Modifier.onSizeChanged { selection.rowHeight = it.height } else Modifier)
             .then(if (drag != null) Modifier.onGloballyPositioned { drag.place(row, group, it.boundsInRoot()) } else Modifier)
             .pointerInput(row.id) {
                 awaitPointerEventScope {
                     while (true) {
                         when (awaitPointerEvent().type) {
-                            PointerEventType.Enter -> hovered = true
-                            PointerEventType.Exit -> hovered = false
+                            PointerEventType.Enter -> {
+                                hovered = true
+                                selection?.hoveredRow = row.id
+                            }
+                            PointerEventType.Exit -> {
+                                hovered = false
+                                if (selection?.hoveredRow == row.id) selection.hoveredRow = null
+                            }
                         }
                     }
                 }

@@ -1522,6 +1522,7 @@ private fun DatabaseViewBody(
             RowSelectionBar(
                 count = chosenRows.size,
                 onDelete = { rowsPendingDeletion = chosenRows },
+                onClear = { rowSelection.selected = emptySet() },
                 entries = buildList {
                     // Le righe di un database semplice non hanno pagine: niente preferiti, icona, apertura, copia né "Move to".
                     if (!simple) {
@@ -5476,6 +5477,8 @@ private fun ListLayout(
         // Le caselle per scegliere le righe stanno a sinistra dell'elenco (vedi `RowSelection`): la lista si allarga fin lì,
         // perché il clic ci arrivi, e le righe restano dov'erano.
         val gutter = if (LocalRowSelection.current != null) ROW_SELECT_GUTTER else 0.dp
+        // La casella "sceglile tutte" sopra la prima riga (vedi `SelectAllAbove`).
+        Box(Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.bleedStart(gutter).fillMaxSize().keepFocusedAboveKeyboard(),
             contentPadding = PaddingValues(start = gutter)
@@ -5487,6 +5490,8 @@ private fun ListLayout(
                 item(key = "groups-end") { Spacer(modifier = Modifier.size(12.dp)) }
             }
             item(key = "trailing") { lazy.trailing() }
+        }
+        SelectAllAbove()
         }
         return
     }
@@ -5520,6 +5525,8 @@ private fun ListLayout(
         }
     }
     Column(modifier = Modifier.fillMaxWidth()) {
+        // La casella "sceglile tutte" una riga sopra la prima (vedi `SelectAllAbove`): non prende posto.
+        SelectAllAbove()
         if (groupLevels.isNotEmpty()) {
             GroupsAt(0, state.rows, emptyList())
             return@Column

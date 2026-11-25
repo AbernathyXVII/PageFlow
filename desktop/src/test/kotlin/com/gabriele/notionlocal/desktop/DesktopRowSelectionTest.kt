@@ -281,6 +281,28 @@ class DesktopRowSelectionTest {
         assertTrue("la barra: ${nodes().map { it.first }}", nodes().any { it.first == "1 selected" })
     }
 
+    /**
+     * Nell'elenco la casella "sceglile tutte" sta una riga sopra la prima (25/11/2026): cliccata le sceglie tutte;
+     * poi Esc toglie la selezione.
+     */
+    private fun ImageComposeScene.selectAllAboveAndEsc(shotName: String) {
+        val first = nodes().last { it.first == "a" }.second
+        val second = nodes().last { it.first == "b" }.second
+        val pitch = second.center.y - first.center.y
+        val all = nodes().single { it.first == "Select all" }.second
+        assertTrue("sopra la prima riga, una riga più su: $all, prima $first, passo $pitch", abs(all.center.y - (first.center.y - pitch)) <= 3f && all.right < first.left)
+        click(all.center)
+        frames(5)
+        shot(shotName)
+        assertTrue("tutte: ${nodes().map { it.first }}", nodes().any { it.first == "5 selected" })
+        onWindowThread {
+            sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(androidx.compose.ui.input.key.Key.Escape, androidx.compose.ui.input.key.KeyEventType.KeyDown))
+            sendKeyEvent(androidx.compose.ui.input.key.KeyEvent(androidx.compose.ui.input.key.Key.Escape, androidx.compose.ui.input.key.KeyEventType.KeyUp))
+        }
+        frames(5)
+        assertTrue("Esc toglie la selezione: ${nodes().map { it.first }}", nodes().none { it.first.endsWith(" selected") })
+    }
+
     private fun databaseScene(): ImageComposeScene {
         val factory = ViewModelFactory(context)
         val owner = ScreenOwner()
@@ -310,6 +332,7 @@ class DesktopRowSelectionTest {
         val scene = databaseScene()
         try {
             scene.chooseAndCheck("c", "rowselect_list")
+            scene.selectAllAboveAndEsc("rowselect_list_all")
         } finally {
             onWindowThread { scene.close() }
         }
@@ -379,6 +402,7 @@ class DesktopRowSelectionTest {
         }
         try {
             scene.chooseAndCheck("d", "rowselect_list_inline")
+            scene.selectAllAboveAndEsc("rowselect_list_inline_all")
         } finally {
             onWindowThread { scene.close() }
         }

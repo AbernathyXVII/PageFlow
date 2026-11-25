@@ -3,6 +3,7 @@ package com.gabriele.notionlocal.ui.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
@@ -19,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,7 +29,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
@@ -66,6 +75,12 @@ class RowSelection {
     fun toggleAll() {
         selected = if (all.isNotEmpty() && all.all { it in selected }) emptySet() else all.toSet()
     }
+
+    /** Quanto è alta una riga: nell'elenco la casella "sceglile tutte" sta una riga sopra la prima (vedi [SelectAllAbove]). */
+    var rowHeight by mutableStateOf(0)
+
+    /** La riga col mouse sopra, se c'è: nell'elenco con lei compare anche la casella "sceglile tutte". */
+    var hoveredRow by mutableStateOf<String?>(null)
 }
 
 /** Le righe scelte di questa tabella; null dove non si scelgono (il telefono, le altre viste). */
@@ -161,13 +176,22 @@ fun SelectAllGutter(content: @Composable () -> Unit) {
 
 /**
  * **La barra delle righe scelte**, al posto del nome del database: "N selected", il cestino
- * ([onDelete]) e i tre puntini col menu ([entries]), come su Notion.
+ * ([onDelete]) e i tre puntini col menu ([entries]), come su Notion. **Esc toglie la selezione**
+ * ([onClear], dal 25/11/2026, chiesto dall'utente): comparendo, la barra prende la tastiera.
  */
 @Composable
-fun RowSelectionBar(count: Int, onDelete: () -> Unit, entries: List<PcMenuEntry>, modifier: Modifier = Modifier) {
+fun RowSelectionBar(count: Int, onDelete: () -> Unit, onClear: () -> Unit, entries: List<PcMenuEntry>, modifier: Modifier = Modifier) {
     var menuOpen by remember { mutableStateOf(false) }
+    val keys = remember { FocusRequester() }
+    // A ogni casella cliccata la tastiera torna qui: il clic su una casella la porta via.
+    LaunchedEffect(count) { runCatching { keys.requestFocus() } }
     Row(
         modifier = modifier
+            .focusRequester(keys)
+            .onPreviewKeyEvent { event ->
+                (event.key == Key.Escape && event.type == KeyEventType.KeyDown && !menuOpen).also { if (it) onClear() }
+            }
+            .focusable()
             .padding(start = 16.dp, top = 6.dp, bottom = 6.dp)
             .height(30.dp)
             .clip(RoundedCornerShape(6.dp))
@@ -190,6 +214,50 @@ fun RowSelectionBar(count: Int, onDelete: () -> Unit, entries: List<PcMenuEntry>
                 Icon(Icons.Filled.MoreHoriz, contentDescription = DbStrings.moreOptions, tint = NotionGray400, modifier = Modifier.size(18.dp))
             }
             if (menuOpen) PcContextMenu(entries, onDismiss = { menuOpen = false })
+        }
+    }
+}
+
+/**
+ * **Nell'elenco la casella che le sceglie tutte sta sopra la prima** (dal 25/11/2026, chiesto
+ * dall'utente: "stessa distanza dalle altre ma messa sopra"): l'elenco non ha i titoli delle colonne.
+ * Non prende posto: si mette una riga più su dell'elenco, nel margine, sopra la casella della prima
+ * riga. Si vede col mouse su una riga o su di lei, o con qualcuna già scelta.
+ */
+@Composable
+fun SelectAllAbove() {
+    val selection = LocalRowSelection.current ?: return
+    val height = selection.rowHeight
+    if (height <= 0) return
+    var hovered by remember { mutableStateOf(false) }
+    Box(
+        Modifier
+            .layout { measurable, _ ->
+                val gutter = ROW_SELECT_GUTTER.roundToPx()
+                val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(gutter, height))
+                layout(0, 0) { placeable.place(-gutter, -height) }
+            }
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        when (awaitPointerEvent().type) {
+                            PointerEventType.Enter -> hovered = true
+                            PointerEventType.Exit -> hovered = false
+                        }
+                    }
+                }
+            }
+    ) {
+        val chosen = selection.selected
+        if (hovered || selection.hoveredRow != null || chosen.isNotEmpty()) {
+            val all = selection.all.isNotEmpty() && selection.all.all { it in chosen }
+            SelectionCheckbox(
+                checked = all,
+                partial = !all && chosen.isNotEmpty(),
+                onClick = selection::toggleAll,
+                description = DbStrings.selectAllRows,
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = SELECT_BOX_START)
+            )
         }
     }
 }

@@ -1126,6 +1126,21 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.14 — 26/11/2026 · 00:05 — "Select all" above the list, Esc takes the selection away
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1404 tests passed)*
+
+- **[Change]** **[💻 PC]** **In the List view the checkbox that chooses all
+  the pages sits above the first one**, at the same distance as between
+  the others: a list has no column titles to put it next to. It takes no
+  room, and shows up with the mouse over a row or with some pages chosen
+- **[Change]** **[💻 PC]** **Esc takes the selection away**: the bar "N
+  selected" takes the keyboard when the selection changes
+- **[Project]** `SelectAllAbove` in `RowSelection.kt` (placed one row
+  above the list, `RowSelection.rowHeight` and `hoveredRow` from
+  `RowDragBox`); `RowSelectionBar` with `onClear`, a `FocusRequester` asked
+  again at every change and Esc in `onPreviewKeyEvent`. Test:
+  `DesktopRowSelectionTest`
+
 ### ✏️ v0.156.13 — 25/11/2026 · 23:38 — The checkboxes also in lists and in simple databases
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1404 tests passed)*
 
