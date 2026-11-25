@@ -1348,7 +1348,8 @@ private fun PageBlockMenu(
         HorizontalDivider()
         // **"Delete linked page"** (dal 24/11/2026, chiesto dall'utente): via da questa pagina solo il
         // collegamento al database (o la vista collegata), mentre "Move to trash" butta il database.
-        if (page.isDatabase) {
+        // Solo sulle viste collegate ("/Linked view of data source", dal 25/11/2026, chiesto dall'utente).
+        if (page.sourceDatabaseId != null) {
             OptionRow(
                 icon = Icons.Filled.LinkOff,
                 label = EditorStrings.deleteLinkedPage,

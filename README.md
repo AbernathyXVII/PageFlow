@@ -1126,6 +1126,30 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.9 — 25/11/2026 · 17:46 — "Delete linked page" only on linked views, calendar arrows next to the title, other months' days darkened
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1392 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"Delete linked page" only in the
+  menu of a linked view** (the ones made with "/Linked view of data
+  source"): on the block of a main database there is only "Move to trash"
+  again
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **In the calendars the arrows
+  sit next to the title** (the year, the month, the week or the day), in
+  every view: they were at the two edges of the row
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **Year, Month, Week and Day in
+  the middle of the row**, under the title: they were in the middle of the
+  space left by "Today", so a little to the left. Where there isn't room
+  (the phone) they move left just enough not to touch "Today"
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **In the Month view the days of
+  the month before and after are darkened together with their events**:
+  before, only their number was dimmed
+- **[Project]** `TurnIntoList` shows "Delete linked page" when
+  `sourceDatabaseId != null`; the calendar's title row has
+  `Arrangement.Center` with the title at `weight(1f, fill = false)`; the
+  mode chips and "Today" are placed by a `Layout`; `CalendarWeekRow` puts a
+  veil of the page colour (`OTHER_MONTH_VEIL`) over the other months'
+  columns, without taking taps. Test: `DesktopCalendarHeaderTest`
+
 ### 🔧 v0.156.8.3 — 25/11/2026 · 17:02 — The photo of a very long web page opens
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1390 tests passed)*
 

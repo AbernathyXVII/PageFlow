@@ -451,6 +451,9 @@ private val CALENDAR_WEEK_MIN_HEIGHT = 120.dp
 private val CALENDAR_WEEK_HEADER = 20.dp
 private val CALENDAR_BAR_HEIGHT = 18.dp
 
+/** Quanto copre il velo sui giorni degli altri mesi nella vista Month (0 niente, 1 tutto). */
+private const val OTHER_MONTH_VEIL = 0.6f
+
 /**
  * Quante righe di pagine può riservare una settimana.
  *
@@ -4304,10 +4307,13 @@ private fun CalendarLayout(
 
     CompositionLocalProvider(LocalCalendarProperties provides properties) {
     Column(modifier = Modifier.fillMaxWidth()) {
+        // **Le frecce accanto al titolo** (dal 25/11/2026, chiesto dall'utente: "vicine al numero
+        // dell'anno"), in tutte le viste: prima stavano ai due bordi della riga.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
@@ -4338,7 +4344,7 @@ private fun CalendarLayout(
                 style = MaterialTheme.typography.titleSmall,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f, fill = false)
             )
             IconButton(
                 onClick = {
@@ -4354,43 +4360,59 @@ private fun CalendarLayout(
             }
         }
 
-        // Con Day i pulsantini sono quattro e centrati su tutta la riga
-        // finivano sotto Today: si centrano nello spazio che lui lascia.
-        Row(
+        // **Year, Month, Week e Day al centro della riga** (dal 25/11/2026, chiesto dall'utente:
+        // "centrami bene"), sotto il titolo; prima al centro dello spazio lasciato da Today, cioè
+        // spostati a sinistra. Dove non ci stanno senza toccare Today (il telefono), si spostano a
+        // sinistra quanto basta.
+        androidx.compose.ui.layout.Layout(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.Center) {
-                CalendarMode.entries.forEachIndexed { index, option ->
-                    if (index > 0) Spacer(modifier = Modifier.size(6.dp))
-                    CalendarModeChip(
-                        label = option.displayName(),
-                        selected = option == mode,
-                        onClick = { onSetMode(option) }
-                    )
+            content = {
+                Row {
+                    CalendarMode.entries.forEachIndexed { index, option ->
+                        if (index > 0) Spacer(modifier = Modifier.size(6.dp))
+                        CalendarModeChip(
+                            label = option.displayName(),
+                            selected = option == mode,
+                            onClick = { onSetMode(option) }
+                        )
+                    }
                 }
-            }
 
-            // Riporta a oggi da qualunque distanza, in qualunque delle
-            // tre modalità: allontanandosi di mesi o di anni tornare
-            // indietro con le frecce diventa un lavoro.
-            //
-            // Sta lì sempre, anche quando si è già su oggi e non
-            // farebbe niente: un pulsante che compare e sparisce
-            // costringe a cercarlo ogni volta, e la riga cambierebbe
-            // aspetto da sola mentre si sfoglia.
-            Text(
-                text = DbStrings.today,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                modifier = Modifier
-                    .background(DarkSurface, RoundedCornerShape(percent = 50))
-                    .clickable { anchor = today }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            )
+                // Riporta a oggi da qualunque distanza, in qualunque delle
+                // tre modalità: allontanandosi di mesi o di anni tornare
+                // indietro con le frecce diventa un lavoro.
+                //
+                // Sta lì sempre, anche quando si è già su oggi e non
+                // farebbe niente: un pulsante che compare e sparisce
+                // costringe a cercarlo ogni volta, e la riga cambierebbe
+                // aspetto da sola mentre si sfoglia.
+                Text(
+                    text = DbStrings.today,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .background(DarkSurface, RoundedCornerShape(percent = 50))
+                        .clickable { anchor = today }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+        ) { measurables, constraints ->
+            val loose = constraints.copy(minWidth = 0)
+            val chips = measurables[0].measure(loose)
+            val todayButton = measurables[1].measure(loose)
+            val width = constraints.maxWidth
+            val height = maxOf(chips.height, todayButton.height)
+            layout(width, height) {
+                val todayX = width - todayButton.width
+                val chipsX = ((width - chips.width) / 2)
+                    .coerceAtMost(todayX - 8.dp.roundToPx() - chips.width)
+                    .coerceAtLeast(0)
+                chips.place(chipsX, (height - chips.height) / 2)
+                todayButton.place(todayX, (height - todayButton.height) / 2)
+            }
         }
 
         if (mode == CalendarMode.YEAR) {
@@ -5160,16 +5182,8 @@ private fun CalendarWeekRow(
                         text = date.dayOfMonth.toString(),
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
-                        color = when {
-                            // Oggi del colore di tutti: lo dice il contorno del suo quadratino (qui sopra).
-                            date == today -> MaterialTheme.colorScheme.onBackground
-                            shownMonth == null || YearMonth.from(date) == shownMonth ->
-                                MaterialTheme.colorScheme.onBackground
-                            // I giorni del mese prima e dopo restano
-                            // visibili ma smorzati: servono a non
-                            // spezzare la griglia.
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        },
+                        // I giorni del mese prima e dopo li smorza il velo qui sotto, con i loro eventi.
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier
                             .weight(1f)
                             .padding(vertical = 2.dp)
@@ -5249,6 +5263,19 @@ private fun CalendarWeekRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp)
                 )
+            }
+        }
+
+        // **I giorni del mese prima e dopo scuriti, eventi compresi** (dal 25/11/2026, chiesto
+        // dall'utente): un velo del colore della pagina sopra le loro colonne. Prima era smorzato
+        // solo il numero. Senza tocchi suoi: gli eventi sotto si aprono e i giorni prendono pagine nuove.
+        if (shownMonth != null) {
+            val veil = MaterialTheme.colorScheme.background.copy(alpha = OTHER_MONTH_VEIL)
+            Row(modifier = Modifier.matchParentSize()) {
+                repeat(7) { dayIndex ->
+                    val outside = YearMonth.from(weekStart.plusDays(dayIndex.toLong())) != shownMonth
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().then(if (outside) Modifier.background(veil) else Modifier))
+                }
             }
         }
 
