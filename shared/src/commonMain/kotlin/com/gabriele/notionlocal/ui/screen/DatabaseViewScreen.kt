@@ -13,6 +13,10 @@ import com.gabriele.notionlocal.ui.navigation.horizontalResizeCursor
 import kotlinx.coroutines.delay
 import com.gabriele.notionlocal.ui.navigation.LocalPeekControls
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DriveFileMove
 import com.gabriele.notionlocal.data.settings.OpenMode
 import com.gabriele.notionlocal.ui.navigation.LocalPageOpener
 import com.gabriele.notionlocal.platform.emojiTransformation
@@ -1232,6 +1236,11 @@ private fun DatabaseViewBody(
     // di rispondere ai tocchi e segue il dito, finché Save o Cancel.
     var repositioningRowId by remember { mutableStateOf<String?>(null) }
     var rowPendingDeletion by remember { mutableStateOf<DatabaseRowEntity?>(null) }
+    // **Le righe scelte con la casella** (dal 25/11/2026, vedi `RowSelection`): sul PC, nella tabella.
+    val rowSelection = remember(viewModel) { RowSelection() }
+    var rowsPendingDeletion by remember { mutableStateOf<List<String>?>(null) }
+    var iconForRows by remember { mutableStateOf<List<String>?>(null) }
+    var rowsMoveExclusions by remember { mutableStateOf<Pair<List<String>, PageRepository.MoveExclusions>?>(null) }
     var showSettings by remember { mutableStateOf(false) }
     var showSort by remember { mutableStateOf(false) }
     var showFilter by remember { mutableStateOf(false) }
@@ -1272,6 +1281,14 @@ private fun DatabaseViewBody(
     // buttato lui, bloccata anche lei.
     val contentLocked = page?.isLocked == true || dataPage?.isLocked == true || page?.trashedAt != null ||
         hostPage?.isLocked == true || hostPage?.trashedAt != null
+    // Le caselle per scegliere le righe: sul PC, nella tabella di un database con le pagine, non bloccato.
+    val rowSelectionOn = rowSelection.takeIf { isPc && !simple && !contentLocked && (page?.databaseLayout ?: DatabaseLayout.TABLE) == DatabaseLayout.TABLE }
+    LaunchedEffect(state.rows, rowSelectionOn) {
+        val ids = state.rows.map { it.id }
+        val shown = ids.toHashSet()
+        rowSelection.all = ids
+        rowSelection.selected = if (rowSelectionOn == null) emptySet() else rowSelection.selected.filterTo(LinkedHashSet()) { it in shown }
+    }
     // Una vista in più ha i dati del database su cui è nata, ma non è una
     // vista collegata: il titolo è quello del database, da scrivere qui.
     val linkedSourceId = hostPage?.sourceDatabaseId
@@ -1492,7 +1509,44 @@ private fun DatabaseViewBody(
         LaunchedEffect(hostPage?.title, titleFocused) {
             if (!titleFocused) titleText = hostPage?.title.orEmpty()
         }
-        if (showTitle) {
+        // **Con delle righe scelte, al posto del nome la barra "N selected"** (dal 25/11/2026, chiesto
+        // dall'utente come su Notion): il cestino e i tre puntini, col "Move to" delle pagine scelte.
+        val chosenRows = rowSelectionOn?.selected.orEmpty().toList()
+        if (chosenRows.isNotEmpty()) {
+            fun icon(vector: ImageVector): @Composable () -> Unit = { Icon(vector, contentDescription = null, modifier = Modifier.size(16.dp)) }
+            val single = state.rows.singleOrNull { chosenRows.singleOrNull() == it.id }
+            RowSelectionBar(
+                count = chosenRows.size,
+                onDelete = { rowsPendingDeletion = chosenRows },
+                entries = buildList {
+                    add(PcMenuItem(EditorStrings.addToFavorites, icon(Icons.Filled.Star), onClick = { viewModel.addRowsToFavorites(chosenRows) }))
+                    add(PcMenuItem(EditorStrings.editIcon, icon(Icons.Filled.EmojiEmotions), onClick = { iconForRows = chosenRows }))
+                    if (single != null && opener != null) {
+                        add(
+                            PcMenuItem(
+                                Strings.openAs, icon(Icons.Filled.OpenInNew),
+                                submenu = OpenMode.entries.map { mode ->
+                                    PcMenuItem(Strings.openModeName(mode), icon(openModeIcon(mode)), onClick = {
+                                        viewModel.openRow(single) { id -> opener.open(id, false, mode) }
+                                    })
+                                }
+                            )
+                        )
+                    }
+                    add(PcMenuSeparator)
+                    add(PcMenuItem(Strings.duplicate, icon(Icons.Filled.ContentCopy), onClick = {
+                        viewModel.duplicateRows(chosenRows, Strings.copySuffix, imageStore)
+                        rowSelection.selected = emptySet()
+                    }))
+                    add(PcMenuItem(Strings.moveTo, icon(Icons.Filled.DriveFileMove), onClick = {
+                        viewModel.loadMoveExclusions { rowsMoveExclusions = chosenRows to it }
+                    }))
+                    // "Delete" e non "Move to trash": la pagina di una riga eliminata non va nel cestino (vedi `deleteRow`).
+                    add(PcMenuItem(Strings.delete, icon(Icons.Filled.Delete), danger = true, onClick = { rowsPendingDeletion = chosenRows }))
+                }
+            )
+        }
+        if (showTitle && chosenRows.isEmpty()) {
         Row(
             // Dentro una pagina sul PC, i sei puntini del blocco si mettono a metà
             // di questa riga, subito a sinistra dell'icona o del nome (`BlockHandle.kt`).
@@ -1734,7 +1788,7 @@ private fun DatabaseViewBody(
         // PC, nella tabella e nell'elenco, quando nessun ordinamento decide il loro posto e il
         // database non è bloccato — le regole di "Move up" e "Move down".
         val rowsSorted = page?.sortRules().orEmpty().existingIn(state.columns).isNotEmpty()
-        val rowDrag = remember(viewModel) { RowDrag { row, target, before -> viewModel.moveRowNextTo(row, target, before) } }
+        val rowDrag = remember(viewModel) { RowDrag { rowIds, target, before -> viewModel.moveRowsNextTo(rowIds, target, before) } }
             .takeIf { isPc && !rowsSorted && !contentLocked }
         CompositionLocalProvider(
             LocalStickyViewport provides (if (embedded) LocalStickyViewport.current else ownViewport),
@@ -1754,7 +1808,7 @@ private fun DatabaseViewBody(
             }
         ) {
             when (layout) {
-                DatabaseLayout.TABLE -> TableLayout(
+                DatabaseLayout.TABLE -> CompositionLocalProvider(LocalRowSelection provides rowSelectionOn) { TableLayout(
                     state = state,
                     viewLocked = viewLocked,
                     onMoveProperty = { column, delta -> viewModel.moveColumn(column.id, delta) },
@@ -1842,7 +1896,7 @@ private fun DatabaseViewBody(
                         newRowTick++
                     },
                     lazy = lazyBody
-                )
+                ) }
 
                 DatabaseLayout.BOARD -> BoardLayout(
                     state = state,
@@ -2327,6 +2381,52 @@ private fun DatabaseViewBody(
         )
     }
 
+    // Le pagine scelte con la casella (dal 25/11/2026): eliminarle, l'icona, "Move to".
+    rowsPendingDeletion?.let { ids ->
+        FitAlertDialog(
+            onDismissRequest = { rowsPendingDeletion = null },
+            title = { Text(DbStrings.deleteRowsTitle(ids.size)) },
+            text = { Text(DbStrings.deleteRowsText) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteRows(ids, imageStore)
+                    rowSelection.selected = emptySet()
+                    rowsPendingDeletion = null
+                }) { Text(Strings.delete) }
+            },
+            dismissButton = {
+                TextButton(onClick = { rowsPendingDeletion = null }) { Text(Strings.cancel) }
+            }
+        )
+    }
+    iconForRows?.let { ids ->
+        IconPickerSheet(
+            store = imageStore,
+            hasIcon = ids.any { rowIcons[it] != null },
+            // Le immagini delle icone di prima le toglie `setRowIcons`, una per pagina: la finestra ne toglie una sola.
+            onPick = { choice ->
+                viewModel.setRowIcons(ids, choice, imageStore)
+                null
+            },
+            onDismiss = { iconForRows = null }
+        )
+    }
+    rowsMoveExclusions?.let { (ids, exclusions) ->
+        MovePagePicker(
+            page = PageEntity(id = "selected-rows", title = "", isRowPage = true),
+            exclusions = exclusions,
+            factory = factory,
+            onDismiss = { rowsMoveExclusions = null },
+            onPick = { destination, _ ->
+                rowsMoveExclusions = null
+                rowSelection.selected = emptySet()
+                viewModel.moveRowsTo(ids, destination) { moved ->
+                    if (moved > 0) showMessage(iconContext, Strings.movedInto(destination.placeName()))
+                }
+            }
+        )
+    }
+
     rowPendingDeletion?.let { row ->
         FitAlertDialog(
             onDismissRequest = { rowPendingDeletion = null },
@@ -2489,8 +2589,10 @@ private fun TableLayout(
     // colonne restano allineate.
     val horizontal = rememberScrollState()
     val frozenColumn = remember(horizontal, freezeFirstColumn) { if (freezeFirstColumn) FrozenColumn(horizontal) else null }
+    val selectGutter = if (LocalRowSelection.current != null) ROW_SELECT_GUTTER else 0.dp
     CompositionLocalProvider(
         LocalTableWidths provides widths,
+        LocalTableLineWidth provides tableWidth,
         LocalColumnResize provides resize,
         LocalWrapCells provides (cellOverflow == CellOverflow.WRAP),
         LocalFrozenColumn provides frozenColumn,
@@ -2619,6 +2721,8 @@ private fun TableLayout(
             val viewport = maxWidth
             Box(
                 modifier = Modifier
+                    // Il margine delle caselle per scegliere le righe, a sinistra della tabella (vedi `RowSelection`).
+                    .bleedStart(selectGutter)
                     .fillMaxHeight()
                     // Toccando la tabella fuori dal segnalino, il segnalino se ne va.
                     .pointerInput(resize) {
@@ -2636,8 +2740,9 @@ private fun TableLayout(
             ) {
                 LazyColumn(
                     state = listState,
+                    contentPadding = PaddingValues(start = selectGutter),
                     modifier = Modifier
-                        .width(maxOf(tableWidth, viewport))
+                        .width(maxOf(tableWidth, viewport) + selectGutter)
                         .fillMaxHeight()
                         .keepFocusedAboveKeyboard()
                 ) {
@@ -2658,6 +2763,8 @@ private fun TableLayout(
             // Tutto lo spazio che c'è, per sapere fin dove arrivano le linee.
             .fillMaxWidth()
             .then(measureAvailable)
+            // Il margine delle caselle per scegliere le righe (vedi `RowSelection`): la tabella resta dov'è.
+            .bleedStart(selectGutter)
             // Toccando la tabella fuori dal segnalino, il segnalino se ne va.
             // Guarda soltanto: il tocco arriva comunque a chi lo aspetta.
             .pointerInput(resize) {
@@ -2672,6 +2779,7 @@ private fun TableLayout(
                 }
             }
             .hoverScrollBar(horizontal).horizontalScroll(horizontal)
+            .padding(start = selectGutter)
     ) {
         if (!grouped) {
             PinnedHeaderSection(pin = freezeFirstRow, header = {
@@ -3171,6 +3279,8 @@ private fun TableHeaderRow(
     // (dal 30/09/2026, come nella tabella di Notion mostrata dall'utente): la
     // riga dei titoli si alza quanto il più lungo.
     val wrap = LocalWrapCells.current
+    // La casella che sceglie tutte le righe, nel margine a sinistra (dal 25/11/2026, vedi `RowSelection`).
+    SelectAllGutter {
     Box {
     Row(modifier = if (wrap) Modifier.height(IntrinsicSize.Min) else Modifier) {
         TableSlots(
@@ -3260,6 +3370,7 @@ private fun TableHeaderRow(
                 onCommit = { onSetColumnWidth(edgeKey, it) }
             )
         }
+    }
     }
     }
 }

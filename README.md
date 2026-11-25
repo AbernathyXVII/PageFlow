@@ -1126,6 +1126,35 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.12 — 25/11/2026 · 21:19 — Pages of a database chosen with a checkbox, as in Notion
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1400 tests passed)*
+
+- **[Change]** **[💻 PC]** **The pages of a database chosen with a
+  checkbox**, as in Notion and in File Explorer: in the table, with the
+  mouse over a row a checkbox appears in the margin on its left; ticked, it
+  stays and the row turns blue. Before the titles of the columns the
+  checkbox that chooses all the pages of the view (with a dash when only
+  some are chosen), and takes them away when they were all chosen
+- **[Change]** **[💻 PC]** **With some pages chosen, in place of the name
+  of the database the bar "N selected"**, with the bin and the three dots:
+  "Add to favorites", "Edit icon", "Open as…" (with one page), "Duplicate",
+  "Move to" (the pages leave the database and go to the page you choose)
+  and "Delete". "Delete" and the bin ask first, and delete the pages for
+  good, as "Delete" of a single row
+- **[Change]** **[💻 PC]** **Dragging a chosen row, all the chosen rows
+  move with it**, one after the other in their order, where the blue line
+  says; only within the database and only without a sorting rule, as for a
+  single row
+- **[Project]** `RowSelection.kt`: `RowSelection`, `LocalRowSelection`,
+  `SelectionCheckbox`, `SelectAllGutter`, `RowSelectionBar`, and
+  `Modifier.bleedStart` that widens the table and its rows to the left by
+  `ROW_SELECT_GUTTER`, so the checkboxes are in the margin and can be
+  clicked; `RowDragBox` with the checkbox and the blue,
+  `RowDrag.moving`; `DatabaseRepository.moveRowsNextTo` and, in
+  `DatabaseViewModel`, `moveRowsNextTo`, `addRowsToFavorites`,
+  `setRowIcons`, `duplicateRows`, `moveRowsTo`, `deleteRows`. Test:
+  `DesktopRowSelectionTest`
+
 ### ✏️ v0.156.11 — 25/11/2026 · 19:11 — The symbol of a list chosen with a right-click, selected blocks apart, Enter under a list
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1398 tests passed)*
 

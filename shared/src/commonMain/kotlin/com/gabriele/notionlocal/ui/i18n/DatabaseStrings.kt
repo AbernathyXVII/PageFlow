@@ -377,6 +377,20 @@ object DbStrings {
     val alignRight get() = t("Align right", "Allinea a destra", "Rechtsbündig", "Aligner à droite", "Alinear a la derecha", "右对齐", "오른쪽 정렬", "右揃え")
     val hide get() = t("Hide", "Nascondi", "Ausblenden", "Masquer", "Ocultar", "隐藏", "숨기기", "非表示")
     /** La maniglia per trascinare una riga (vedi `RowDrag`). */
+    val selectRow get() = t("Select", "Scegli", "Auswählen", "Sélectionner", "Seleccionar", "选择", "선택", "選択")
+    val selectAllRows get() = t("Select all", "Scegli tutte", "Alle auswählen", "Tout sélectionner", "Seleccionar todo", "全选", "모두 선택", "すべて選択")
+    fun selectedCount(n: Int) = t("$n selected", "$n scelte", "$n ausgewählt", "$n sélectionnés", "$n seleccionados", "已选择 $n 个", "${n}개 선택됨", "$n 件選択")
+    fun deleteRowsTitle(n: Int) = t("Delete $n pages?", "Eliminare $n pagine?", "$n Seiten löschen?", "Supprimer $n pages ?", "¿Eliminar $n páginas?", "删除 $n 个页面？", "페이지 ${n}개를 삭제할까요?", "$n ページを削除しますか？")
+    val deleteRowsText get() = t(
+        "The rows, their values and their pages will be deleted. This can't be undone.",
+        "Le righe, i loro valori e le loro pagine verranno eliminati. Non si può annullare.",
+        "Die Zeilen, ihre Werte und ihre Seiten werden gelöscht. Das kann nicht rückgängig gemacht werden.",
+        "Les lignes, leurs valeurs et leurs pages seront supprimées. Action irréversible.",
+        "Se eliminarán las filas, sus valores y sus páginas. No se puede deshacer.",
+        "这些行、它们的值和页面将被删除，且无法撤销。",
+        "행과 값, 페이지가 삭제됩니다. 되돌릴 수 없습니다.",
+        "行とその値、ページが削除されます。元に戻せません。"
+    )
     val moveRow get() = t("Drag to move", "Trascina per spostare", "Zum Verschieben ziehen", "Faire glisser pour déplacer", "Arrastra para mover", "拖动以移动", "끌어서 이동", "ドラッグして移動")
     val rowsFollowSort get() = t(
         "The rows follow the sort: remove it to move them by hand.",

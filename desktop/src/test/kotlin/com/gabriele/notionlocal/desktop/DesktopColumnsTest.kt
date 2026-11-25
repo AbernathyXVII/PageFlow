@@ -886,7 +886,8 @@ class DesktopColumnsTest {
             mouse("move", 300f, title.last + 111f)
             val hovered = shot("columns_databases_dots")
             val titleLeft = (0 until 400).first { x -> (title.first..title.last).any { y -> bright(x, y) } }
-            val dots = (0 until hovered.height).filter { y -> (titleLeft - 30 until titleLeft - 2).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
+            // Più in basso, accanto alla riga sotto il mouse, la sua casella (dal 25/11/2026, vedi `RowSelection`): non conta.
+            val dots = (0 until hovered.height).filter { y -> y < title.last + 40 && (titleLeft - 30 until titleLeft - 2).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
             val center = (title.first + title.last) / 2f
             assertTrue("puntini $dots, titolo $title", dots.isNotEmpty() && abs(dots.average() - center) <= 2.0)
         }
@@ -908,7 +909,9 @@ class DesktopColumnsTest {
             mouse("move", 18f, 330f)
             mouse("move", 20f, 331f)
             val hovered = shot("columns_group_margin")
-            val changed = (0 until hovered.height).filter { y -> (0 until 52).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
+            // Dove starebbero i sei puntini (x 30-52): più a sinistra c'è la casella della riga sotto il mouse,
+            // che col mouse lì deve comparire (dal 25/11/2026, vedi `RowSelection`).
+            val changed = (0 until hovered.height).filter { y -> (30 until 52).any { x -> hovered.getColor(x, y) != clean.getColor(x, y) } }
             assertTrue("comparso qualcosa nel margine, alle altezze $changed", changed.isEmpty())
         }
     }

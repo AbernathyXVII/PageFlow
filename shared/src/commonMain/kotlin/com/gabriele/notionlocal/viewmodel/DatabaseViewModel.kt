@@ -2567,6 +2567,62 @@ class DatabaseViewModel(
         viewModelScope.launch { repository.setSubRowsCollapsed(row.id, collapsed) }
     }
 
+    // --- **Le righe scelte con la casella** (dal 25/11/2026, vedi `RowSelection`) ---
+
+    /** Trascinate insieme: subito prima o dopo [target], nel loro ordine (vedi `DatabaseRepository.moveRowsNextTo`). */
+    fun moveRowsNextTo(rowIds: List<String>, target: DatabaseRowEntity, before: Boolean) {
+        val pageId = dataPageId ?: return
+        viewModelScope.launch { repository.moveRowsNextTo(pageId, rowIds, target.id, before) }
+    }
+
+    /** "Add to favorites": le loro pagine, che nascono adesso se non c'erano. */
+    fun addRowsToFavorites(rowIds: List<String>) {
+        viewModelScope.launch {
+            rowIds.forEach { id -> pageRepository.ensureRowPage(id)?.let { pageRepository.setFavorite(it, true) } }
+        }
+    }
+
+    /** "Edit icon": la stessa icona a tutte; le immagini delle icone di prima se ne vanno dalla cartella. */
+    fun setRowIcons(rowIds: List<String>, choice: IconChoice, imageStore: PageImageStore) {
+        val replaced = _tableState.value.rows.filter { it.id in rowIds }.mapNotNull { setRowIcon(it, choice) }
+        viewModelScope.launch { replaced.forEach { imageStore.delete(it) } }
+    }
+
+    /** "Duplicate": ogni pagina copiata subito sotto la sua riga, come "Duplicate" di una pagina sola. */
+    fun duplicateRows(rowIds: List<String>, titleSuffix: String, imageStore: PageImageStore) {
+        viewModelScope.launch {
+            rowIds.forEach { id ->
+                val pageId = pageRepository.ensureRowPage(id) ?: return@forEach
+                pageRepository.duplicatePage(pageId, PageRepository.DuplicateTarget.NextToOriginal, titleSuffix) { imageStore.copy(it) }
+            }
+        }
+    }
+
+    /**
+     * "Move to": le pagine escono dal database e finiscono in fondo alla pagina scelta, come "Move to"
+     * di una pagina sola (vedi `PageRepository.movePageTo`). `onDone` riceve quante sono arrivate.
+     */
+    fun moveRowsTo(rowIds: List<String>, destination: PageRepository.PageTreeNode, onDone: (Int) -> Unit) {
+        viewModelScope.launch {
+            val moved = rowIds.count { id ->
+                val pageId = pageRepository.ensureRowPage(id) ?: return@count false
+                pageRepository.movePageTo(pageId, destination) != null
+            }
+            onDone(moved)
+        }
+    }
+
+    /** "Move to trash" e il cestino della barra: come "Delete" di una riga, per tutte. */
+    fun deleteRows(rowIds: List<String>, imageStore: PageImageStore? = null) {
+        val rows = _tableState.value.rows.filter { it.id in rowIds }
+        viewModelScope.launch {
+            rows.forEach { row ->
+                val pageId = repository.deleteRow(row) ?: return@forEach
+                pageRepository.deleteRowPage(pageId).forEach { imageStore?.delete(it) }
+            }
+        }
+    }
+
     /** "Move up" / "Move down": la riga subito prima o subito dopo `target`. Vedi `DatabaseRepository.moveRowNextTo`. */
     fun moveRowNextTo(row: DatabaseRowEntity, target: DatabaseRowEntity, before: Boolean) {
         val pageId = dataPageId ?: return

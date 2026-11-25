@@ -8,7 +8,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material3.Icon
@@ -25,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -51,7 +54,7 @@ import com.gabriele.notionlocal.ui.theme.NotionGray400
  * `LocalRowDrag`), e solo fra le righe dello stesso gruppo e dello stesso
  * livello (una sotto-riga fra le sorelle).
  */
-class RowDrag(private val onMove: (row: DatabaseRowEntity, target: DatabaseRowEntity, before: Boolean) -> Unit) {
+class RowDrag(private val onMove: (rowIds: List<String>, target: DatabaseRowEntity, before: Boolean) -> Unit) {
     private class Slot(val row: DatabaseRowEntity, val group: List<String>, val bounds: Rect)
 
     // Le righe sullo schermo, dove stanno (nella finestra): in una lista lunga solo quelle disegnate.
@@ -65,6 +68,13 @@ class RowDrag(private val onMove: (row: DatabaseRowEntity, target: DatabaseRowEn
     var target by mutableStateOf<Pair<String, Boolean>?>(null)
         private set
 
+    /**
+     * Le righe che vanno insieme (dal 25/11/2026): quella trascinata e, se è fra le scelte con la
+     * casella, tutte le scelte (vedi `RowSelection`), che arrivano una dopo l'altra nel loro ordine.
+     */
+    var moving by mutableStateOf<Set<String>>(emptySet())
+        private set
+
     private var pointerY = 0f
 
     fun place(row: DatabaseRowEntity, group: List<String>, bounds: Rect) {
@@ -75,8 +85,9 @@ class RowDrag(private val onMove: (row: DatabaseRowEntity, target: DatabaseRowEn
         if (dragging != rowId) slots.remove(rowId)
     }
 
-    fun start(rowId: String, y: Float) {
+    fun start(rowId: String, y: Float, chosen: Set<String> = emptySet()) {
         dragging = rowId
+        moving = if (rowId in chosen) chosen else setOf(rowId)
         pointerY = y
         aim()
     }
@@ -87,24 +98,26 @@ class RowDrag(private val onMove: (row: DatabaseRowEntity, target: DatabaseRowEn
     }
 
     fun drop() {
-        val moving = dragging?.let { slots[it]?.row }
+        val rows = moving.toList()
         val (targetId, before) = target ?: (null to false)
         val to = targetId?.let { slots[it]?.row }
         dragging = null
         target = null
-        if (moving != null && to != null) onMove(moving, to, before)
+        moving = emptySet()
+        if (rows.isNotEmpty() && to != null) onMove(rows, to, before)
     }
 
     fun cancel() {
         dragging = null
         target = null
+        moving = emptySet()
     }
 
     /** La riga sotto il puntatore, fra quelle dove si può andare: prima di lei se si è sopra la sua metà. */
     private fun aim() {
         val moving = dragging?.let { slots[it] } ?: return
         val others = slots.values
-            .filter { it.row.id != moving.row.id && it.group == moving.group && it.row.parentRowId == moving.row.parentRowId }
+            .filter { it.row.id !in this.moving && it.group == moving.group && it.row.parentRowId == moving.row.parentRowId }
             .sortedBy { it.bounds.top }
         if (others.isEmpty()) {
             target = null
@@ -132,16 +145,21 @@ fun RowDragBox(
     content: @Composable BoxScope.() -> Unit
 ) {
     val drag = LocalRowDrag.current
-    if (drag == null) {
+    // La casella per sceglierla, nel margine a sinistra (dal 25/11/2026, vedi `RowSelection`).
+    val selection = LocalRowSelection.current
+    if (drag == null && selection == null) {
         Box(modifier, content = content)
         return
     }
     var hovered by remember { mutableStateOf(false) }
-    DisposableEffect(drag, row.id) { onDispose { drag.forget(row.id) } }
+    if (drag != null) DisposableEffect(drag, row.id) { onDispose { drag.forget(row.id) } }
     val line = MaterialTheme.colorScheme.primary
+    val gutter = if (selection != null) ROW_SELECT_GUTTER else 0.dp
+    val checked = selection?.selected?.contains(row.id) == true
     Box(
         modifier = modifier
-            .onGloballyPositioned { drag.place(row, group, it.boundsInRoot()) }
+            .then(if (selection != null) Modifier.bleedStart(gutter).widthIn(min = LocalTableLineWidth.current + gutter) else Modifier)
+            .then(if (drag != null) Modifier.onGloballyPositioned { drag.place(row, group, it.boundsInRoot()) } else Modifier)
             .pointerInput(row.id) {
                 awaitPointerEventScope {
                     while (true) {
@@ -152,18 +170,29 @@ fun RowDragBox(
                     }
                 }
             }
-            .graphicsLayer { alpha = if (drag.dragging == row.id) 0.4f else 1f }
+            .graphicsLayer { alpha = if (drag != null && row.id in drag.moving) 0.4f else 1f }
             .drawWithContent {
                 drawContent()
-                val aim = drag.target
+                val left = gutter.toPx()
+                if (checked) drawRect(SelectedRowTint, topLeft = Offset(left, 0f), size = Size(size.width - left, size.height))
+                val aim = drag?.target
                 if (aim != null && aim.first == row.id) {
                     val y = if (aim.second) 1f else size.height - 1f
-                    drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 2.dp.toPx())
+                    drawLine(line, Offset(left, y), Offset(size.width, y), strokeWidth = 2.dp.toPx())
                 }
             }
     ) {
-        content()
-        if (hovered || drag.dragging == row.id) {
+        Box(Modifier.padding(start = gutter), content = content)
+        // Col mouse sopra la riga, o spuntata (dal 25/11/2026, chiesto dall'utente: "visibile solo se ci metto il mouse sopra").
+        if (selection != null && (hovered || checked)) {
+            SelectionCheckbox(
+                checked = checked,
+                onClick = { selection.toggle(row.id) },
+                description = DbStrings.selectRow,
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 5.dp)
+            )
+        }
+        if (drag != null && (hovered || drag.dragging == row.id)) {
             val at = remember { arrayOfNulls<LayoutCoordinates>(1) }
             // Invisibile finché il mouse non è sopra di lei (dal 17/11/2026, come i sei puntini dei blocchi).
             val hover = remember { MutableInteractionSource() }
@@ -171,6 +200,7 @@ fun RowDragBox(
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
+                    .padding(start = gutter)
                     .size(width = ROW_HANDLE_WIDTH, height = ROW_HANDLE_HEIGHT)
                     .hoverable(hover)
                     .semantics { contentDescription = DbStrings.moveRow }
@@ -179,7 +209,7 @@ fun RowDragBox(
                         detectDragGestures(
                             onDragStart = { offset ->
                                 val y = at[0]?.takeIf { it.isAttached }?.localToRoot(offset)?.y ?: return@detectDragGestures
-                                drag.start(row.id, y)
+                                drag.start(row.id, y, selection?.selected.orEmpty())
                             },
                             onDragEnd = { drag.drop() },
                             onDragCancel = { drag.cancel() }

@@ -251,6 +251,21 @@ class DatabaseRepository(private val db: AppDatabase) {
     }
 
     /**
+     * **Più righe insieme subito prima o dopo [targetId]** (dal 25/11/2026, trascinando le righe scelte con
+     * la casella): arrivano una dopo l'altra, nell'ordine che avevano, e le righe si rinumerano da 0.
+     */
+    suspend fun moveRowsNextTo(pageId: String, rowIds: List<String>, targetId: String, before: Boolean) = db.withTransaction {
+        if (targetId in rowIds) return@withTransaction
+        val rows = dao.getRowsForPageOnce(pageId)
+        val moving = rows.filter { it.id in rowIds }
+        val rest = rows.filter { it.id !in rowIds }.toMutableList()
+        val target = rest.indexOfFirst { it.id == targetId }
+        if (moving.isEmpty() || target < 0) return@withTransaction
+        rest.addAll(if (before) target else target + 1, moving)
+        rest.forEachIndexed { index, row -> if (row.orderIndex != index) dao.setRowOrderIndex(row.id, index) }
+    }
+
+    /**
      * Cambia il titolo di una riga, segnandola come modificata adesso.
      * Se la riga è già stata aperta come pagina, rinomina anche quella:
      * per l'utente è un oggetto solo, e vedere due nomi diversi a
