@@ -2052,6 +2052,27 @@ class PageRepository(private val db: AppDatabase) {
     }
 
     /**
+     * **Il blocco dentro il toggle [toggleId]**, per primo (dal 25/11/2026,
+     * chiesto dall'utente: trascinandolo sul titolo del toggle). Le righe che ha
+     * dentro vengono con lui; il toggle, se era chiuso, si apre, perché lo si
+     * veda arrivare. Falso se il blocco o il toggle non ci sono più, o se il
+     * toggle sta dentro il blocco stesso.
+     */
+    suspend fun moveBlockInto(blockId: String, toggleId: String): Boolean = db.withTransaction {
+        val block = blockDao.getById(blockId) ?: return@withTransaction false
+        val byId = blockDao.getBlocksForPageOnce(block.pageId).associateBy { it.id }
+        val toggle = byId[toggleId] ?: return@withTransaction false
+        if (isInside(toggle, blockId, byId)) return@withTransaction false
+        val oldParent = block.parentBlockId
+        blockDao.shiftOrderIndexes(block.pageId, oldParent, block.orderIndex + 1, -1)
+        blockDao.shiftOrderIndexes(block.pageId, toggleId, 0, 1)
+        blockDao.setParentAndOrder(blockId, toggleId, 0)
+        if (!toggle.isExpanded) blockDao.setExpanded(toggleId, true)
+        if (oldParent != toggleId) tidyColumn(oldParent)
+        true
+    }
+
+    /**
      * **Il blocco accanto a [targetId], a destra o a sinistra ([right])**,
      * come su Notion (dal 12/11/2026, chiesto dall'utente con le foto):
      * - accanto a una riga qualsiasi della pagina, lei e il blocco diventano

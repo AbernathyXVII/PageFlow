@@ -1126,6 +1126,31 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.10 — 25/11/2026 · 18:37 — Blocks dragged into a toggle, Tab inside toggles
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1395 tests passed)*
+
+- **[Change]** **[💻 PC]** **A block dragged by its six dots goes inside a
+  toggle**: with the mouse on the lower half of the toggle's title, over its
+  text, the blue line starts where the toggle's lines start, and the block
+  becomes the first line inside it; a closed toggle opens, so you see it
+  arrive. From the margin of the dots the block still goes under the
+  toggle, and on the edges of the text beside it (the columns)
+- **[Bug fix]** **[💻 PC]** **Tab and Shift+Tab inside toggles** (and in
+  the other lines inside a block: columns, callouts, quotes) work as in the
+  lines of the page: Tab is a real Tab, as wide as the next tab stop, and
+  Shift+Tab takes away the one just before the cursor; at the start of a
+  bulleted or numbered item they move it right and left
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **An item of a list inside a
+  toggle, moved right, is drawn further right**, four spaces for each step
+  as in the lines of the page: before, only its bullet or number changed
+- **[Project]** `DropPlace.INSIDE` in `dropFor` (lower half of a
+  `TOGGLE`'s text, `nested` = `NESTED_INDENT`), `PageRepository.moveBlockInto`
+  (first child, opens the toggle), `PageEditorViewModel.moveBlockInto`;
+  `islandTabKey` in `BlockRow`, `RichTextVisualTransformation` with
+  `TabStops`, and the start padding of list items from
+  `INDENT_SPACES.repeat(indentLevel)`. Tests: `DesktopToggleDropTest`,
+  `DesktopToggleTabTest`
+
 ### ✏️ v0.156.9 — 25/11/2026 · 17:46 — "Delete linked page" only on linked views, calendar arrows next to the title, other months' days darkened
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1392 tests passed)*
 

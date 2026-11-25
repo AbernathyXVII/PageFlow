@@ -46,8 +46,8 @@ import kotlin.math.roundToInt
 // fuori.
 // ---------------------------------------------------------------------------
 
-/** Dove va il blocco trascinato rispetto a quello sotto il mouse. */
-enum class DropPlace { BEFORE, AFTER, LEFT, RIGHT }
+/** Dove va il blocco trascinato rispetto a quello sotto il mouse ([INSIDE]: dentro un toggle, per primo). */
+enum class DropPlace { BEFORE, AFTER, LEFT, RIGHT, INSIDE }
 
 /**
  * Dove cadrà il blocco trascinato: [place] rispetto a [targetId]. La linea
@@ -70,8 +70,13 @@ data class BlockDrop(
  * secondo la metà. [blocks] sono quelli della pagina. Null se il blocco
  * resterebbe dov'è (sopra se stesso, o subito sopra o sotto), se finirebbe
  * dentro se stesso, o se un gruppo di colonne finirebbe in una colonna.
+ *
+ * **Dentro un toggle** (dal 25/11/2026, chiesto dall'utente): sulla metà bassa
+ * del suo titolo, col mouse sul testo, il blocco va per primo dentro di lui, e la
+ * linea comincia [nested] più a destra della riga, dove cominciano le sue righe.
+ * Dal margine dei puntini va sotto, con la linea dal bordo della riga.
  */
-fun dropFor(dragged: String, target: String, pointer: Offset, box: BlockBox, side: Float, blocks: List<BlockEntity>): BlockDrop? {
+fun dropFor(dragged: String, target: String, pointer: Offset, box: BlockBox, side: Float, blocks: List<BlockEntity>, nested: Float = 0f): BlockDrop? {
     val byId = blocks.associateBy { it.id }
     // Un file che arriva da fuori (vedi `OutsideFileDrop.kt`) non è nella pagina: va dove si vuole.
     val moving = byId[dragged]
@@ -99,6 +104,12 @@ fun dropFor(dragged: String, target: String, pointer: Offset, box: BlockBox, sid
         }
     }
     val below = pointer.y > (box.top + box.bottom) / 2f
+    val toggle = byId[target]?.type == BlockType.TOGGLE
+    if (toggle && moving != null && below && pointer.x >= textStart) {
+        val first = blocks.filter { it.parentBlockId == target }.minByOrNull { it.orderIndex }
+        if (first?.id == dragged) return null
+        return BlockDrop(target, DropPlace.INSIDE, textStart + nested, box.bottom, textEnd - textStart - nested, vertical = false)
+    }
     if (moving != null) {
         val siblings = blocks.filter { it.parentBlockId == moving.parentBlockId }.sortedBy { it.orderIndex }
         val at = siblings.indexOfFirst { it.id == dragged }
@@ -121,6 +132,8 @@ class BlockDrag(
     private val picker: BlockPicker,
     private val blocks: () -> List<BlockEntity>,
     private val side: () -> Float,
+    /** Quanto rientrano le righe dentro un toggle (vedi [dropFor]). */
+    private val nested: () -> Float = { 0f },
     private val onDrop: (String, BlockDrop) -> Unit
 ) {
     var dragged by mutableStateOf<String?>(null)
@@ -157,7 +170,7 @@ class BlockDrag(
     fun follow() {
         val id = dragged ?: return
         val (target, box) = picker.blockAt(pointer) ?: return
-        drop = dropFor(id, target, pointer, box, side(), blocks())
+        drop = dropFor(id, target, pointer, box, side(), blocks(), nested())
     }
 
     /** Fine del trascinamento: con [place] il blocco va dove dice la linea blu, se c'è. */

@@ -3279,6 +3279,10 @@ class PageEditorViewModel(
     fun moveBlockNextTo(block: BlockEntity, targetId: String, after: Boolean) =
         moveBlockBy(block) { repository.moveBlockNextTo(block.id, targetId, after) }
 
+    /** Trascinato coi sei puntini sul titolo di un toggle: dentro, per primo (vedi `PageRepository.moveBlockInto`). */
+    fun moveBlockInto(block: BlockEntity, toggleId: String) =
+        moveBlockBy(block) { repository.moveBlockInto(block.id, toggleId) }
+
     /** Trascinato coi sei puntini sul bordo di [targetId]: le colonne (vedi `PageRepository.moveBlockBeside`). */
     fun moveBlockBeside(block: BlockEntity, targetId: String, right: Boolean) =
         moveBlockBy(block) { repository.moveBlockBeside(block.id, targetId, right) }

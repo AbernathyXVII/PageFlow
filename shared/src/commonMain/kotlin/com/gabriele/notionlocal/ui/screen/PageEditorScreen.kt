@@ -3290,13 +3290,15 @@ private fun PageEditorContent(
                 BlockDrag(
                     picker = blockPicker,
                     blocks = { viewModel.blocks.value },
-                    side = { with(dragDensity) { DROP_SIDE_ZONE.toPx() } }
+                    side = { with(dragDensity) { DROP_SIDE_ZONE.toPx() } },
+                    nested = { with(dragDensity) { NESTED_INDENT.toPx() } }
                 ) { id, drop ->
                     blockSpot.value = null
                     val moving = viewModel.blocks.value.firstOrNull { it.id == id } ?: return@BlockDrag
                     when (drop.place) {
                         DropPlace.BEFORE, DropPlace.AFTER -> viewModel.moveBlockNextTo(moving, drop.targetId, after = drop.place == DropPlace.AFTER)
                         DropPlace.LEFT, DropPlace.RIGHT -> viewModel.moveBlockBeside(moving, drop.targetId, right = drop.place == DropPlace.RIGHT)
+                        DropPlace.INSIDE -> viewModel.moveBlockInto(moving, drop.targetId)
                     }
                 }
             }
@@ -8019,6 +8021,18 @@ private fun BlockRow(
         } else base
     }
 
+    // **Tab e rientri come nel campo unito** (dal 25/11/2026, chiesto dall'utente per i toggle): i Tab
+    // larghi fino al prossimo punto (`TabStops`), e una voce di elenco spostata col Tab rientra di
+    // quattro spazi per livello (`INDENT_SPACES`). Prima qui `indentLevel` cambiava solo il segno.
+    val islandTabMeasurer = rememberTextMeasurer()
+    val islandDensity = LocalDensity.current
+    val islandTabStops = remember(islandTabMeasurer, textStyle, islandDensity) { TabStops(islandTabMeasurer, textStyle, islandDensity) }
+    val listIndent = if ((block.type == BlockType.BULLET_LIST_ITEM || block.type == BlockType.NUMBERED_LIST_ITEM) && block.indentLevel > 0) {
+        with(islandDensity) { islandTabMeasurer.measure(INDENT_SPACES.repeat(block.indentLevel), textStyle).size.width.toDp() }
+    } else {
+        0.dp
+    }
+
     // Le righe di testo dentro un toggle stanno al passo di quelle fuori
     // (24, riga dopo riga): con altri 4dp sopra e sotto ognuna, un elenco
     // dentro un toggle veniva più largo dello stesso elenco fuori. Il
@@ -8062,7 +8076,7 @@ private fun BlockRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = PAGE_SIDE_PADDING + NESTED_INDENT * depth, end = PAGE_SIDE_PADDING)
+            .padding(start = PAGE_SIDE_PADDING + NESTED_INDENT * depth + listIndent, end = PAGE_SIDE_PADDING)
             .then(islandLook),
         verticalAlignment = Alignment.Top
     ) {
@@ -8205,7 +8219,8 @@ private fun BlockRow(
                 null
             },
             proof = proofing?.let { { text: String -> islandMisspellings[text].orEmpty() } },
-            typingAt = if (fieldFocused) proofTyping else null
+            typingAt = if (fieldFocused) proofTyping else null,
+            tabStops = islandTabStops
         )
         // Le frecce su e giù fuori dal campo, come nel campo unito.
         val islandCoords = remember(block.id) { arrayOfNulls<LayoutCoordinates>(1) }
@@ -8239,6 +8254,29 @@ private fun BlockRow(
             if (if (right) value.selection.end < value.text.length else value.selection.end > RUN_LEAD.length) return false
             val next = viewModel.lineNextTo(block.id, down = right) ?: return !right
             viewModel.arriveAtEdge(next.id, atEnd = !right)
+            return true
+        }
+        // **Tab e Maiusc+Tab anche qui** (dal 25/11/2026, chiesto dall'utente: nei toggle "non
+        // funziona, né per le indentazioni né per gli spazi"): come nel campo unito (vedi `tabKey`).
+        // In una voce di un elenco, col cursore all'inizio, la spostano; altrove Tab lo scrive il
+        // campo, e Maiusc+Tab toglie quello subito prima del cursore.
+        fun islandTabKey(event: KeyEvent): Boolean {
+            if (!isPc || pageLocked || event.key != Key.Tab || event.isCtrlPressed || event.isAltPressed) return false
+            if (event.type != KeyEventType.KeyDown) return false
+            val value = editState.fieldValue
+            val body = bodyOf(value.text)
+            val from = (value.selection.min - RUN_LEAD.length).coerceIn(0, body.length)
+            val to = (value.selection.max - RUN_LEAD.length).coerceIn(from, body.length)
+            if ((block.type == BlockType.BULLET_LIST_ITEM || block.type == BlockType.NUMBERED_LIST_ITEM) && from == 0) {
+                if (event.isShiftPressed) viewModel.outdentBlock(block) else viewModel.indentBlock(block)
+                return true
+            }
+            if (!event.isShiftPressed) return false
+            if (from != to || from == 0 || body[from - 1] != '\t') return true
+            val newBody = body.removeRange(from - 1, from)
+            val newSpans = applyTextEdit(editState.spans, body, newBody)
+            editState = BlockEditState(newSpans, TextFieldValue(RUN_LEAD + newBody, TextRange(RUN_LEAD.length + from - 1)))
+            viewModel.updateBlockSpans(block, newSpans)
             return true
         }
         // **Il menu "/" anche qui** (dal 19/11/2026, trovato dall'utente nel collaudo: "su PC /
@@ -8666,7 +8704,7 @@ private fun BlockRow(
                         proofMenu = word to at
                     }
                     .onGloballyPositioned { islandCoords[0] = it }
-                    .onPreviewKeyEvent { islandSlashKey(it) || islandArrowKey(it) || islandSideKey(it) }
+                    .onPreviewKeyEvent { islandSlashKey(it) || islandArrowKey(it) || islandSideKey(it) || islandTabKey(it) }
                     // Col tasto destro, come nel campo unito.
                     .rightClickCaret(
                         enabled = isPc && !pageLocked,
@@ -8851,7 +8889,9 @@ private class RichTextVisualTransformation(
     private val caret: IntRange? = null,
     /** Vedi i gemelli nel campo unito. */
     private val proof: ((String) -> List<IntRange>)? = null,
-    private val typingAt: Int? = null
+    private val typingAt: Int? = null,
+    /** I Tab larghi fino al prossimo punto di tabulazione, come nel campo unito (dal 25/11/2026). */
+    private val tabStops: TabStops? = null
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         // L'a-capo nascosto in testa non si deve vedere: quello che si
@@ -8909,7 +8949,8 @@ private class RichTextVisualTransformation(
             }
         }
         proof?.let { p -> builder.markMisspellings(0, p(body), 0, effective, typingAt?.takeIf { it in 0..body.length }) }
-        return TransformedText(builder.toAnnotatedString().withEmojiFont(), mapping)
+        val shown = builder.toAnnotatedString().withEmojiFont()
+        return TransformedText(tabStops?.widen(shown) ?: shown, mapping)
     }
 }
 
