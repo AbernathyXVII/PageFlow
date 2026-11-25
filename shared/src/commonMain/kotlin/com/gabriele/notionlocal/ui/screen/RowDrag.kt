@@ -189,7 +189,7 @@ fun RowDragBox(
                 checked = checked,
                 onClick = { selection.toggle(row.id) },
                 description = DbStrings.selectRow,
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 5.dp)
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = SELECT_BOX_START)
             )
         }
         if (drag != null && (hovered || drag.dragging == row.id)) {

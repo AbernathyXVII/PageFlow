@@ -77,6 +77,9 @@ val LocalTableLineWidth = staticCompositionLocalOf { 0.dp }
 /** Lo spazio della casella, nel margine a sinistra della tabella. */
 val ROW_SELECT_GUTTER = 26.dp
 
+/** Dove comincia la casella nel suo spazio: staccata dalla riga, e fuori dalla zona dei sei puntini dei blocchi. */
+val SELECT_BOX_START = 2.dp
+
 /**
  * Allarga di [width] verso sinistra chi lo porta, senza spostare il resto: misura largo [width]
  * di più e si mette [width] più a sinistra. Chi sta dentro comincia col margine vuoto, dove va la
@@ -150,7 +153,7 @@ fun SelectAllGutter(content: @Composable () -> Unit) {
                 partial = !all && chosen.isNotEmpty(),
                 onClick = selection::toggleAll,
                 description = DbStrings.selectAllRows,
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 5.dp)
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = SELECT_BOX_START)
             )
         }
     }

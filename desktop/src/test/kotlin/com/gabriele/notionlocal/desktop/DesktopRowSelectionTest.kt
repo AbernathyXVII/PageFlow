@@ -28,6 +28,11 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.gabriele.notionlocal.data.AppDatabase
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
+import com.gabriele.notionlocal.data.entity.ColumnType
+import com.gabriele.notionlocal.data.entity.DatabaseCellEntity
+import com.gabriele.notionlocal.data.entity.DatabaseColumnEntity
+import com.gabriele.notionlocal.data.entity.GroupRuleSpec
+import com.gabriele.notionlocal.data.entity.encodeGroupRules
 import com.gabriele.notionlocal.data.entity.DatabaseLayout
 import com.gabriele.notionlocal.data.entity.DatabaseRowEntity
 import com.gabriele.notionlocal.data.entity.PageEntity
@@ -256,6 +261,124 @@ class DesktopRowSelectionTest {
             scene.frames(5)
             scene.shot("rowselect_inline")
             assertTrue("la barra dentro la pagina: ${scene.nodes().map { it.first }}", scene.nodes().any { it.first == "1 selected" })
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /** La riga [name] col mouse sopra: la sua casella c'è, a sinistra, e cliccata fa "1 selected". */
+    private fun ImageComposeScene.chooseAndCheck(name: String, shotName: String) {
+        frames(40)
+        val r = nodes().last { it.first == name }.second
+        mouse(PointerEventType.Move, Offset(r.center.x + 100f, r.center.y))
+        frames(3)
+        val box = nodes().filter { it.first == "Select" }.map { it.second }.minByOrNull { abs(it.center.y - r.center.y) }
+            ?: throw AssertionError("manca la casella di $name: ${nodes().map { it.first }}")
+        assertTrue("la casella a sinistra di $name: $box, $r", box.right < r.left)
+        click(box.center)
+        frames(5)
+        shot(shotName)
+        assertTrue("la barra: ${nodes().map { it.first }}", nodes().any { it.first == "1 selected" })
+    }
+
+    private fun databaseScene(): ImageComposeScene {
+        val factory = ViewModelFactory(context)
+        val owner = ScreenOwner()
+        return onWindowThread {
+            ImageComposeScene(width = 900, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize()) {
+                            DatabaseViewScreen(
+                                pageId = "esempi", factory = factory, onBack = {}, onOpenRowPage = {}, onOpenSearch = {},
+                                onOpenUpdates = {}, onOpenPage = {}, onOpenDatabase = {}
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** **Anche nell'elenco** (25/11/2026, trovato dall'utente: in Notebook, un elenco, le caselle non c'erano), a tutta pagina. */
+    @Test
+    fun aListHasTheCheckboxesToo() {
+        runBlocking {
+            val dao = AppDatabase.getInstance(context).pageDao()
+            dao.update(dao.getById("esempi")!!.copy(databaseLayout = DatabaseLayout.LIST))
+        }
+        val scene = databaseScene()
+        try {
+            scene.chooseAndCheck("c", "rowselect_list")
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /** Una tabella coi gruppi e un ordinamento, come "Main calendar" dell'utente: le caselle ci sono lo stesso. */
+    @Test
+    fun aGroupedSortedTableHasTheCheckboxes() {
+        runBlocking {
+            val db = AppDatabase.getInstance(context)
+            db.databaseDao().insertColumn(DatabaseColumnEntity(id = "kind", pageId = "esempi", name = "Tipo", type = ColumnType.SELECT, orderIndex = 0, optionsJson = """[{"label":"Uno"},{"label":"Due"}]"""))
+            names.forEachIndexed { i, name -> db.databaseDao().insertCell(DatabaseCellEntity(rowId = name, columnId = "kind", value = if (i % 2 == 0) "Uno" else "Due")) }
+            val page = db.pageDao().getById("esempi")!!
+            db.pageDao().update(page.copy(tableGroupRulesJson = encodeGroupRules(listOf(GroupRuleSpec("kind"))), sortColumnId = "kind"))
+        }
+        val scene = databaseScene()
+        try {
+            scene.chooseAndCheck("d", "rowselect_grouped")
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /** **Un database semplice** (25/11/2026, "Main calendar" dell'utente): le caselle ci sono, e il menu ha solo "Delete". */
+    @Test
+    fun aSimpleDatabaseHasTheCheckboxesToo() {
+        runBlocking {
+            val dao = AppDatabase.getInstance(context).pageDao()
+            dao.update(dao.getById("esempi")!!.copy(isSimpleDatabase = true))
+        }
+        val scene = databaseScene()
+        try {
+            scene.chooseAndCheck("b", "rowselect_simple")
+            scene.click(scene.nodes().single { it.first == "More options" }.second.center)
+            scene.frames(5)
+            val menu = scene.nodes().map { it.first }
+            assertTrue("il menu: $menu", "Delete" in menu && "Move to" !in menu && "Add to favorites" !in menu)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /** **Un elenco dentro una pagina** (25/11/2026, "Notebook" dell'utente). */
+    @Test
+    fun aListInsideAPageHasTheCheckboxes() {
+        runBlocking {
+            val db = AppDatabase.getInstance(context)
+            db.pageDao().update(db.pageDao().getById("esempi")!!.copy(databaseLayout = DatabaseLayout.LIST))
+            val repo = PageRepository(db)
+            repo.createPage(PageEntity(id = "casa", title = "Casa"))
+            repo.saveBlock(BlockEntity(id = "link", pageId = "casa", type = BlockType.DATABASE_LINK, linkedPageId = "esempi", orderIndex = 0))
+        }
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        PageEditorScreen(
+                            pageId = "casa", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                            onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                        )
+                    }
+                }
+            }
+        }
+        try {
+            scene.chooseAndCheck("d", "rowselect_list_inline")
         } finally {
             onWindowThread { scene.close() }
         }

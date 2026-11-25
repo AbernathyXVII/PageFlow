@@ -1126,6 +1126,23 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.13 — 25/11/2026 · 23:38 — The checkboxes also in lists and in simple databases
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1404 tests passed)*
+
+- **[Change]** **[💻 PC]** **The checkboxes to choose pages are also in the
+  List view and in simple databases**: in the v0.156.12 they were only in
+  the tables of databases with pages. In a simple database (rows without
+  a page) the three dots of the bar have only "Delete", and the chosen
+  rows still move together dragging one of them
+- **[Bug fix]** **[💻 PC]** **In a list opened full page the checkbox can
+  be clicked**: it showed up but the click didn't reach it
+- **[Project]** `rowSelectionOn` also for `DatabaseLayout.LIST` and simple
+  databases, the page-only entries of the menu under `!simple`; the
+  `LazyColumn` of `ListLayout` widened to the left with `bleedStart` and
+  `contentPadding`, like the table's. Tests: `DesktopRowSelectionTest`
+  (list full page and in a page, simple database, grouped and sorted
+  table)
+
 ### ✏️ v0.156.12 — 25/11/2026 · 21:19 — Pages of a database chosen with a checkbox, as in Notion
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1400 tests passed)*
 

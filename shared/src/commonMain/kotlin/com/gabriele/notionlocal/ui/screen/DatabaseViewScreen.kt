@@ -1281,8 +1281,12 @@ private fun DatabaseViewBody(
     // buttato lui, bloccata anche lei.
     val contentLocked = page?.isLocked == true || dataPage?.isLocked == true || page?.trashedAt != null ||
         hostPage?.isLocked == true || hostPage?.trashedAt != null
-    // Le caselle per scegliere le righe: sul PC, nella tabella di un database con le pagine, non bloccato.
-    val rowSelectionOn = rowSelection.takeIf { isPc && !simple && !contentLocked && (page?.databaseLayout ?: DatabaseLayout.TABLE) == DatabaseLayout.TABLE }
+    // Le caselle per scegliere le righe: sul PC, nella tabella e nell'elenco, col database non bloccato. Anche nei
+    // database semplici (dal 25/11/2026, trovato dall'utente: in Notebook, un elenco, e in Main calendar, semplice,
+    // non c'erano), dove il menu ha solo quello che si fa senza pagine.
+    val rowSelectionOn = rowSelection.takeIf {
+        isPc && !contentLocked && (page?.databaseLayout ?: DatabaseLayout.TABLE).let { it == DatabaseLayout.TABLE || it == DatabaseLayout.LIST }
+    }
     LaunchedEffect(state.rows, rowSelectionOn) {
         val ids = state.rows.map { it.id }
         val shown = ids.toHashSet()
@@ -1519,28 +1523,31 @@ private fun DatabaseViewBody(
                 count = chosenRows.size,
                 onDelete = { rowsPendingDeletion = chosenRows },
                 entries = buildList {
-                    add(PcMenuItem(EditorStrings.addToFavorites, icon(Icons.Filled.Star), onClick = { viewModel.addRowsToFavorites(chosenRows) }))
-                    add(PcMenuItem(EditorStrings.editIcon, icon(Icons.Filled.EmojiEmotions), onClick = { iconForRows = chosenRows }))
-                    if (single != null && opener != null) {
-                        add(
-                            PcMenuItem(
-                                Strings.openAs, icon(Icons.Filled.OpenInNew),
-                                submenu = OpenMode.entries.map { mode ->
-                                    PcMenuItem(Strings.openModeName(mode), icon(openModeIcon(mode)), onClick = {
-                                        viewModel.openRow(single) { id -> opener.open(id, false, mode) }
-                                    })
-                                }
+                    // Le righe di un database semplice non hanno pagine: niente preferiti, icona, apertura, copia né "Move to".
+                    if (!simple) {
+                        add(PcMenuItem(EditorStrings.addToFavorites, icon(Icons.Filled.Star), onClick = { viewModel.addRowsToFavorites(chosenRows) }))
+                        add(PcMenuItem(EditorStrings.editIcon, icon(Icons.Filled.EmojiEmotions), onClick = { iconForRows = chosenRows }))
+                        if (single != null && opener != null) {
+                            add(
+                                PcMenuItem(
+                                    Strings.openAs, icon(Icons.Filled.OpenInNew),
+                                    submenu = OpenMode.entries.map { mode ->
+                                        PcMenuItem(Strings.openModeName(mode), icon(openModeIcon(mode)), onClick = {
+                                            viewModel.openRow(single) { id -> opener.open(id, false, mode) }
+                                        })
+                                    }
+                                )
                             )
-                        )
+                        }
+                        add(PcMenuSeparator)
+                        add(PcMenuItem(Strings.duplicate, icon(Icons.Filled.ContentCopy), onClick = {
+                            viewModel.duplicateRows(chosenRows, Strings.copySuffix, imageStore)
+                            rowSelection.selected = emptySet()
+                        }))
+                        add(PcMenuItem(Strings.moveTo, icon(Icons.Filled.DriveFileMove), onClick = {
+                            viewModel.loadMoveExclusions { rowsMoveExclusions = chosenRows to it }
+                        }))
                     }
-                    add(PcMenuSeparator)
-                    add(PcMenuItem(Strings.duplicate, icon(Icons.Filled.ContentCopy), onClick = {
-                        viewModel.duplicateRows(chosenRows, Strings.copySuffix, imageStore)
-                        rowSelection.selected = emptySet()
-                    }))
-                    add(PcMenuItem(Strings.moveTo, icon(Icons.Filled.DriveFileMove), onClick = {
-                        viewModel.loadMoveExclusions { rowsMoveExclusions = chosenRows to it }
-                    }))
                     // "Delete" e non "Move to trash": la pagina di una riga eliminata non va nel cestino (vedi `deleteRow`).
                     add(PcMenuItem(Strings.delete, icon(Icons.Filled.Delete), danger = true, onClick = { rowsPendingDeletion = chosenRows }))
                 }
@@ -1967,7 +1974,7 @@ private fun DatabaseViewBody(
                     }
                 )
 
-                DatabaseLayout.LIST -> ListLayout(
+                DatabaseLayout.LIST -> CompositionLocalProvider(LocalRowSelection provides rowSelectionOn) { ListLayout(
                     state = state,
                     onOpenRow = openRow,
                     onRowLongPress = { row ->
@@ -1981,7 +1988,7 @@ private fun DatabaseViewBody(
                         newRowTick++
                     },
                     lazy = lazyBody
-                )
+                ) }
 
                 DatabaseLayout.CHART -> ChartLayout(state = state, settings = chartSettings)
 
@@ -5466,7 +5473,13 @@ private fun ListLayout(
                 if (depth > 0) item(key = "gap:$key") { Spacer(modifier = Modifier.size(8.dp)) }
             }
         }
-        LazyColumn(modifier = Modifier.fillMaxSize().keepFocusedAboveKeyboard()) {
+        // Le caselle per scegliere le righe stanno a sinistra dell'elenco (vedi `RowSelection`): la lista si allarga fin lì,
+        // perché il clic ci arrivi, e le righe restano dov'erano.
+        val gutter = if (LocalRowSelection.current != null) ROW_SELECT_GUTTER else 0.dp
+        LazyColumn(
+            modifier = Modifier.bleedStart(gutter).fillMaxSize().keepFocusedAboveKeyboard(),
+            contentPadding = PaddingValues(start = gutter)
+        ) {
             if (groupLevels.isEmpty()) {
                 items(state.rows, key = { it.id }) { row -> ListRow(row, state, onOpenRow, onRowLongPress, tight = tight) }
             } else {
