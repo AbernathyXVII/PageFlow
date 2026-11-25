@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### 🔧 v0.156.8.1 — 24/11/2026 · 22:49 — The fill handle exactly on the corner of the cell
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1388 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1388 tests passed)*
 
 - **[Bug fix]** **[💻 PC]** **The circle that fills the cells sits exactly
   on the corner of the chosen cell**, half inside and half outside, as in
