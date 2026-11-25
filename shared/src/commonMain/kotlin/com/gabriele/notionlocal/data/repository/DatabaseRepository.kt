@@ -231,8 +231,6 @@ class DatabaseRepository(private val db: AppDatabase) {
         DatabaseChanges.rowAdded(row.pageId, row.id)
     }
 
-    suspend fun updateRow(row: DatabaseRowEntity) = dao.updateRow(row)
-
     /**
      * **Sposta una riga** (dal 29/09/2026, "Move up" / "Move down" tenendo
      * premuto il nome): subito prima (`before`) o subito dopo `targetId`,

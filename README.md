@@ -1126,6 +1126,26 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.156.8.2 — 25/11/2026 · 15:50 — Opening a row again no longer empties its page
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1389 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **Opening a database row again
+  no longer gives it a new empty page.** A row created empty, given its
+  name and content in its page and then opened again from the list (without
+  leaving the database in between, as on the PC with the peek) lost its
+  page: the app still had the row as it was when it appeared, with no page
+  and no name, so it made a new empty page and wrote the row back without
+  its name. The real page was left without a row, and at the next start it
+  went to the trash. Now opening a row always reads it again from the
+  database
+- **[Project]** `DatabaseViewModel.openRow` goes through
+  `PageRepository.ensureRowPage(row.id)`, like every other way of opening a
+  row page; `DatabaseRepository.updateRow`, which wrote a whole row from
+  the screen, is gone. The rows of the list (and of the other views) keep
+  the row they were composed with in `pointerInput(row.id)`.
+  `DesktopStaleRowOpenTest` opens a row, names its page and opens it again:
+  same page, same name (before the fix, a new page and the old name)
+
 ### 🔧 v0.156.8.1 — 24/11/2026 · 22:49 — The fill handle exactly on the corner of the cell
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1388 tests passed)*
 

@@ -2725,19 +2725,13 @@ class DatabaseViewModel(
      * mai come pagina radice indipendente nella Home), altrimenti riusa
      * quella già collegata. onReady riceve l'id della pagina per
      * navigarci subito.
+     *
+     * **La riga si rilegge dal database** (dal 25/11/2026): quella in mano
+     * può essere di quando è comparsa, senza pagina e senza nome. Riaprirla
+     * creava una pagina nuova vuota e riscriveva la riga com'era allora:
+     * via il nome e il collegamento alla pagina vera (Shin Megami Tensei 3).
      */
     fun openRow(row: DatabaseRowEntity, onReady: (String) -> Unit) {
-        viewModelScope.launch {
-            val targetPageId = row.linkedPageId ?: run {
-                val newPage = PageEntity(
-                    title = row.title.ifBlank { "Untitled" },
-                    isRowPage = true
-                )
-                pageRepository.createPage(newPage)
-                repository.updateRow(row.copy(linkedPageId = newPage.id))
-                newPage.id
-            }
-            onReady(targetPageId)
-        }
+        viewModelScope.launch { pageRepository.ensureRowPage(row.id)?.let(onReady) }
     }
 }
