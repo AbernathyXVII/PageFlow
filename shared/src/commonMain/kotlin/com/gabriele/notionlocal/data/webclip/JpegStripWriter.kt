@@ -17,8 +17,8 @@ import kotlin.math.abs
  * JPEG "baseline" come quello delle fotocamere, con le tabelle di Huffman
  * standard e i colori a piena risoluzione (4:4:4): nelle foto delle pagine
  * il testo colorato resta nitido. Lo leggono tutti, `BitmapRegionDecoder`
- * compreso, che serve a mostrarlo a pezzi. Il limite del formato è 65535
- * pixel per lato.
+ * compreso, che serve a mostrarlo a pezzi. Il formato arriva a 65535 pixel
+ * per lato, ma chi lo legge si ferma a 65500 (vedi [MAX_SIDE]).
  */
 class JpegStripWriter(
     output: OutputStream,
@@ -309,7 +309,12 @@ class JpegStripWriter(
     }
 
     companion object {
-        const val MAX_SIDE = 65535
+        /**
+         * Il lato più lungo che si scrive: 65500, il limite di libjpeg, che legge i JPEG per Skia
+         * (l'app sul PC), Android e Java. Fino al 25/11/2026 era 65535, quello del formato: la foto
+         * di una pagina molto lunga finiva alta 65535 e non si apriva da nessuna parte.
+         */
+        const val MAX_SIDE = 65500
         const val DEFAULT_QUALITY = 88
 
         /** Quanti bit servono per un valore: la "categoria" del JPEG. */

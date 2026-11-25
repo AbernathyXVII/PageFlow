@@ -86,6 +86,17 @@ class JpegStripWriterTest {
         assertDecodesClose(width = 200, height = 333, chunk = 64)
     }
 
+    /**
+     * **La foto più alta che si scrive si apre** (25/11/2026, Asakusa di game8: alta 65535, non si
+     * apriva). Il decodificatore di Java è libjpeg, come quelli di Skia e di Android: oltre 65500 dice
+     * "Maximum supported image dimension is 65500 pixels".
+     */
+    @Test
+    fun theTallestPhotoStillOpens() {
+        val decoded = Decoded(encode(page(8, JpegStripWriter.MAX_SIDE), 8, JpegStripWriter.MAX_SIDE, 4096))
+        assertEquals(JpegStripWriter.MAX_SIDE, decoded.height)
+    }
+
     @Test
     fun theSameImageGivesTheSameFileWhateverTheStrips() {
         val pixels = page(64, 50)

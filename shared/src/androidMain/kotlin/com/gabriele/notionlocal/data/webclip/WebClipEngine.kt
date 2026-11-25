@@ -278,7 +278,7 @@ class WebClipEngine(
 
     /**
      * **La foto di tutta la pagina**, in [target]: una finestra alla volta, dall'alto in fondo.
-     * Una pagina più alta di quanto sta in un JPEG (65535 pixel) si fotografa
+     * Una pagina più alta di quanto sta in un JPEG (`JpegStripWriter.MAX_SIDE`) si fotografa
      * un po' più piccola, ma intera. `onProgress` va da 0 a 1.
      */
     suspend fun captureFullPage(target: File, onProgress: (Float) -> Unit = {}): WebClipImage? {

@@ -1126,6 +1126,22 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.156.8.3 — 25/11/2026 · 17:02 — The photo of a very long web page opens
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1390 tests passed)*
+
+- **[Bug fix]** **[📱 Mobile]** **[💻 PC]** **The Web Clipper's photo of a
+  very long page opens again.** A page too long for a JPEG is photographed
+  smaller, but whole: the photo was made 65535 pixels tall, the most the
+  format allows, but the programs that read JPEGs (on the PC, on Android
+  and in Java) stop at 65500, so that photo couldn't be opened anywhere and
+  the page showed an empty space under the title. Now the photo of a long
+  page is at most 65500 pixels tall: a few pixels smaller, still whole, and
+  it opens. A photo clipped before stays as it is: clip the page again
+- **[Project]** `JpegStripWriter.MAX_SIDE` from 65535 to 65500, the limit
+  of libjpeg; the two clipper engines already use it.
+  `JpegStripWriterTest` writes a photo `MAX_SIDE` tall and reads it back
+  with Java's decoder
+
 ### 🔧 v0.156.8.2 — 25/11/2026 · 15:50 — Opening a row again no longer empties its page
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1389 tests passed)*
 
