@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.156.12 — 25/11/2026 · 21:19 — Pages of a database chosen with a checkbox, as in Notion
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1400 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1400 tests passed)*
 
 - **[Change]** **[💻 PC]** **The pages of a database chosen with a
   checkbox**, as in Notion and in File Explorer: in the table, with the
