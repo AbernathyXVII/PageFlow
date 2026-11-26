@@ -133,6 +133,17 @@ data class BlockAttrs(
     val align: String? = null,
     /** La didascalia sotto l'immagine, che ne segue l'allineamento; null = nessuna. */
     val caption: String? = null,
+    /**
+     * **La didascalia di lato** (dal 26/11/2026, chiesto dall'utente): [IMAGE_LEFT] o [IMAGE_RIGHT] dell'immagine;
+     * null = sotto.
+     */
+    val captionSide: String? = null,
+    /**
+     * **Come sta la didascalia** (dal 26/11/2026, chiesto dall'utente): [CAPTION_START], [CAPTION_CENTER] o
+     * [CAPTION_END], cioè sotto l'immagine a sinistra, al centro o a destra, e di lato in alto, al centro o in
+     * basso. Null = sotto segue l'allineamento dell'immagine, di lato in alto.
+     */
+    val captionAlign: String? = null,
     /** Il titolo sopra l'immagine, che ne segue l'allineamento; null = nessuno. */
     val imageTitle: String? = null,
     /**
@@ -175,6 +186,11 @@ val BlockEntity.attrs: BlockAttrs get() = BlockAttrs.parse(attrsJson)
 const val IMAGE_LEFT = "LEFT"
 const val IMAGE_CENTER = "CENTER"
 const val IMAGE_RIGHT = "RIGHT"
+
+// I tre allineamenti della didascalia (vedi `BlockAttrs.captionAlign`).
+const val CAPTION_START = "START"
+const val CAPTION_CENTER = "CENTER"
+const val CAPTION_END = "END"
 
 /** Gli stili dei divisori, coi tre caratteri che scritti da soli in una riga li fanno (vedi `BlockAttrs.divider`). */
 enum class DividerStyle(val shortcut: String) { SINGLE("---"), DOUBLE("==="), THICK("___"), DOTTED("***"), WAVY("~~~") }

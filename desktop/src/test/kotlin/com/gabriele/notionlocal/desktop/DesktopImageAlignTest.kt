@@ -15,6 +15,9 @@ import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getAllSemanticsNodes
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -29,6 +32,9 @@ import com.gabriele.notionlocal.data.PageImageStore
 import com.gabriele.notionlocal.data.entity.BlockAttrs
 import com.gabriele.notionlocal.data.entity.BlockEntity
 import com.gabriele.notionlocal.data.entity.BlockType
+import com.gabriele.notionlocal.data.entity.CAPTION_CENTER
+import com.gabriele.notionlocal.data.entity.CAPTION_END
+import com.gabriele.notionlocal.data.entity.CAPTION_START
 import com.gabriele.notionlocal.data.entity.IMAGE_CENTER
 import com.gabriele.notionlocal.data.entity.IMAGE_LEFT
 import com.gabriele.notionlocal.data.entity.IMAGE_RIGHT
@@ -207,6 +213,128 @@ class DesktopImageAlignTest {
             shot("imagealign_caption_gone")
             assertEquals("la didascalia vuota se ne va", null, attrs().caption)
             assertEquals("Titolo", attrs().imageTitle)
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **La didascalia a destra o a sinistra dell'immagine, e il suo allineamento** (26/11/2026, chiesto
+     * dall'utente: "sinistra, centro, destra oppure sopra, centro, sotto, in ogni parte dell'immagine dove si
+     * trova il caption").
+     */
+    @Test
+    fun theCaptionGoesBesideTheImage() {
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        fun <T> onWindowThread(block: () -> T): T = runBlocking(Dispatchers.Main) { block() }
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 700, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        Box(Modifier.fillMaxSize()) {
+                            PageEditorScreen(
+                                pageId = "foto", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                                onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        var time = 0L
+        fun frames(count: Int) = repeat(count) {
+            onWindowThread { scene.render(time) }
+            time += 100_000_000L
+            Thread.sleep(30)
+        }
+        fun shot(name: String): Bitmap = onWindowThread { Bitmap.makeFromImage(scene.render(time)) }.also {
+            File("build/desktop-screenshots").mkdirs()
+            File("build/desktop-screenshots", "$name.png").writeBytes(Image.makeFromBitmap(it).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+        }
+        fun red(c: Int) = ((c shr 16) and 0xFF) > 200 && ((c shr 8) and 0xFF) < 60 && (c and 0xFF) < 60
+        fun redBox(bitmap: Bitmap): Pair<IntRange, IntRange> {
+            val xs = (0 until bitmap.width).filter { x -> (0 until bitmap.height step 4).any { y -> red(bitmap.getColor(x, y)) } }
+            val ys = (0 until bitmap.height).filter { y -> (0 until bitmap.width step 4).any { x -> red(bitmap.getColor(x, y)) } }
+            return (xs.first()..xs.last()) to (ys.first()..ys.last())
+        }
+        fun bright(c: Int) = ((c shr 16) and 0xFF) > 120 && ((c shr 8) and 0xFF) > 120 && (c and 0xFF) > 120
+        /** Dove c'è del testo chiaro nel rettangolo [xs] × [ys]: le colonne e le righe. */
+        fun text(bitmap: Bitmap, xs: IntRange, ys: IntRange): Pair<List<Int>, List<Int>> =
+            xs.filter { x -> ys.any { y -> bright(bitmap.getColor(x, y)) } } to ys.filter { y -> xs.any { x -> bright(bitmap.getColor(x, y)) } }
+        fun change(edit: (BlockAttrs) -> BlockAttrs) {
+            viewModel.updateBlockAttrs("img", edit)
+            frames(10)
+        }
+        fun attrs() = runBlocking { db.blockDao().getBlocksForPageOnce("foto").first { it.id == "img" }.attrs }
+        fun mouse(type: PointerEventType, at: Offset, buttons: PointerButtons = PointerButtons(), button: PointerButton? = null) = onWindowThread {
+            scene.sendPointerEvent(type, at, type = PointerType.Mouse, buttons = buttons, button = button)
+        }
+        fun click(at: Offset, secondary: Boolean = false) {
+            val button = if (secondary) PointerButton.Secondary else PointerButton.Primary
+            mouse(PointerEventType.Move, at)
+            mouse(PointerEventType.Press, at, PointerButtons(isPrimaryPressed = !secondary, isSecondaryPressed = secondary), button)
+            mouse(PointerEventType.Release, at, PointerButtons(), button)
+            frames(8)
+        }
+        fun node(label: String): androidx.compose.ui.geometry.Rect = onWindowThread {
+            scene.semanticsOwners.flatMap { it.getAllSemanticsNodes(mergingEnabled = false) }.firstOrNull { node ->
+                node.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text } == label
+            }?.boundsInRoot
+        } ?: throw AssertionError("manca \"$label\"")
+        try {
+            frames(40)
+            // A sinistra, con la didascalia a destra: comincia dopo l'immagine, in alto.
+            change { it.copy(align = IMAGE_LEFT, left = null, caption = "Accanto", captionSide = IMAGE_RIGHT) }
+            val top = shot("captionside_right_top")
+            val (image, imageYs) = redBox(top)
+            val (xs, ys) = text(top, image.last + 1 until top.width, imageYs)
+            assertTrue("a destra dell'immagine, staccata: $xs $image", xs.isNotEmpty() && xs.first() >= image.last + 8 && xs.first() <= image.last + 20)
+            assertTrue("in alto: $ys $imageYs", ys.first() - imageYs.first in 0..14)
+            val middle = (imageYs.first + imageYs.last) / 2.0
+
+            change { it.copy(captionAlign = CAPTION_CENTER) }
+            val (_, centerYs) = text(shot("captionside_right_center"), image.last + 1 until top.width, imageYs)
+            assertEquals("al centro dell'immagine", middle, (centerYs.first() + centerYs.last()) / 2.0, 4.0)
+
+            change { it.copy(captionAlign = CAPTION_END) }
+            val (_, bottomYs) = text(shot("captionside_right_bottom"), image.last + 1 until top.width, imageYs)
+            assertTrue("in basso: $bottomYs $imageYs", imageYs.last - bottomYs.last() in 0..14)
+
+            // Ci si scrive: il clic dopo il testo mette il cursore in fondo (la didascalia sta fuori dall'immagine).
+            val textMid = Offset(xs.last() + 30f, ((bottomYs.first() + bottomYs.last()) / 2).toFloat())
+            click(textMid)
+            onWindowThread {
+                val awt = java.awt.event.KeyEvent(java.awt.Canvas(), java.awt.event.KeyEvent.KEY_TYPED, 0L, 0, java.awt.event.KeyEvent.VK_UNDEFINED, '!')
+                scene.sendKeyEvent(KeyEvent(Key.Unknown, KeyEventType.Unknown, codePoint = '!'.code, nativeEvent = awt))
+            }
+            frames(10)
+            assertEquals("Accanto!", attrs().caption)
+
+            // A destra, con la didascalia a sinistra: finisce poco prima dell'immagine.
+            change { it.copy(align = IMAGE_RIGHT, captionSide = IMAGE_LEFT, captionAlign = null) }
+            val leftShot = shot("captionside_left")
+            val (rightImage, rightYs) = redBox(leftShot)
+            val (leftXs, _) = text(leftShot, 0 until rightImage.first, rightYs)
+            assertTrue("a sinistra, vicino all'immagine: $leftXs $rightImage", leftXs.isNotEmpty() && leftXs.last() in rightImage.first - 20..rightImage.first - 8)
+
+            // Sotto, l'immagine al centro e la didascalia a sinistra: comincia dove comincia lei.
+            change { it.copy(align = IMAGE_CENTER, captionSide = null, captionAlign = CAPTION_START) }
+            val belowShot = shot("captionside_below_start")
+            val (centered, centeredYs) = redBox(belowShot)
+            val (belowXs, _) = text(belowShot, 0 until belowShot.width, centeredYs.last + 4..centeredYs.last + 24)
+            assertTrue("sotto, a sinistra: $belowXs $centered", belowXs.isNotEmpty() && belowXs.first() in centered.first..centered.first + 6)
+
+            // Dal menu: clic destro sull'immagine, "Caption position", a destra, al centro.
+            click(Offset(((centered.first + centered.last) / 2).toFloat(), ((centeredYs.first + centeredYs.last) / 2).toFloat()), secondary = true)
+            click(node("Caption position").center)
+            click(node("Right of the image").center)
+            assertEquals(IMAGE_RIGHT, attrs().captionSide)
+            assertEquals("cambiando parte l'allineamento torna quello di partenza", null, attrs().captionAlign)
+            click(node("Middle").center)
+            assertEquals(CAPTION_CENTER, attrs().captionAlign)
+            shot("captionside_menu")
         } finally {
             onWindowThread { scene.close() }
         }

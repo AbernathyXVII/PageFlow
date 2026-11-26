@@ -1,7 +1,12 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.CAPTION_CENTER
+import com.gabriele.notionlocal.data.entity.CAPTION_END
+import com.gabriele.notionlocal.data.entity.CAPTION_START
 import com.gabriele.notionlocal.data.entity.IMAGE_LEFT
 import com.gabriele.notionlocal.data.entity.IMAGE_RIGHT
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import com.gabriele.notionlocal.platform.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -147,6 +152,12 @@ private fun WholeImage(fileName: String, store: PageImageStore, description: Str
     }
 }
 
+/** Fra l'immagine e la sua didascalia di lato. */
+private val SIDE_CAPTION_GAP: Dp = 12.dp
+
+/** Lo spazio minimo per una didascalia di lato: con meno va sotto l'immagine. */
+private val MIN_SIDE_CAPTION: Dp = 80.dp
+
 /**
  * **Il blocco "Image"** (dal 06/10/2026, chiesto dall'utente): un'immagine
  * caricata dal telefono — solo così, come ha chiesto — larga quanto la
@@ -271,7 +282,7 @@ fun ImageBlockContent(
             }
             // Titolo e didascalia, larghi quanto l'immagine e allineati come lei (dal 18/11/2026).
             @Composable
-            fun imageText(kind: MediaRequestKind, text: String?) {
+            fun imageText(kind: MediaRequestKind, text: String?, align: TextAlign, placed: Modifier) {
                 if (text == null || (locked && text.isBlank())) return
                 val caption = kind == MediaRequestKind.CAPTION
                 ImageTextField(
@@ -279,25 +290,40 @@ fun ImageBlockContent(
                     hint = if (caption) BlockStrings.captionHint else BlockStrings.imageTitleHint,
                     style = if (caption) MaterialTheme.typography.bodySmall else MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = if (caption) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                    align = imageTextAlign(attrs.align),
+                    align = align,
                     locked = locked,
                     focus = focusText == kind,
                     onFocused = { focusText = null },
                     onChange = { new -> viewModel.updateImageText(block.id) { if (caption) it.copy(caption = new) else it.copy(imageTitle = new) } },
                     onLeftEmpty = { viewModel.updateBlockAttrs(block.id) { if (caption) it.copy(caption = null) else it.copy(imageTitle = null) } },
                     // I sei puntini a metà del titolo, nel margine (dal 23/11/2026, trovato dall'utente: "è storta").
-                    modifier = if (caption) Modifier else Modifier.reportsFirstLine(start = null)
+                    modifier = if (caption) placed else placed.reportsFirstLine(start = null)
                 )
             }
-            Column(
-                modifier = Modifier
-                    .offset { IntOffset(frame.left.roundToInt(), 0) }
-                    .width(with(density) { frame.width.toDp() })
-            ) {
-            imageText(MediaRequestKind.TITLE, attrs.imageTitle)
+            // Dove sta l'immagine: titolo e didascalia sotto sono larghi quanto lei.
+            val atImage = Modifier
+                .offset { IntOffset(frame.left.roundToInt(), 0) }
+                .width(with(density) { frame.width.toDp() })
+            // **La didascalia di lato** (dal 26/11/2026, chiesto dall'utente): nello spazio fra l'immagine e il
+            // bordo della pagina da quella parte. Se lì non ci sta (l'immagine è larga quasi quanto la pagina), sotto.
+            val sideGap = with(density) { SIDE_CAPTION_GAP.toPx() }
+            val sideRoom = when (attrs.captionSide) {
+                IMAGE_LEFT -> frame.left - sideGap
+                IMAGE_RIGHT -> pageWidth - frame.left - frame.width - sideGap
+                else -> 0f
+            }
+            val beside = attrs.captionSide != null && sideRoom >= with(density) { MIN_SIDE_CAPTION.toPx() }
+            val belowAlign = when (attrs.captionAlign) {
+                CAPTION_START -> TextAlign.Start
+                CAPTION_CENTER -> TextAlign.Center
+                CAPTION_END -> TextAlign.End
+                else -> imageTextAlign(attrs.align)
+            }
+            Column(modifier = Modifier.fillMaxWidth()) {
+            imageText(MediaRequestKind.TITLE, attrs.imageTitle, imageTextAlign(attrs.align), atImage)
+            Box(modifier = Modifier.fillMaxWidth()) {
             Box(
-                modifier = Modifier
-                    .size(with(density) { frame.width.toDp() }, with(density) { frame.height.toDp() })
+                modifier = atImage.height(with(density) { frame.height.toDp() })
             ) {
                 WholeImage(
                     fileName = file,
@@ -347,7 +373,26 @@ fun ImageBlockContent(
                     )
                 }
             }
-            imageText(MediaRequestKind.CAPTION, attrs.caption)
+            if (beside) {
+                val x = if (attrs.captionSide == IMAGE_LEFT) 0f else frame.left + frame.width + sideGap
+                imageText(
+                    MediaRequestKind.CAPTION, attrs.caption,
+                    // Verso l'immagine: a sinistra di lei finisce sul suo bordo, a destra comincia dal suo.
+                    if (attrs.captionSide == IMAGE_LEFT) TextAlign.End else TextAlign.Start,
+                    Modifier
+                        .align(
+                            when (attrs.captionAlign) {
+                                CAPTION_CENTER -> Alignment.CenterStart
+                                CAPTION_END -> Alignment.BottomStart
+                                else -> Alignment.TopStart
+                            }
+                        )
+                        .offset { IntOffset(x.roundToInt(), 0) }
+                        .width(with(density) { sideRoom.toDp() })
+                )
+            }
+            }
+            if (!beside) imageText(MediaRequestKind.CAPTION, attrs.caption, belowAlign, atImage)
             }
         }
     }

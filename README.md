@@ -1126,6 +1126,26 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.16 — 26/11/2026 · 15:04 — The caption of an image also on its left or right, aligned as you choose
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1409 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **"Caption position" in the menu
+  of an image with a caption**: below the image, as before, or on its
+  left or its right. On a side, the caption takes the room between the
+  image and the edge of the page, and its text starts (or ends) next to
+  the image. When there is not enough room there (the image is almost as
+  wide as the page) it stays below, until the image is made narrower
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **The alignment of the caption,
+  in the same window**: below the image left, center or right (before, it
+  always followed the image, as it still does until one is chosen); on a
+  side top, middle or bottom of the image. Changing side starts again from
+  the usual alignment
+- **[Project]** `BlockAttrs.captionSide` and `captionAlign` (`CAPTION_START`,
+  `CAPTION_CENTER`, `CAPTION_END`); `BlockMenuStep.CAPTION_PLACE` with
+  `CaptionPlaceMenu`; the image row of `ImageBlockContent` as wide as the
+  page, with the caption placed beside it. The PDF still puts the caption
+  below. Test: `DesktopImageAlignTest`
+
 ### 🔧 v0.156.15.1 — 26/11/2026 · 14:17 — The "+" of a group no longer moves the database down
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1408 tests passed)*
 

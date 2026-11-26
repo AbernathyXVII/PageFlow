@@ -1,6 +1,14 @@
 package com.gabriele.notionlocal.ui.screen
 
+import com.gabriele.notionlocal.data.entity.BlockAttrs
+import com.gabriele.notionlocal.data.entity.CAPTION_CENTER
+import com.gabriele.notionlocal.data.entity.CAPTION_END
+import com.gabriele.notionlocal.data.entity.CAPTION_START
 import com.gabriele.notionlocal.data.entity.IMAGE_LEFT
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.VerticalAlignCenter
+import androidx.compose.material.icons.filled.VerticalSplit
 import com.gabriele.notionlocal.data.entity.IMAGE_CENTER
 import com.gabriele.notionlocal.data.entity.IMAGE_RIGHT
 import com.gabriele.notionlocal.ui.navigation.LocalPageOpener
@@ -323,7 +331,7 @@ fun BlockActionsHost(
                             viewModel.addLineNextTo(block, below)
                         },
                         actions = when {
-                            block.type == BlockType.IMAGE && media.file != null -> listOf(
+                            block.type == BlockType.IMAGE && media.file != null -> listOfNotNull(
                                 // Le maniglie si vedono solo da qui (dal 20/10/2026, chiesto dall'utente).
                                 ObjectAction(Icons.Filled.PhotoSizeSelectLarge, BlockStrings.resizeImage) { ask(MediaRequestKind.RESIZE) },
                                 ObjectAction(Icons.Filled.CropFree, BlockStrings.fullResize) { ask(MediaRequestKind.FULL_RESIZE) },
@@ -334,6 +342,8 @@ fun BlockActionsHost(
                                 ObjectAction(Icons.Filled.FormatAlignCenter, BlockStrings.alignCenter) { align(IMAGE_CENTER) },
                                 ObjectAction(Icons.AutoMirrored.Filled.FormatAlignRight, BlockStrings.alignRight) { align(IMAGE_RIGHT) },
                                 ObjectAction(Icons.AutoMirrored.Filled.ShortText, BlockStrings.caption) { ask(MediaRequestKind.CAPTION) },
+                                // Dove sta la didascalia e come (dal 26/11/2026): solo quando ce n'è una.
+                                media.caption?.let { ObjectAction(Icons.Filled.VerticalSplit, BlockStrings.captionPlace) { step = BlockMenuStep.CAPTION_PLACE } },
                                 ObjectAction(Icons.Filled.Title, BlockStrings.imageTitle) { ask(MediaRequestKind.TITLE) },
                                 ObjectAction(Icons.Filled.Download, BlockStrings.download) { ask(MediaRequestKind.DOWNLOAD) },
                                 ObjectAction(Icons.Filled.Autorenew, BlockStrings.replace) { ask(MediaRequestKind.PICK) },
@@ -631,6 +641,13 @@ fun BlockActionsHost(
             }
         }
 
+        BlockMenuStep.CAPTION_PLACE -> NoteBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = DarkSheet
+        ) {
+            CaptionPlaceMenu(block.attrs) { change -> viewModel.updateBlockAttrs(block.id, change) }
+        }
         BlockMenuStep.MOVE_TO_LINE -> {
             val lines = remember(block.id) { viewModel.moveTargets(block) }
             MoveToLineSheet(
@@ -925,7 +942,71 @@ enum class BlockMenuStep {
     /** "Sync to another page" di un blocco sincronizzato: in quale pagina va la copia (dal 03/11/2026). */
     SYNC_TO_PAGE,
     /** "Lock with password" del database dal menu del suo blocco (dal 24/11/2026): la password o l'impronta. */
-    PASSWORD_LOCK
+    PASSWORD_LOCK,
+    /** Dove sta la didascalia di un'immagine e come è allineata (dal 26/11/2026). */
+    CAPTION_PLACE
+}
+
+/**
+ * **Dove sta la didascalia di un'immagine, e come** (dal 26/11/2026, chiesto dall'utente): sotto, a sinistra o
+ * a destra dell'immagine; sotto si allinea a sinistra, al centro o a destra, di lato in alto, al centro o in
+ * basso. La finestra resta aperta: si sceglie la parte, poi l'allineamento.
+ */
+@Composable
+private fun CaptionPlaceMenu(attrs: BlockAttrs, onChange: ((BlockAttrs) -> BlockAttrs) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
+            .navigationBarsPadding()
+    ) {
+        MenuTitle(BlockStrings.captionPlace)
+        val side = attrs.captionSide
+        OptionsGroup {
+            listOf(
+                Triple(null, Icons.Filled.ArrowDownward, BlockStrings.captionBelow),
+                Triple(IMAGE_LEFT, Icons.AutoMirrored.Filled.ArrowBack, BlockStrings.captionLeft),
+                Triple(IMAGE_RIGHT, Icons.AutoMirrored.Filled.ArrowForward, BlockStrings.captionRight)
+            ).forEachIndexed { index, (value, icon, label) ->
+                if (index > 0) HorizontalDivider()
+                // Cambiando parte l'allineamento torna quello di partenza: "a destra" sotto non è "in basso" di lato.
+                OptionRow(
+                    icon = icon,
+                    label = label,
+                    trailing = if (side == value) ({ CurrentMark() }) else null,
+                    onClick = { if (side != value) onChange { it.copy(captionSide = value, captionAlign = null) } }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.size(12.dp))
+        val current = attrs.captionAlign ?: when {
+            side != null -> CAPTION_START
+            attrs.align == IMAGE_LEFT -> CAPTION_START
+            attrs.align == IMAGE_RIGHT -> CAPTION_END
+            else -> CAPTION_CENTER
+        }
+        OptionsGroup {
+            (if (side == null) listOf(
+                Triple(CAPTION_START, Icons.AutoMirrored.Filled.FormatAlignLeft, BlockStrings.alignLeft),
+                Triple(CAPTION_CENTER, Icons.Filled.FormatAlignCenter, BlockStrings.alignCenter),
+                Triple(CAPTION_END, Icons.AutoMirrored.Filled.FormatAlignRight, BlockStrings.alignRight)
+            ) else listOf(
+                Triple(CAPTION_START, Icons.Filled.VerticalAlignTop, BlockStrings.alignTop),
+                Triple(CAPTION_CENTER, Icons.Filled.VerticalAlignCenter, BlockStrings.alignMiddle),
+                Triple(CAPTION_END, Icons.Filled.VerticalAlignBottom, BlockStrings.alignBottom)
+            )).forEachIndexed { index, (value, icon, label) ->
+                if (index > 0) HorizontalDivider()
+                OptionRow(
+                    icon = icon,
+                    label = label,
+                    trailing = if (current == value) ({ CurrentMark() }) else null,
+                    onClick = { onChange { it.copy(captionAlign = value) } }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.size(12.dp))
+    }
 }
 
 /**
