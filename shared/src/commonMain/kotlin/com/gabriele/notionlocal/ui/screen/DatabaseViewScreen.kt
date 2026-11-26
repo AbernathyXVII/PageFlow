@@ -1239,6 +1239,8 @@ private fun DatabaseViewBody(
     // **Le righe scelte con la casella** (dal 25/11/2026, vedi `RowSelection`): sul PC, nella tabella.
     val rowSelection = remember(viewModel) { RowSelection() }
     var rowsPendingDeletion by remember { mutableStateOf<List<String>?>(null) }
+    // "New group" in fondo a un database raggruppato (dal 26/11/2026): per quale livello si sta scrivendo il nome.
+    var newGroupFor by remember { mutableStateOf<GroupLevel?>(null) }
     var iconForRows by remember { mutableStateOf<List<String>?>(null) }
     var rowsMoveExclusions by remember { mutableStateOf<Pair<List<String>, PageRepository.MoveExclusions>?>(null) }
     var showSettings by remember { mutableStateOf(false) }
@@ -1761,8 +1763,21 @@ private fun DatabaseViewBody(
             DatabaseLayout.BOARD -> viewModel.boardGroupColumn() != null
             else -> true
         }
+        // **Coi gruppi, in fondo "New group" e non un altro "New page"** (dal 26/11/2026, chiesto
+        // dall'utente, come su Notion): ogni gruppo ha già il suo "New page", e il "+" accanto al nome.
+        // Un gruppo nuovo è un'etichetta nuova della proprietà dei gruppi, se è Select o Multi-select;
+        // coi gruppi d'altro tipo (date, caselle, numeri) in fondo non c'è niente.
+        val groupLevel = if (layout == DatabaseLayout.TABLE || layout == DatabaseLayout.LIST) viewModel.tableGroupLevels().firstOrNull() else null
         val newRowsButton: @Composable () -> Unit = {
-            if (canShowNewRows) {
+            if (canShowNewRows && groupLevel != null) {
+                if (groupLevel.column.type == ColumnType.SELECT || groupLevel.column.type == ColumnType.MULTI_SELECT) {
+                    TextButton(onClick = { newGroupFor = groupLevel }, modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
+                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text(DbStrings.newGroup)
+                    }
+                }
+            } else if (canShowNewRows) {
             TextButton(
                 onClick = {
                     // Una pagina creata da qui deve comparire dove la si
@@ -2399,6 +2414,37 @@ private fun DatabaseViewBody(
         )
     }
 
+    newGroupFor?.let { level ->
+        var name by remember(level) { mutableStateOf("") }
+        // Il cursore già nel campo: aperta la finestra si scrive il nome e basta.
+        val nameFocus = remember(level) { FocusRequester() }
+        LaunchedEffect(level) { runCatching { nameFocus.requestFocus() } }
+        FitAlertDialog(
+            onDismissRequest = { newGroupFor = null },
+            title = { Text(DbStrings.newGroup) },
+            text = {
+                AutoCaps {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        placeholder = { Text(DbStrings.newGroupHint(level.column.name)) },
+                        modifier = Modifier.focusRequester(nameFocus)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = name.isNotBlank(), onClick = {
+                    viewModel.addGroup(level, name)
+                    newGroupFor = null
+                }) { Text(Strings.create) }
+            },
+            dismissButton = {
+                TextButton(onClick = { newGroupFor = null }) { Text(Strings.cancel) }
+            }
+        )
+    }
+
     // Le pagine scelte con la casella (dal 25/11/2026): eliminarle, l'icona, "Move to".
     rowsPendingDeletion?.let { ids ->
         FitAlertDialog(
@@ -2721,6 +2767,7 @@ private fun TableLayout(
                         collapsed = isCollapsed,
                         width = tableWidth,
                         indent = SUB_GROUP_INDENT * depth,
+                        onAdd = { onAddRowInGroups(keys) },
                         onToggle = { onCollapseGroup(level.column.id, key, !isCollapsed) }
                     )
                 }
@@ -2968,6 +3015,7 @@ private fun TableLayout(
                     collapsed = isCollapsed,
                     width = tableWidth,
                     indent = SUB_GROUP_INDENT * depth,
+                    onAdd = { onAddRowInGroups(keys) },
                     onToggle = { onCollapseGroup(level.column.id, key, !isCollapsed) }
                 )
                 if (!isCollapsed) {
@@ -3789,12 +3837,28 @@ private fun GroupHeaderRow(
     width: Dp?,
     /** Per i sottogruppi, un po' più a destra del loro gruppo. */
     indent: Dp = 0.dp,
+    /**
+     * **Il "+" accanto al nome** (dal 26/11/2026, chiesto dall'utente, come su Notion): una pagina nuova
+     * già dentro il gruppo. Sul PC col mouse sopra l'intestazione, sul telefono sempre. Null = niente "+".
+     */
+    onAdd: (() -> Unit)? = null,
     onToggle: () -> Unit
 ) {
     val editTag = rememberGroupTagEdit(group, column)
+    var hovered by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .then(if (width == null) Modifier.fillMaxWidth() else Modifier.width(width))
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        when (awaitPointerEvent().type) {
+                            PointerEventType.Enter -> hovered = true
+                            PointerEventType.Exit -> hovered = false
+                        }
+                    }
+                }
+            }
             .onRightClick(editTag)
             .onLongPressFirst(editTag)
             .clickable { onToggle() }
@@ -3831,6 +3895,18 @@ private fun GroupHeaderRow(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (onAdd != null && (hovered || !isPc)) {
+            Spacer(modifier = Modifier.size(6.dp))
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable(onClick = onAdd),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = DbStrings.newPageInGroup, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+            }
+        }
     }
 }
 
@@ -5456,12 +5532,13 @@ private fun ListLayout(
     val rowIcons = LocalRowIcons.current
     val tight = remember(state.rows, rowIcons) { state.rows.any { it.id in rowIcons } }
     @Composable
-    fun Header(group: RowGroup, depth: Int, level: GroupLevel, key: String, collapsed: Boolean) = GroupHeaderRow(
+    fun Header(group: RowGroup, depth: Int, level: GroupLevel, key: String, collapsed: Boolean, keys: List<String>) = GroupHeaderRow(
         group = group,
         column = level.column,
         collapsed = collapsed,
         width = null,
         indent = LIST_GROUP_INDENT + SUB_GROUP_INDENT * depth,
+        onAdd = { onAddRowInGroups(keys) },
         onToggle = { onCollapseGroup(level.column.id, key, !collapsed) }
     )
     if (lazy != null) {
@@ -5472,7 +5549,7 @@ private fun ListLayout(
                 val keys = path + group.key
                 val key = keys.joinToString(SUB_GROUP_KEY_SEPARATOR)
                 val collapsed = key in level.collapsed
-                item(key = "group:$key") { Header(group, depth, level, key, collapsed) }
+                item(key = "group:$key") { Header(group, depth, level, key, collapsed, keys) }
                 if (!collapsed) {
                     if (depth == groupLevels.lastIndex) {
                         items(group.rows, key = { "g:$key:" + it.id }) { row -> ListRow(row, state, onOpenRow, onRowLongPress, keys, tight) }
@@ -5516,7 +5593,7 @@ private fun ListLayout(
             val keys = path + group.key
             val key = keys.joinToString(SUB_GROUP_KEY_SEPARATOR)
             val collapsed = key in level.collapsed
-            Header(group, depth, level, key, collapsed)
+            Header(group, depth, level, key, collapsed, keys)
             if (!collapsed) {
                 if (depth == groupLevels.lastIndex) {
                     val rowsKey = "list-group:$key"

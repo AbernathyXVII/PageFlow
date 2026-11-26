@@ -2422,6 +2422,18 @@ class DatabaseViewModel(
     }
 
     /**
+     * **"New group"** (dal 26/11/2026, chiesto dall'utente): un'etichetta nuova [name] della proprietà dei
+     * gruppi. Coi gruppi vuoti nascosti ("Hide empty groups", come di solito) il gruppo nuovo sparirebbe
+     * subito: allora nasce anche la sua prima pagina, e il gruppo si vede.
+     */
+    fun addGroup(level: GroupLevel, name: String) {
+        val label = name.trim()
+        if (label.isEmpty()) return
+        addSelectOption(level.column.id, label)
+        if (level.hideEmpty) addRowInGroups(listOf(level.column.id to label))
+    }
+
+    /**
      * **Una riga nata dentro un gruppo**, a qualunque livello: col valore di
      * ognuno dei gruppi in cui sta ([path]: proprietà e chiave del gruppo,
      * dal primo livello), così compare lì dove la si è chiesta.

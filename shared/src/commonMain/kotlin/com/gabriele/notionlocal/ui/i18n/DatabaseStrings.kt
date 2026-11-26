@@ -169,6 +169,9 @@ object DbStrings {
     val mainPropertyHint get() = t("Empty: back to \"Name\"", "Vuoto: torna \"Name\"", "Leer: wieder \"Name\"", "Vide : de nouveau \"Name\"", "Vacío: vuelve a \"Name\"", "留空：恢复为“Name”", "비우면 \"Name\"으로", "空欄で「Name」に戻る")
     val none get() = t("None", "Nessuno", "Keine", "Aucun", "Ninguno", "无", "없음", "なし")
     val newPage get() = t("New page", "Nuova pagina", "Neue Seite", "Nouvelle page", "Nueva página", "新建页面", "새 페이지", "新規ページ")
+    val newPageInGroup get() = t("New page in this group", "Nuova pagina in questo gruppo", "Neue Seite in dieser Gruppe", "Nouvelle page dans ce groupe", "Nueva página en este grupo", "在此组中新建页面", "이 그룹에 새 페이지", "このグループに新しいページ")
+    val newGroup get() = t("New group", "Nuovo gruppo", "Neue Gruppe", "Nouveau groupe", "Nuevo grupo", "新建组", "새 그룹", "新しいグループ")
+    fun newGroupHint(property: String) = t("A new value of $property", "Un nuovo valore di $property", "Ein neuer Wert von $property", "Une nouvelle valeur de $property", "Un nuevo valor de $property", "$property 的新值", "${property}의 새 값", "$property の新しい値")
     // Database semplice: le righe non sono pagine, e i pulsanti lo dicono.
     val newRow get() = t("New row", "Nuova riga", "Neue Zeile", "Nouvelle ligne", "Nueva fila", "新建行", "새 행", "新規行")
     /** Sotto le prime righe di un database dentro una pagina (dal 18/10/2026, come su Notion). */

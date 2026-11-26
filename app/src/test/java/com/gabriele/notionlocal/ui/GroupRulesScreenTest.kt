@@ -204,7 +204,9 @@ class GroupRulesScreenTest {
         // Nelle righe i primi due valori (IPERPOLI e Cibo per Pasta e Sale); in più le intestazioni.
         waitFor("i gruppi") { count("IPERPOLI") == 3 && count("Lidl") == 2 }
         assertEquals("Cibo: le due righe e il sottogruppo", 3, count("Cibo"))
-        assertEquals("un \"New page\" per gruppo, e quello in fondo", 3, count("New page"))
+        // Dal 26/11/2026 in fondo c'è "New group" (i gruppi vengono da una Select), non un altro "New page".
+        assertEquals("un \"New page\" per gruppo", 2, count("New page"))
+        assertEquals(1, count("New group"))
         // Chiuso IPERPOLI, le sue righe non si vedono più; quella di Lidl sì.
         compose.onAllNodesWithText("IPERPOLI").onFirst().performClick()
         waitFor("chiuso") { !shown("Pasta") && !shown("Sale") }

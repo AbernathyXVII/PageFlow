@@ -1126,6 +1126,23 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### ✏️ v0.156.15 — 26/11/2026 · 12:27 — A "+" next to each group of a database, "New group" at the bottom
+*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1408 tests passed)*
+
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **A "+" after the name of each
+  group** of a grouped table or list: it makes a new page already in that
+  group, as the "New page" under it. On the PC it shows with the mouse over
+  the name of the group, on the phone always
+- **[Change]** **[📱 Mobile]** **[💻 PC]** **At the bottom of a grouped
+  table or list, "New group"** instead of a second "New page": it asks for
+  the name and adds it as a new value of the property the rows are grouped
+  by. With "Hide empty groups" on, the group is made together with its
+  first page, otherwise it would not show. Only when the groups come from a
+  Select or Multi-select property; with the other ones (dates, checkboxes,
+  numbers) there is nothing at the bottom
+- **[Project]** `GroupHeaderRow` with `onAdd` and its own hover;
+  `DatabaseViewModel.addGroup`. Test: `DesktopGroupAddTest`
+
 ### 🔧 v0.156.14.1 — 26/11/2026 · 10:21 — The "select all" of a list only with the mouse over it, the page stays still when choosing rows
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1407 tests passed)*
 
