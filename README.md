@@ -1126,6 +1126,16 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.156.15.1 — 26/11/2026 · 14:17 — The "+" of a group no longer moves the database down
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1408 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The mouse over the name of a group no longer
+  moves the database down**: the "+" that shows up there was a little
+  taller than the row of the group, and everything below went down by a
+  few points. Now it is as tall as the arrow next to the name
+- **[Project]** The box of the "+" in `GroupHeaderRow` is 22 × 18. Test:
+  `DesktopGroupAddTest` checks that the rows below stay still
+
 ### ✏️ v0.156.15 — 26/11/2026 · 12:27 — A "+" next to each group of a database, "New group" at the bottom
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1408 tests passed)*
 

@@ -171,6 +171,8 @@ class DesktopGroupAddTest {
             val plus = scene.nodes().singleOrNull { it.first == "New page in this group" }?.second
                 ?: throw AssertionError("manca il + del gruppo: ${scene.nodes().map { it.first }}")
             assertTrue("accanto al nome, sulla stessa riga: $plus, $header", plus.left > header.right && kotlin.math.abs(plus.center.y - header.center.y) < 6f)
+            // Comparendo, il "+" non allunga l'intestazione: le righe sotto restano ferme (26/11, l'utente le vedeva scendere).
+            assertEquals("la riga c non si muove", c.top, scene.nodes().last { it.first == "c" }.second.top, 0.01f)
             scene.shot("group_plus")
             scene.click(plus.center)
             val end = System.currentTimeMillis() + 5_000

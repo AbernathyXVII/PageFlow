@@ -3897,9 +3897,10 @@ private fun GroupHeaderRow(
         )
         if (onAdd != null && (hovered || !isPc)) {
             Spacer(modifier = Modifier.size(6.dp))
+            // Alto quanto la freccia (18), che c'è sempre: comparendo col mouse non allunga l'intestazione.
             Box(
                 modifier = Modifier
-                    .size(22.dp)
+                    .size(width = 22.dp, height = 18.dp)
                     .clip(RoundedCornerShape(4.dp))
                     .clickable(onClick = onAdd),
                 contentAlignment = Alignment.Center
