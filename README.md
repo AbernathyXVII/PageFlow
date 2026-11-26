@@ -1127,7 +1127,7 @@ say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
 ### ✏️ v0.156.15 — 26/11/2026 · 12:27 — A "+" next to each group of a database, "New group" at the bottom
-*(Claude Code on the PC; not yet tested by the user; not installed on the phone, which was disconnected; 1408 tests passed)*
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1408 tests passed)*
 
 - **[Change]** **[📱 Mobile]** **[💻 PC]** **A "+" after the name of each
   group** of a grouped table or list: it makes a new page already in that
