@@ -234,6 +234,7 @@ class DesktopRowSelectionTest {
             val repo = PageRepository(AppDatabase.getInstance(context))
             repo.createPage(PageEntity(id = "casa", title = "Casa"))
             repo.saveBlock(BlockEntity(id = "link", pageId = "casa", type = BlockType.DATABASE_LINK, linkedPageId = "esempi", orderIndex = 0))
+            repo.saveBlock(BlockEntity(id = "sotto", pageId = "casa", type = BlockType.PARAGRAPH, textJson = """[{"text":"Sotto"}]""", orderIndex = 1))
         }
         val factory = ViewModelFactory(context)
         val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
@@ -252,6 +253,12 @@ class DesktopRowSelectionTest {
         }
         try {
             scene.frames(40)
+            // Il testo sotto il database non si sposta quando la barra prende il posto del nome (26/11/2026).
+            fun below() = onWindowThread {
+                scene.semanticsOwners.flatMap { it.getAllSemanticsNodes(mergingEnabled = false) }
+                    .first { it.config.getOrNull(SemanticsProperties.EditableText)?.text?.contains("Sotto") == true }.boundsInRoot.top
+            }
+            val belowBefore = below()
             val r = scene.nodes().last { it.first == "c" }.second
             scene.mouse(PointerEventType.Move, Offset(r.center.x + 100f, r.center.y))
             scene.frames(3)
@@ -261,6 +268,7 @@ class DesktopRowSelectionTest {
             scene.frames(5)
             scene.shot("rowselect_inline")
             assertTrue("la barra dentro la pagina: ${scene.nodes().map { it.first }}", scene.nodes().any { it.first == "1 selected" })
+            assertEquals("il testo sotto resta dov'era", belowBefore, below(), 0.5f)
         } finally {
             onWindowThread { scene.close() }
         }
@@ -403,6 +411,147 @@ class DesktopRowSelectionTest {
         try {
             scene.chooseAndCheck("d", "rowselect_list_inline")
             scene.selectAllAboveAndEsc("rowselect_list_inline_all")
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /**
+     * **"Sceglile tutte" sparisce col mouse fuori dall'elenco** (26/11/2026, trovato dall'utente in Notebook e
+     * Foreign languages: passato il mouse su un punto dell'elenco, la casella restava accesa).
+     */
+    @Test
+    fun theSelectAllOfAListGoesAwayWithTheMouse() {
+        runBlocking {
+            val dao = AppDatabase.getInstance(context).pageDao()
+            dao.update(dao.getById("esempi")!!.copy(databaseLayout = DatabaseLayout.LIST))
+        }
+        val scene = databaseScene()
+        try {
+            scene.frames(40)
+            fun selectAllShown() = scene.nodes().any { it.first == "Select all" }
+            // Su e giù per l'elenco, poi via, come col mouse vero.
+            val rows = names.map { n -> scene.nodes().last { it.first == n }.second }
+            for (r in rows + rows.reversed()) {
+                scene.mouse(PointerEventType.Move, Offset(r.center.x + 150f, r.center.y))
+                scene.frames(1)
+            }
+            // Come la casella dei titoli nella tabella (26/11/2026): col mouse sulle righe non c'è.
+            assertTrue("col mouse sulle righe non si vede", !selectAllShown())
+            // Col mouse sul suo posto, una riga sopra la prima, nel margine, sì.
+            val pitch = rows[1].center.y - rows[0].center.y
+            scene.mouse(PointerEventType.Move, Offset(rows[0].center.x + 150f, rows[0].center.y))
+            scene.frames(3)
+            val firstBox = scene.nodes().filter { it.first == "Select" }.minBy { abs(it.second.center.y - rows[0].center.y) }.second
+            scene.mouse(PointerEventType.Move, Offset(firstBox.center.x, firstBox.center.y - pitch))
+            scene.frames(4)
+            assertTrue("col mouse sopra di lei si vede", selectAllShown())
+            scene.mouse(PointerEventType.Move, Offset(600f, 560f))
+            scene.frames(4)
+            scene.shot("rowselect_list_left")
+            assertTrue("col mouse fuori non si vede: ${scene.nodes().map { it.first }}", !selectAllShown())
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /** Lo stesso con l'elenco dentro una pagina, in una colonna, come "Notebook" dell'utente. */
+    @Test
+    fun theSelectAllOfAListInAColumnGoesAwayWithTheMouse() {
+        runBlocking {
+            val db = AppDatabase.getInstance(context)
+            db.pageDao().update(db.pageDao().getById("esempi")!!.copy(databaseLayout = DatabaseLayout.LIST))
+            val repo = PageRepository(db)
+            repo.createPage(PageEntity(id = "casa", title = "Casa"))
+            repo.saveBlock(BlockEntity(id = "link", pageId = "casa", type = BlockType.DATABASE_LINK, linkedPageId = "esempi", orderIndex = 0))
+            repo.saveBlock(BlockEntity(id = "accanto", pageId = "casa", type = BlockType.PARAGRAPH, textJson = """[{"text":"Accanto"}]""", orderIndex = 1))
+            assertTrue(repo.moveBlockBeside("accanto", "link", right = true))
+        }
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        PageEditorScreen(
+                            pageId = "casa", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                            onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                        )
+                    }
+                }
+            }
+        }
+        try {
+            scene.frames(40)
+            fun selectAllShown() = scene.nodes().any { it.first == "Select all" }
+            val rows = names.map { n -> scene.nodes().last { it.first == n }.second }
+            for (r in rows + rows.reversed()) {
+                scene.mouse(PointerEventType.Move, Offset(r.center.x + 60f, r.center.y))
+                scene.frames(1)
+            }
+            assertTrue("col mouse sulle righe non si vede", !selectAllShown())
+            scene.shot("rowselect_column_on")
+            // Via verso il titolo della pagina, poi nell'altra colonna, poi in fondo.
+            for (at in listOf(Offset(200f, 140f), Offset(700f, rows[2].center.y), Offset(450f, 580f))) {
+                scene.mouse(PointerEventType.Move, at)
+                scene.frames(4)
+                assertTrue("col mouse in $at non si vede: ${scene.nodes().map { it.first }}", !selectAllShown())
+            }
+        } finally {
+            onWindowThread { scene.close() }
+        }
+    }
+
+    /** Con le icone sulle righe, come "Notebook" e "Foreign languages", e uscendo da sinistra sopra le caselle. */
+    @Test
+    fun theSelectAllOfAListWithIconsGoesAwayWithTheMouse() {
+        runBlocking {
+            val db = AppDatabase.getInstance(context)
+            db.pageDao().update(db.pageDao().getById("esempi")!!.copy(databaseLayout = DatabaseLayout.LIST))
+            names.forEach { n ->
+                db.pageDao().insert(PageEntity(id = "p-$n", title = n, isRowPage = true, icon = "📘"))
+                val row = db.databaseDao().getRowById(n)!!
+                db.databaseDao().updateRow(row.copy(linkedPageId = "p-$n"))
+            }
+            val repo = PageRepository(db)
+            repo.createPage(PageEntity(id = "casa", title = "Casa"))
+            repo.saveBlock(BlockEntity(id = "link", pageId = "casa", type = BlockType.DATABASE_LINK, linkedPageId = "esempi", orderIndex = 0))
+        }
+        val factory = ViewModelFactory(context)
+        val viewModel = factory.create(PageEditorViewModel::class, CreationExtras.Empty)
+        val owner = ScreenOwner()
+        val scene = onWindowThread {
+            ImageComposeScene(width = 900, height = 600, density = Density(1f)) {
+                CompositionLocalProvider(LocalPlatformContext provides context, LocalLifecycleOwner provides owner, LocalViewModelStoreOwner provides owner) {
+                    NotionLocalTheme {
+                        PageEditorScreen(
+                            pageId = "casa", factory = factory, onBack = {}, onOpenSearch = {}, onOpenUpdates = {},
+                            onNavigateToPage = {}, onNavigateToDatabase = {}, viewModel = viewModel
+                        )
+                    }
+                }
+            }
+        }
+        try {
+            scene.frames(40)
+            fun selectAllShown() = scene.nodes().any { it.first == "Select all" }
+            val rows = names.map { n -> scene.nodes().last { it.first == n }.second }
+            // Sulle righe, sull'icona, sulla casella, poi a sinistra fuori e in alto.
+            for (r in rows) {
+                for (x in listOf(r.center.x + 200f, r.left + 2f, r.left - 20f, r.left - 35f)) {
+                    scene.mouse(PointerEventType.Move, Offset(x, r.center.y))
+                    scene.frames(1)
+                }
+            }
+            scene.mouse(PointerEventType.Move, Offset(rows[0].left - 20f, rows[0].center.y - (rows[1].center.y - rows[0].center.y)))
+            scene.frames(2)
+            for (at in listOf(Offset(3f, 300f), Offset(450f, 90f), Offset(450f, 580f))) {
+                scene.mouse(PointerEventType.Move, at)
+                scene.frames(4)
+                scene.shot("rowselect_icons_left")
+                assertTrue("col mouse in $at non si vede: ${scene.nodes().map { it.first }}", !selectAllShown())
+            }
         } finally {
             onWindowThread { scene.close() }
         }

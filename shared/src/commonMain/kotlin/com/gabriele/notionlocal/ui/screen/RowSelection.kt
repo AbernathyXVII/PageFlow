@@ -78,9 +78,6 @@ class RowSelection {
 
     /** Quanto è alta una riga: nell'elenco la casella "sceglile tutte" sta una riga sopra la prima (vedi [SelectAllAbove]). */
     var rowHeight by mutableStateOf(0)
-
-    /** La riga col mouse sopra, se c'è: nell'elenco con lei compare anche la casella "sceglile tutte". */
-    var hoveredRow by mutableStateOf<String?>(null)
 }
 
 /** Le righe scelte di questa tabella; null dove non si scelgono (il telefono, le altre viste). */
@@ -222,7 +219,8 @@ fun RowSelectionBar(count: Int, onDelete: () -> Unit, onClear: () -> Unit, entri
  * **Nell'elenco la casella che le sceglie tutte sta sopra la prima** (dal 25/11/2026, chiesto
  * dall'utente: "stessa distanza dalle altre ma messa sopra"): l'elenco non ha i titoli delle colonne.
  * Non prende posto: si mette una riga più su dell'elenco, nel margine, sopra la casella della prima
- * riga. Si vede col mouse su una riga o su di lei, o con qualcuna già scelta.
+ * riga. Come quella dei titoli nella tabella, si vede solo col mouse sopra di lei, o con qualcuna già
+ * scelta (dal 26/11/2026, chiesto dall'utente: col mouse su un punto qualsiasi dell'elenco compariva).
  */
 @Composable
 fun SelectAllAbove() {
@@ -249,7 +247,7 @@ fun SelectAllAbove() {
             }
     ) {
         val chosen = selection.selected
-        if (hovered || selection.hoveredRow != null || chosen.isNotEmpty()) {
+        if (hovered || chosen.isNotEmpty()) {
             val all = selection.all.isNotEmpty() && selection.all.all { it in chosen }
             SelectionCheckbox(
                 checked = all,

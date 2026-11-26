@@ -1126,6 +1126,20 @@ The entries born in the cloud sessions (those of 24/09/2026, from
 say that **they still have to be verified on the phone**: when they are,
 "(verified on the phone on dd/mm/yyyy)" is added next to the title.
 
+### 🔧 v0.156.14.1 — 26/11/2026 · 10:21 — The "select all" of a list only with the mouse over it, the page stays still when choosing rows
+*(Claude Code on the PC; not yet tested by the user; installed on the phone; 1407 tests passed)*
+
+- **[Bug fix]** **[💻 PC]** **The checkbox that chooses all the pages of a
+  list shows up only with the mouse over it**, or with some pages already
+  chosen, as the one before the column titles of a table: it showed up
+  with the mouse anywhere on the list
+- **[Bug fix]** **[💻 PC]** **Choosing rows no longer moves the page**: the
+  bar "N selected" was a little lower than the name of the database it
+  takes the place of, and everything below went up by a few points
+- **[Project]** `SelectAllAbove` without `RowSelection.hoveredRow`, gone
+  with its updates in `RowDragBox`; the bar in a box as tall as the title
+  row, measured with `onSizeChanged`. Test: `DesktopRowSelectionTest`
+
 ### ✏️ v0.156.14 — 26/11/2026 · 00:05 — "Select all" above the list, Esc takes the selection away
 *(Claude Code on the PC; not yet tested by the user; installed on the phone; 1404 tests passed)*
 

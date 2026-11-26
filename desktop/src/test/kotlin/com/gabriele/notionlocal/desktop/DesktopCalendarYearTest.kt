@@ -178,15 +178,17 @@ class DesktopCalendarYearTest {
         // Oggi col numero blu, come in Google (scelto dall'utente il 23/11/2026; nella v0.155.50 arancione).
         val monthWidth = shown.at("February").left - january.left
         val title = shown.at(months[today.monthValue - 1])
-        val number = shown.filter { (text, r) ->
-            text == today.dayOfMonth.toString() && r.center.x in (title.left + 24f)..(title.left + monthWidth) && r.top in title.bottom..(title.bottom + 170f)
-        }.single().second
         val bitmap = shot!!
-        val blue = (number.top.toInt()..number.bottom.toInt()).sumOf { y ->
+        fun blueIn(number: Rect) = (number.top.toInt()..number.bottom.toInt()).sumOf { y ->
             (number.left.toInt()..number.right.toInt()).count { x ->
                 bitmap.getColor(x, y).let { c -> (c and 0xFF) > 170 && (c and 0xFF) - ((c shr 16) and 0xFF) > 90 }
             }
         }
+        // Lo stesso numero può esserci due volte nel mese in miniatura: il 26 di ottobre, scurito, nella prima
+        // settimana di novembre (trovato il 26/11/2026). Oggi è quello blu.
+        val blue = shown.filter { (text, r) ->
+            text == today.dayOfMonth.toString() && r.center.x in (title.left + 24f)..(title.left + monthWidth) && r.top in title.bottom..(title.bottom + 170f)
+        }.maxOf { blueIn(it.second) }
         assertTrue("il numero di oggi è blu: $blue punti", blue > 5)
     }
 

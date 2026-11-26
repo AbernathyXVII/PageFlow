@@ -166,14 +166,8 @@ fun RowDragBox(
                 awaitPointerEventScope {
                     while (true) {
                         when (awaitPointerEvent().type) {
-                            PointerEventType.Enter -> {
-                                hovered = true
-                                selection?.hoveredRow = row.id
-                            }
-                            PointerEventType.Exit -> {
-                                hovered = false
-                                if (selection?.hoveredRow == row.id) selection.hoveredRow = null
-                            }
+                            PointerEventType.Enter -> hovered = true
+                            PointerEventType.Exit -> hovered = false
                         }
                     }
                 }

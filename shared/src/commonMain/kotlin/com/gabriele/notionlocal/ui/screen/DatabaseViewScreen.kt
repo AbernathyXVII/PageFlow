@@ -1516,7 +1516,16 @@ private fun DatabaseViewBody(
         // **Con delle righe scelte, al posto del nome la barra "N selected"** (dal 25/11/2026, chiesto
         // dall'utente come su Notion): il cestino e i tre puntini, col "Move to" delle pagine scelte.
         val chosenRows = rowSelectionOn?.selected.orEmpty().toList()
+        // La barra sta nell'altezza della riga del nome, misurata qui sotto: così niente sotto si sposta
+        // (dal 26/11/2026, trovato dall'utente: scegliendo le righe la pagina saliva di qualche punto).
+        var titleRowHeight by remember { mutableStateOf(0) }
         if (chosenRows.isNotEmpty()) {
+            val barBox = if (showTitle && titleRowHeight > 0) {
+                Modifier.fillMaxWidth().height(with(LocalDensity.current) { titleRowHeight.toDp() })
+            } else {
+                Modifier.fillMaxWidth()
+            }
+            Box(barBox, contentAlignment = Alignment.CenterStart) {
             fun icon(vector: ImageVector): @Composable () -> Unit = { Icon(vector, contentDescription = null, modifier = Modifier.size(16.dp)) }
             val single = state.rows.singleOrNull { chosenRows.singleOrNull() == it.id }
             RowSelectionBar(
@@ -1553,12 +1562,13 @@ private fun DatabaseViewBody(
                     add(PcMenuItem(Strings.delete, icon(Icons.Filled.Delete), danger = true, onClick = { rowsPendingDeletion = chosenRows }))
                 }
             )
+            }
         }
         if (showTitle && chosenRows.isEmpty()) {
         Row(
             // Dentro una pagina sul PC, i sei puntini del blocco si mettono a metà
             // di questa riga, subito a sinistra dell'icona o del nome (`BlockHandle.kt`).
-            modifier = Modifier.fillMaxWidth().reportsFirstLine(start = 16.dp),
+            modifier = Modifier.fillMaxWidth().reportsFirstLine(start = 16.dp).onSizeChanged { titleRowHeight = it.height },
             verticalAlignment = Alignment.CenterVertically
         ) {
             // **L'icona del database, prima del nome.** Solo se c'è:
